@@ -117,6 +117,8 @@ pub enum RedrawEventGrid {
     DefaultColorsSet(Color, Color, Color),
     // id, hl
     HlAttrDefine(Vec<(u64, Highlight)>),
+    // grid, [top, bot, left, right], rows, cols
+    Scroll(u64, [u64;4], i64, i64),
     Unknown(String),
 }
 
@@ -236,6 +238,20 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                 let args = try_array!(args[1]);
                 let id = try_u64!(args[0]);
                 RedrawEventGrid::Clear(id)
+            }
+            "grid_scroll" => {
+                let args = try_array!(args[1]);
+
+                let id = try_u64!(args[0]);
+                let top = try_u64!(args[1]);
+                let bot = try_u64!(args[2]);
+                let left = try_u64!(args[3]);
+                let right = try_u64!(args[4]);
+                let rows = try_i64!(args[5]);
+                let cols = try_i64!(args[6]);
+
+                //RedrawEventGrid::Unknown(cmd.to_string())
+                RedrawEventGrid::Scroll(id, [top, bot, left, right], rows, cols)
             }
             "default_colors_set" => {
                 let args = try_array!(args[1]);

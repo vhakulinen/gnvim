@@ -171,6 +171,10 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, grids: Arc<Mutex<Grids>>, 
                 let grid = grids.get(grid).unwrap();
                 grid.clear();
             }
+            RedrawEventGrid::Scroll(grid, reg, rows, cols) => {
+                let grid = grids.get(grid).unwrap();
+                grid.scroll(*reg, *rows, *cols);
+            }
             RedrawEventGrid::DefaultColorsSet(fg, bg, sp) => {
 
                 {

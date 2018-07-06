@@ -92,3 +92,86 @@ pub fn clear(da: &DrawingArea, ctx: &Context) {
 
     da.queue_draw_area(0, 0, w, h);
 }
+
+pub fn scroll(da: &DrawingArea, ctx: &Context, reg: [u64;4], count: i64) {
+    let cr = &ctx.cairo_context;
+    let cm = &ctx.cell_metrics;
+    let bg = &ctx.default_bg;
+
+    let s = cr.get_target();
+
+    let top = reg[0];
+    let bot = reg[1];
+    let left = reg[2];
+    let right = reg[3];
+
+    let (
+        src_top, _src_bot,
+        dst_top, dst_bot,
+        clr_top, clr_bot,
+        ) = if count > 0 {
+        let ( src_top, src_bot ) = ((top as i64 + count) as f64, bot as f64);
+        let ( dst_top, dst_bot ) = (top as f64, (bot as i64 - count) as f64);
+        (
+            src_top, src_bot,
+            dst_top, dst_bot,
+            dst_bot, src_bot,
+        )
+    } else {
+        let ( src_top, src_bot ) = (top as f64, (bot as i64 + count) as f64);
+        let ( dst_top, dst_bot ) = ((top as i64 - count) as f64, bot as f64);
+        (
+            src_top, src_bot,
+            dst_top, dst_bot,
+            src_top, dst_top,
+        )
+    };
+
+    cr.save();
+
+    // Create pattern which we can then "safely" draw to the surface. On X11, the pattern part was
+    // not needed but on wayland it is - I suppose it has something to do with the underlaying
+    // backbuffer.
+    cr.push_group();
+    let (_, y) = get_coords(cm.height, cm.width, dst_top - src_top, 0.0);
+    cr.set_source_surface(&s, 0.0, y);
+    cr.set_operator(cairo::Operator::Source);
+    let (x1, y1, x2, y2) = get_rect(cm.height, cm.width, dst_top, dst_bot, left as f64, right as f64);
+    let w = x2 - x1;
+    let h = y2 - y1;
+    cr.rectangle(x1, y1, w, h);
+    cr.fill();
+
+    // Get the pattern.
+    let mut p = cr.pop_group();
+
+    // Draw the parttern.
+    cr.set_source(&mut p);
+    cr.set_operator(cairo::Operator::Source);
+    cr.rectangle(x1, y1, w, h);
+    cr.fill();
+    da.queue_draw_area(x1 as i32, y1 as i32, w as i32, h as i32);
+
+    // Clear the area that is left "dirty".
+    let (x1, y1, x2, y2) = get_rect(cm.height, cm.width, clr_top, clr_bot, left as f64, right as f64);
+    let w = x2 - x1;
+    let h = y2 - y1;
+    cr.rectangle(x1, y1, x2 - x1, y2 - y1);
+    cr.set_source_rgb(bg.r, bg.g, bg.b);
+    cr.fill();
+    da.queue_draw_area(x1 as i32, y1 as i32, w as i32, h as i32);
+
+    cr.restore();
+}
+
+pub fn get_rect(col_h: f64, col_w: f64, top: f64, bot: f64, left: f64, right: f64) -> (f64, f64, f64, f64) {
+    let (x1, y1) = get_coords(col_h, col_w, top, left);
+    let (x2, y2) = get_coords(col_h, col_w, bot, right);
+    (x1, y1, x2, y2)
+}
+
+pub fn get_coords(h: f64, w: f64, row: f64, col: f64) -> (f64, f64) {
+    let x = col * w;
+    let y = row * h;
+    (x, y)
+}

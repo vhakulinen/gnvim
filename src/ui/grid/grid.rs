@@ -117,6 +117,14 @@ impl Grid {
         ctx.default_bg = bg;
         ctx.default_sp = sp;
     }
+
+    pub fn scroll(&self, reg: [u64;4], rows: i64, cols: i64) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        let da = self.da.borrow();
+
+        render::scroll(&da, &ctx, reg, rows);
+    }
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
