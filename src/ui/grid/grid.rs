@@ -1,0 +1,136 @@
+use std::sync::{Arc, Mutex};
+use std::cell::RefMut;
+
+use pango::FontDescription;
+use pango;
+use pangocairo;
+use cairo;
+use gtk::{DrawingArea};
+use gtk;
+
+use cairo::prelude::*;
+use gtk::prelude::*;
+use pango::prelude::*;
+
+use nvim_bridge::GridLineSegment;
+use ui::ui::HlDefs;
+use ui::grid::context::{Context, CellMetrics};
+use ui::grid::render;
+use ui::color::{Color, Highlight};
+use thread_guard::ThreadGuard;
+
+pub struct Grid {
+    da: ThreadGuard<DrawingArea>,
+    context: Arc<ThreadGuard<Option<Context>>>,
+    hl_defs: Arc<Mutex<HlDefs>>,
+}
+
+impl Grid {
+    pub fn new(id: u64, win: &gtk::ApplicationWindow, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+
+        let da = DrawingArea::new();
+        let ctx = Arc::new(ThreadGuard::new(None));
+
+        let ctx_ref = ctx.clone();
+        da.connect_configure_event(move |da, _| {
+            let mut ctx = ctx_ref.borrow_mut();
+            if ctx.is_none() {
+                *ctx = Some(Context::new(&da))
+            } else {
+                ctx.as_mut().unwrap().update(&da);
+            }
+
+            false
+        });
+
+        let ctx_ref = ctx.clone();
+        da.connect_draw(move |_, cr| {
+            let ctx = ctx_ref.clone();
+            if let Some(ref mut ctx) = *ctx.borrow_mut() {
+                drawingarea_draw(cr, ctx);
+            }
+            Inhibit(false)
+        });
+
+        win.add(&da);
+
+        Grid {
+            da: ThreadGuard::new(da),
+            context: ctx,
+            hl_defs,
+        }
+    }
+
+    pub fn connect_resize<F: 'static>(&self, f: F)
+        where F: Fn(u64, u64) -> bool {
+        let da = self.da.borrow();
+        let ctx = self.context.clone();
+
+        // TODO(ville): Set resize timeout so this wont be triggered constantly.
+        da.connect_configure_event(move |da, _| {
+            let ctx = ctx.borrow();
+            let ctx = ctx.as_ref().unwrap();
+
+            let w = da.get_allocated_width();
+            let h = da.get_allocated_height();
+            let cols = (w / ctx.cell_metrics.width as i32) as u64;
+            let rows = (h / ctx.cell_metrics.height as i32) as u64;
+
+            f(rows, cols)
+        });
+    }
+
+    pub fn put_line(&self, line: &GridLineSegment) {
+        //let state = self.state.borrow();
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        let da = self.da.borrow();
+        render::put_line(&da, ctx, line, &mut *self.hl_defs.lock().unwrap());
+    }
+
+    pub fn cursor_goto(&self, row: u64, col: u64) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        ctx.cursor.0 = row;
+        ctx.cursor.1 = col;
+    }
+
+    pub fn resize(&self, width: u64, height: u64) {
+        // TODO(ville): Implement. Not sure about the widget's size, since
+        // it should be defined by container, but the internal datastructures
+        // (once we have them) should be adjusted to the new size.
+    }
+
+    pub fn clear(&self) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        let da = self.da.borrow();
+        render::clear(&da, ctx)
+    }
+
+    pub fn set_default_colors(&self, fg: Color, bg: Color, sp: Color) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        ctx.default_fg = fg;
+        ctx.default_bg = bg;
+        ctx.default_sp = sp;
+    }
+}
+
+fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
+    println!("DRAW");
+
+    //let ctx = ctx.lock().unwrap();
+    let surface = ctx.cairo_context.get_target();
+    surface.flush();
+
+    cr.save();
+    cr.set_source_surface(&surface, 0.0, 0.0);
+    cr.paint();
+    cr.restore();
+
+    //cr.set_source_rgb(0.0, 255.0, 255.0);
+    //cr.paint();
+}

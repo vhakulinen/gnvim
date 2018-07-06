@@ -1,0 +1,33 @@
+[package]
+name = "gnvim"
+version = "0.1.0"
+authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
+
+[dependencies]
+neovim-lib = "0.5"
+
+#gio = "0.4"
+gio = { git = "https://github.com/gtk-rs/gio" }
+#cairo-rs = "0.4"
+cairo-rs = { git = "https://github.com/gtk-rs/cairo" }
+#pango = "0.4"
+#pangocairo = "0.5"
+#glib = "0.5"
+pangocairo = { git = "https://github.com/gtk-rs/pangocairo" }
+glib = { git = "https://github.com/gtk-rs/glib" }
+
+[dependencies.gtk]
+#version = "0.4"
+git = "https://github.com/gtk-rs/gtk"
+features = ["v3_22"]
+
+[dependencies.pango]
+#version = "0.4"
+#path = "../gtk-rs/pango"
+git = "https://github.com/gtk-rs/pango"
+
+[patch.'https://github.com/gtk-rs/pango']
+pango = { path = "../gtk-rs/pango" }
+
+[patch.'https://github.com/rust-lang/crates.io-index']
+neovim-lib = { path = "../neovim-lib" }
