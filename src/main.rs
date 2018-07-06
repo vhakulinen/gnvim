@@ -1,6 +1,7 @@
 extern crate cairo;
 extern crate gio;
 extern crate glib;
+extern crate gdk;
 extern crate gtk;
 extern crate pango;
 extern crate pangocairo;

@@ -15,6 +15,7 @@ cairo-rs = { git = "https://github.com/gtk-rs/cairo" }
 #glib = "0.5"
 pangocairo = { git = "https://github.com/gtk-rs/pangocairo" }
 glib = { git = "https://github.com/gtk-rs/glib" }
+gdk = { git = "https://github.com/gtk-rs/gdk" }
 
 [dependencies.gtk]
 #version = "0.4"

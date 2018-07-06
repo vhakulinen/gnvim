@@ -5,6 +5,7 @@ use std::thread;
 
 use glib;
 use gtk;
+use gdk;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
@@ -45,6 +46,55 @@ impl UI {
 
         let mut grids = HashMap::new();
         grids.insert(1, grid);
+
+        let im_context = gtk::IMMulticontext::new();
+        let nvim_ref = nvim.clone();
+        im_context.connect_commit(move |_, mut input| {
+
+            // Some quirk with gtk and/or neovim. The python-gui
+            // does the same thing.
+            if input == "<" {
+                input = "<lt>"
+            }
+
+            let mut nvim = nvim_ref.lock().unwrap();
+            nvim.input(input).expect("Couldn't send input");
+        });
+
+        let im_ref = im_context.clone();
+        let nvim_ref = nvim.clone();
+        window.connect_key_press_event(move |_, e| {
+
+            if im_ref.filter_keypress(e) {
+                Inhibit(true)
+            } else {
+                if let Some(input) = event_to_nvim_input(e) {
+                    let mut nvim = nvim_ref.lock().unwrap();
+                    nvim.input(input.as_str()).expect("Couldn't send input");
+                    return Inhibit(true);
+                }
+
+                Inhibit(false)
+            }
+        });
+
+        let im_ref = im_context.clone();
+        window.connect_key_release_event(move |_, e| {
+            im_ref.filter_keypress(e);
+            Inhibit(false)
+        });
+
+        let im_ref = im_context.clone();
+        window.connect_focus_in_event(move |_, _| {
+            im_ref.focus_in();
+            Inhibit(false)
+        });
+
+        let im_ref = im_context.clone();
+        window.connect_focus_out_event(move |_, _| {
+            im_ref.focus_out();
+            Inhibit(false)
+        });
 
         window.show_all();
 
@@ -147,4 +197,84 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, grids: Arc<Mutex<Grids>>, 
             }
         }
     }
+}
+
+fn keyname_to_nvim_key(s: &str) -> Option<&str> {
+    // Sourced from python-gui.
+    match s {
+        "slash" => Some("/"),
+        "backslash" => Some("\\"),
+        "dead_circumflex" => Some("^"),
+        "at" => Some("@"),
+        "numbersign" => Some("#"),
+        "dollar" => Some("$"),
+        "percent" => Some("%"),
+        "ampersand" => Some("&"),
+        "asterisk" => Some("*"),
+        "parenleft" => Some("("),
+        "parenright" => Some(")"),
+        "underscore" => Some("_"),
+        "plus" => Some("+"),
+        "minus" => Some("-"),
+        "bracketleft" => Some("["),
+        "bracketright" => Some("]"),
+        "braceleft" => Some("{"),
+        "braceright" => Some("}"),
+        "dead_diaeresis" => Some("\""),
+        "dead_acute" => Some("\'"),
+        "less" => Some("<"),
+        "greater" => Some(">"),
+        "comma" => Some(","),
+        "period" => Some("."),
+        "BackSpace" => Some("BS"),
+        "Return" => Some("CR"),
+        "Escape" => Some("Esc"),
+        "Delete" => Some("Del"),
+        "Page_Up" => Some("PageUp"),
+        "Page_Down" => Some("PageDown"),
+        "Enter" => Some("CR"),
+        "ISO_Left_Tab" => Some("Tab"),
+        "Tab" => Some("Tab"),
+        "Up" => Some("Up"),
+        "Down" => Some("Down"),
+        "Left" => Some("Left"),
+        "Right" => Some("Right"),
+        "Home" => Some("Home"),
+        "End" => Some("End"),
+    _ => None,
+    }
+}
+
+fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
+    let mut input = String::from("");
+
+    let keyval = e.get_keyval();
+    let keyname = gdk::keyval_name(keyval).unwrap();
+
+    let state = e.get_state();
+
+    if state.contains(gdk::ModifierType::SHIFT_MASK) {
+        input.push_str("S-");
+    }
+    if state.contains(gdk::ModifierType::CONTROL_MASK) {
+        input.push_str("C-");
+    }
+    if state.contains(gdk::ModifierType::MOD1_MASK) {
+        input.push_str("A-");
+    }
+
+    if keyname.chars().count() > 1 {
+        let n = keyname_to_nvim_key(keyname.as_str());
+
+        if let Some(n) = n {
+            input.push_str(n);
+        } else {
+            println!("NO KEY FOR NVIM ('{}')", keyname);
+            return None;
+        }
+    } else {
+        input.push(gdk::keyval_to_unicode(keyval).unwrap());
+    }
+
+    Some(format!("<{}>", input))
 }
