@@ -105,6 +105,13 @@ pub struct GridLineSegment {
     pub cells: Vec<Cell>,
 }
 
+pub enum OptionSet {
+    // font name
+    GuiFont(String),
+    // event name
+    NotSupported(String),
+}
+
 pub enum RedrawEvent {
     GridLine(Vec<GridLineSegment>),
     // grid, width, height
@@ -120,6 +127,7 @@ pub enum RedrawEvent {
     DefaultColorsSet(Color, Color, Color),
     // id, hl
     HlAttrDefine(Vec<(u64, Highlight)>),
+    OptionSet(OptionSet),
     Unknown(String),
 }
 
@@ -280,6 +288,20 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 }
                 
                 RedrawEvent::HlAttrDefine(hls)
+            }
+            "option_set" => {
+                let args = try_array!(args[1]);
+                let name = try_str!(args[0]);
+
+                let opt = match name {
+                    "guifont" => {
+                        let val = try_str!(args[1]);
+                        OptionSet::GuiFont(String::from(val))
+                    }
+                    _ => OptionSet::NotSupported(String::from(name))
+                };
+
+                RedrawEvent::OptionSet(opt)
             }
             _ => {
                 //println!("Unknown redraw event: {}", cmd);

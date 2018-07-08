@@ -12,7 +12,7 @@ use neovim_lib::neovim_api::NeovimApi;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEvent, GridLineSegment};
+use nvim_bridge::{Notify, RedrawEvent, GridLineSegment, OptionSet};
 use ui::color::{Color, Highlight};
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
@@ -237,6 +237,18 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
 
                 for (id, hl) in defs {
                     hl_defs.insert(*id, *hl);
+                }
+            }
+            RedrawEvent::OptionSet(opt) => {
+                match opt {
+                    OptionSet::GuiFont(font) => {
+                        for grid in (state.grids).values() {
+                            grid.set_font(font.to_string());
+                        }
+                    }
+                    OptionSet::NotSupported(name) => {
+                        println!("Not supported option set: {}", name);
+                    }
                 }
             }
             RedrawEvent::Unknown(e) => {

@@ -181,6 +181,20 @@ impl Grid {
 
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
+
+    pub fn set_font(&self, name: String) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        let font_desc = FontDescription::from_string(&name);
+        ctx.font_desc = font_desc;
+
+        // Tell the drawing area to resize it self, which in turn will
+        // trigger the configure event, which in turn will resize
+        // our internals.
+        let da = self.da.borrow();
+        da.queue_resize();
+    }
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
