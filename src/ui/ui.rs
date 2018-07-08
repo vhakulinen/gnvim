@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time;
 
 use glib;
 use gtk;
@@ -18,11 +19,16 @@ use ui::grid::Grid;
 type Grids = HashMap<u64, Grid>;
 pub type HlDefs = HashMap<u64, Highlight>;
 
+struct UIState {
+    grids: Grids,
+    hl_defs: Arc<Mutex<HlDefs>>,
+    current_grid: u64,
+}
+
 pub struct UI {
     nvim: Arc<Mutex<Neovim>>,
     rx: Receiver<Notify>,
-    grids: Arc<Mutex<Grids>>,
-    hl_defs: Arc<Mutex<HlDefs>>
+    state: Arc<Mutex<UIState>>,
 }
 
 impl UI {
@@ -101,39 +107,55 @@ impl UI {
         UI {
             nvim,
             rx,
-            grids: Arc::new(Mutex::new(grids)),
-            hl_defs,
+            state: Arc::new(Mutex::new(UIState {
+                grids: grids,
+                hl_defs,
+                current_grid: 1,
+            }))
         }
     }
 
     pub fn start(self) {
         let rx = self.rx;
-        let grids = self.grids.clone();
-        let hl_defs = self.hl_defs.clone();
-        thread::spawn(move || loop {
-            let notify = rx.recv().unwrap();
-            let grids = grids.clone();
-            let hl_defs = hl_defs.clone();
+        let state = self.state.clone();
 
-            glib::idle_add(move || {
-                handle_notify(&notify, grids.clone(), hl_defs.clone());
+        thread::spawn(move || {
+            let timeout = time::Duration::from_millis(33);
 
-                glib::Continue(false)
-            });
+            loop {
+                // Use timeout, so we can use this loop to "tick" the current
+                // grid (mainly to just blink the cursor).
+                let notify = rx.recv_timeout(timeout);
+                let state = state.clone();
+
+                glib::idle_add(move || {
+
+                    let mut state = state.lock().unwrap();
+
+                    if let Ok(ref notify) = notify {
+                        handle_notify(notify, &mut state);
+                    }
+
+                    let grid = state.grids.get(&state.current_grid).unwrap();
+                    grid.tick();
+
+                    glib::Continue(false)
+                });
+            }
         });
     }
 }
 
-fn handle_notify(notify: &Notify, grids: Arc<Mutex<Grids>>, hl_defs: Arc<Mutex<HlDefs>>) {
+fn handle_notify(notify: &Notify, state: &mut UIState) {
     match notify {
         Notify::RedrawEventGrid(events) => {
-            handle_redraw_event(events, grids.clone(), hl_defs.clone());
+            handle_redraw_event(events, state);
         }
     }
 }
 
-fn handle_redraw_event(events: &Vec<RedrawEventGrid>, grids: Arc<Mutex<Grids>>, hl_defs: Arc<Mutex<HlDefs>>) {
-    let grids = grids.lock().unwrap();
+fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
+    //let mut state = state.lock().unwrap();
 
     for event in events {
         match event {
@@ -141,22 +163,27 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, grids: Arc<Mutex<Grids>>, 
                 println!("girdline");
 
                 for line in lines {
-                    let grid = grids.get(&line.grid).unwrap();
+                    let grid = state.grids.get(&line.grid).unwrap();
                     grid.put_line(line);
                 }
-
-                //grid_line(da, ctx, state, lines);
             }
-            //RedrawEvent::Put(s) => {
-                //println!("{}", s);
-                //put(da, s, ctx, state);
-            //}
-            RedrawEventGrid::CursorGoto(grid, row, col) => {
-                let grid = grids.get(grid).unwrap();
+            RedrawEventGrid::CursorGoto(grid_id, row, col) => {
+
+                let grid = if *grid_id != state.current_grid {
+                    state.grids.get(&state.current_grid).unwrap().set_active(false);
+                    state.current_grid = *grid_id;
+
+                    let grid = state.grids.get(grid_id).unwrap();
+                    grid.set_active(true);
+                    grid
+                } else {
+                    state.grids.get(grid_id).unwrap()
+                };
+
                 grid.cursor_goto(*row, *col);
             }
             RedrawEventGrid::Resize(grid, width, height) => {
-                let grid = grids.get(grid).unwrap();
+                let grid = state.grids.get(grid).unwrap();
                 grid.resize(*width, *height);
                 // TODO(ville): What else do we need to do here? Will there be a situtation where neovim
                 // actually resizes it?
@@ -168,29 +195,29 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, grids: Arc<Mutex<Grids>>, 
                 //state.grid.cursor.1 = 0;
             }
             RedrawEventGrid::Clear(grid) => {
-                let grid = grids.get(grid).unwrap();
+                let grid = state.grids.get(grid).unwrap();
                 grid.clear();
             }
             RedrawEventGrid::Scroll(grid, reg, rows, cols) => {
-                let grid = grids.get(grid).unwrap();
+                let grid = state.grids.get(grid).unwrap();
                 grid.scroll(*reg, *rows, *cols);
             }
             RedrawEventGrid::DefaultColorsSet(fg, bg, sp) => {
 
                 {
-                    let mut hl_defs = hl_defs.lock().unwrap();
+                    let mut hl_defs = state.hl_defs.lock().unwrap();
                     let hl = hl_defs.get_mut(&0).unwrap();
                     hl.foreground = Some(*fg);
                     hl.background = Some(*bg);
                     hl.special = Some(*sp);
                 }
 
-                for grid in grids.values() {
+                for grid in (state.grids).values() {
                     grid.set_default_colors(*fg, *bg, *sp);
                 }
             }
             RedrawEventGrid::HlAttrDefine(defs) => {
-                let mut hl_defs = hl_defs.lock().unwrap();
+                let mut hl_defs = state.hl_defs.lock().unwrap();
 
                 for (id, hl) in defs {
                     hl_defs.insert(*id, *hl);

@@ -19,12 +19,14 @@ pub struct Context {
 
     // row, col
     pub cursor: (u64, u64),
+    pub cursor_alpha: f64,
 
     pub default_fg: Color,
     pub default_bg: Color,
     pub default_sp: Color,
 
     pub current_hl: Highlight,
+    pub active: bool,
 }
 
 impl Context {
@@ -61,11 +63,13 @@ impl Context {
             cell_metrics,
             //rows,
             cursor: (0, 0),
+            cursor_alpha: 1.0,
 
             default_fg: Color::default(),
             default_bg: Color::default(),
             default_sp: Color::default(),
             current_hl: Highlight::default(),
+            active: false,
         }
     }
 

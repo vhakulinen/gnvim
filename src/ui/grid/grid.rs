@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic;
 use std::sync::{Arc, Mutex};
 use std::cell::RefMut;
 
@@ -92,8 +94,33 @@ impl Grid {
     pub fn cursor_goto(&self, row: u64, col: u64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
+        let da = self.da.borrow();
+
+        // Clear old cursor position.
+        let (x, y, w, h) = {
+            let cm = &ctx.cell_metrics;
+            let (x, y) = render::get_coords(cm.height,
+                                            cm.width,
+                                            ctx.cursor.0 as f64,
+                                            ctx.cursor.1 as f64);
+            (x, y, cm.width, cm.height)
+        };
+        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
+
+        // Mark the new cursor position to be drawn.
+        let (x, y, w, h) = {
+            let cm = &ctx.cell_metrics;
+            let (x, y) = render::get_coords(cm.height,
+                                            cm.width,
+                                            ctx.cursor.0 as f64,
+                                            ctx.cursor.1 as f64);
+            (x, y, cm.width, cm.height)
+        };
+
+        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
     pub fn resize(&self, width: u64, height: u64) {
@@ -125,10 +152,39 @@ impl Grid {
 
         render::scroll(&da, &ctx, reg, rows);
     }
+
+    pub fn set_active(&self, active: bool) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        ctx.active = active;
+    }
+
+    pub fn tick(&self) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        let da = self.da.borrow();
+
+        ctx.cursor_alpha += 0.05;
+        if ctx.cursor_alpha > 2.0 {
+            ctx.cursor_alpha = 0.0;
+        }
+
+        let (x, y, w, h) = {
+            let cm = &ctx.cell_metrics;
+            let (x, y) = render::get_coords(cm.height,
+                                            cm.width,
+                                            ctx.cursor.0 as f64,
+                                            ctx.cursor.1 as f64);
+            (x, y, cm.width, cm.height)
+        };
+
+        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+    }
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
-    println!("DRAW");
+    //println!("DRAW");
 
     //let ctx = ctx.lock().unwrap();
     let surface = ctx.cairo_context.get_target();
@@ -141,4 +197,25 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
 
     //cr.set_source_rgb(0.0, 255.0, 255.0);
     //cr.paint();
+
+    let (x, y, w, h) = {
+        let cm = &ctx.cell_metrics;
+        let (x, y) = render::get_coords(cm.height,
+                                        cm.width,
+                                        ctx.cursor.0 as f64,
+                                        ctx.cursor.1 as f64);
+        (x, y, cm.width, cm.height)
+    };
+
+    let mut alpha = ctx.cursor_alpha;
+    if alpha > 1.0 {
+        alpha = 2.0 - alpha;
+    }
+
+    cr.save();
+    cr.rectangle(x, y, w, h);
+    cr.set_source_rgba(255.0, 255.0, 255.0, alpha);
+    cr.set_operator(cairo::Operator::Difference);
+    cr.fill();
+    cr.restore();
 }
