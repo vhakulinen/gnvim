@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
@@ -15,6 +15,7 @@ use gtk::prelude::*;
 use nvim_bridge::{Notify, RedrawEventGrid, GridLineSegment};
 use ui::color::{Color, Highlight};
 use ui::grid::Grid;
+use thread_guard::ThreadGuard;
 
 type Grids = HashMap<u64, Grid>;
 pub type HlDefs = HashMap<u64, Highlight>;
@@ -26,6 +27,7 @@ struct UIState {
 }
 
 pub struct UI {
+    win: Arc<ThreadGuard<gtk::ApplicationWindow>>,
     nvim: Arc<Mutex<Neovim>>,
     rx: Receiver<Notify>,
     state: Arc<Mutex<UIState>>,
@@ -105,6 +107,7 @@ impl UI {
         window.show_all();
 
         UI {
+            win: Arc::new(ThreadGuard::new(window)),
             nvim,
             rx,
             state: Arc::new(Mutex::new(UIState {
@@ -118,6 +121,7 @@ impl UI {
     pub fn start(self) {
         let rx = self.rx;
         let state = self.state.clone();
+        let win = self.win.clone();
 
         thread::spawn(move || {
             let timeout = time::Duration::from_millis(33);
@@ -126,8 +130,14 @@ impl UI {
                 // Use timeout, so we can use this loop to "tick" the current
                 // grid (mainly to just blink the cursor).
                 let notify = rx.recv_timeout(timeout);
-                let state = state.clone();
 
+                if let Err(RecvTimeoutError::Disconnected) = notify {
+                    // Neovim closed and the sender is disconnected
+                    // so we need to exit too.
+                    break;
+                }
+
+                let state = state.clone();
                 glib::idle_add(move || {
 
                     let mut state = state.lock().unwrap();
@@ -142,6 +152,12 @@ impl UI {
                     glib::Continue(false)
                 });
             }
+
+            // Close the window once the recv loop exits.
+            glib::idle_add(move || {
+                win.borrow().close();
+                glib::Continue(false)
+            });
         });
     }
 }
