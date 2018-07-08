@@ -20,6 +20,7 @@ pub struct Context {
     // row, col
     pub cursor: (u64, u64),
     pub cursor_alpha: f64,
+    pub cursor_cell_percentage: f64,
 
     pub default_fg: Color,
     pub default_bg: Color,
@@ -64,6 +65,7 @@ impl Context {
             //rows,
             cursor: (0, 0),
             cursor_alpha: 1.0,
+            cursor_cell_percentage: 1.0,
 
             default_fg: Color::default(),
             default_bg: Color::default(),

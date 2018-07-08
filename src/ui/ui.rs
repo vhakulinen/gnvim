@@ -12,7 +12,7 @@ use neovim_lib::neovim_api::NeovimApi;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEvent, GridLineSegment, OptionSet};
+use nvim_bridge::{Notify, RedrawEvent, GridLineSegment, OptionSet, ModeInfo};
 use ui::color::{Color, Highlight};
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
@@ -23,6 +23,7 @@ pub type HlDefs = HashMap<u64, Highlight>;
 struct UIState {
     grids: Grids,
     hl_defs: Arc<Mutex<HlDefs>>,
+    mode_infos: Vec<ModeInfo>,
     current_grid: u64,
 }
 
@@ -113,6 +114,7 @@ impl UI {
             state: Arc::new(Mutex::new(UIState {
                 grids: grids,
                 hl_defs,
+                mode_infos: vec!(),
                 current_grid: 1,
             }))
         }
@@ -249,6 +251,15 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
                     OptionSet::NotSupported(name) => {
                         println!("Not supported option set: {}", name);
                     }
+                }
+            }
+            RedrawEvent::ModeInfoSet(_cursor_shape_enabled, infos) => {
+                state.mode_infos = infos.clone();
+            }
+            RedrawEvent::ModeChange(name, idx) => {
+                let mode = state.mode_infos.get(*idx as usize).unwrap();
+                for grid in state.grids.values() {
+                    grid.set_mode(mode);
                 }
             }
             RedrawEvent::Unknown(e) => {

@@ -92,6 +92,86 @@ pub enum Notify {
     RedrawEvent(Vec<RedrawEvent>),
 }
 
+#[derive(Clone)]
+pub enum CursorShape {
+    Block,
+    Horizontal,
+    Vertical,
+    Unknown,
+}
+
+impl CursorShape {
+    fn from_string(name: &str) -> Self {
+        match String::from(name).to_lowercase().as_str() {
+            "block" => {
+                CursorShape::Block
+            }
+            "horizontal" => {
+                CursorShape::Horizontal
+            }
+            "vertical" => {
+                CursorShape::Vertical
+            }
+            _ => {
+                panic!("Unknown cursor shape: {}", name);
+            }
+        }
+    }
+}
+
+impl Default for CursorShape {
+    fn default() -> Self {
+        CursorShape::Block
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct ModeInfo {
+    pub cursor_shape: CursorShape,
+    /// The cursor's width (in percentages, from 0..1).
+    pub cell_percentage: f64,
+
+    // TODO(vile): Implement the rest.
+    //blinkwait
+    //blinkon
+    //blinkoff
+    //pub hl_id: i64,
+    //pub hl_lm: i64,
+    //pub short_name: String,
+    //pub name: String,
+}
+
+impl ModeInfo {
+    fn set(&mut self, prop: &str, val: Value) {
+        match prop {
+            "cursor_shape" => {
+                self.cursor_shape = CursorShape::from_string(try_str!(val))
+            }
+            "cell_percentage" => {
+                let mut val = try_u64!(val);
+
+                // Ensure that the val is not zero.
+                if val == 0 {
+                    val = 100;
+                }
+                self.cell_percentage = val as f64 / 100.0;
+            }
+            "blinkwait" => {}
+            "blinkon" => {}
+            "blinkoff" => {}
+            "hl_id" => {}
+            // NOTE(ville): This is documented as "hl_lm".
+            "id_lm" => {}
+            "short_name" => {}
+            "name" => {}
+            "mouse_shape" => {}
+            _ => {
+                panic!("Unknown mode_info property: {}", prop);
+            }
+        }
+    }
+}
+
 pub struct Cell {
     pub text: String,
     pub hl_id: Option<u64>,
@@ -106,28 +186,32 @@ pub struct GridLineSegment {
 }
 
 pub enum OptionSet {
-    // font name
+    /// font name
     GuiFont(String),
-    // event name
+    /// event name
     NotSupported(String),
 }
 
 pub enum RedrawEvent {
     GridLine(Vec<GridLineSegment>),
-    // grid, width, height
+    /// grid, width, height
     GridResize(u64, u64, u64),
-    // grid, row, col
+    /// grid, row, col
     GridCursorGoto(u64, u64, u64),
-    // grid
+    /// grid
     GridClear(u64),
-    // grid, [top, bot, left, right], rows, cols
+    /// grid, [top, bot, left, right], rows, cols
     GridScroll(u64, [u64;4], i64, i64),
 
-    // fg, bg, sp
+    /// fg, bg, sp
     DefaultColorsSet(Color, Color, Color),
-    // id, hl
+    /// id, hl
     HlAttrDefine(Vec<(u64, Highlight)>),
     OptionSet(OptionSet),
+    /// cusror shape enabled, mode info
+    ModeInfoSet(bool, Vec<ModeInfo>),
+    /// name, index
+    ModeChange(String, u64),
     Unknown(String),
 }
 
@@ -302,6 +386,32 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 };
 
                 RedrawEvent::OptionSet(opt)
+            }
+            "mode_info_set" => {
+                let args = try_array!(args[1]);
+                let cursor_style_enabled = try_bool!(args[0]);
+
+                let mut infos = vec!();
+                for info in try_array!(args[1]).into_iter() {
+                    //let args = try_array!(args);
+                    //let id = try_u64!(args[0]);
+                    let map = try_map!(info);
+
+                    let mut mode = ModeInfo::default();
+                    for (prop, val) in map {
+                        mode.set(try_str!(prop), val.clone());
+                    }
+
+                    infos.push(mode);
+                }
+
+                RedrawEvent::ModeInfoSet(cursor_style_enabled, infos)
+            }
+            "mode_change" => {
+                let args = try_array!(args[1]);
+                let name = try_str!(args[0]);
+                let idx = try_u64!(args[1]);
+                RedrawEvent::ModeChange(String::from(name), idx)
             }
             _ => {
                 //println!("Unknown redraw event: {}", cmd);

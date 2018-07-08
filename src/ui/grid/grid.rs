@@ -14,7 +14,7 @@ use cairo::prelude::*;
 use gtk::prelude::*;
 use pango::prelude::*;
 
-use nvim_bridge::GridLineSegment;
+use nvim_bridge::{GridLineSegment, ModeInfo};
 use ui::ui::HlDefs;
 use ui::grid::context::{Context, CellMetrics};
 use ui::grid::render;
@@ -195,6 +195,13 @@ impl Grid {
         let da = self.da.borrow();
         da.queue_resize();
     }
+
+    pub fn set_mode(&self, mode: &ModeInfo) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        ctx.cursor_cell_percentage = mode.cell_percentage;
+    }
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
@@ -227,7 +234,7 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     }
 
     cr.save();
-    cr.rectangle(x, y, w, h);
+    cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
     cr.set_source_rgba(255.0, 255.0, 255.0, alpha);
     cr.set_operator(cairo::Operator::Difference);
     cr.fill();
