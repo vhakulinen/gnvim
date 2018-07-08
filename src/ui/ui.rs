@@ -12,7 +12,7 @@ use neovim_lib::neovim_api::NeovimApi;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEventGrid, GridLineSegment};
+use nvim_bridge::{Notify, RedrawEvent, GridLineSegment};
 use ui::color::{Color, Highlight};
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
@@ -164,18 +164,18 @@ impl UI {
 
 fn handle_notify(notify: &Notify, state: &mut UIState) {
     match notify {
-        Notify::RedrawEventGrid(events) => {
+        Notify::RedrawEvent(events) => {
             handle_redraw_event(events, state);
         }
     }
 }
 
-fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
+fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
     //let mut state = state.lock().unwrap();
 
     for event in events {
         match event {
-            RedrawEventGrid::Line(lines) => {
+            RedrawEvent::GridLine(lines) => {
                 println!("girdline");
 
                 for line in lines {
@@ -183,7 +183,7 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
                     grid.put_line(line);
                 }
             }
-            RedrawEventGrid::CursorGoto(grid_id, row, col) => {
+            RedrawEvent::GridCursorGoto(grid_id, row, col) => {
 
                 let grid = if *grid_id != state.current_grid {
                     state.grids.get(&state.current_grid).unwrap().set_active(false);
@@ -198,7 +198,7 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
 
                 grid.cursor_goto(*row, *col);
             }
-            RedrawEventGrid::Resize(grid, width, height) => {
+            RedrawEvent::GridResize(grid, width, height) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.resize(*width, *height);
                 // TODO(ville): What else do we need to do here? Will there be a situtation where neovim
@@ -210,15 +210,15 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
                 //state.grid.cursor.0 = 0;
                 //state.grid.cursor.1 = 0;
             }
-            RedrawEventGrid::Clear(grid) => {
+            RedrawEvent::GridClear(grid) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.clear();
             }
-            RedrawEventGrid::Scroll(grid, reg, rows, cols) => {
+            RedrawEvent::GridScroll(grid, reg, rows, cols) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.scroll(*reg, *rows, *cols);
             }
-            RedrawEventGrid::DefaultColorsSet(fg, bg, sp) => {
+            RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
 
                 {
                     let mut hl_defs = state.hl_defs.lock().unwrap();
@@ -232,14 +232,14 @@ fn handle_redraw_event(events: &Vec<RedrawEventGrid>, state: &mut UIState) {
                     grid.set_default_colors(*fg, *bg, *sp);
                 }
             }
-            RedrawEventGrid::HlAttrDefine(defs) => {
+            RedrawEvent::HlAttrDefine(defs) => {
                 let mut hl_defs = state.hl_defs.lock().unwrap();
 
                 for (id, hl) in defs {
                     hl_defs.insert(*id, *hl);
                 }
             }
-            RedrawEventGrid::Unknown(e) => {
+            RedrawEvent::Unknown(e) => {
                 println!("Received unknow redraw event: {}", e);
             }
         }

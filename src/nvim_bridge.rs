@@ -89,7 +89,7 @@ impl Highlight {
 }
 
 pub enum Notify {
-    RedrawEventGrid(Vec<RedrawEventGrid>),
+    RedrawEvent(Vec<RedrawEvent>),
 }
 
 pub struct Cell {
@@ -105,20 +105,21 @@ pub struct GridLineSegment {
     pub cells: Vec<Cell>,
 }
 
-pub enum RedrawEventGrid {
-    Line(Vec<GridLineSegment>),
+pub enum RedrawEvent {
+    GridLine(Vec<GridLineSegment>),
     // grid, width, height
-    Resize(u64, u64, u64),
+    GridResize(u64, u64, u64),
     // grid, row, col
-    CursorGoto(u64, u64, u64),
+    GridCursorGoto(u64, u64, u64),
     // grid
-    Clear(u64),
+    GridClear(u64),
+    // grid, [top, bot, left, right], rows, cols
+    GridScroll(u64, [u64;4], i64, i64),
+
     // fg, bg, sp
     DefaultColorsSet(Color, Color, Color),
     // id, hl
     HlAttrDefine(Vec<(u64, Highlight)>),
-    // grid, [top, bot, left, right], rows, cols
-    Scroll(u64, [u64;4], i64, i64),
     Unknown(String),
 }
 
@@ -158,7 +159,7 @@ impl Handler for NvimBridge {
 fn parse_notify(name: &str, args: Vec<Value>) -> Option<Notify> {
     match name {
         "redraw" => {
-            Some(Notify::RedrawEventGrid(parse_redraw_event_grid(args)))
+            Some(Notify::RedrawEvent(parse_redraw_event(args)))
         }
         _ => None
     }
@@ -181,7 +182,7 @@ GLOBALS:
     ["visual_bell"]
  */
 
-fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
+fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
 
     args.into_iter().map(|args| {
         let cmd = try_str!(args[0]);
@@ -216,11 +217,11 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                     lines.push(GridLineSegment{grid, row, col_start, cells});
                 }
 
-                RedrawEventGrid::Line(lines)
+                RedrawEvent::GridLine(lines)
             }
             "grid_cursor_goto" => {
                 let args = try_array!(args[1]);
-                RedrawEventGrid::CursorGoto(
+                RedrawEvent::GridCursorGoto(
                     try_u64!(args[0]),
                     try_u64!(args[1]),
                     try_u64!(args[2]),
@@ -232,12 +233,12 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                 let width = try_u64!(args[1]);
                 let height = try_u64!(args[2]);
 
-                RedrawEventGrid::Resize(grid, width, height)
+                RedrawEvent::GridResize(grid, width, height)
             }
             "grid_clear" => {
                 let args = try_array!(args[1]);
                 let id = try_u64!(args[0]);
-                RedrawEventGrid::Clear(id)
+                RedrawEvent::GridClear(id)
             }
             "grid_scroll" => {
                 let args = try_array!(args[1]);
@@ -250,8 +251,8 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                 let rows = try_i64!(args[5]);
                 let cols = try_i64!(args[6]);
 
-                //RedrawEventGrid::Unknown(cmd.to_string())
-                RedrawEventGrid::Scroll(id, [top, bot, left, right], rows, cols)
+                //RedrawEvent::Unknown(cmd.to_string())
+                RedrawEvent::GridScroll(id, [top, bot, left, right], rows, cols)
             }
             "default_colors_set" => {
                 let args = try_array!(args[1]);
@@ -260,7 +261,7 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                 let bg = Color::from_u64(try_i64!(args[1]) as u64);
                 let sp = Color::from_u64(try_i64!(args[2]) as u64);
 
-                RedrawEventGrid::DefaultColorsSet(fg, bg, sp)
+                RedrawEvent::DefaultColorsSet(fg, bg, sp)
             }
             "hl_attr_define" => {
                 let mut hls = vec!();
@@ -278,11 +279,11 @@ fn parse_redraw_event_grid(args: Vec<Value>) -> Vec<RedrawEventGrid> {
                     hls.push((id, hl));
                 }
                 
-                RedrawEventGrid::HlAttrDefine(hls)
+                RedrawEvent::HlAttrDefine(hls)
             }
             _ => {
                 //println!("Unknown redraw event: {}", cmd);
-                RedrawEventGrid::Unknown(cmd.to_string())
+                RedrawEvent::Unknown(cmd.to_string())
             }
         }
     }).collect()
