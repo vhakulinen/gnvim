@@ -238,7 +238,7 @@ impl NvimBridge {
 
 impl Handler for NvimBridge {
     fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
-        println!("{}", name);
+        //println!("{}", name);
 
         if let Some(notify) = parse_notify(name, args) {
             self.tx.send(notify).unwrap();

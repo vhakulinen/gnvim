@@ -9,13 +9,14 @@ use gtk::prelude::*;
 use pango::prelude::*;
 
 use ui::color::{Color, Highlight};
+use ui::grid::row::Row;
 
 pub struct Context {
     pub cairo_context: cairo::Context,
     pub pango_context: pango::Context,
     pub font_desc: FontDescription,
     pub cell_metrics: CellMetrics,
-    // im_context
+    pub rows: Vec<Row>,
 
     // row, col
     pub cursor: (u64, u64),
@@ -46,23 +47,23 @@ impl Context {
         let mut cell_metrics = CellMetrics::default();
         cell_metrics.update(&pango_context, &font_desc);
 
-        //let row_count = h / cell_metrics.height as i32;
-        //let col_count = w / cell_metrics.width as i32;
-        //let mut rows = Vec::with_capacity(row_count as usize);
-        //for r in [0..row_count].iter() {
-            //let mut row = Vec::with_capacity(col_count as usize);
-            //for c in [0..col_count].iter() {
-                //row.push(Cell::default());
-            //}
-            //rows.push(row);
-        //}
+        let row_count = h / cell_metrics.height as i32;
+        let col_count = w / cell_metrics.width as i32;
+        let mut rows = vec!();
+        println!("cols: {:?}", col_count);
+        for _ in 0..row_count {
+            rows.push(Row::new(col_count as usize));
+        }
+        
+        println!("metrics: {:?}", cell_metrics);
 
         Context {
             cairo_context,
             pango_context,
             font_desc,
             cell_metrics,
-            //rows,
+            rows,
+
             cursor: (0, 0),
             cursor_alpha: 1.0,
             cursor_cell_percentage: 1.0,
@@ -96,10 +97,20 @@ impl Context {
         self.pango_context = pctx;
 
         self.cell_metrics.update(&self.pango_context, &self.font_desc);
+        
+        println!("metrics: {:?}", self.cell_metrics);
+
+        let row_count = h / self.cell_metrics.height as i32;
+        let col_count = w / self.cell_metrics.width as i32;
+        println!("cols: {:?}", col_count);
+        self.rows = vec!();
+        for _ in 0..row_count {
+            self.rows.push(Row::new(col_count as usize));
+        }
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CellMetrics {
     pub height: f64,
     pub width: f64,

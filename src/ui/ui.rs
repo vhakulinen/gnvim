@@ -178,8 +178,6 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
     for event in events {
         match event {
             RedrawEvent::GridLine(lines) => {
-                println!("girdline");
-
                 for line in lines {
                     let grid = state.grids.get(&line.grid).unwrap();
                     grid.put_line(line);
@@ -203,6 +201,8 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
             RedrawEvent::GridResize(grid, width, height) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.resize(*width, *height);
+
+                println!("RESIZE: {} {}", width, height);
                 // TODO(ville): What else do we need to do here? Will there be a situtation where neovim
                 // actually resizes it?
                 //state.scroll_region = [ 0, cols - 1, 0, rows - 1 ];

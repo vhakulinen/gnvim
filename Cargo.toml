@@ -3,6 +3,9 @@ name = "gnvim"
 version = "0.1.0"
 authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 
+[profile.dev]
+debug = true
+
 [dependencies]
 neovim-lib = "0.5"
 
@@ -20,7 +23,7 @@ gdk = { git = "https://github.com/gtk-rs/gdk" }
 [dependencies.gtk]
 #version = "0.4"
 git = "https://github.com/gtk-rs/gtk"
-features = ["v3_22"]
+features = ["v3_18"]
 
 [dependencies.pango]
 #version = "0.4"

@@ -18,6 +18,7 @@ use nvim_bridge::{GridLineSegment, ModeInfo};
 use ui::ui::HlDefs;
 use ui::grid::context::{Context, CellMetrics};
 use ui::grid::render;
+use ui::grid::row::Row;
 use ui::color::{Color, Highlight};
 use thread_guard::ThreadGuard;
 
@@ -127,12 +128,27 @@ impl Grid {
         // TODO(ville): Implement. Not sure about the widget's size, since
         // it should be defined by container, but the internal datastructures
         // (once we have them) should be adjusted to the new size.
+
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        let da = self.da.borrow();
+
+        println!("cols: {:?}", width);
+        ctx.rows = vec!();
+        for _ in 0..height {
+            ctx.rows.push(Row::new(width as usize));
+        }
     }
 
     pub fn clear(&self) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
         let da = self.da.borrow();
+
+        for row in ctx.rows.iter_mut() {
+            row.clear();
+        }
+
         render::clear(&da, ctx)
     }
 
@@ -147,10 +163,10 @@ impl Grid {
 
     pub fn scroll(&self, reg: [u64;4], rows: i64, cols: i64) {
         let mut ctx = self.context.borrow_mut();
-        let ctx = ctx.as_mut().unwrap();
+        let mut ctx = ctx.as_mut().unwrap();
         let da = self.da.borrow();
 
-        render::scroll(&da, &ctx, reg, rows);
+        render::scroll(&da, &mut ctx, reg, rows);
     }
 
     pub fn set_active(&self, active: bool) {

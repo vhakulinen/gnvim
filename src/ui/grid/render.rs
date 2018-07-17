@@ -11,19 +11,29 @@ use ui::color::{Highlight, Color};
 
 
 pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment, hl_defs: &mut HlDefs) {
+    let affected_segments = context.rows.get_mut(line.row as usize).unwrap().update(line);
+
     let row = line.row;
-    let mut col = line.col_start;
     let cw = context.cell_metrics.width;
     let ch = context.cell_metrics.height;
     let cr = &context.cairo_context;
 
-    for cell in line.cells.iter() {
+    //let mut bg = Color::from_u64(0);
+    //bg.r = 0.0;
+    //bg.g = 1.0;
 
-        let s = cell.text.repeat(cell.repeat as usize);
+    //let offset = 0.3;
+    for seg in affected_segments {
+        //bg.r += offset;
+        //if bg.r >= 1.0 {
+            //bg.r = 0.0;
+        //}
+        let col = seg.start;
 
-        if let Some(hl_id) = cell.hl_id {
-            context.current_hl = *hl_defs.get(&hl_id).unwrap();
-        }
+        //if let Some(hl_id) = seg.leaf.hl_id {
+            //context.current_hl = *hl_defs.get(&hl_id).unwrap();
+        //}
+        context.current_hl = *hl_defs.get(&seg.leaf.hl_id).unwrap();
 
         let hl = &context.current_hl;
 
@@ -39,7 +49,8 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             )
         };
 
-        let len = s.chars().count();
+        let s = &seg.leaf.text();
+        let len = seg.end;
         let x = col as f64 * cw;
         let y = row as f64 * ch;
         let w = len as f64 * cw;
@@ -52,7 +63,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
         cr.restore();
 
         let attrs = pango::AttrList::new();
-        let items = pango::itemize(&context.pango_context, s.as_str(), 0, s.len() as i32, &attrs, None);
+        let items = pango::itemize(&context.pango_context, s.as_str(), 0, s.len() as i32, &attrs , None);
 
         cr.save();
         cr.set_operator(cairo::Operator::Over);
@@ -65,15 +76,15 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             let mut glyphs = pango::GlyphString::new();
             pango::shape(s.as_str(), &a, &mut glyphs);
 
-            //cr.move_to(x + offset * context.cell_metrics.width, y + context.cell_metrics.ascent);
+            //cr.move_to(x + offset * context.cell_metrics.width, y + context.cell_metrics.ascen t);
             cr.move_to(x + offset, y + context.cell_metrics.ascent);
             pangocairo::functions::show_glyph_string(&cr, &font, &mut glyphs);
 
             offset += glyphs.get_width() as f64;
         }
+
         cr.restore();
 
-        col += len as u64;
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 }
@@ -93,7 +104,7 @@ pub fn clear(da: &DrawingArea, ctx: &Context) {
     da.queue_draw_area(0, 0, w, h);
 }
 
-pub fn scroll(da: &DrawingArea, ctx: &Context, reg: [u64;4], count: i64) {
+pub fn scroll(da: &DrawingArea, ctx: &mut Context, reg: [u64;4], count: i64) {
     let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
     let bg = &ctx.default_bg;
@@ -106,7 +117,7 @@ pub fn scroll(da: &DrawingArea, ctx: &Context, reg: [u64;4], count: i64) {
     let right = reg[3];
 
     let (
-        src_top, _src_bot,
+        src_top, src_bot,
         dst_top, dst_bot,
         clr_top, clr_bot,
         ) = if count > 0 {
@@ -127,6 +138,24 @@ pub fn scroll(da: &DrawingArea, ctx: &Context, reg: [u64;4], count: i64) {
         )
     };
 
+    // Modify the rows stored data of the rows.
+    let mut src = vec!();
+    for i in src_top as usize..src_bot as usize {
+        let row = ctx.rows.get(i).unwrap().clone();
+        let part = row.copy_range(left as usize, right as usize).clone();
+        src.push(part);
+    }
+    src.reverse();
+    
+    for i in dst_top as usize..dst_bot as usize {
+        ctx.rows.get_mut(i).unwrap().insert_rope_at(left as usize, src.pop().unwrap());
+    }
+
+    for i in clr_top as usize..clr_bot as usize {
+        ctx.rows.get_mut(i).unwrap().clear_range(left as usize, right as usize);
+    }
+
+    // Draw move the scrolled part on the cairo surface.
     cr.save();
 
     // Create pattern which we can then "safely" draw to the surface. On X11, the pattern part was
