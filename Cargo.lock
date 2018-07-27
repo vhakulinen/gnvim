@@ -176,7 +176,7 @@ dependencies = [
  "gio 0.4.0 (git+https://github.com/gtk-rs/gio)",
  "glib 0.5.0 (git+https://github.com/gtk-rs/glib)",
  "gtk 0.4.0 (git+https://github.com/gtk-rs/gtk)",
- "neovim-lib 0.5.3",
+ "neovim-lib 0.5.3 (git+https://github.com/vhakulinen/neovim-lib?branch=add-newgrid-external)",
  "pango 0.4.0 (git+https://github.com/gtk-rs/pango)",
  "pangocairo 0.5.0 (git+https://github.com/gtk-rs/pangocairo)",
 ]
@@ -253,6 +253,7 @@ dependencies = [
 [[package]]
 name = "neovim-lib"
 version = "0.5.3"
+source = "git+https://github.com/vhakulinen/neovim-lib?branch=add-newgrid-external#a86e35feaa5658b135761b618d938e57faa202a8"
 dependencies = [
  "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -425,6 +426,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum lazy_static 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e6412c5e2ad9584b0b8e979393122026cdd6d2a80b933f890dcd694ddbe73739"
 "checksum libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)" = "b685088df2b950fccadf07a7187c8ef846a959c142338a48f9dc0b94517eb5f1"
 "checksum log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "61bd98ae7f7b754bc53dca7d44b604f733c6bba044ea6f41bc8d89272d8161d2"
+"checksum neovim-lib 0.5.3 (git+https://github.com/vhakulinen/neovim-lib?branch=add-newgrid-external)" = "<none>"
 "checksum num-traits 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)" = "92e5113e9fd4cc14ded8e499429f396a20f98c772a47cc8622a736e1ec843c31"
 "checksum num-traits 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "630de1ef5cc79d0cdd78b7e33b81f083cbfe90de0f4b2b2f07f905867c70e9fe"
 "checksum pango 0.4.0 (git+https://github.com/gtk-rs/pango)" = "<none>"

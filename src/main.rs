@@ -44,10 +44,6 @@ fn build(app: &gtk::Application) {
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_newgrid_external(true);
-    //pub fn set_wildmenu_external(&mut self, wildmenu_external: bool) -> &mut Self {
-    //pub fn set_multigrid_external(&mut self, multigrid_external: bool) -> &mut Self {
-    //pub fn set_hlstate_external(&mut self, hlstate_external: bool) -> &mut Self {
-
     //ui_opts.set_popupmenu_external(true);
     //ui_opts.set_cmdline_external(true);
     nvim.ui_attach(80, 30, &ui_opts).unwrap();
