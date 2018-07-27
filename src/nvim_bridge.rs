@@ -215,23 +215,14 @@ pub enum RedrawEvent {
     Unknown(String),
 }
 
-#[derive(Default)]
-struct DefaultColors {
-    foreground: Color,
-    background: Color,
-    special: Color,
-}
-
 pub struct NvimBridge {
     tx: Sender<Notify>,
-    default_colors: DefaultColors,
 }
 
 impl NvimBridge {
     pub fn new(tx: Sender<Notify>) -> Self {
         NvimBridge {
             tx,
-            default_colors: DefaultColors::default(),
         }
     }
 }
