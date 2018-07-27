@@ -39,7 +39,6 @@ impl Leaf {
     }
 
     fn split(self, at: usize) -> (Rope, Rope) {
-        //assert!(at < self.len(), format!("Leaf split bounds ({} < {})", at, self.len()));
         let left = self.text.chars().take(at).collect::<String>();
         let right = self.text.chars().skip(at).collect::<String>();
 
@@ -118,7 +117,6 @@ impl Rope {
     }
 
     pub fn split(self, at: usize) -> (Rope, Rope) {
-        //assert!(at <= self.len(), format!("Bounds check on rope split ({} < {})", at, self.len()));
         match self {
             Rope::Leaf(leaf) => {
                 if at == leaf.len() {
@@ -211,10 +209,6 @@ impl Row {
         }
     }
 
-    //pub fn debug_print(&self) {
-        //self.rope.debug_print();
-    //}
-
     pub fn len(&self) -> usize {
         self.len
     }
@@ -259,23 +253,34 @@ impl Row {
             at += len;
         }
 
-        println!("LEAF COUNT PRE: {}", self.rope.leafs().len());
         self.rope = self.rope.optimize();
-
         assert_eq!(self.rope.len(), self.len);
 
         let mut segs = vec!();
         let mut start = 0;
         let leafs = self.rope.leafs();
-        println!("LEAF COUNT: {}", leafs.len());
         for leaf in leafs {
+            // If we're past the affected range, break early.
+            if start > at {
+                break;
+            }
+
             let len = leaf.len();
+            let end = start + len;
+
+            // If we're not yet in the affected range, continue to the next leaf.
+            if end < line.col_start as usize {
+                start = end;
+                continue;
+            }
+
             segs.push(Segment {
                 leaf: leaf,
                 start: start,
                 len: len,
             });
-            start += len;
+
+            start = end;
         }
 
         segs
