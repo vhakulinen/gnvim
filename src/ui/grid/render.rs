@@ -33,7 +33,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
         //if let Some(hl_id) = seg.leaf.hl_id {
             //context.current_hl = *hl_defs.get(&hl_id).unwrap();
         //}
-        context.current_hl = *hl_defs.get(&seg.leaf.hl_id).unwrap();
+        context.current_hl = *hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
         let hl = &context.current_hl;
 
@@ -50,7 +50,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
         };
 
         let s = &seg.leaf.text();
-        let len = seg.end;
+        let len = seg.len;
         let x = col as f64 * cw;
         let y = row as f64 * ch;
         let w = len as f64 * cw;

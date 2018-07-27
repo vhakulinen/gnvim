@@ -3,13 +3,13 @@ use nvim_bridge::GridLineSegment;
 pub struct Segment<'a> {
     pub leaf: &'a Leaf,
     pub start: usize,
-    pub end: usize,
+    pub len: usize,
 }
 
 #[derive(Clone)]
 pub struct Leaf {
     text: String,
-    pub hl_id: u64,
+    hl_id: u64,
 }
 
 impl Leaf {
@@ -31,6 +31,11 @@ impl Leaf {
     #[inline]
     pub fn text(&self) -> String {
         self.text.clone()
+    }
+
+    #[inline]
+    pub fn hl_id(&self) -> u64 {
+        self.hl_id
     }
 
     fn split(self, at: usize) -> (Rope, Rope) {
@@ -85,8 +90,25 @@ impl Rope {
 
     pub fn concat(self, other: Rope) -> Rope {
         match self {
-            Rope::Leaf(leaf) => {
-                Rope::Node(Box::new(Rope::Leaf(leaf)), Box::new(other))
+            Rope::Leaf(mut leaf) => {
+                // If the other is just a leaf, check if it's hl_id is the same
+                // as ours - if it is, we can just append the text of the other
+                // to us.
+                match other {
+                    Rope::Leaf(other) => {
+                        if other.hl_id == leaf.hl_id {
+                            leaf.text += &other.text;
+                            Rope::Leaf(leaf)
+                        } else {
+                            Rope::Node(
+                                Box::new(Rope::Leaf(leaf)),
+                                Box::new(Rope::Leaf(other)))
+                        }
+                    }
+                    _ => {
+                        Rope::Node(Box::new(Rope::Leaf(leaf)), Box::new(other))
+                    }
+                }
             },
             Rope::Node(left, right) => {
                 let right = right.concat(other);
@@ -151,6 +173,28 @@ impl Rope {
             }
         }
     }
+
+    pub fn optimize(&self) -> Rope {
+        assert!(self.len() > 0,
+            "Rope needs to have lenght greater than 0 inorder to be optimized");
+
+        let mut rope = None;
+
+        let mut leafs = self.leafs();
+        for leaf in leafs {
+            if leaf.len() == 0 {
+                continue;
+            }
+
+            if rope.is_none() {
+                rope = Some(Rope::Leaf(leaf.clone()));
+            } else {
+                rope = Some(rope.unwrap().concat(Rope::Leaf(leaf.clone())));
+            }
+        }
+
+        rope.unwrap()
+    }
 }
 
 #[derive(Clone)]
@@ -206,21 +250,17 @@ impl Row {
     pub fn update(&mut self, line: &GridLineSegment) -> Vec<Segment> {
         let mut at = line.col_start as usize;
         for cell in &line.cells {
-            //let rope = self.rope.clone();
             let text = cell.text.repeat(cell.repeat as usize);
             let len = text.chars().count();
 
             let other = Rope::new(text, cell.hl_id.unwrap_or(self.rope.leaf_at(at).hl_id));
             self.insert_rope_at(at, other);
 
-            //let (left, right) = rope.split(at);
-            //let left = left.concat(Rope::new(text));
-            //let (_, right) = right.split(len);
-
-            //self.rope = left.concat(right);
-
             at += len;
         }
+
+        println!("LEAF COUNT PRE: {}", self.rope.leafs().len());
+        self.rope = self.rope.optimize();
 
         assert_eq!(self.rope.len(), self.len);
 
@@ -229,13 +269,13 @@ impl Row {
         let leafs = self.rope.leafs();
         println!("LEAF COUNT: {}", leafs.len());
         for leaf in leafs {
-            let end = leaf.len();
+            let len = leaf.len();
             segs.push(Segment {
                 leaf: leaf,
                 start: start,
-                end: end,
+                len: len,
             });
-            start += end;
+            start += len;
         }
 
         segs
@@ -336,15 +376,22 @@ mod tests {
 
     #[test]
     fn test_rope_leafs() {
-        let rope = Rope::new(String::from("first"), 0);
-        let rope = rope.concat(Rope::new(String::from("second"), 0));
-        let rope = rope.concat(Rope::new(String::from("third"), 0));
+        let rope = Rope::new(String::from("first"), 1);
+        let rope = rope.concat(Rope::new(String::from("second"), 2));
+        let rope = rope.concat(Rope::new(String::from("third"), 3));
 
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 3);
         assert_eq!(leafs.get(0).unwrap().text(), "first");
         assert_eq!(leafs.get(1).unwrap().text(), "second");
         assert_eq!(leafs.get(2).unwrap().text(), "third");
+
+        let rope = Rope::new(String::from("first"), 0);
+        let rope = rope.concat(Rope::new(String::from("second"), 0));
+
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 1);
+        assert_eq!(leafs.get(0).unwrap().text(), "firstsecond");
     }
 
     #[test]
@@ -394,5 +441,58 @@ mod tests {
         assert_eq!(rope.leaf_at(8).hl_id, 2);
         assert_eq!(rope.leaf_at(11).hl_id, 2);
         assert_eq!(rope.leaf_at(13).hl_id, 3);
+    }
+
+    #[test]
+    fn test_rope_optimize() {
+        let rope = Rope::new(String::from("first"), 0);
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("second"), 1)));
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("third"), 0)));
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("fourth"), 1)));
+
+        assert_eq!(rope.leafs().len(), 4);
+
+        let (left, right) = rope.split(5);
+        let rope = left.concat(right.split(6).1);
+        assert_eq!(rope.text(), "firstthirdfourth");
+        assert_eq!(rope.leafs().len(), 3);
+
+        let rope = rope.optimize();
+        assert_eq!(rope.text(), "firstthirdfourth");
+
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 2);
+        assert_eq!(leafs[0].text(), "firstthird");
+        assert_eq!(leafs[1].text(), "fourth");
+    }
+
+    #[test]
+    fn test_rope_optimize2() {
+        let rope = Rope::new(String::from(""), 3);
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("first"), 0)));
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("second"), 1)));
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from("third"), 0)));
+        let rope = rope.concat(
+            Rope::Leaf(Leaf::new(String::from(""), 1)));
+
+        assert_eq!(rope.leafs().len(), 5);
+
+        let (left, right) = rope.split(5);
+        let rope = left.concat(right.split(6).1);
+        assert_eq!(rope.text(), "firstthird");
+        assert_eq!(rope.leafs().len(), 4);
+
+        let rope = rope.optimize();
+        assert_eq!(rope.text(), "firstthird");
+
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 1);
+        assert_eq!(leafs[0].text(), "firstthird");
     }
 }
