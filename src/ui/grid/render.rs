@@ -156,11 +156,8 @@ pub fn scroll(da: &DrawingArea, ctx: &mut Context, reg: [u64;4], count: i64) {
     cr.rectangle(x1, y1, w, h);
     cr.fill();
 
-    // Get the pattern.
-    let mut p = cr.pop_group();
-
     // Draw the parttern.
-    cr.set_source(&mut p);
+    cr.pop_group_to_source();
     cr.set_operator(cairo::Operator::Source);
     cr.rectangle(x1, y1, w, h);
     cr.fill();

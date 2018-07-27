@@ -26,16 +26,7 @@ git = "https://github.com/gtk-rs/gtk"
 features = ["v3_18"]
 
 [dependencies.pango]
-#version = "0.4"
-#path = "../gtk-rs/pango"
 git = "https://github.com/gtk-rs/pango"
-
-[patch.'https://github.com/gtk-rs/pango']
-pango = { path = "../gtk-rs/pango" }
-
-[patch.'https://github.com/gtk-rs/cairo']
-cairo-rs = { path = "../gtk-rs/cairo" }
-cairo-sys-rs = { path = "../gtk-rs/cairo/cairo-sys-rs" }
 
 [patch.'https://github.com/rust-lang/crates.io-index']
 neovim-lib = { path = "../neovim-lib" }
