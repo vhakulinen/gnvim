@@ -124,6 +124,7 @@ impl UI {
         let rx = self.rx;
         let state = self.state.clone();
         let win = self.win.clone();
+        let nvim = self.nvim.clone();
 
         thread::spawn(move || {
             let timeout = time::Duration::from_millis(33);
@@ -140,12 +141,13 @@ impl UI {
                 }
 
                 let state = state.clone();
+                let nvim = nvim.clone();
                 glib::idle_add(move || {
 
                     let mut state = state.lock().unwrap();
 
                     if let Ok(ref notify) = notify {
-                        handle_notify(notify, &mut state);
+                        handle_notify(notify, &mut state, nvim.clone());
                     }
 
                     let grid = state.grids.get(&state.current_grid).unwrap();
@@ -164,15 +166,15 @@ impl UI {
     }
 }
 
-fn handle_notify(notify: &Notify, state: &mut UIState) {
+fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
     match notify {
         Notify::RedrawEvent(events) => {
-            handle_redraw_event(events, state);
+            handle_redraw_event(events, state, nvim);
         }
     }
 }
 
-fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
+fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
     //let mut state = state.lock().unwrap();
 
     for event in events {
@@ -201,16 +203,6 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
             RedrawEvent::GridResize(grid, width, height) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.resize(*width, *height);
-
-                println!("RESIZE: {} {}", width, height);
-                // TODO(ville): What else do we need to do here? Will there be a situtation where neovim
-                // actually resizes it?
-                //state.scroll_region = [ 0, cols - 1, 0, rows - 1 ];
-
-                // After resize the screen is redrawn, and neovim doesn't tell us to put the cursor to the
-                // "beginning" but acts like its there.
-                //state.grid.cursor.0 = 0;
-                //state.grid.cursor.1 = 0;
             }
             RedrawEvent::GridClear(grid) => {
                 let grid = state.grids.get(grid).unwrap();
@@ -247,6 +239,11 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState) {
                         for grid in (state.grids).values() {
                             grid.set_font(font.to_string());
                         }
+
+                        let grid = state.grids.get(&1).unwrap();
+                        let (rows, cols) = grid.calc_size();
+                        let mut nvim = nvim.lock().unwrap();
+                        nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
                     }
                     OptionSet::NotSupported(name) => {
                         println!("Not supported option set: {}", name);

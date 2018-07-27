@@ -134,10 +134,7 @@ impl Grid {
         let da = self.da.borrow();
 
         println!("cols: {:?}", width);
-        ctx.rows = vec!();
-        for _ in 0..height {
-            ctx.rows.push(Row::new(width as usize));
-        }
+        ctx.update(&da);
     }
 
     pub fn clear(&self) {
@@ -205,11 +202,14 @@ impl Grid {
         let font_desc = FontDescription::from_string(&name);
         ctx.font_desc = font_desc;
 
-        // Tell the drawing area to resize it self, which in turn will
-        // trigger the configure event, which in turn will resize
-        // our internals.
-        let da = self.da.borrow();
-        da.queue_resize();
+        // Update the font metrics according to the new font. The parent (e.g.
+        // the main UI) should tell neovim to resize according to the new size
+        // if needed - this is when the main grid gets new font.
+        // This is basically done by calling grid.calc_size and passing
+        // the size to neovim.
+        ctx.cell_metrics.update(&ctx.pango_context, &ctx.font_desc);
+
+        // TODO(ville): How to handle font updates on other grids than the main grid?
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {
@@ -217,6 +217,20 @@ impl Grid {
         let ctx = ctx.as_mut().unwrap();
 
         ctx.cursor_cell_percentage = mode.cell_percentage;
+    }
+
+    /// Calculates the current gird size. Returns (rows, cols).
+    pub fn calc_size(&self) -> (usize, usize) {
+        let da = self.da.borrow();
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+
+        let w = da.get_allocated_width();
+        let h = da.get_allocated_height();
+        let cols = (w / ctx.cell_metrics.width as i32) as usize;
+        let rows = (h / ctx.cell_metrics.height as i32) as usize;
+
+        (rows, cols)
     }
 }
 
