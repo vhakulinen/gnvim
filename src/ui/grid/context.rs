@@ -34,7 +34,7 @@ impl Context {
     pub fn new(da: &DrawingArea) -> Self {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();
-        let h = da.get_allocated_width();
+        let h = da.get_allocated_height();
         let surface = win.create_similar_surface(cairo::Content::Color, w, h).unwrap();
 
         let cairo_context = cairo::Context::new(&surface);
@@ -68,7 +68,7 @@ impl Context {
     pub fn update(&mut self, da: &DrawingArea) {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();
-        let h = da.get_allocated_width();
+        let h = da.get_allocated_height();
         let surface = win.create_similar_surface(cairo::Content::Color, w, h).unwrap();
         let ctx = cairo::Context::new(&surface);
 
