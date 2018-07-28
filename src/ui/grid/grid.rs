@@ -105,6 +105,13 @@ impl Grid {
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
 
+        // Update cursor color.
+        let hl_defs = self.hl_defs.lock().unwrap();
+        let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
+        let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
+        let hl = hl_defs.get(&leaf.hl_id()).unwrap();
+        ctx.cursor_color = hl.foreground.unwrap_or(ctx.default_fg);
+
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
             let cm = &ctx.cell_metrics;
@@ -256,8 +263,10 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
 
     cr.save();
     cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
-    cr.set_source_rgba(255.0, 255.0, 255.0, alpha);
-    cr.set_operator(cairo::Operator::Difference);
+    cr.set_source_rgba(ctx.cursor_color.r,
+                       ctx.cursor_color.g,
+                       ctx.cursor_color.b,
+                       alpha);
     cr.fill();
     cr.restore();
 }

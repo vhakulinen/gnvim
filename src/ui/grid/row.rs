@@ -178,7 +178,7 @@ impl Rope {
 
         let mut rope = None;
 
-        let mut leafs = self.leafs();
+        let leafs = self.leafs();
         for leaf in leafs {
             if leaf.len() == 0 {
                 continue;
@@ -207,6 +207,10 @@ impl Row {
             rope: Rope::new(" ".repeat(len), 0),
             len: len,
         }
+    }
+
+    pub fn leaf_at(&self, at: usize) -> &Leaf {
+        self.rope.leaf_at(at)
     }
 
     pub fn len(&self) -> usize {
