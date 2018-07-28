@@ -12,8 +12,8 @@ use neovim_lib::neovim_api::NeovimApi;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEvent, GridLineSegment, OptionSet, ModeInfo};
-use ui::color::{Color, Highlight};
+use nvim_bridge::{Notify, RedrawEvent, OptionSet, ModeInfo};
+use ui::color::Highlight;
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
 
@@ -44,12 +44,11 @@ impl UI {
         hl_defs.insert(0, Highlight::default());
         let hl_defs = Arc::new(Mutex::new(hl_defs));
 
-        let grid = Grid::new(1, &window, hl_defs.clone());
+        let grid = Grid::new(1, &window.clone().upcast::<gtk::Widget>().downcast::<gtk::Container>().unwrap(), hl_defs.clone());
         let nvim_ref = nvim.clone();
-        grid.connect_resize(move |rows, cols| {
+        grid.connect_da_resize(move |rows, cols| {
             let mut nvim = nvim_ref.lock().unwrap();
-            nvim.ui_try_resize(cols, rows).unwrap();
-
+            nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
             false
         });
 
@@ -105,6 +104,7 @@ impl UI {
             Inhibit(false)
         });
 
+
         window.show_all();
 
         UI {
@@ -116,7 +116,7 @@ impl UI {
                 hl_defs,
                 mode_infos: vec!(),
                 current_grid: 1,
-            }))
+            })),
         }
     }
 
@@ -175,8 +175,6 @@ fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>)
 }
 
 fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
-    //let mut state = state.lock().unwrap();
-
     for event in events {
         match event {
             RedrawEvent::GridLine(lines) => {

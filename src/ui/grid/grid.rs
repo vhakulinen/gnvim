@@ -1,25 +1,19 @@
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic;
 use std::sync::{Arc, Mutex};
-use std::cell::RefMut;
 
 use pango::FontDescription;
-use pango;
-use pangocairo;
 use cairo;
 use gtk::{DrawingArea};
 use gtk;
 
 use cairo::prelude::*;
 use gtk::prelude::*;
-use pango::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
 use ui::ui::HlDefs;
-use ui::grid::context::{Context, CellMetrics};
+use ui::grid::context::Context;
 use ui::grid::render;
 use ui::grid::row::Row;
-use ui::color::{Color, Highlight};
+use ui::color::Color;
 use thread_guard::ThreadGuard;
 
 pub struct Grid {
@@ -29,7 +23,7 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(id: u64, win: &gtk::ApplicationWindow, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(id: u64, container: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
 
         let da = DrawingArea::new();
         let ctx = Arc::new(ThreadGuard::new(None));
@@ -55,7 +49,7 @@ impl Grid {
             Inhibit(false)
         });
 
-        win.add(&da);
+        container.add(&da);
 
         Grid {
             da: ThreadGuard::new(da),
@@ -64,7 +58,7 @@ impl Grid {
         }
     }
 
-    pub fn connect_resize<F: 'static>(&self, f: F)
+    pub fn connect_da_resize<F: 'static>(&self, f: F)
         where F: Fn(u64, u64) -> bool {
         let da = self.da.borrow();
         let ctx = self.context.clone();
@@ -125,16 +119,13 @@ impl Grid {
     }
 
     pub fn resize(&self, width: u64, height: u64) {
-        // TODO(ville): Implement. Not sure about the widget's size, since
-        // it should be defined by container, but the internal datastructures
-        // (once we have them) should be adjusted to the new size.
-
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        let da = self.da.borrow();
 
-        println!("cols: {:?}", width);
-        ctx.update(&da);
+        ctx.rows = vec!();
+        for _ in 0..height {
+            ctx.rows.push(Row::new(width as usize));
+        }
     }
 
     pub fn clear(&self) {

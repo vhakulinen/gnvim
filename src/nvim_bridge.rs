@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::mpsc::Sender;
 
 use neovim_lib::{Handler, Value};
@@ -213,6 +214,24 @@ pub enum RedrawEvent {
     /// name, index
     ModeChange(String, u64),
     Unknown(String),
+}
+
+impl fmt::Display for RedrawEvent {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RedrawEvent::GridLine(..) => write!(fmt, "GridLine"),
+            RedrawEvent::GridResize(..) => write!(fmt, "GridResize"),
+            RedrawEvent::GridCursorGoto(..) => write!(fmt, "GridCursorGoto"),
+            RedrawEvent::GridClear(..) => write!(fmt, "GridClear"),
+            RedrawEvent::GridScroll(..) => write!(fmt, "GridScroll"),
+            RedrawEvent::DefaultColorsSet(..) => write!(fmt, "DefaultColorsSet"),
+            RedrawEvent::HlAttrDefine(..) => write!(fmt, "HlAttrDefine"),
+            RedrawEvent::OptionSet(..) => write!(fmt, "OptionSet"),
+            RedrawEvent::ModeInfoSet(..) => write!(fmt, "ModeInfoSet"),
+            RedrawEvent::ModeChange(..) => write!(fmt, "ModeChange"),
+            RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
+        }
+    }
 }
 
 pub struct NvimBridge {

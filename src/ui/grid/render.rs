@@ -11,7 +11,9 @@ use ui::color::{Highlight, Color};
 
 
 pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment, hl_defs: &mut HlDefs) {
-    let affected_segments = context.rows.get_mut(line.row as usize).unwrap().update(line);
+    let affected_segments = context.rows.get_mut(line.row as usize)
+        .expect(&format!("Failed to get row {}", line.row))
+        .update(line);
 
     let row = line.row;
     let cw = context.cell_metrics.width;

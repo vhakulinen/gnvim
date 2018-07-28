@@ -4,7 +4,6 @@ use pangocairo;
 use cairo;
 use gtk::{DrawingArea};
 
-use cairo::prelude::*;
 use gtk::prelude::*;
 use pango::prelude::*;
 
@@ -47,22 +46,12 @@ impl Context {
         let mut cell_metrics = CellMetrics::default();
         cell_metrics.update(&pango_context, &font_desc);
 
-        let row_count = h / cell_metrics.height as i32;
-        let col_count = w / cell_metrics.width as i32;
-        let mut rows = vec!();
-        println!("cols: {:?}", col_count);
-        for _ in 0..row_count {
-            rows.push(Row::new(col_count as usize));
-        }
-        
-        println!("metrics: {:?}", cell_metrics);
-
         Context {
             cairo_context,
             pango_context,
             font_desc,
             cell_metrics,
-            rows,
+            rows: vec!(),
 
             cursor: (0, 0),
             cursor_alpha: 1.0,
@@ -97,16 +86,6 @@ impl Context {
         self.pango_context = pctx;
 
         self.cell_metrics.update(&self.pango_context, &self.font_desc);
-        
-        println!("metrics: {:?}", self.cell_metrics);
-
-        let row_count = h / self.cell_metrics.height as i32;
-        let col_count = w / self.cell_metrics.width as i32;
-        println!("cols: {:?}", col_count);
-        self.rows = vec!();
-        for _ in 0..row_count {
-            self.rows.push(Row::new(col_count as usize));
-        }
     }
 }
 
