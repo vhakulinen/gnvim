@@ -97,6 +97,8 @@ pub struct CellMetrics {
     pub width: f64,
     pub ascent: f64,
     pub decent: f64,
+    pub underline_thickness: f64,
+    pub underline_position: f64,
 }
 
 impl CellMetrics {
@@ -106,5 +108,8 @@ impl CellMetrics {
         self.decent = fm.get_descent() as f64 / pango::SCALE as f64;
         self.height = self.ascent + self.decent;
         self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
+
+        self.underline_position = fm.get_underline_position() as f64 / pango::SCALE as f64;
+        self.underline_thickness = fm.get_underline_thickness() as f64 / pango::SCALE as f64 * 2.0;
     }
 }

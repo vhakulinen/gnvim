@@ -2,6 +2,7 @@ use gtk::DrawingArea;
 use gtk::prelude::*;
 use cairo;
 use pango;
+use pango::Attribute;
 use pangocairo;
 
 use nvim_bridge::GridLineSegment;
@@ -51,10 +52,19 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
         cr.restore();
 
         let attrs = pango::AttrList::new();
+
+        if hl.bold {
+            let attr = Attribute::new_weight(pango::Weight::Bold).unwrap();
+            attrs.insert(attr);
+        }
+        if hl.italic {
+            let attr = Attribute::new_style(pango::Style::Italic).unwrap();
+            attrs.insert(attr);
+        }
+
         let items = pango::itemize(&context.pango_context, s.as_str(), 0, s.len() as i32, &attrs , None);
 
         cr.save();
-        cr.set_operator(cairo::Operator::Over);
         cr.set_source_rgb(fg.r, fg.g, fg.b);
         let mut offset = 0.0;
         for item in items {
@@ -70,7 +80,35 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             offset += glyphs.get_width() as f64;
         }
 
+        // Since we can't (for some reason) use pango attributes to draw
+        // underline and undercurl, we'll have to do that manually.
+        let sp = hl.special.unwrap_or(context.default_sp);
+        cr.set_source_rgb(sp.r, sp.g, sp.b);
+        if hl.undercurl {
+            pangocairo::functions::show_error_underline(
+                cr,
+                x,
+                y + h + context.cell_metrics.underline_position,
+                w,
+                context.cell_metrics.underline_thickness * 2.0);
+        }
+        if hl.underline {
+            // TODO(ville): The ui.txt doc clearly states that underline and
+            //              undercurl should use the special color. From my
+            //              (short) test, I only got white special color for
+            //              underline - which would be _ok_ except the
+            //              background was also white so the underline was not
+            //              visible unless the underlined text hand some glyphs
+            //              under the underline.
+            cr.set_source_rgb(fg.r, fg.g, fg.b);
+            let y = y + h + context.cell_metrics.underline_position;
+            cr.rectangle(x, y, w, context.cell_metrics.underline_thickness);
+            cr.fill();
+        }
+
         cr.restore();
+
+        // TODO(ville): Handle ink overflow (from glyphs and underline/undercurl).
 
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
