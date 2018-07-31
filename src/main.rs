@@ -1,3 +1,5 @@
+#![feature(test)]
+
 extern crate cairo;
 
 extern crate gio;

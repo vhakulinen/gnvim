@@ -293,7 +293,52 @@ impl Row {
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+
+    use self::test::Bencher;
+
     use super::*;
+
+    #[bench]
+    fn bench_rope_concat(b: &mut Bencher) {
+
+        b.iter(move || {
+            let rope = Rope::new(String::from("first"), 0);
+            let rope2 = Rope::new(String::from("second"), 0);
+            rope.concat(rope2);
+        });
+    }
+
+    #[bench]
+    fn bench_rope_split(b: &mut Bencher) {
+        let rope = Rope::new(String::from("first"), 0);
+        let rope = rope.concat(Rope::new(String::from("second"), 0));
+        let rope = rope.concat(Rope::new(String::from("third"), 2));
+        let rope = rope.concat(Rope::new(String::from("fourth"), 3));
+
+        b.iter(move || {
+            rope.clone().split(3);
+        });
+    }
+
+    #[bench]
+    fn bench_insert_rope(b: &mut Bencher) {
+
+        b.iter(move || {
+            let mut row = Row::new(30);
+            let rope = Rope::new(String::from("first"), 0);
+            row.insert_rope_at(5, rope);
+        });
+    }
+
+    #[bench]
+    fn bench_leaf_split(b: &mut Bencher) {
+
+        b.iter(move || {
+            let mut leaf = Leaf::new(String::from("123123123"), 0);
+            leaf.split(4);
+        });
+    }
 
     #[test]
     fn test_leaf_split() {
