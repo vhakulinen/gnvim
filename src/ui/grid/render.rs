@@ -22,7 +22,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
     let cr = &context.cairo_context;
 
     for seg in affected_segments {
-        context.current_hl = *hl_defs.get(&seg.leaf.hl_id()).unwrap();
+        context.current_hl = *hl_defs.get(&seg.leaf.hl_id).unwrap();
 
         let hl = &context.current_hl;
 
@@ -38,7 +38,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             )
         };
 
-        let s = &seg.leaf.text();
+        let s = &seg.leaf.text;
         let len = seg.len;
         let x = seg.start as f64 * cw;
         let y = row as f64 * ch;
@@ -62,7 +62,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             attrs.insert(attr);
         }
 
-        let items = pango::itemize(&context.pango_context, s.as_str(), 0, s.len() as i32, &attrs , None);
+        let items = pango::itemize(&context.pango_context, s, 0, s.len() as i32, &attrs , None);
 
         cr.save();
         cr.set_source_rgb(fg.r, fg.g, fg.b);
@@ -72,7 +72,7 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             let a = item.analysis();
             let font = a.font();
             let mut glyphs = pango::GlyphString::new();
-            pango::shape(s.as_str(), &a, &mut glyphs);
+            pango::shape(s, &a, &mut glyphs);
 
             cr.move_to(x + offset, y + context.cell_metrics.ascent);
             pangocairo::functions::show_glyph_string(&cr, &font, &mut glyphs);

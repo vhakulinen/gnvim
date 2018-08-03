@@ -147,7 +147,10 @@ impl UI {
                     let mut state = state.lock().unwrap();
 
                     if let Ok(ref notify) = notify {
+                        let instant = time::Instant::now();
                         handle_notify(notify, &mut state, nvim.clone());
+                        println!("handled notify in: {}ms",
+                                 instant.elapsed().as_millis())
                     }
 
                     let grid = state.grids.get(&state.current_grid).unwrap();
@@ -178,10 +181,13 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
     for event in events {
         match event {
             RedrawEvent::GridLine(lines) => {
+                let instant = time::Instant::now();
                 for line in lines {
                     let grid = state.grids.get(&line.grid).unwrap();
                     grid.put_line(line);
                 }
+                println!("handled grid_line in: {}ms",
+                         instant.elapsed().as_millis())
             }
             RedrawEvent::GridCursorGoto(grid_id, row, col) => {
 

@@ -109,7 +109,7 @@ impl Grid {
         let hl_defs = self.hl_defs.lock().unwrap();
         let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
         let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
-        let hl = hl_defs.get(&leaf.hl_id()).unwrap();
+        let hl = hl_defs.get(&leaf.hl_id).unwrap();
         ctx.cursor_color = hl.foreground.unwrap_or(ctx.default_fg);
 
         // Mark the new cursor position to be drawn.

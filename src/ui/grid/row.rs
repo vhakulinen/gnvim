@@ -8,39 +8,36 @@ pub struct Segment<'a> {
 
 #[derive(Clone)]
 pub struct Leaf {
-    text: String,
-    hl_id: u64,
+    pub text: String,
+    pub hl_id: u64,
+    pub len: usize,
 }
 
 impl Leaf {
     fn new(text: String, hl_id: u64) -> Self {
         Leaf {
+            len: text.chars().count(),
             text,
             hl_id,
         }
     }
 
-    fn len(&self) -> usize {
-        self.text.chars().count()
-    }
-
-    fn weight(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    pub fn text(&self) -> String {
-        self.text.clone()
-    }
-
-    #[inline]
-    pub fn hl_id(&self) -> u64 {
-        self.hl_id
-    }
-
     fn split(self, at: usize) -> (Rope, Rope) {
-        let left = self.text.chars().take(at).collect::<String>();
-        let right = self.text.chars().skip(at).collect::<String>();
+        //let mut chars = self.text.chars();
+        //let left = chars.by_ref().take(at).collect::<String>();
+        //let right = chars.collect::<String>();
+
+        let mut i = 0;
+        let mut left = String::with_capacity(at);
+        let mut right = String::with_capacity(self.len - at);
+        for c in self.text.chars() {
+            if i < at {
+                left.push(c);
+            } else {
+                right.push(c);
+            }
+            i += 1;
+        }
 
         (
             Rope::new(left, self.hl_id),
@@ -62,7 +59,7 @@ impl Rope {
 
     fn len(&self) -> usize {
         match self {
-            Rope::Leaf(leaf) => leaf.len(),
+            Rope::Leaf(leaf) => leaf.len,
             Rope::Node(left, right) => {
                 left.len() + right.len()
             }
@@ -71,7 +68,7 @@ impl Rope {
 
     pub fn weight(&self) -> usize {
         match self {
-            Rope::Leaf(leaf) => leaf.weight(),
+            Rope::Leaf(leaf) => leaf.len,
             Rope::Node(left, right) => {
                 right.weight() + left.weight()
             }
@@ -80,7 +77,7 @@ impl Rope {
 
     pub fn text(&self) -> String {
         match self {
-            Rope::Leaf(leaf) => leaf.text(),
+            Rope::Leaf(leaf) => leaf.text.clone(),
             Rope::Node(left, right) => {
                 left.text() + &right.text()
             }
@@ -97,6 +94,7 @@ impl Rope {
                     Rope::Leaf(other) => {
                         if other.hl_id == leaf.hl_id {
                             leaf.text += &other.text;
+                            leaf.len += other.text.chars().count();
                             Rope::Leaf(leaf)
                         } else {
                             Rope::Node(
@@ -110,8 +108,8 @@ impl Rope {
                 }
             },
             Rope::Node(left, right) => {
-                let right = right.concat(other);
-                left.concat(right)
+                //let right = right.concat(other);
+                left.concat(right.concat(other))
             }
         }
     }
@@ -119,7 +117,7 @@ impl Rope {
     pub fn split(self, at: usize) -> (Rope, Rope) {
         match self {
             Rope::Leaf(leaf) => {
-                if at == leaf.len() {
+                if at == leaf.len {
                     let hl_id = leaf.hl_id;
                     (Rope::Leaf(leaf), Rope::new(String::new(), hl_id))
                 } else {
@@ -180,7 +178,7 @@ impl Rope {
 
         let leafs = self.leafs();
         for leaf in leafs {
-            if leaf.len() == 0 {
+            if leaf.len == 0 {
                 continue;
             }
 
@@ -197,20 +195,20 @@ impl Rope {
 
 #[derive(Clone)]
 pub struct Row {
-    rope: Rope,
+    rope: Option<Rope>,
     len: usize,
 }
 
 impl Row {
     pub fn new(len: usize) -> Self {
         Row {
-            rope: Rope::new(" ".repeat(len), 0),
+            rope: Some(Rope::new(" ".repeat(len), 0)),
             len: len,
         }
     }
 
     pub fn leaf_at(&self, at: usize) -> &Leaf {
-        self.rope.leaf_at(at)
+        self.rope.as_ref().unwrap().leaf_at(at)
     }
 
     pub fn len(&self) -> usize {
@@ -218,30 +216,30 @@ impl Row {
     }
 
     pub fn clear(&mut self) {
-        self.rope = Rope::new(" ".repeat(self.len), 0);
+        self.rope = Some(Rope::new(" ".repeat(self.len), 0));
     }
 
     pub fn clear_range(&mut self, from: usize, to: usize) {
-        let (left, right) = self.rope.clone().split(from);
+        let (left, right) = self.rope.take().unwrap().split(from);
         let (_, right) = right.split(to - from);
         let middle = Rope::new(" ".repeat(to - from), 0);
         let left = left.concat(middle);
-        self.rope = left.concat(right);
+        self.rope = Some(left.concat(right));
     }
 
     pub fn copy_range(&self, from: usize, to: usize) -> Rope {
-        let (_, rope) = self.rope.clone().split(from);
+        let (_, rope) = self.rope.as_ref().unwrap().clone().split(from);
         let (rope, _) = rope.split(to - from);
         rope
     }
 
     pub fn insert_rope_at(&mut self, at: usize, rope: Rope) {
 
-        let (left, right) = self.rope.clone().split(at);
+        let (left, right) = self.rope.take().unwrap().split(at);
         let (_, right) = right.split(rope.len());
-        self.rope = left.concat(rope).concat(right);
+        self.rope = Some(left.concat(rope).concat(right));
 
-        assert_eq!(self.rope.len(), self.len);
+        assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
     }
 
 
@@ -249,27 +247,30 @@ impl Row {
         let mut at = line.col_start as usize;
         for cell in &line.cells {
             let text = cell.text.repeat(cell.repeat as usize);
-            let len = text.chars().count();
+            let len = cell.repeat as usize;
 
-            let other = Rope::new(text, cell.hl_id.unwrap_or(self.rope.leaf_at(at).hl_id));
+            let other = Rope::new(
+                text,
+                cell.hl_id.unwrap_or(self.rope.as_ref().unwrap().leaf_at(at).hl_id));
             self.insert_rope_at(at, other);
 
             at += len;
         }
 
-        self.rope = self.rope.optimize();
-        assert_eq!(self.rope.len(), self.len);
+        self.rope = Some(self.rope.take().unwrap().optimize());
+        assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
 
         let mut segs = vec!();
         let mut start = 0;
-        let leafs = self.rope.leafs();
+        let rope = self.rope.as_ref().unwrap();
+        let leafs = rope.leafs();
         for leaf in leafs {
             // If we're past the affected range, break early.
             if start > at {
                 break;
             }
 
-            let len = leaf.len();
+            let len = leaf.len;
             let end = start + len;
 
             // If we're not yet in the affected range, continue to the next leaf.
@@ -305,7 +306,7 @@ mod tests {
         b.iter(move || {
             let rope = Rope::new(String::from("first"), 0);
             let rope2 = Rope::new(String::from("second"), 0);
-            rope.concat(rope2);
+            rope.concat(rope2)
         });
     }
 
@@ -317,7 +318,7 @@ mod tests {
         let rope = rope.concat(Rope::new(String::from("fourth"), 3));
 
         b.iter(move || {
-            rope.clone().split(3);
+            rope.clone().split(3)
         });
     }
 
@@ -327,7 +328,7 @@ mod tests {
         b.iter(move || {
             let mut row = Row::new(30);
             let rope = Rope::new(String::from("first"), 0);
-            row.insert_rope_at(5, rope);
+            row.insert_rope_at(5, rope)
         });
     }
 
@@ -336,7 +337,7 @@ mod tests {
 
         b.iter(move || {
             let mut leaf = Leaf::new(String::from("123123123"), 0);
-            leaf.split(4);
+            leaf.split(4)
         });
     }
 
@@ -351,17 +352,9 @@ mod tests {
     #[test]
     fn test_leaf_len() {
         let leaf = Leaf::new(String::from("123"), 0);
-        assert_eq!(leaf.len(), 3);
+        assert_eq!(leaf.len, 3);
         let leaf = Leaf::new(String::from("✗ä"), 0);
-        assert_eq!(leaf.len(), 2);
-    }
-
-    #[test]
-    fn test_leaf_weight() {
-        let leaf = Leaf::new(String::from("123"), 0);
-        assert_eq!(leaf.weight(), 3);
-        let leaf = Leaf::new(String::from("✗ä"), 0);
-        assert_eq!(leaf.weight(), 2);
+        assert_eq!(leaf.len, 2);
     }
 
     #[test]
@@ -436,16 +429,16 @@ mod tests {
 
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 3);
-        assert_eq!(leafs.get(0).unwrap().text(), "first");
-        assert_eq!(leafs.get(1).unwrap().text(), "second");
-        assert_eq!(leafs.get(2).unwrap().text(), "third");
+        assert_eq!(leafs.get(0).unwrap().text, "first");
+        assert_eq!(leafs.get(1).unwrap().text, "second");
+        assert_eq!(leafs.get(2).unwrap().text, "third");
 
         let rope = Rope::new(String::from("first"), 0);
         let rope = rope.concat(Rope::new(String::from("second"), 0));
 
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 1);
-        assert_eq!(leafs.get(0).unwrap().text(), "firstsecond");
+        assert_eq!(leafs.get(0).unwrap().text, "firstsecond");
     }
 
     #[test]
@@ -454,7 +447,7 @@ mod tests {
         let rope = Rope::new(String::from("first"), 0);
         let rope = rope.concat(Rope::new(String::from("second"), 0));
         let rope = rope.concat(Rope::new(String::from("third"), 0));
-        row.rope = rope;
+        row.rope = Some(rope);
 
         let range = row.copy_range(2, 10);
         assert_eq!(range.text(), "rstsecon")
@@ -469,17 +462,17 @@ mod tests {
 
         row.insert_rope_at(5, rope);
 
-        assert_eq!(row.rope.text(), "     firstsecondthird         ");
+        assert_eq!(row.rope.unwrap().text(), "     firstsecondthird         ");
     }
 
     #[test]
     fn test_row_clear_range() {
         let mut row = Row::new(10);
-        row.rope = Rope::new(String::from("0123456789"), 0);
+        row.rope = Some(Rope::new(String::from("0123456789"), 0));
 
         row.clear_range(2, 5);
 
-        assert_eq!(row.rope.text(), "01   56789");
+        assert_eq!(row.rope.unwrap().text(), "01   56789");
     }
 
     #[test]
@@ -519,8 +512,8 @@ mod tests {
 
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 2);
-        assert_eq!(leafs[0].text(), "firstthird");
-        assert_eq!(leafs[1].text(), "fourth");
+        assert_eq!(leafs[0].text, "firstthird");
+        assert_eq!(leafs[1].text, "fourth");
     }
 
     #[test]
@@ -547,6 +540,6 @@ mod tests {
 
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 1);
-        assert_eq!(leafs[0].text(), "firstthird");
+        assert_eq!(leafs[0].text, "firstthird");
     }
 }

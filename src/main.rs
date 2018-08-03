@@ -1,3 +1,4 @@
+#![feature(duration_as_u128)]
 #![feature(test)]
 
 extern crate cairo;
