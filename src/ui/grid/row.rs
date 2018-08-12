@@ -22,26 +22,21 @@ impl Leaf {
         }
     }
 
+    #[inline]
     fn split(self, at: usize) -> (Rope, Rope) {
-        //let mut chars = self.text.chars();
-        //let left = chars.by_ref().take(at).collect::<String>();
-        //let right = chars.collect::<String>();
-
-        let mut i = 0;
         let mut left = String::with_capacity(at);
         let mut right = String::with_capacity(self.len - at);
-        for c in self.text.chars() {
+        for (i, c) in self.text.chars().enumerate() {
             if i < at {
                 left.push(c);
             } else {
                 right.push(c);
             }
-            i += 1;
         }
 
         (
-            Rope::new(left, self.hl_id),
-            Rope::new(right, self.hl_id),
+            Rope::Leaf(Leaf::new(left, self.hl_id)),
+            Rope::Leaf(Leaf::new(right, self.hl_id)),
         )
     }
 }
@@ -57,6 +52,7 @@ impl Rope {
         Rope::Leaf(Leaf::new(base, hl_id))
     }
 
+    #[inline]
     fn len(&self) -> usize {
         match self {
             Rope::Leaf(leaf) => leaf.len,
@@ -66,6 +62,7 @@ impl Rope {
         }
     }
 
+    #[inline]
     pub fn weight(&self) -> usize {
         match self {
             Rope::Leaf(leaf) => leaf.len,
@@ -93,8 +90,9 @@ impl Rope {
                 match other {
                     Rope::Leaf(other) => {
                         if other.hl_id == leaf.hl_id {
-                            leaf.text += &other.text;
-                            leaf.len += other.text.chars().count();
+                            leaf.text.push_str(&other.text);
+                            //leaf.text += &other.text;
+                            leaf.len += other.len;
                             Rope::Leaf(leaf)
                         } else {
                             Rope::Node(
@@ -114,7 +112,7 @@ impl Rope {
         }
     }
 
-    pub fn split(self, at: usize) -> (Rope, Rope) {
+    pub fn split(self, mut at: usize) -> (Rope, Rope) {
         match self {
             Rope::Leaf(leaf) => {
                 if at == leaf.len {
@@ -132,7 +130,7 @@ impl Rope {
                     let (l, r) = left.split(at);
                     (l, r.concat(*right))
                 } else {
-                    let at = at - left.len();
+                    at = at - weight;
                     let (l, r) = right.split(at);
                     (left.concat(l), r)
                 }
@@ -207,6 +205,7 @@ impl Row {
         }
     }
 
+    #[inline]
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         self.rope.as_ref().unwrap().leaf_at(at)
     }
@@ -220,10 +219,13 @@ impl Row {
     }
 
     pub fn clear_range(&mut self, from: usize, to: usize) {
+        let middle_len = to - from;
+
         let (left, right) = self.rope.take().unwrap().split(from);
-        let (_, right) = right.split(to - from);
-        let middle = Rope::new(" ".repeat(to - from), 0);
+        let (_, right) = right.split(middle_len);
+        let middle = Rope::new(" ".repeat(middle_len), 0);
         let left = left.concat(middle);
+
         self.rope = Some(left.concat(right));
     }
 
@@ -301,6 +303,16 @@ mod tests {
     use super::*;
 
     #[bench]
+    fn bench_row_clear_range(b: &mut Bencher) {
+        let mut row = Row::new(10);
+        row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
+
+        b.iter(move || {
+            row.clone().clear_range(3, 6)
+        });
+    }
+
+    #[bench]
     fn bench_rope_concat(b: &mut Bencher) {
 
         b.iter(move || {
@@ -316,6 +328,8 @@ mod tests {
         let rope = rope.concat(Rope::new(String::from("second"), 0));
         let rope = rope.concat(Rope::new(String::from("third"), 2));
         let rope = rope.concat(Rope::new(String::from("fourth"), 3));
+
+        //let rope = rope.optimize();
 
         b.iter(move || {
             rope.clone().split(3)

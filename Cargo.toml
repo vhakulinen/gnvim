@@ -7,7 +7,8 @@ authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 debug = true
 
 [dependencies]
-neovim-lib = "0.5"
+#neovim-lib = "0.5"
+neovim-lib = { git = "https://github.com/vhakulinen/neovim-lib", branch = "add-newgrid-external" }
 
 #gio = "0.4"
 gio = { git = "https://github.com/gtk-rs/gio" }
@@ -28,5 +29,5 @@ features = ["v3_18"]
 [dependencies.pango]
 git = "https://github.com/gtk-rs/pango"
 
-[patch.'https://github.com/rust-lang/crates.io-index']
-neovim-lib = { git = "https://github.com/vhakulinen/neovim-lib", branch = "add-newgrid-external" }
+#[patch.crates-io]
+#neovim-lib = { git = "https://github.com/vhakulinen/neovim-lib", branch = "add-newgrid-external" }
