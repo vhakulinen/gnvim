@@ -7,27 +7,18 @@ authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 debug = true
 
 [dependencies]
-#neovim-lib = "0.5"
-neovim-lib = { git = "https://github.com/vhakulinen/neovim-lib", branch = "add-newgrid-external" }
 
-#gio = "0.4"
-gio = { git = "https://github.com/gtk-rs/gio" }
-#cairo-rs = "0.4"
-cairo-rs = { git = "https://github.com/gtk-rs/cairo" }
-#pango = "0.4"
-#pangocairo = "0.5"
-#glib = "0.5"
-pangocairo = { git = "https://github.com/gtk-rs/pangocairo" }
-glib = { git = "https://github.com/gtk-rs/glib" }
-gdk = { git = "https://github.com/gtk-rs/gdk" }
+gio = "0.5"
+cairo-rs = "0.5"
+pango = "0.5"
+pangocairo = "0.6"
+glib = "0.6"
+gdk = "0.9"
 
 [dependencies.gtk]
-#version = "0.4"
-git = "https://github.com/gtk-rs/gtk"
+version = "0.5"
 features = ["v3_18"]
 
-[dependencies.pango]
-git = "https://github.com/gtk-rs/pango"
-
-#[patch.crates-io]
-#neovim-lib = { git = "https://github.com/vhakulinen/neovim-lib", branch = "add-newgrid-external" }
+[dependencies.neovim-lib]
+#version = "0.5"
+git = "https://github.com/daa84/neovim-lib"
