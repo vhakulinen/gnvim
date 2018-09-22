@@ -230,6 +230,20 @@ impl Grid {
 
         (rows, cols)
     }
+
+    pub fn get_row_text(&self, row: usize) -> String {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+
+        ctx.rows.get(row).unwrap().text()
+    }
+
+    pub fn hl_id_at(&self, row: usize, col: usize) -> u64 {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+
+        ctx.rows.get(row).unwrap().leaf_at(col).hl_id
+    }
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {

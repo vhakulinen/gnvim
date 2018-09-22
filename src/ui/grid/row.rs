@@ -1,4 +1,4 @@
-use nvim_bridge::GridLineSegment;
+use nvim_bridge::{GridLineSegment, Cell as NvimCell};
 use nvim_bridge;
 
 pub struct Segment<'a> {
@@ -51,6 +51,16 @@ pub enum Rope {
 impl Rope {
     fn new(base: String, hl_id: u64) -> Self {
         Rope::Leaf(Leaf::new(base, hl_id))
+    }
+
+    fn from_nvim_cells(cells: &Vec<NvimCell>) -> Self {
+        let mut rope = Rope::new(String::new(), 0);
+        for cell in cells {
+            let leaf = Leaf::new(cell.text.repeat(cell.repeat as usize), cell.hl_id);
+            rope = rope.concat(Rope::Leaf(leaf));
+        }
+
+        rope
     }
 
     #[inline]
@@ -206,6 +216,10 @@ impl Row {
         }
     }
 
+    pub fn text(&self) -> String {
+        self.rope.as_ref().unwrap().text()
+    }
+
     #[inline]
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         self.rope.as_ref().unwrap().leaf_at(at)
@@ -245,20 +259,13 @@ impl Row {
         assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
     }
 
-
     pub fn update(&mut self, line: &GridLineSegment) -> Vec<Segment> {
-        let mut at = line.col_start as usize;
-        for cell in &line.cells {
-            let text = cell.text.repeat(cell.repeat as usize);
-            let len = cell.repeat as usize;
 
-            let other = Rope::new(
-                text,
-                cell.hl_id.unwrap_or(self.rope.as_ref().unwrap().leaf_at(at).hl_id));
-            self.insert_rope_at(at, other);
-
-            at += len;
-        }
+        let other = Rope::from_nvim_cells(&line.cells);
+        let other_len = other.len();
+        let col_start = line.col_start as usize;
+        let other_end = col_start + other_len;
+        self.insert_rope_at(col_start, other);
 
         self.rope = Some(self.rope.take().unwrap().optimize());
         assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
@@ -269,7 +276,7 @@ impl Row {
         let leafs = rope.leafs();
         for leaf in leafs {
             // If we're past the affected range, break early.
-            if start > at {
+            if start > other_end {
                 break;
             }
 
@@ -277,7 +284,7 @@ impl Row {
             let end = start + len;
 
             // If we're not yet in the affected range, continue to the next leaf.
-            if end < line.col_start as usize {
+            if end < col_start {
                 start = end;
                 continue;
             }
@@ -317,16 +324,71 @@ mod tests {
                     cells: vec!(
                         nvim_bridge::Cell {
                             text: String::from("1"),
-                            hl_id: None,
+                            hl_id: 1,
                             repeat: 3,
                         },
                         nvim_bridge::Cell {
                             text: String::from("1"),
-                            hl_id: None,
+                            hl_id: 1,
                             repeat: 3,
                         },
                     )});
         });
+    }
+
+    #[bench]
+    fn bench_row_update2(b: &mut Bencher) {
+        let mut row = Row::new(10);
+        row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
+
+        b.iter(move || {
+            row.clone()
+                .update(&GridLineSegment{
+                    grid: 0,
+                    row: 0,
+                    col_start: 3,
+                    cells: vec!(
+                        nvim_bridge::Cell {
+                            text: String::from("1"),
+                            hl_id: 1,
+                            repeat: 3,
+                        },
+                        nvim_bridge::Cell {
+                            text: String::from("1"),
+                            hl_id: 2,
+                            repeat: 3,
+                        },
+                    )});
+        });
+    }
+
+    #[test]
+    fn test_rope_from_nvim_cells() {
+        let cells = vec!(
+            nvim_bridge::Cell {
+                text: String::from("1"),
+                hl_id: 1,
+                repeat: 3,
+            },
+            nvim_bridge::Cell {
+                text: String::from("2"),
+                hl_id: 2,
+                repeat: 3,
+            });
+
+        let rope = Rope::from_nvim_cells(&cells);
+
+        assert_eq!(rope.text(), "111222");
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 3);
+        assert_eq!(leafs[1].hl_id, 1);
+        assert_eq!(leafs[2].hl_id, 2);
+
+        let rope = rope.optimize();
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 2);
+        assert_eq!(leafs[0].hl_id, 1);
+        assert_eq!(leafs[1].hl_id, 2);
     }
 
     #[bench]

@@ -167,7 +167,7 @@ impl ModeInfo {
             "name" => {}
             "mouse_shape" => {}
             _ => {
-                panic!("Unknown mode_info property: {}", prop);
+                println!("Unknown mode_info property: {}", prop);
             }
         }
     }
@@ -175,7 +175,7 @@ impl ModeInfo {
 
 pub struct Cell {
     pub text: String,
-    pub hl_id: Option<u64>,
+    pub hl_id: u64,
     pub repeat: u64,
 }
 
@@ -297,7 +297,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let grid = try_u64!(entry[0]);
                     let row = try_u64!(entry[1]);
                     let col_start = try_u64!(entry[2]);
-                    let mut cells = vec!();
+                    let mut cells: Vec<Cell> = vec!();
 
                     for entry in try_array!(entry[3]) {
                         let entry = try_array!(entry);
@@ -313,7 +313,16 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                             1
                         };
 
-                        cells.push(Cell{hl_id, repeat, text: String::from(text)});
+                        let hl_id = if let Some(hl_id) = hl_id {
+                            hl_id
+                        } else {
+                            cells.last().unwrap().hl_id
+                        };
+
+                        cells.push(Cell{
+                            hl_id,
+                            repeat,
+                            text: String::from(text)});
                     }
 
                     lines.push(GridLineSegment{grid, row, col_start, cells});

@@ -187,7 +187,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                     grid.put_line(line);
                 }
                 println!("handled grid_line in: {}ms ({} lines)",
-                         instant.elapsed().as_millis(), lines.len())
+                         instant.elapsed().as_millis(), lines.len());
             }
             RedrawEvent::GridCursorGoto(grid_id, row, col) => {
 
