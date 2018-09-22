@@ -1,4 +1,5 @@
 use nvim_bridge::GridLineSegment;
+use nvim_bridge;
 
 pub struct Segment<'a> {
     pub leaf: &'a Leaf,
@@ -161,7 +162,7 @@ impl Rope {
                 if at <= weight {
                     left.leaf_at(at)
                 } else {
-                    let at = at - left.len();
+                    let at = at - weight;
                     right.leaf_at(at)
                 }
             }
@@ -301,6 +302,32 @@ mod tests {
     use self::test::Bencher;
 
     use super::*;
+
+    #[bench]
+    fn bench_row_update(b: &mut Bencher) {
+        let mut row = Row::new(10);
+        row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
+
+        b.iter(move || {
+            row.clone()
+                .update(&GridLineSegment{
+                    grid: 0,
+                    row: 0,
+                    col_start: 3,
+                    cells: vec!(
+                        nvim_bridge::Cell {
+                            text: String::from("1"),
+                            hl_id: None,
+                            repeat: 3,
+                        },
+                        nvim_bridge::Cell {
+                            text: String::from("1"),
+                            hl_id: None,
+                            repeat: 3,
+                        },
+                    )});
+        });
+    }
 
     #[bench]
     fn bench_row_clear_range(b: &mut Bencher) {
