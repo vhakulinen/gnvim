@@ -46,9 +46,22 @@ impl UI {
 
         let grid = Grid::new(1, &window.clone().upcast::<gtk::Widget>().downcast::<gtk::Container>().unwrap(), hl_defs.clone());
         let nvim_ref = nvim.clone();
+        let source_id = Arc::new(Mutex::new(None));
         grid.connect_da_resize(move |rows, cols| {
-            let mut nvim = nvim_ref.lock().unwrap();
-            nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+            let nvim_ref = nvim_ref.clone();
+            let source_id = source_id.clone();
+            let mut source_id = source_id.lock().unwrap();
+
+            let new = glib::timeout_add(30, move || {
+                let mut nvim = nvim_ref.lock().unwrap();
+                nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+                Continue(false)
+            });
+
+            if let Some(old) = source_id.replace(new) {
+                glib::source::source_remove(old);
+            }
+
             false
         });
 
