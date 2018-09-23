@@ -13,12 +13,35 @@ use neovim_lib::neovim_api::NeovimApi;
 use gtk::prelude::*;
 
 use nvim_bridge::{Notify, RedrawEvent, OptionSet, ModeInfo};
-use ui::color::Highlight;
+use ui::color::{Highlight, Color};
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
 
 type Grids = HashMap<u64, Grid>;
-pub type HlDefs = HashMap<u64, Highlight>;
+//pub type HlDefs = HashMap<u64, Highlight>;
+
+#[derive(Default)]
+pub struct HlDefs {
+    hl_defs: HashMap<u64, Highlight>,
+
+    pub default_fg: Color,
+    pub default_bg: Color,
+    pub default_sp: Color,
+}
+
+impl HlDefs {
+    pub fn get_mut(&mut self, id: &u64) -> Option<&mut Highlight> {
+        self.hl_defs.get_mut(id)
+    }
+
+    pub fn get(&self, id: &u64) -> Option<&Highlight> {
+        self.hl_defs.get(id)
+    }
+
+    pub fn insert(&mut self, id: u64, hl: Highlight) -> Option<Highlight> {
+        self.hl_defs.insert(id, hl)
+    }
+}
 
 struct UIState {
     grids: Grids,
@@ -231,17 +254,15 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
 
-                {
-                    let mut hl_defs = state.hl_defs.lock().unwrap();
-                    let hl = hl_defs.get_mut(&0).unwrap();
-                    hl.foreground = Some(*fg);
-                    hl.background = Some(*bg);
-                    hl.special = Some(*sp);
-                }
+                let mut hl_defs = state.hl_defs.lock().unwrap();
+                hl_defs.default_fg = *fg;
+                hl_defs.default_bg = *bg;
+                hl_defs.default_sp = *sp;
 
-                for grid in (state.grids).values() {
-                    grid.set_default_colors(*fg, *bg, *sp);
-                }
+                let hl = hl_defs.get_mut(&0).unwrap();
+                hl.foreground = Some(*fg);
+                hl.background = Some(*bg);
+                hl.special = Some(*sp);
             }
             RedrawEvent::HlAttrDefine(defs) => {
                 let mut hl_defs = state.hl_defs.lock().unwrap();

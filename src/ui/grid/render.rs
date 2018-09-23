@@ -6,43 +6,40 @@ use pango::Attribute;
 use pangocairo;
 
 use nvim_bridge::GridLineSegment;
-use ui::grid::context::Context;
+use ui::grid::row::Segment;
+use ui::grid::context::{Context, CellMetrics};
 use ui::ui::HlDefs;
 use ui::color::{Highlight, Color};
 
+fn put_segments(da: &DrawingArea,
+                cr: &cairo::Context,
+                pango_context: &pango::Context,
+                cm: &CellMetrics,
+                hl_defs: &mut HlDefs,
+                segments: Vec<Segment>,
+                row: usize) {
 
-pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment, hl_defs: &mut HlDefs) {
-    let affected_segments = context.rows.get_mut(line.row as usize)
-        .expect(&format!("Failed to get row {}", line.row))
-        .update(line);
+    let cw = cm.width;
+    let ch = cm.height;
 
-    let row = line.row;
-    let cw = context.cell_metrics.width;
-    let ch = context.cell_metrics.height;
-    let cr = &context.cairo_context;
-
-    for seg in affected_segments {
-        context.current_hl = *hl_defs.get(&seg.leaf.hl_id).unwrap();
-
-        let hl = &context.current_hl;
+    for seg in segments {
+        let hl = *hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
         let (fg, bg) = if hl.reverse {
             (
-                hl.background.unwrap_or(context.default_bg),
-                hl.foreground.unwrap_or(context.default_fg),
+                hl.background.unwrap_or(hl_defs.default_bg),
+                hl.foreground.unwrap_or(hl_defs.default_fg),
             )
         } else {
             (
-                hl.foreground.unwrap_or(context.default_fg),
-                hl.background.unwrap_or(context.default_bg),
+                hl.foreground.unwrap_or(hl_defs.default_fg),
+                hl.background.unwrap_or(hl_defs.default_bg),
             )
         };
 
-        let s = &seg.leaf.text;
-        let len = seg.len;
         let x = seg.start as f64 * cw;
         let y = row as f64 * ch;
-        let w = len as f64 * cw;
+        let w = seg.len as f64 * cw;
         let h = ch;
 
         cr.save();
@@ -62,35 +59,30 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             attrs.insert(attr);
         }
 
-        let items = pango::itemize(&context.pango_context, s, 0, s.len() as i32, &attrs , None);
-
         cr.save();
         cr.set_source_rgb(fg.r, fg.g, fg.b);
+
+        seg.leaf.update_glyphs(&pango_context, &attrs);
         let mut offset = 0.0;
-        for item in items {
+        for glyphs in seg.leaf.glyphs() {
+            cr.move_to(x + offset, y + cm.ascent);
+            pangocairo::functions::show_glyph_string(&cr, &glyphs.font, &mut glyphs.glyphs);
 
-            let a = item.analysis();
-            let font = a.font();
-            let mut glyphs = pango::GlyphString::new();
-            pango::shape(s, &a, &mut glyphs);
-
-            cr.move_to(x + offset, y + context.cell_metrics.ascent);
-            pangocairo::functions::show_glyph_string(&cr, &font, &mut glyphs);
-
-            offset += glyphs.get_width() as f64;
+            offset += glyphs.char_count as f64 * cw;
+            //offset += glyphs.glyphs.get_width() as f64;
         }
 
         // Since we can't (for some reason) use pango attributes to draw
         // underline and undercurl, we'll have to do that manually.
-        let sp = hl.special.unwrap_or(context.default_sp);
+        let sp = hl.special.unwrap_or(hl_defs.default_sp);
         cr.set_source_rgb(sp.r, sp.g, sp.b);
         if hl.undercurl {
             pangocairo::functions::show_error_underline(
                 cr,
                 x,
-                y + h + context.cell_metrics.underline_position,
+                y + h + cm.underline_position,
                 w,
-                context.cell_metrics.underline_thickness * 2.0);
+                cm.underline_thickness * 2.0);
         }
         if hl.underline {
             // TODO(ville): The ui.txt doc clearly states that underline and
@@ -98,11 +90,11 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
             //              (short) test, I only got white special color for
             //              underline - which would be _ok_ except the
             //              background was also white so the underline was not
-            //              visible unless the underlined text hand some glyphs
+            //              visible unless the underlined text had some glyphs
             //              under the underline.
             cr.set_source_rgb(fg.r, fg.g, fg.b);
-            let y = y + h + context.cell_metrics.underline_position;
-            cr.rectangle(x, y, w, context.cell_metrics.underline_thickness);
+            let y = y + h + cm.underline_position;
+            cr.rectangle(x, y, w, cm.underline_thickness);
             cr.fill();
         }
 
@@ -114,11 +106,36 @@ pub fn put_line(da: &DrawingArea, context: &mut Context, line: &GridLineSegment,
     }
 }
 
-pub fn clear(da: &DrawingArea, ctx: &Context) {
+pub fn put_line(da: &DrawingArea,
+                context: &mut Context,
+                line: &GridLineSegment,
+                hl_defs: &mut HlDefs) {
+    let mut affected_segments = context.rows.get_mut(line.row as usize)
+        .expect(&format!("Failed to get row {}", line.row))
+        .update(line);
+
+    let row = line.row;
+
+    // NOTE(ville): I haven't noticed any cases where a character is overflowing
+    //              to the left. Probably doesn't apply to languages that goes
+    //              from right to left, instead of left to right.
+    // Rendering the segments in reversed order fixes issues when some character
+    // is overflowing to the right.
+    affected_segments.reverse();
+    put_segments(da,
+                 &context.cairo_context,
+                 &context.pango_context,
+                 &context.cell_metrics,
+                 hl_defs,
+                 affected_segments,
+                 row as usize);
+}
+
+pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
     let cr = &ctx.cairo_context;
     let w = da.get_allocated_width();
     let h = da.get_allocated_height();
-    let bg = &ctx.default_bg;
+    let bg = &hl_defs.default_bg;
 
     cr.save();
     cr.set_source_rgb(bg.r, bg.g, bg.b);
@@ -129,10 +146,10 @@ pub fn clear(da: &DrawingArea, ctx: &Context) {
     da.queue_draw_area(0, 0, w, h);
 }
 
-pub fn scroll(da: &DrawingArea, ctx: &mut Context, reg: [u64;4], count: i64) {
+pub fn scroll(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs, reg: [u64;4], count: i64) {
     let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
-    let bg = &ctx.default_bg;
+    let bg = &hl_defs.default_bg;
 
     let s = cr.get_target();
 

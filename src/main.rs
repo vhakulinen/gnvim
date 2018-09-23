@@ -28,10 +28,8 @@ mod thread_guard;
 fn build(app: &gtk::Application) {
 
     let (tx, rx) = channel();
-    //let ui = Arc::new(Mutex::new(ui));
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
-    //bridge.attach_redraw_handler(ui);
 
     let mut cmd = Command::new("/home/ville/src/neovim/build/bin/nvim");
     cmd.arg("--embed")

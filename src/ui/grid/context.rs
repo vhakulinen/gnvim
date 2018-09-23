@@ -23,10 +23,6 @@ pub struct Context {
     pub cursor_cell_percentage: f64,
     pub cursor_color: Color,
 
-    pub default_fg: Color,
-    pub default_bg: Color,
-    pub default_sp: Color,
-
     pub current_hl: Highlight,
     pub active: bool,
 }
@@ -59,9 +55,6 @@ impl Context {
             cursor_cell_percentage: 1.0,
             cursor_color: Color::from_u64(0),
 
-            default_fg: Color::default(),
-            default_bg: Color::default(),
-            default_sp: Color::default(),
             current_hl: Highlight::default(),
             active: false,
         }

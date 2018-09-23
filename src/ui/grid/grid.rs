@@ -109,8 +109,8 @@ impl Grid {
         let hl_defs = self.hl_defs.lock().unwrap();
         let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
         let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
-        let hl = hl_defs.get(&leaf.hl_id).unwrap();
-        ctx.cursor_color = hl.foreground.unwrap_or(ctx.default_fg);
+        let hl = hl_defs.get(&leaf.hl_id()).unwrap();
+        ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
@@ -139,29 +139,22 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
         let da = self.da.borrow();
+        let hl_defs = self.hl_defs.lock().unwrap();
 
         for row in ctx.rows.iter_mut() {
             row.clear();
         }
 
-        render::clear(&da, ctx)
-    }
-
-    pub fn set_default_colors(&self, fg: Color, bg: Color, sp: Color) {
-        let mut ctx = self.context.borrow_mut();
-        let ctx = ctx.as_mut().unwrap();
-
-        ctx.default_fg = fg;
-        ctx.default_bg = bg;
-        ctx.default_sp = sp;
+        render::clear(&da, ctx, &hl_defs)
     }
 
     pub fn scroll(&self, reg: [u64;4], rows: i64, cols: i64) {
         let mut ctx = self.context.borrow_mut();
         let mut ctx = ctx.as_mut().unwrap();
         let da = self.da.borrow();
+        let hl_defs = self.hl_defs.lock().unwrap();
 
-        render::scroll(&da, &mut ctx, reg, rows);
+        render::scroll(&da, &mut ctx, &hl_defs, reg, rows);
     }
 
     pub fn set_active(&self, active: bool) {
@@ -242,7 +235,7 @@ impl Grid {
         let ctx = self.context.borrow();
         let ctx = ctx.as_ref().unwrap();
 
-        ctx.rows.get(row).unwrap().leaf_at(col).hl_id
+        ctx.rows.get(row).unwrap().leaf_at(col).hl_id()
     }
 }
 

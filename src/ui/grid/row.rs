@@ -1,17 +1,29 @@
+use pango;
+
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
 use nvim_bridge;
 
 pub struct Segment<'a> {
-    pub leaf: &'a Leaf,
+    pub leaf: &'a mut Leaf,
     pub start: usize,
     pub len: usize,
 }
 
 #[derive(Clone)]
+pub struct LeafGlyphs {
+    pub glyphs: pango::GlyphString,
+    pub font: pango::Font,
+    pub char_count: usize,
+}
+
+#[derive(Clone)]
 pub struct Leaf {
-    pub text: String,
-    pub hl_id: u64,
-    pub len: usize,
+    text: String,
+    hl_id: u64,
+    len: usize,
+
+    glyphs: Vec<LeafGlyphs>,
+    glyphs_valid: bool,
 }
 
 impl Leaf {
@@ -20,7 +32,60 @@ impl Leaf {
             len: text.chars().count(),
             text,
             hl_id,
+            glyphs: vec!(),
+            glyphs_valid: false,
         }
+    }
+
+    pub fn update_glyphs(&mut self, context: &pango::Context, attrs: &pango::AttrList) {
+        let text = self.text.as_str();
+
+        let items = pango::itemize(
+            context,
+            text,
+            0,
+            self.len as i32,
+            &attrs,
+            None);
+
+        self.glyphs = vec!();
+        for item in items {
+            let a = item.analysis();
+            let offset = item.offset() as usize;
+            let font = a.font();
+            let mut glyphs = pango::GlyphString::new();
+
+            pango::shape(
+                &self.text[offset..offset + item.length() as usize],
+                &a,
+                &mut glyphs);
+
+            let (ink, _) = glyphs.extents(&font);
+            println!("'{}' {:?}", text, ink.height / pango::SCALE);
+
+            self.glyphs.push(LeafGlyphs {
+                glyphs,
+                font,
+                char_count: item.num_chars() as usize,
+            })
+        }
+    }
+
+    pub fn glyphs(&mut self) -> &mut Vec<LeafGlyphs> {
+        &mut self.glyphs
+    }
+
+    pub fn hl_id(&self) -> u64 {
+        self.hl_id
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn append(&mut self, text: &str) {
+        self.len += text.chars().count();
+        self.text.push_str(text);
     }
 
     #[inline]
@@ -100,10 +165,11 @@ impl Rope {
                 // to us.
                 match other {
                     Rope::Leaf(other) => {
-                        if other.hl_id == leaf.hl_id {
-                            leaf.text.push_str(&other.text);
+                        if other.hl_id() == leaf.hl_id() {
+                            leaf.append(&other.text);
+                            //leaf.text.push_str(&other.text);
                             //leaf.text += &other.text;
-                            leaf.len += other.len;
+                            //leaf.len += other.len;
                             Rope::Leaf(leaf)
                         } else {
                             Rope::Node(
@@ -145,6 +211,19 @@ impl Rope {
                     let (l, r) = right.split(at);
                     (left.concat(l), r)
                 }
+            }
+        }
+    }
+
+    pub fn leafs_mut(&mut self) -> Vec<&mut Leaf> {
+        match self {
+            Rope::Leaf(leaf) => {
+                vec!(leaf)
+            }
+            Rope::Node(left, right) => {
+                let mut left = left.leafs_mut();
+                left.append(&mut right.leafs_mut());
+                left
             }
         }
     }
@@ -272,8 +351,8 @@ impl Row {
 
         let mut segs = vec!();
         let mut start = 0;
-        let rope = self.rope.as_ref().unwrap();
-        let leafs = rope.leafs();
+        let rope = self.rope.as_mut().unwrap();
+        let leafs = rope.leafs_mut();
         for leaf in leafs {
             // If we're past the affected range, break early.
             if start > other_end {
