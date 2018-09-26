@@ -60,6 +60,20 @@ impl Context {
         }
     }
 
+    pub fn update_font(&mut self, font_name: &str) {
+        let mut font_desc = FontDescription::from_string(font_name);
+
+        // Make sure we dont have a font with size of 0, otherwise we'll
+        // have problems later.
+        if font_desc.get_size() == 0 {
+            font_desc.set_size(12 * pango::SCALE);
+        }
+
+        self.pango_context.set_font_description(&font_desc);
+        self.font_desc = font_desc;
+        self.cell_metrics.update(&self.pango_context, &self.font_desc);
+    }
+
     pub fn update(&mut self, da: &DrawingArea) {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();

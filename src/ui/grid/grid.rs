@@ -189,18 +189,7 @@ impl Grid {
     pub fn set_font(&self, name: String) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-
-        let font_desc = FontDescription::from_string(&name);
-        ctx.font_desc = font_desc;
-
-        // Update the font metrics according to the new font. The parent (e.g.
-        // the main UI) should tell neovim to resize according to the new size
-        // if needed - this is when the main grid gets new font.
-        // This is basically done by calling grid.calc_size and passing
-        // the size to neovim.
-        ctx.cell_metrics.update(&ctx.pango_context, &ctx.font_desc);
-
-        // TODO(ville): How to handle font updates on other grids than the main grid?
+        ctx.update_font(&name);
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {
