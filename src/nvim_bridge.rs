@@ -157,17 +157,15 @@ impl ModeInfo {
                 }
                 self.cell_percentage = val as f64 / 100.0;
             }
-            "blinkwait" => {}
-            "blinkon" => {}
-            "blinkoff" => {}
-            "attr_id" => {}
-            // NOTE(ville): This is documented as "hl_lm".
-            "attr_id_lm" => {}
-            "short_name" => {}
-            "name" => {}
-            "mouse_shape" => {}
+            //"blinkwait" => {}
+            //"blinkon" => {}
+            //"blinkoff" => {}
+            //"attr_id" => {}
+            //"attr_id_lm" => {}
+            //"short_name" => {}
+            //"name" => {}
+            //"mouse_shape" => {}
             _ => {
-                println!("Unknown mode_info property: {}", prop);
             }
         }
     }

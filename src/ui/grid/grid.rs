@@ -1,8 +1,12 @@
 use std::sync::{Arc, Mutex};
+use std::fmt::Display;
+use std::fmt;
 
 use pango::FontDescription;
 use cairo;
-use gtk::{DrawingArea};
+use gdk::{EventMask, ModifierType};
+use gdk;
+use gtk::{DrawingArea, EventBox};
 use gtk;
 
 use cairo::prelude::*;
@@ -16,8 +20,39 @@ use ui::grid::row::Row;
 use ui::color::Color;
 use thread_guard::ThreadGuard;
 
+pub enum ScrollDirection {
+    Up,
+    Down,
+}
+
+impl Display for ScrollDirection {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ScrollDirection::Up => write!(fmt, "ScrollWheelUp"),
+            ScrollDirection::Down => write!(fmt, "ScrollWheelDown"),
+        }
+    }
+}
+
+pub enum MouseButton {
+    Left,
+    Middle,
+    Right,
+}
+
+impl Display for MouseButton {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MouseButton::Left => write!(fmt, "Left"),
+            MouseButton::Middle => write!(fmt, "Middle"),
+            MouseButton::Right => write!(fmt, "Right"),
+        }
+    }
+}
+
 pub struct Grid {
     da: ThreadGuard<DrawingArea>,
+    eb: ThreadGuard<EventBox>,
     context: Arc<ThreadGuard<Option<Context>>>,
     hl_defs: Arc<Mutex<HlDefs>>,
 }
@@ -49,13 +84,87 @@ impl Grid {
             Inhibit(false)
         });
 
-        container.add(&da);
+
+        let eb = EventBox::new();
+        eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
+
+        eb.add(&da);
+        container.add(&eb);
 
         Grid {
             da: ThreadGuard::new(da),
+            eb: ThreadGuard::new(eb),
             context: ctx,
             hl_defs,
         }
+    }
+
+    pub fn connect_scroll_events<F: 'static>(&self, f: F)
+        where F: Fn(ScrollDirection, u64, u64) -> Inhibit {
+        let eb = self.eb.borrow();
+        let ctx = self.context.clone();
+
+        eb.connect_scroll_event(move |_, e| {
+            let ctx = ctx.borrow();
+            let ctx = ctx.as_ref().unwrap();
+
+            let dir = match e.get_direction() {
+                gdk::ScrollDirection::Up => ScrollDirection::Up,
+                _ => ScrollDirection::Down,
+            };
+
+            let pos = e.get_position();
+            let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
+            let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
+
+            f(dir, row, col)
+        });
+    }
+
+    pub fn connect_motion_events<F: 'static>(&self, f: F)
+        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+        let eb = self.eb.borrow();
+        let ctx = self.context.clone();
+
+        eb.connect_motion_notify_event(move |_, e| {
+            let ctx = ctx.borrow();
+            let ctx = ctx.as_ref().unwrap();
+
+            let button = match e.get_state() {
+                ModifierType::BUTTON3_MASK => MouseButton::Right,
+                ModifierType::BUTTON2_MASK => MouseButton::Middle,
+                _ => MouseButton::Left,
+            };
+
+            let pos = e.get_position();
+            let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
+            let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
+
+            f(button, row, col)
+        });
+    }
+
+    pub fn connect_mouse_button_events<F: 'static>(&self, f: F)
+        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+        let eb = self.eb.borrow();
+        let ctx = self.context.clone();
+
+        eb.connect_button_press_event(move |_, e| {
+            let ctx = ctx.borrow();
+            let ctx = ctx.as_ref().unwrap();
+
+            let button = match e.get_button() {
+                3 => MouseButton::Right,
+                2 => MouseButton::Middle,
+                _ => MouseButton::Left,
+            };
+
+            let pos = e.get_position();
+            let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
+            let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
+
+            f(button, row, col)
+        });
     }
 
     pub fn connect_da_resize<F: 'static>(&self, f: F)
@@ -63,7 +172,6 @@ impl Grid {
         let da = self.da.borrow();
         let ctx = self.context.clone();
 
-        // TODO(ville): Set resize timeout so this wont be triggered constantly.
         da.connect_configure_event(move |da, _| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();

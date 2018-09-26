@@ -98,6 +98,36 @@ impl UI {
             false
         });
 
+        // Mouse button click events.
+        let nvim_ref = nvim.clone();
+        grid.connect_mouse_button_events(move |button, row, col| {
+            let mut nvim = nvim_ref.lock().unwrap();
+            let input = format!("<{}Mouse><{},{}>", button, col, row);
+            nvim.input(&input).expect("Couldn't send mouse input");
+
+            Inhibit(false)
+        });
+
+        // Mouse drag events.
+        let nvim_ref = nvim.clone();
+        grid.connect_motion_events(move |button, row, col| {
+            let mut nvim = nvim_ref.lock().unwrap();
+            let input = format!("<{}Drag><{},{}>", button, col, row);
+            nvim.input(&input).expect("Couldn't send mouse input");
+
+            Inhibit(false)
+        });
+
+        // Scrolling events.
+        let nvim_ref = nvim.clone();
+        grid.connect_scroll_events(move |dir, row, col| {
+            let mut nvim = nvim_ref.lock().unwrap();
+            let input = format!("<{}><{},{}>", dir, col, row);
+            nvim.input(&input).expect("Couldn't send mouse input");
+
+            Inhibit(false)
+        });
+
         let mut grids = HashMap::new();
         grids.insert(1, grid);
 
