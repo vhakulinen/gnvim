@@ -1,5 +1,3 @@
-use pango;
-
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
 use nvim_bridge;
 
@@ -10,20 +8,10 @@ pub struct Segment<'a> {
 }
 
 #[derive(Clone)]
-pub struct LeafGlyphs {
-    pub glyphs: pango::GlyphString,
-    pub font: pango::Font,
-    pub char_count: usize,
-}
-
-#[derive(Clone)]
 pub struct Leaf {
     text: String,
     hl_id: u64,
     len: usize,
-
-    glyphs: Vec<LeafGlyphs>,
-    glyphs_valid: bool,
 }
 
 impl Leaf {
@@ -32,47 +20,11 @@ impl Leaf {
             len: text.chars().count(),
             text,
             hl_id,
-            glyphs: vec!(),
-            glyphs_valid: false,
         }
     }
 
-    pub fn update_glyphs(&mut self, context: &pango::Context, attrs: &pango::AttrList) {
-        let text = self.text.as_str();
-
-        let items = pango::itemize(
-            context,
-            text,
-            0,
-            self.len as i32,
-            &attrs,
-            None);
-
-        self.glyphs = vec!();
-        for item in items {
-            let a = item.analysis();
-            let offset = item.offset() as usize;
-            let font = a.font();
-            let mut glyphs = pango::GlyphString::new();
-
-            pango::shape(
-                &self.text[offset..offset + item.length() as usize],
-                &a,
-                &mut glyphs);
-
-            let (ink, _) = glyphs.extents(&font);
-            println!("'{}' {:?}", text, ink.height / pango::SCALE);
-
-            self.glyphs.push(LeafGlyphs {
-                glyphs,
-                font,
-                char_count: item.num_chars() as usize,
-            })
-        }
-    }
-
-    pub fn glyphs(&mut self) -> &mut Vec<LeafGlyphs> {
-        &mut self.glyphs
+    pub fn len(&self) -> usize {
+        self.len
     }
 
     pub fn hl_id(&self) -> u64 {

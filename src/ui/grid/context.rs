@@ -103,6 +103,7 @@ impl CellMetrics {
         self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
 
         self.underline_position = fm.get_underline_position() as f64 / pango::SCALE as f64;
+        // TODO(ville): make the underline thickness a bit thicker (one 10th of the cell height?).
         self.underline_thickness = fm.get_underline_thickness() as f64 / pango::SCALE as f64 * 2.0;
     }
 }

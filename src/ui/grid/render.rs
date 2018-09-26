@@ -62,14 +62,31 @@ fn put_segments(da: &DrawingArea,
         cr.save();
         cr.set_source_rgb(fg.r, fg.g, fg.b);
 
-        seg.leaf.update_glyphs(&pango_context, &attrs);
-        let mut offset = 0.0;
-        for glyphs in seg.leaf.glyphs() {
-            cr.move_to(x + offset, y + cm.ascent);
-            pangocairo::functions::show_glyph_string(&cr, &glyphs.font, &mut glyphs.glyphs);
+        let text = seg.leaf.text();
+        let items = pango::itemize(
+            pango_context,
+            text,
+            0,
+            seg.leaf.len() as i32,
+            &attrs,
+            None);
 
-            offset += glyphs.char_count as f64 * cw;
-            //offset += glyphs.glyphs.get_width() as f64;
+        let mut x_offset = 0.0;
+        for item in items {
+            let a = item.analysis();
+            let item_offset = item.offset() as usize;
+            let mut glyphs = pango::GlyphString::new();
+
+            pango::shape(
+                &text[item_offset..item_offset + item.length() as usize],
+                &a,
+                &mut glyphs);
+
+            cr.move_to(x + x_offset, y + cm.ascent);
+            pangocairo::functions::show_glyph_string(&cr, &a.font(), &mut glyphs);
+
+            x_offset += item.num_chars() as f64 * cw;
+            //x_offset += glyphs.glyphs.get_width() as f64;
         }
 
         // Since we can't (for some reason) use pango attributes to draw
@@ -80,7 +97,7 @@ fn put_segments(da: &DrawingArea,
             pangocairo::functions::show_error_underline(
                 cr,
                 x,
-                y + h + cm.underline_position,
+                y + h + cm.underline_position - cm.underline_thickness,
                 w,
                 cm.underline_thickness * 2.0);
         }
@@ -94,7 +111,7 @@ fn put_segments(da: &DrawingArea,
             //              under the underline.
             cr.set_source_rgb(fg.r, fg.g, fg.b);
             let y = y + h + cm.underline_position;
-            cr.rectangle(x, y, w, cm.underline_thickness);
+            cr.rectangle(x, y, w, cm.underline_thickness - cm.underline_thickness);
             cr.fill();
         }
 
@@ -110,11 +127,11 @@ pub fn put_line(da: &DrawingArea,
                 context: &mut Context,
                 line: &GridLineSegment,
                 hl_defs: &mut HlDefs) {
-    let mut affected_segments = context.rows.get_mut(line.row as usize)
+
+    let row = line.row as usize;
+    let mut affected_segments = context.rows.get_mut(row)
         .expect(&format!("Failed to get row {}", line.row))
         .update(line);
-
-    let row = line.row;
 
     // NOTE(ville): I haven't noticed any cases where a character is overflowing
     //              to the left. Probably doesn't apply to languages that goes
@@ -128,7 +145,7 @@ pub fn put_line(da: &DrawingArea,
                  &context.cell_metrics,
                  hl_defs,
                  affected_segments,
-                 row as usize);
+                 row);
 }
 
 pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
