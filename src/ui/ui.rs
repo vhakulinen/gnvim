@@ -18,7 +18,6 @@ use ui::grid::Grid;
 use thread_guard::ThreadGuard;
 
 type Grids = HashMap<u64, Grid>;
-//pub type HlDefs = HashMap<u64, Highlight>;
 
 #[derive(Default)]
 pub struct HlDefs {
@@ -72,18 +71,29 @@ impl UI {
         let source_id = Arc::new(Mutex::new(None));
         grid.connect_da_resize(move |rows, cols| {
             let nvim_ref = nvim_ref.clone();
-            let source_id = source_id.clone();
-            let mut source_id = source_id.lock().unwrap();
 
+            let source_id_moved = source_id.clone();
             let new = glib::timeout_add(30, move || {
                 let mut nvim = nvim_ref.lock().unwrap();
                 nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+
+                let source_id = source_id_moved.clone();
+                let mut source_id = source_id.lock().unwrap();
+                *source_id = None;
+
                 Continue(false)
             });
 
-            if let Some(old) = source_id.replace(new) {
-                glib::source::source_remove(old);
+            let source_id = source_id.clone();
+            let mut source_id = source_id.lock().unwrap();
+            {
+                let old = source_id.take();
+                if let Some(old) = old {
+                    glib::source::source_remove(old);
+                }
             }
+
+            *source_id = Some(new);
 
             false
         });
@@ -183,10 +193,7 @@ impl UI {
                     let mut state = state.lock().unwrap();
 
                     if let Ok(ref notify) = notify {
-                        let instant = time::Instant::now();
                         handle_notify(notify, &mut state, nvim.clone());
-                        println!("handled notify in: {}ms",
-                                 instant.elapsed().as_millis())
                     }
 
                     let grid = state.grids.get(&state.current_grid).unwrap();
@@ -217,13 +224,10 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
     for event in events {
         match event {
             RedrawEvent::GridLine(lines) => {
-                let instant = time::Instant::now();
                 for line in lines {
                     let grid = state.grids.get(&line.grid).unwrap();
                     grid.put_line(line);
                 }
-                println!("handled grid_line in: {}ms ({} lines)",
-                         instant.elapsed().as_millis(), lines.len());
             }
             RedrawEvent::GridCursorGoto(grid_id, row, col) => {
 

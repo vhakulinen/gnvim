@@ -117,8 +117,6 @@ fn put_segments(da: &DrawingArea,
 
         cr.restore();
 
-        // TODO(ville): Handle ink overflow (from glyphs and underline/undercurl).
-
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 }

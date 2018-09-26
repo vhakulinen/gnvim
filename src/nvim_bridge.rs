@@ -160,9 +160,9 @@ impl ModeInfo {
             "blinkwait" => {}
             "blinkon" => {}
             "blinkoff" => {}
-            "hl_id" => {}
+            "attr_id" => {}
             // NOTE(ville): This is documented as "hl_lm".
-            "id_lm" => {}
+            "attr_id_lm" => {}
             "short_name" => {}
             "name" => {}
             "mouse_shape" => {}
