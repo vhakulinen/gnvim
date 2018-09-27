@@ -2,5 +2,9 @@
 
 Highly experiemental.
 
-Requires latest master of neovim (at the time of writing:
-https://github.com/neovim/neovim/commit/85a7170f19cbad58607907e853ce605772d4d345).
+Requires latest master of neovim.
+
+# Running
+
+By default, gnvim will use `nvim` to run neovim. If you want to change that,
+you can use `--nvim` argument like so: `cargo run -- --nvim=/path/to/bin/nvim`.

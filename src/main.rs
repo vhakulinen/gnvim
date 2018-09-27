@@ -18,6 +18,7 @@ use neovim_lib::session::Session as NeovimSession;
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
+use std::env;
 
 mod nvim_bridge;
 mod ui;
@@ -29,7 +30,22 @@ fn build(app: &gtk::Application) {
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
-    let mut cmd = Command::new("/home/ville/src/neovim/build/bin/nvim");
+    //let nvim_path = env::args()
+        //.find(|s| {
+            //s == "nvim"
+        //})
+    let nvim_path = env::args()
+        .find(|arg| {
+            arg.starts_with("--nvim")
+        })
+        .and_then(|arg| {
+            arg.split("=").nth(1).map(str::to_owned)
+        })
+        .unwrap_or(String::from("nvim"));
+
+    println!("nvim: {:?}", nvim_path);
+
+    let mut cmd = Command::new(&nvim_path);
     cmd.arg("--embed")
         .arg("--headless")
         //.arg("-u")
