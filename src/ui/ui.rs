@@ -42,41 +42,75 @@ impl HlDefs {
     }
 }
 
+/// Internal structure for `UI` to work on.
 struct UIState {
+    /// All grids currently in the UI.
     grids: Grids,
+    /// Highlight definitions. This is shared across all grids.
     hl_defs: Arc<Mutex<HlDefs>>,
+    /// Mode infos. When a mode is activated, the activated mode is passed
+    /// to the gird(s).
     mode_infos: Vec<ModeInfo>,
+    /// Id of the current active grid.
     current_grid: u64,
 }
 
+/// Main UI structure.
 pub struct UI {
+    /// Main window.
     win: Arc<ThreadGuard<gtk::ApplicationWindow>>,
+    /// Neovim instance.
     nvim: Arc<Mutex<Neovim>>,
+    /// Channel to receive event from nvim.
     rx: Receiver<Notify>,
+    /// Our internal state, containing basically everything we manipulate
+    /// when we receive an event from nvim.
     state: Arc<Mutex<UIState>>,
 }
 
 impl UI {
+    /// Creates new UI.
+    ///
+    /// * `app` - GTK application for the UI.
+    /// * `rx` - Channel to receive nvim UI events.
+    /// * `nvim` - Neovim instance to use. Should be the same that is the source
+    ///            of `rx` events.
     pub fn init(app: &gtk::Application, rx: Receiver<Notify>, nvim: Arc<Mutex<Neovim>>) -> Self {
+        // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
         window.set_title("Neovim");
         window.set_default_size(1280, 720);
 
+        // Create hl defs and initialize 0th element because we'll need to have
+        // something that is accessible for the default grid that we're gonna
+        // make next.
         let mut hl_defs = HlDefs::default();
         hl_defs.insert(0, Highlight::default());
         let hl_defs = Arc::new(Mutex::new(hl_defs));
 
-        let grid = Grid::new(1, &window.clone().upcast::<gtk::Widget>().downcast::<gtk::Container>().unwrap(), hl_defs.clone());
-        let nvim_ref = nvim.clone();
+        // Create default grid.
+        let grid = Grid::new(1,
+                             &window.clone().upcast::<gtk::Widget>()
+                                 .downcast::<gtk::Container>().unwrap(),
+                             hl_defs.clone());
+
+        // When resizing our window (main grid), we'll have to tell neovim to
+        // resize it self also. The notify to nvim is send with a small delay,
+        // so we don't spam it multiple times a second. source_id is used to
+        // track the function timeout.
         let source_id = Arc::new(Mutex::new(None));
+        let nvim_ref = nvim.clone();
         grid.connect_da_resize(move |rows, cols| {
             let nvim_ref = nvim_ref.clone();
 
             let source_id_moved = source_id.clone();
+            // Set timeout to notify nvim about the new size.
             let new = glib::timeout_add(30, move || {
                 let mut nvim = nvim_ref.lock().unwrap();
                 nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
 
+                // Set the source_id to none, so we don't accidentally remove
+                // it since it used at this point.
                 let source_id = source_id_moved.clone();
                 let mut source_id = source_id.lock().unwrap();
                 *source_id = None;
@@ -87,6 +121,7 @@ impl UI {
             let source_id = source_id.clone();
             let mut source_id = source_id.lock().unwrap();
             {
+                // If we have earlier timeout, remove it.
                 let old = source_id.take();
                 if let Some(old) = old {
                     glib::source::source_remove(old);
@@ -131,6 +166,7 @@ impl UI {
         let mut grids = HashMap::new();
         grids.insert(1, grid);
 
+        // IMMulticontext is used to handle most of the inputs.
         let im_context = gtk::IMMulticontext::new();
         let nvim_ref = nvim.clone();
         im_context.connect_commit(move |_, mut input| {
@@ -180,7 +216,6 @@ impl UI {
             Inhibit(false)
         });
 
-
         window.show_all();
 
         UI {
@@ -196,6 +231,8 @@ impl UI {
         }
     }
 
+    /// Starts to listen events from `rx` (e.g. from nvim) and processing those.
+    /// Think this as the "main" function of the UI.
     pub fn start(self) {
         let rx = self.rx;
         let state = self.state.clone();
@@ -222,10 +259,12 @@ impl UI {
 
                     let mut state = state.lock().unwrap();
 
+                    // Handle any events that we might have.
                     if let Ok(ref notify) = notify {
                         handle_notify(notify, &mut state, nvim.clone());
                     }
 
+                    // Tick the current active grid.
                     let grid = state.grids.get(&state.current_grid).unwrap();
                     grid.tick();
 
@@ -260,11 +299,15 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 }
             }
             RedrawEvent::GridCursorGoto(grid_id, row, col) => {
-
+                // Gird cursor goto sets the current cursor to grid_id,
+                // so we'll need to handle that here...
                 let grid = if *grid_id != state.current_grid {
+                    // ...so if the grid_id is not same as the state tells us,
+                    // set the previous current grid to inactive state.
                     state.grids.get(&state.current_grid).unwrap().set_active(false);
                     state.current_grid = *grid_id;
 
+                    // And set the new current grid to active.
                     let grid = state.grids.get(grid_id).unwrap();
                     grid.set_active(true);
                     grid
@@ -272,6 +315,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                     state.grids.get(grid_id).unwrap()
                 };
 
+                // And after all that, set the current grid's cursor position.
                 grid.cursor_goto(*row, *col);
             }
             RedrawEvent::GridResize(grid, width, height) => {
@@ -293,6 +337,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 hl_defs.default_bg = *bg;
                 hl_defs.default_sp = *sp;
 
+                // NOTE(ville): Not sure if these are actually needed.
                 let hl = hl_defs.get_mut(&0).unwrap();
                 hl.foreground = Some(*fg);
                 hl.background = Some(*bg);
@@ -312,6 +357,8 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                             grid.set_font(font.to_string());
                         }
 
+                        // Channing the font affects the grid size, so we'll
+                        // need to tell nvim our new size.
                         let grid = state.grids.get(&1).unwrap();
                         let (rows, cols) = grid.calc_size();
                         let mut nvim = nvim.lock().unwrap();
@@ -327,6 +374,9 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::ModeChange(name, idx) => {
                 let mode = state.mode_infos.get(*idx as usize).unwrap();
+                // Broadcast the mode change to all grids.
+                // TODO(ville): It might be enough to just set the mode to the
+                //              current active grid.
                 for grid in state.grids.values() {
                     grid.set_mode(mode);
                 }
@@ -337,7 +387,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 }
             }
             RedrawEvent::Unknown(e) => {
-                println!("Received unknow redraw event: {}", e);
+                println!("Received unknown redraw event: {}", e);
             }
         }
     }

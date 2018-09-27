@@ -11,6 +11,7 @@ use ui::grid::context::{Context, CellMetrics};
 use ui::ui::HlDefs;
 use ui::color::{Highlight, Color};
 
+/// Renders `segments` to `da`.
 fn put_segments(da: &DrawingArea,
                 cr: &cairo::Context,
                 pango_context: &pango::Context,
@@ -121,6 +122,7 @@ fn put_segments(da: &DrawingArea,
     }
 }
 
+/// Renders `line` to `da`.
 pub fn put_line(da: &DrawingArea,
                 context: &mut Context,
                 line: &GridLineSegment,
@@ -146,6 +148,7 @@ pub fn put_line(da: &DrawingArea,
                  row);
 }
 
+/// Clears whole `da` with `hl_defs.default_bg`.
 pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
     let cr = &ctx.cairo_context;
     let w = da.get_allocated_width();
@@ -161,7 +164,11 @@ pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
     da.queue_draw_area(0, 0, w, h);
 }
 
-pub fn scroll(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs, reg: [u64;4], count: i64) {
+/// Scrolls contents in `da` and `ctx.rows`, based on `reg`.
+pub fn scroll(da: &DrawingArea,
+              ctx: &mut Context,
+              hl_defs: &HlDefs,
+              reg: [u64;4], count: i64) {
     let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
     let bg = &hl_defs.default_bg;

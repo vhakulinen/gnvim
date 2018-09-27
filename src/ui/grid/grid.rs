@@ -50,16 +50,21 @@ impl Display for MouseButton {
     }
 }
 
+/// Single grid in the neovim UI. This matches the `ui-newgrid` stuff in
+/// the ui.txt documentation for neovim.
 pub struct Grid {
+    /// Our internal "widget". This is what is drawn to the screen.
     da: ThreadGuard<DrawingArea>,
+    /// EventBox to get mouse events for this grid.
     eb: ThreadGuard<EventBox>,
+    /// Internal context that is manipulated and used when handling events.
     context: Arc<ThreadGuard<Option<Context>>>,
+    /// Reference to the highlight defs.
     hl_defs: Arc<Mutex<HlDefs>>,
 }
 
 impl Grid {
     pub fn new(id: u64, container: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
-
         let da = DrawingArea::new();
         let ctx = Arc::new(ThreadGuard::new(None));
 
@@ -67,8 +72,12 @@ impl Grid {
         da.connect_configure_event(move |da, _| {
             let mut ctx = ctx_ref.borrow_mut();
             if ctx.is_none() {
+                // On initial expose, we'll need to create our internal context,
+                // since this is the first time we'll have drawing area present...
                 *ctx = Some(Context::new(&da))
             } else {
+                // ...but if we already have context, our size is changing, so
+                // we'll need to update our internals.
                 ctx.as_mut().unwrap().update(&da);
             }
 
@@ -79,6 +88,8 @@ impl Grid {
         da.connect_draw(move |_, cr| {
             let ctx = ctx_ref.clone();
             if let Some(ref mut ctx) = *ctx.borrow_mut() {
+                // After making sure we have our internal context, draw us (e.g.
+                // our drawingarea) to the screen!
                 drawingarea_draw(cr, ctx);
             }
             Inhibit(false)
@@ -99,6 +110,8 @@ impl Grid {
         }
     }
 
+    /// Connects `f` to internal widget's scroll events. `f` params are scroll
+    /// direction, row, col.
     pub fn connect_scroll_events<F: 'static>(&self, f: F)
         where F: Fn(ScrollDirection, u64, u64) -> Inhibit {
         let eb = self.eb.borrow();
@@ -121,6 +134,8 @@ impl Grid {
         });
     }
 
+    /// Connects `f` to internal widget's motion events. `f` params are button,
+    /// row, col.
     pub fn connect_motion_events<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
         let eb = self.eb.borrow();
@@ -144,6 +159,8 @@ impl Grid {
         });
     }
 
+    /// Connects `f` to internal widget's mouse button events. `f` params are
+    /// button, row, col.
     pub fn connect_mouse_button_events<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
         let eb = self.eb.borrow();
@@ -167,6 +184,7 @@ impl Grid {
         });
     }
 
+    /// Connects `f` to internal widget's resize events. `f` params are rows, cols.
     pub fn connect_da_resize<F: 'static>(&self, f: F)
         where F: Fn(u64, u64) -> bool {
         let da = self.da.borrow();
@@ -186,7 +204,6 @@ impl Grid {
     }
 
     pub fn put_line(&self, line: &GridLineSegment) {
-        //let state = self.state.borrow();
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
@@ -229,7 +246,6 @@ impl Grid {
                                             ctx.cursor.1 as f64);
             (x, y, cm.width, cm.height)
         };
-
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
@@ -237,6 +253,7 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
+        // Clear internal grid (rows).
         ctx.rows = vec!();
         for _ in 0..height {
             ctx.rows.push(Row::new(width as usize));
@@ -249,6 +266,7 @@ impl Grid {
         let da = self.da.borrow();
         let hl_defs = self.hl_defs.lock().unwrap();
 
+        // Clear internal grid (rows).
         for row in ctx.rows.iter_mut() {
             row.clear();
         }
@@ -343,6 +361,8 @@ impl Grid {
     }
 }
 
+/// Handler for grid's drawingarea's draw event. Draws the internal cairo
+/// context (`ctx`) surface to the `cr`.
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     let surface = ctx.cairo_context.get_target();
     surface.flush();

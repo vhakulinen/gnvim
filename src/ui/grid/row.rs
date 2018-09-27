@@ -1,6 +1,7 @@
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
 use nvim_bridge;
 
+/// Wrapper for a leaf, that tells the leaf's position.
 pub struct Segment<'a> {
     pub leaf: &'a mut Leaf,
     pub start: usize,
@@ -9,11 +10,15 @@ pub struct Segment<'a> {
 
 #[derive(Clone)]
 pub struct Leaf {
+    /// Texts of this leaf.
     text: String,
+    /// Hl id of this leaf.
     hl_id: u64,
+    /// Length of this leaf in utf8 characters.
     len: usize,
 }
 
+/// Leaf of `Rope` (tree) structure.
 impl Leaf {
     fn new(text: String, hl_id: u64) -> Self {
         Leaf {
@@ -23,23 +28,28 @@ impl Leaf {
         }
     }
 
+    /// Length of this leaf (in utf8 characters).
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// This leaf's hl_id.
     pub fn hl_id(&self) -> u64 {
         self.hl_id
     }
 
+    /// Texts of this leaf.
     pub fn text(&self) -> &str {
         &self.text
     }
 
+    /// Appends `text` to this leaf.
     pub fn append(&mut self, text: &str) {
         self.len += text.chars().count();
         self.text.push_str(text);
     }
 
+    /// Splits this leaf into two (ropes).
     #[inline]
     fn split(self, at: usize) -> (Rope, Rope) {
         let mut left = String::with_capacity(at);
@@ -59,6 +69,9 @@ impl Leaf {
     }
 }
 
+/// Rope is a "rope"/tree structure that combines leafs by hl_id to make them
+/// easier to render as whole "segments". Each leaf/segment can be basically
+/// rendered with same hl.
 #[derive(Clone)]
 pub enum Rope {
     Leaf(Leaf),
@@ -70,6 +83,8 @@ impl Rope {
         Rope::Leaf(Leaf::new(base, hl_id))
     }
 
+    /// Constructs a rope from NvimCells (that are supposedly coming from nvim's
+    /// "grid_line" event).
     fn from_nvim_cells(cells: &Vec<NvimCell>) -> Self {
         let mut rope = Rope::new(String::new(), 0);
         for cell in cells {
@@ -80,6 +95,7 @@ impl Rope {
         rope
     }
 
+    /// Returns the current length of the rope.
     #[inline]
     fn len(&self) -> usize {
         match self {
@@ -90,6 +106,8 @@ impl Rope {
         }
     }
 
+    /// Returns the current weight of the rope. Is the same as Rope.len() in
+    /// this implementation.
     #[inline]
     pub fn weight(&self) -> usize {
         match self {
@@ -100,6 +118,7 @@ impl Rope {
         }
     }
 
+    /// Returns the current text of this rope.
     pub fn text(&self) -> String {
         match self {
             Rope::Leaf(leaf) => leaf.text.clone(),
@@ -109,6 +128,8 @@ impl Rope {
         }
     }
 
+    /// Concatenates another rope to this rope. If we are a leaf, and `other` is
+    /// also a leaf, both (`self` and `other`) are combined.
     pub fn concat(self, other: Rope) -> Rope {
         match self {
             Rope::Leaf(mut leaf) => {
@@ -135,12 +156,12 @@ impl Rope {
                 }
             },
             Rope::Node(left, right) => {
-                //let right = right.concat(other);
                 left.concat(right.concat(other))
             }
         }
     }
 
+    /// Split us into two, at `at`.
     pub fn split(self, mut at: usize) -> (Rope, Rope) {
         match self {
             Rope::Leaf(leaf) => {
@@ -167,6 +188,7 @@ impl Rope {
         }
     }
 
+    /// Returns our leafs as mutable references.
     pub fn leafs_mut(&mut self) -> Vec<&mut Leaf> {
         match self {
             Rope::Leaf(leaf) => {
@@ -180,6 +202,7 @@ impl Rope {
         }
     }
 
+    /// Returns our leafs as reference.
     pub fn leafs(&self) -> Vec<&Leaf> {
         match self {
             Rope::Leaf(leaf) => {
@@ -193,6 +216,7 @@ impl Rope {
         }
     }
 
+    /// Returns leaf at `at`.
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         match self {
             Rope::Leaf(leaf) => {
@@ -210,9 +234,10 @@ impl Rope {
         }
     }
 
-    pub fn optimize(&self) -> Rope {
+    /// Combines leafs together, based on hl_id.
+    pub fn combine_leafs(&self) -> Rope {
         assert!(self.len() > 0,
-            "Rope needs to have lenght greater than 0 inorder to be optimized");
+            "Rope needs to have length greater than 0 in order to be combine_leafs");
 
         let mut rope = None;
 
@@ -233,13 +258,21 @@ impl Rope {
     }
 }
 
+/// Row, as in one row in a grid. Internally has a rope/tree structure.
 #[derive(Clone)]
 pub struct Row {
+    /// Actual contents of a row. This is an option, so we can temporally have
+    /// it as an none when restructuring it. This should only _not_ be none when
+    /// entering or leaving a function.
     rope: Option<Rope>,
+    /// Length of the row.
     len: usize,
 }
 
 impl Row {
+    /// Creates a new row.
+    ///
+    /// * `len` - Length of the row.
     pub fn new(len: usize) -> Self {
         Row {
             rope: Some(Rope::new(" ".repeat(len), 0)),
@@ -247,10 +280,12 @@ impl Row {
         }
     }
 
+    /// Returns the whole text of the row.
     pub fn text(&self) -> String {
         self.rope.as_ref().unwrap().text()
     }
 
+    /// Returns a leaf at a position.
     #[inline]
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         self.rope.as_ref().unwrap().leaf_at(at)
@@ -260,10 +295,12 @@ impl Row {
         self.len
     }
 
+    /// Clears (resets) the row.
     pub fn clear(&mut self) {
         self.rope = Some(Rope::new(" ".repeat(self.len), 0));
     }
 
+    /// Clears range from `from` to `to`.
     pub fn clear_range(&mut self, from: usize, to: usize) {
         let middle_len = to - from;
 
@@ -275,12 +312,15 @@ impl Row {
         self.rope = Some(left.concat(right));
     }
 
+    /// Copies range from `from` to `to`.
     pub fn copy_range(&self, from: usize, to: usize) -> Rope {
         let (_, rope) = self.rope.as_ref().unwrap().clone().split(from);
         let (rope, _) = rope.split(to - from);
         rope
     }
 
+    /// Inserts rope to `at`. What ever is between `at` and `rope.len()` is
+    /// replaced.
     pub fn insert_rope_at(&mut self, at: usize, rope: Rope) {
 
         let (left, right) = self.rope.take().unwrap().split(at);
@@ -290,17 +330,23 @@ impl Row {
         assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
     }
 
+    /// Updates row. `line` should be coming straight from nvim's 'grid_line'.
+    /// event.
     pub fn update(&mut self, line: &GridLineSegment) -> Vec<Segment> {
 
+        // Construct a rope from give cells in `line` and insert it into us.
         let other = Rope::from_nvim_cells(&line.cells);
         let other_len = other.len();
         let col_start = line.col_start as usize;
         let other_end = col_start + other_len;
         self.insert_rope_at(col_start, other);
 
-        self.rope = Some(self.rope.take().unwrap().optimize());
+        // Combine leafs so they are "intact".
+        self.rope = Some(self.rope.take().unwrap().combine_leafs());
         assert_eq!(self.rope.as_ref().unwrap().len(), self.len);
 
+        // Compute segments that were affected by this update and return
+        // them to the caller.
         let mut segs = vec!();
         let mut start = 0;
         let rope = self.rope.as_mut().unwrap();
@@ -415,7 +461,7 @@ mod tests {
         assert_eq!(leafs[1].hl_id, 1);
         assert_eq!(leafs[2].hl_id, 2);
 
-        let rope = rope.optimize();
+        let rope = rope.combine_leafs();
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 2);
         assert_eq!(leafs[0].hl_id, 1);
@@ -449,7 +495,7 @@ mod tests {
         let rope = rope.concat(Rope::new(String::from("third"), 2));
         let rope = rope.concat(Rope::new(String::from("fourth"), 3));
 
-        //let rope = rope.optimize();
+        //let rope = rope.combine_leafs();
 
         b.iter(move || {
             rope.clone().split(3)
@@ -625,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rope_optimize() {
+    fn test_rope_combine_leafs() {
         let rope = Rope::new(String::from("first"), 0);
         let rope = rope.concat(
             Rope::Leaf(Leaf::new(String::from("second"), 1)));
@@ -641,7 +687,7 @@ mod tests {
         assert_eq!(rope.text(), "firstthirdfourth");
         assert_eq!(rope.leafs().len(), 3);
 
-        let rope = rope.optimize();
+        let rope = rope.combine_leafs();
         assert_eq!(rope.text(), "firstthirdfourth");
 
         let leafs = rope.leafs();
@@ -651,7 +697,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rope_optimize2() {
+    fn test_rope_combine_leafs2() {
         let rope = Rope::new(String::from(""), 3);
         let rope = rope.concat(
             Rope::Leaf(Leaf::new(String::from("first"), 0)));
@@ -669,7 +715,7 @@ mod tests {
         assert_eq!(rope.text(), "firstthird");
         assert_eq!(rope.leafs().len(), 4);
 
-        let rope = rope.optimize();
+        let rope = rope.combine_leafs();
         assert_eq!(rope.text(), "firstthird");
 
         let leafs = rope.leafs();

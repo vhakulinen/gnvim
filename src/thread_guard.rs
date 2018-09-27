@@ -1,6 +1,9 @@
 use std::cell::{RefCell, Ref, RefMut};
 use std::thread;
 
+/// TheardGuard is a _runtime_ thread guard for internal data. It panics if
+/// data is being accessed from a thread other than the one that TheardGuard
+/// was initialized in.
 pub struct ThreadGuard<T> {
     thread_id: thread::ThreadId,
     data: RefCell<T>,
@@ -23,7 +26,7 @@ impl<T> ThreadGuard<T> {
                 self.data.borrow()
             }
             Err(_) => {
-                panic!("Data is only accessable on thread {:?} (current is {:?})",
+                panic!("Data is only accessible on thread {:?} (current is {:?})",
                 self.thread_id, thread::current().id(),
                 );
             }
@@ -36,7 +39,7 @@ impl<T> ThreadGuard<T> {
                 self.data.borrow_mut()
             }
             Err(_) => {
-                panic!("Data is only accessable on thread {:?} (current is {:?})",
+                panic!("Data is only accessible on thread {:?} (current is {:?})",
                 self.thread_id, thread::current().id(),
                 );
             }

@@ -10,21 +10,34 @@ use pango::prelude::*;
 use ui::color::{Color, Highlight};
 use ui::grid::row::Row;
 
+/// Context is manipulated by Grid.
 pub struct Context {
+    /// Our cairo context, that is evetually drawn to the screen.
     pub cairo_context: cairo::Context,
+    /// Our pango context.
     pub pango_context: pango::Context,
+    /// Our font (description).
     pub font_desc: FontDescription,
+    /// Our cell metrics. This is dependant on the `font_desc`.
     pub cell_metrics: CellMetrics,
+    /// Internal grid.
     pub rows: Vec<Row>,
 
-    // row, col
+    /// Cursor, (row, col):
     pub cursor: (u64, u64),
+    /// Cursor alpha color. Used to make the cursor blink.
     pub cursor_alpha: f64,
+    /// Width of the curosr.
     pub cursor_cell_percentage: f64,
+    /// Color of the cursor.
     pub cursor_color: Color,
+    /// If the current status is busy or not. When busy, the cursor is not
+    /// drawn (like when in terminal mode in inserting text).
     pub busy: bool,
 
+    /// Current highlight.
     pub current_hl: Highlight,
+    /// If the grid that this context belongs to is active or not.
     pub active: bool,
 }
 
@@ -62,6 +75,7 @@ impl Context {
         }
     }
 
+    /// Updates font and other values that are dependant on font.
     pub fn update_font(&mut self, font_name: &str) {
         let mut font_desc = FontDescription::from_string(font_name);
 
@@ -76,6 +90,7 @@ impl Context {
         self.cell_metrics.update(&self.pango_context, &self.font_desc);
     }
 
+    /// Updates internals that are dependant on the drawing area.
     pub fn update(&mut self, da: &DrawingArea) {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();
@@ -100,6 +115,7 @@ impl Context {
     }
 }
 
+/// Cell metrics tells the size (and other metrics) of the cells in a grid.
 #[derive(Default, Debug)]
 pub struct CellMetrics {
     pub height: f64,
