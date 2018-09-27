@@ -307,6 +307,13 @@ impl Grid {
         ctx.cursor_cell_percentage = mode.cell_percentage;
     }
 
+    pub fn set_busy(&self, busy: bool) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        ctx.busy = busy;
+    }
+
     /// Calculates the current gird size. Returns (rows, cols).
     pub fn calc_size(&self) -> (usize, usize) {
         let da = self.da.borrow();
@@ -337,9 +344,6 @@ impl Grid {
 }
 
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
-    //println!("DRAW");
-
-    //let ctx = ctx.lock().unwrap();
     let surface = ctx.cairo_context.get_target();
     surface.flush();
 
@@ -348,29 +352,30 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     cr.paint();
     cr.restore();
 
-    //cr.set_source_rgb(0.0, 255.0, 255.0);
-    //cr.paint();
+    // If we're not "busy", draw the cursor.
+    if !ctx.busy {
 
-    let (x, y, w, h) = {
-        let cm = &ctx.cell_metrics;
-        let (x, y) = render::get_coords(cm.height,
-                                        cm.width,
-                                        ctx.cursor.0 as f64,
-                                        ctx.cursor.1 as f64);
-        (x, y, cm.width, cm.height)
-    };
+        let (x, y, w, h) = {
+            let cm = &ctx.cell_metrics;
+            let (x, y) = render::get_coords(cm.height,
+                                            cm.width,
+                                            ctx.cursor.0 as f64,
+                                            ctx.cursor.1 as f64);
+            (x, y, cm.width, cm.height)
+        };
 
-    let mut alpha = ctx.cursor_alpha;
-    if alpha > 1.0 {
-        alpha = 2.0 - alpha;
+        let mut alpha = ctx.cursor_alpha;
+        if alpha > 1.0 {
+            alpha = 2.0 - alpha;
+        }
+
+        cr.save();
+        cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
+        cr.set_source_rgba(ctx.cursor_color.r,
+                           ctx.cursor_color.g,
+                           ctx.cursor_color.b,
+                           alpha);
+        cr.fill();
+        cr.restore();
     }
-
-    cr.save();
-    cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
-    cr.set_source_rgba(ctx.cursor_color.r,
-                       ctx.cursor_color.g,
-                       ctx.cursor_color.b,
-                       alpha);
-    cr.fill();
-    cr.restore();
 }

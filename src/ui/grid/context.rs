@@ -22,6 +22,7 @@ pub struct Context {
     pub cursor_alpha: f64,
     pub cursor_cell_percentage: f64,
     pub cursor_color: Color,
+    pub busy: bool,
 
     pub current_hl: Highlight,
     pub active: bool,
@@ -54,6 +55,7 @@ impl Context {
             cursor_alpha: 1.0,
             cursor_cell_percentage: 1.0,
             cursor_color: Color::from_u64(0),
+            busy: false,
 
             current_hl: Highlight::default(),
             active: false,

@@ -132,14 +132,7 @@ pub struct ModeInfo {
     /// The cursor's width (in percentages, from 0..1).
     pub cell_percentage: f64,
 
-    // TODO(vile): Implement the rest.
-    //blinkwait
-    //blinkon
-    //blinkoff
-    //pub hl_id: i64,
-    //pub hl_lm: i64,
-    //pub short_name: String,
-    //pub name: String,
+    // TODO(ville): Implement the rest.
 }
 
 impl ModeInfo {
@@ -157,14 +150,6 @@ impl ModeInfo {
                 }
                 self.cell_percentage = val as f64 / 100.0;
             }
-            //"blinkwait" => {}
-            //"blinkon" => {}
-            //"blinkoff" => {}
-            //"attr_id" => {}
-            //"attr_id_lm" => {}
-            //"short_name" => {}
-            //"name" => {}
-            //"mouse_shape" => {}
             _ => {
             }
         }
@@ -211,6 +196,7 @@ pub enum RedrawEvent {
     ModeInfoSet(bool, Vec<ModeInfo>),
     /// name, index
     ModeChange(String, u64),
+    SetBusy(bool),
     Unknown(String),
 }
 
@@ -227,6 +213,7 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::OptionSet(..) => write!(fmt, "OptionSet"),
             RedrawEvent::ModeInfoSet(..) => write!(fmt, "ModeInfoSet"),
             RedrawEvent::ModeChange(..) => write!(fmt, "ModeChange"),
+            RedrawEvent::SetBusy(..) => write!(fmt, "SetBusy"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
@@ -429,6 +416,12 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 let name = try_str!(args[0]);
                 let idx = try_u64!(args[1]);
                 RedrawEvent::ModeChange(String::from(name), idx)
+            }
+            "busy_start" => {
+                RedrawEvent::SetBusy(true)
+            }
+            "busy_stop" => {
+                RedrawEvent::SetBusy(false)
             }
             _ => {
                 //println!("Unknown redraw event: {}", cmd);

@@ -331,6 +331,11 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                     grid.set_mode(mode);
                 }
             }
+            RedrawEvent::SetBusy(busy) => {
+                for grid in state.grids.values() {
+                    grid.set_busy(*busy);
+                }
+            }
             RedrawEvent::Unknown(e) => {
                 println!("Received unknow redraw event: {}", e);
             }
