@@ -12,6 +12,7 @@ extern crate neovim_lib;
 
 use gio::prelude::*;
 
+use neovim_lib::NeovimApi;
 use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::session::Session as NeovimSession;
 
@@ -30,10 +31,6 @@ fn build(app: &gtk::Application) {
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
-    //let nvim_path = env::args()
-        //.find(|s| {
-            //s == "nvim"
-        //})
     let nvim_path = env::args()
         .find(|arg| {
             arg.starts_with("--nvim")
@@ -60,9 +57,12 @@ fn build(app: &gtk::Application) {
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_newgrid_external(true);
-    //ui_opts.set_popupmenu_external(true);
+    ui_opts.set_popupmenu_external(true);
     //ui_opts.set_cmdline_external(true);
     nvim.ui_attach(80, 30, &ui_opts).unwrap();
+
+    nvim.subscribe("Gnvim").unwrap();
+    nvim.command("so ~/src/gnvim/runtime/plugin.vim").unwrap();
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();

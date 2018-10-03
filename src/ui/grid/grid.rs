@@ -6,7 +6,7 @@ use pango::FontDescription;
 use cairo;
 use gdk::{EventMask, ModifierType};
 use gdk;
-use gtk::{DrawingArea, EventBox};
+use gtk::{DrawingArea, EventBox, Overlay};
 use gtk;
 
 use cairo::prelude::*;
@@ -14,6 +14,7 @@ use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
 use ui::ui::HlDefs;
+use ui::popupmenu::Popupmenu;
 use ui::grid::context::Context;
 use ui::grid::render;
 use ui::grid::row::Row;
@@ -57,6 +58,7 @@ pub struct Grid {
     da: ThreadGuard<DrawingArea>,
     /// EventBox to get mouse events for this grid.
     eb: ThreadGuard<EventBox>,
+    overlay: ThreadGuard<Overlay>,
     /// Internal context that is manipulated and used when handling events.
     context: Arc<ThreadGuard<Option<Context>>>,
     /// Reference to the highlight defs.
@@ -64,8 +66,10 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(id: u64, container: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(id: u64, parent: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
         let da = DrawingArea::new();
+        da.set_vexpand(true);
+        da.set_hexpand(true);
         let ctx = Arc::new(ThreadGuard::new(None));
 
         let ctx_ref = ctx.clone();
@@ -98,16 +102,36 @@ impl Grid {
 
         let eb = EventBox::new();
         eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
-
         eb.add(&da);
-        container.add(&eb);
+
+        let overlay = Overlay::new();
+        overlay.add(&eb);
+
+        parent.add(&overlay);
 
         Grid {
+            overlay: ThreadGuard::new(overlay),
             da: ThreadGuard::new(da),
             eb: ThreadGuard::new(eb),
             context: ctx,
             hl_defs,
         }
+    }
+
+    pub fn show_popupmenu(&self, pmenu: &Popupmenu, row: u64, col: u64) {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+        let overlay = self.overlay.borrow();
+
+        let (x, y) = render::get_coords(
+            ctx.cell_metrics.height,
+            ctx.cell_metrics.width,
+            row as f64,
+            col as f64);
+
+        let widget = pmenu.widget();
+        overlay.add_overlay(&widget);
+        pmenu.set_position(x as i32, y as i32 + ctx.cell_metrics.height as i32);
     }
 
     /// Connects `f` to internal widget's scroll events. `f` params are scroll
@@ -312,10 +336,10 @@ impl Grid {
         da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
-    pub fn set_font(&self, name: String) {
+    pub fn set_font(&self, font: FontDescription) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        ctx.update_font(&name);
+        ctx.update_font(font);
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {

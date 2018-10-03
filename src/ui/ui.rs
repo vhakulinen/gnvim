@@ -7,13 +7,15 @@ use std::time;
 use glib;
 use gtk;
 use gdk;
+use pango;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEvent, OptionSet, ModeInfo};
+use nvim_bridge::{Notify, RedrawEvent, GnvimEvent, OptionSet, ModeInfo};
 use ui::color::{Highlight, Color};
+use ui::popupmenu::Popupmenu;
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
 
@@ -53,6 +55,9 @@ struct UIState {
     mode_infos: Vec<ModeInfo>,
     /// Id of the current active grid.
     current_grid: u64,
+
+    popupmenu: Popupmenu,
+    container: gtk::Grid,
 }
 
 /// Main UI structure.
@@ -65,7 +70,7 @@ pub struct UI {
     rx: Receiver<Notify>,
     /// Our internal state, containing basically everything we manipulate
     /// when we receive an event from nvim.
-    state: Arc<Mutex<UIState>>,
+    state: Arc<ThreadGuard<UIState>>,
 }
 
 impl UI {
@@ -81,6 +86,9 @@ impl UI {
         window.set_title("Neovim");
         window.set_default_size(1280, 720);
 
+        let container = gtk::Grid::new();
+        window.add(&container);
+
         // Create hl defs and initialize 0th element because we'll need to have
         // something that is accessible for the default grid that we're gonna
         // make next.
@@ -90,8 +98,7 @@ impl UI {
 
         // Create default grid.
         let grid = Grid::new(1,
-                             &window.clone().upcast::<gtk::Widget>()
-                                 .downcast::<gtk::Container>().unwrap(),
+                             &container.clone().upcast::<gtk::Container>(),
                              hl_defs.clone());
 
         // When resizing our window (main grid), we'll have to tell neovim to
@@ -220,14 +227,16 @@ impl UI {
 
         UI {
             win: Arc::new(ThreadGuard::new(window)),
-            nvim,
             rx,
-            state: Arc::new(Mutex::new(UIState {
+            state: Arc::new(ThreadGuard::new(UIState {
                 grids: grids,
                 hl_defs,
                 mode_infos: vec!(),
                 current_grid: 1,
+                popupmenu: Popupmenu::new(nvim.clone()),
+                container: container,
             })),
+            nvim,
         }
     }
 
@@ -257,7 +266,7 @@ impl UI {
                 let nvim = nvim.clone();
                 glib::idle_add(move || {
 
-                    let mut state = state.lock().unwrap();
+                    let mut state = state.borrow_mut();
 
                     // Handle any events that we might have.
                     if let Ok(ref notify) = notify {
@@ -285,6 +294,25 @@ fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>)
     match notify {
         Notify::RedrawEvent(events) => {
             handle_redraw_event(events, state, nvim);
+        }
+        Notify::GnvimEvent(event) => {
+            handle_gnvim_event(event, state, nvim);
+        }
+    }
+}
+
+fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
+    match event {
+        GnvimEvent::SetGuiColors(colors) => {
+            state.popupmenu.set_colors(
+                colors.pmenu_fg,
+                colors.pmenu_bg,
+                colors.pmenusel_fg,
+                colors.pmenusel_bg,
+            )
+        }
+        GnvimEvent::Unknown(msg) => {
+            println!("Received unknown GnvimEvent: {}", msg);
         }
     }
 }
@@ -353,8 +381,10 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             RedrawEvent::OptionSet(opt) => {
                 match opt {
                     OptionSet::GuiFont(font) => {
+                        let font = get_font_from_string(font);
+
                         for grid in (state.grids).values() {
-                            grid.set_font(font.to_string());
+                            grid.set_font(font.clone());
                         }
 
                         // Channing the font affects the grid size, so we'll
@@ -363,6 +393,8 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                         let (rows, cols) = grid.calc_size();
                         let mut nvim = nvim.lock().unwrap();
                         nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+
+                        state.popupmenu.set_font(&font);
                     }
                     OptionSet::NotSupported(name) => {
                         println!("Not supported option set: {}", name);
@@ -385,6 +417,22 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 for grid in state.grids.values() {
                     grid.set_busy(*busy);
                 }
+            }
+            RedrawEvent::PopupmenuShow(popupmenu) => {
+                state.popupmenu.set_items(popupmenu.items.clone());
+                //state.container.attach(&state.popupmenu.widget(), 1, 0, 1, 1);
+                //state.popupmenu.widget().show();
+
+                let grid = state.grids.get(&state.current_grid).unwrap();
+                grid.show_popupmenu(&state.popupmenu,
+                                    popupmenu.row,
+                                    popupmenu.col);
+            }
+            RedrawEvent::PopupmenuHide() => {
+                state.popupmenu.hide();
+            }
+            RedrawEvent::PopupmenuSelect(selected) => {
+                state.popupmenu.select(*selected as i32);
             }
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);
@@ -471,4 +519,16 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     }
 
     Some(format!("<{}>", input))
+}
+
+fn get_font_from_string(font: &str) -> pango::FontDescription {
+    let mut font_desc = pango::FontDescription::from_string(font);
+
+    // Make sure we dont have a font with size of 0, otherwise we'll
+    // have problems later.
+    if font_desc.get_size() == 0 {
+        font_desc.set_size(12 * pango::SCALE);
+    }
+
+    font_desc
 }

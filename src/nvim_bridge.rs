@@ -91,6 +91,7 @@ impl Highlight {
 
 pub enum Notify {
     RedrawEvent(Vec<RedrawEvent>),
+    GnvimEvent(GnvimEvent),
 }
 
 #[derive(Clone)]
@@ -176,6 +177,21 @@ pub enum OptionSet {
     NotSupported(String),
 }
 
+#[derive(Clone)]
+pub struct CompletionItem {
+    pub word: String,
+    pub kind: String,
+    pub menu: String,
+    pub info: String,
+}
+
+pub struct PopupmenuShow {
+    pub items: Vec<CompletionItem>,
+    pub selected: i64,
+    pub row: u64,
+    pub col: u64,
+}
+
 pub enum RedrawEvent {
     GridLine(Vec<GridLineSegment>),
     /// grid, width, height
@@ -197,6 +213,11 @@ pub enum RedrawEvent {
     /// name, index
     ModeChange(String, u64),
     SetBusy(bool),
+
+    PopupmenuShow(PopupmenuShow),
+    PopupmenuHide(),
+    PopupmenuSelect(i64),
+
     Unknown(String),
 }
 
@@ -214,9 +235,25 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::ModeInfoSet(..) => write!(fmt, "ModeInfoSet"),
             RedrawEvent::ModeChange(..) => write!(fmt, "ModeChange"),
             RedrawEvent::SetBusy(..) => write!(fmt, "SetBusy"),
+            RedrawEvent::PopupmenuShow(..) => write!(fmt, "PopupmenuShow"),
+            RedrawEvent::PopupmenuHide(..) => write!(fmt, "PopupmenuHide"),
+            RedrawEvent::PopupmenuSelect(..) => write!(fmt, "PopupmenuSelect"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
+}
+
+pub enum GnvimEvent {
+    SetGuiColors(SetGuiColors),
+    Unknown(String),
+}
+
+#[derive(Default)]
+pub struct SetGuiColors {
+    pub pmenu_bg: Color,
+    pub pmenu_fg: Color,
+    pub pmenusel_bg: Color,
+    pub pmenusel_fg: Color,
 }
 
 pub struct NvimBridge {
@@ -248,6 +285,9 @@ fn parse_notify(name: &str, args: Vec<Value>) -> Option<Notify> {
         "redraw" => {
             Some(Notify::RedrawEvent(parse_redraw_event(args)))
         }
+        "Gnvim" => {
+            Some(Notify::GnvimEvent(parse_gnvim_event(args)))
+        }
         _ => None
     }
 }
@@ -270,7 +310,6 @@ GLOBALS:
  */
 
 fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
-
     args.into_iter().map(|args| {
         let cmd = try_str!(args[0]);
         match cmd {
@@ -423,10 +462,70 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
             "busy_stop" => {
                 RedrawEvent::SetBusy(false)
             }
+            "popupmenu_show" => {
+                let args = try_array!(args[1]);
+                let selected = try_i64!(args[1]);
+                let row = try_u64!(args[2]);
+                let col = try_u64!(args[3]);
+
+                let mut items = vec!();
+                for item in try_array!(args[0]) {
+                    let item = try_array!(item);
+                    let word = try_str!(item[0]).to_owned();
+                    let kind = try_str!(item[1]).to_owned();
+                    let menu = try_str!(item[2]).to_owned();
+                    let info = try_str!(item[3]).to_owned();
+
+                    items.push(CompletionItem {
+                        word, kind, menu, info,
+                    });
+                }
+
+                RedrawEvent::PopupmenuShow(PopupmenuShow {
+                    items, selected, row, col,
+                })
+            }
+            "popupmenu_hide" => {
+                RedrawEvent::PopupmenuHide()
+            }
+            "popupmenu_select"  => {
+                let args = try_array!(args[1]);
+                let selected = try_i64!(args[0]);
+                RedrawEvent::PopupmenuSelect(selected)
+            }
             _ => {
                 //println!("Unknown redraw event: {}", cmd);
                 RedrawEvent::Unknown(cmd.to_string())
             }
         }
     }).collect()
+}
+
+fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
+    let cmd = try_str!(args[0]);
+    match cmd {
+        "SetGuiColors" => {
+            let mut colors = SetGuiColors::default();
+
+            for e in try_map!(args[1]) {
+                let color = Color::from_hex_string(
+                        String::from(try_str!(e.1))
+                    ).unwrap_or(Color::default());
+                match try_str!(e.0) {
+                    "pmenu_bg" => colors.pmenu_bg = color,
+                    "pmenu_fg" => colors.pmenu_fg = color,
+                    "pmenusel_bg" => colors.pmenusel_bg = color,
+                    "pmenusel_fg" => colors.pmenusel_fg = color,
+                    _ => {
+                        println!("Unknown SetGuiColor: {}", try_str!(e.0));
+                    }
+                }
+            }
+
+            GnvimEvent::SetGuiColors(colors)
+        }
+        _ => {
+            GnvimEvent::Unknown(String::from("UGH"))
+        }
+    }
 }
