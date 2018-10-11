@@ -17,9 +17,16 @@ function! SetGuiColors()
     call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)
 endfunction
 
+function! CompletionMenuToggleInfo()
+    call rpcnotify(0, 'Gnvim', 'CompletionMenuToggleInfo')
+    return ''
+endfunction
+
 augroup GnvimColors
     autocmd!
     autocmd ColorScheme * call SetGuiColors()
 augroup END
 
 call SetGuiColors()
+
+inoremap <expr> <C-s> CompletionMenuToggleInfo()

@@ -245,6 +245,7 @@ impl fmt::Display for RedrawEvent {
 
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
+    CompletionMenuToggleInfo,
     Unknown(String),
 }
 
@@ -523,6 +524,9 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             }
 
             GnvimEvent::SetGuiColors(colors)
+        }
+        "CompletionMenuToggleInfo" => {
+            GnvimEvent::CompletionMenuToggleInfo
         }
         _ => {
             GnvimEvent::Unknown(String::from("UGH"))

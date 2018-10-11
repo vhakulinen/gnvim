@@ -311,6 +311,9 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState, nvim: Arc<Mutex<N
                 colors.pmenusel_bg,
             )
         }
+        GnvimEvent::CompletionMenuToggleInfo => {
+            state.popupmenu.toggle_show_info()
+        }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }
