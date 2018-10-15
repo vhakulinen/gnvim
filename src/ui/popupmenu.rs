@@ -42,8 +42,7 @@ pub struct Popupmenu {
     /// Box that contains all the "content". This box is placed in side the
     /// layout container.
     box_: gtk::Box,
-    /// Top level container. Box is added into this and moved around as needed.
-    /// This container should be added to any grid where the popupmenu is needed.
+    /// Top level container.
     layout: gtk::Layout,
     /// Scrolled window that contains the list box that displays all the items.
     scrolled_list: gtk::ScrolledWindow,
@@ -65,12 +64,13 @@ pub struct Popupmenu {
 }
 
 impl Popupmenu {
-    /// Creates new popupmenu. After creating a new popupmenu, remember to add
-    /// it to some container (get the widget by calling `widget()`).
+    /// Creates a new popupmenu.
     ///
+    /// * `parent` - Overlay where popupmenu is placed. Ideally, this overlay
+    ///              is where all the (neovim) grids are drawn.
     /// * `nvim` - Neovim instance. Popupmenu will instruct neovim to act on
     ///            user interaction.
-    pub fn new(nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let info_label = gtk::Label::new("");
@@ -197,6 +197,8 @@ impl Popupmenu {
         layout.show_all();
         scrolled_info.hide();
 
+        parent.add_overlay(&layout);
+
         Popupmenu {
             box_,
             layout,
@@ -235,27 +237,27 @@ impl Popupmenu {
         }
     }
 
-    /// Hides the popupmenu and removes it from any parent it might exists in.
+    /// Hides the popupmenu.
     pub fn hide(&mut self) {
         if self.info_shown {
             self.toggle_show_info();
         }
 
-        if let Some(parent) = self.layout.get_parent() {
-            if let Ok(container) = parent.downcast::<gtk::Container>() {
-                container.remove(&self.layout);
-            }
-        }
+        self.layout.hide();
     }
 
-    /// Returns top level widget (container) for popupmenu. This widget should
-    /// be added to a container (of a grid where the menu is needed).
-    pub fn widget(&self) -> gtk::Widget {
-        self.layout.clone().upcast()
+    /// Shows the popupmenu.
+    pub fn show(&self) {
+        self.layout.show();
     }
 
-    /// Sets the position of popupmenu, relative to the parent its in.
-    pub fn set_position(&self, x: i32, y: i32) {
+    /// Sets the anchor point for popupmenu.
+    pub fn set_anchor(&self, rect: &gdk::Rectangle) {
+        self.set_position(rect.x, rect.y + rect.height);
+    }
+
+    /// Sets the position of popupmenu.
+    fn set_position(&self, x: i32, y: i32) {
         self.layout.move_(&self.box_, x, y);
     }
 
@@ -351,7 +353,7 @@ impl Popupmenu {
 
 
     pub fn set_font(&self, font: &pango::FontDescription) {
-        gtk::WidgetExt::override_font(&self.widget(), font);
+        gtk::WidgetExt::override_font(&self.layout, font);
     }
 }
 
@@ -402,7 +404,7 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
         info.hide();
     });
 
-    grid.attach(&info, 1, 1, 1, 1);
+    grid.attach(&info, 1, 1, 2, 1);
 
     // NOTE(ville): We only need to explicitly a crate this row widget
     //              so we can set css provider to it.

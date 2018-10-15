@@ -57,7 +57,10 @@ struct UIState {
     current_grid: u64,
 
     popupmenu: Popupmenu,
-    container: gtk::Grid,
+
+    /// Overlay is our root widget. Has one contianer widget for grids and such,
+    /// and overlays for popupmenu and such.
+    overlay: gtk::Overlay,
 }
 
 /// Main UI structure.
@@ -86,8 +89,12 @@ impl UI {
         window.set_title("Neovim");
         window.set_default_size(1280, 720);
 
-        let container = gtk::Grid::new();
-        window.add(&container);
+        // Our root widget.
+        let overlay = gtk::Overlay::new();
+        window.add(&overlay);
+
+        let grid_ = gtk::Grid::new();
+        overlay.add(&grid_);
 
         // Create hl defs and initialize 0th element because we'll need to have
         // something that is accessible for the default grid that we're gonna
@@ -98,7 +105,7 @@ impl UI {
 
         // Create default grid.
         let grid = Grid::new(1,
-                             &container.clone().upcast::<gtk::Container>(),
+                             &grid_.clone().upcast::<gtk::Container>(),
                              hl_defs.clone());
 
         // When resizing our window (main grid), we'll have to tell neovim to
@@ -233,8 +240,8 @@ impl UI {
                 hl_defs,
                 mode_infos: vec!(),
                 current_grid: 1,
-                popupmenu: Popupmenu::new(nvim.clone()),
-                container: container,
+                popupmenu: Popupmenu::new(&overlay, nvim.clone()),
+                overlay: overlay,
             })),
             nvim,
         }
@@ -423,13 +430,12 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::PopupmenuShow(popupmenu) => {
                 state.popupmenu.set_items(popupmenu.items.clone());
-                //state.container.attach(&state.popupmenu.widget(), 1, 0, 1, 1);
-                //state.popupmenu.widget().show();
 
                 let grid = state.grids.get(&state.current_grid).unwrap();
-                grid.show_popupmenu(&state.popupmenu,
-                                    popupmenu.row,
-                                    popupmenu.col);
+                let rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+
+                state.popupmenu.set_anchor(&rect);
+                state.popupmenu.show();
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();

@@ -58,7 +58,6 @@ pub struct Grid {
     da: ThreadGuard<DrawingArea>,
     /// EventBox to get mouse events for this grid.
     eb: ThreadGuard<EventBox>,
-    overlay: ThreadGuard<Overlay>,
     /// Internal context that is manipulated and used when handling events.
     context: Arc<ThreadGuard<Option<Context>>>,
     /// Reference to the highlight defs.
@@ -104,13 +103,9 @@ impl Grid {
         eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
         eb.add(&da);
 
-        let overlay = Overlay::new();
-        overlay.add(&eb);
-
-        parent.add(&overlay);
+        parent.add(&eb);
 
         Grid {
-            overlay: ThreadGuard::new(overlay),
             da: ThreadGuard::new(da),
             eb: ThreadGuard::new(eb),
             context: ctx,
@@ -118,10 +113,12 @@ impl Grid {
         }
     }
 
-    pub fn show_popupmenu(&self, pmenu: &Popupmenu, row: u64, col: u64) {
+    /// Returns position (+ width and height) for cell (row, col) relative
+    /// to the top level window of this grid.
+    pub fn get_rect_for_cell(&self, row: u64, col: u64) -> gdk::Rectangle {
         let ctx = self.context.borrow();
         let ctx = ctx.as_ref().unwrap();
-        let overlay = self.overlay.borrow();
+        let eb = self.eb.borrow();
 
         let (x, y) = render::get_coords(
             ctx.cell_metrics.height,
@@ -129,9 +126,14 @@ impl Grid {
             row as f64,
             col as f64);
 
-        let widget = pmenu.widget();
-        overlay.add_overlay(&widget);
-        pmenu.set_position(x as i32, y as i32 + ctx.cell_metrics.height as i32);
+        let (x, y) = eb.translate_coordinates(
+            &eb.get_toplevel().unwrap(), x as i32, y as i32).unwrap();
+
+        gtk::Rectangle {
+            x, y,
+            width: ctx.cell_metrics.width as i32,
+            height: ctx.cell_metrics.height as i32,
+        }
     }
 
     /// Connects `f` to internal widget's scroll events. `f` params are scroll
