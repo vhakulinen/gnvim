@@ -68,7 +68,7 @@ fn put_segments(da: &DrawingArea,
             pango_context,
             text,
             0,
-            seg.leaf.len() as i32,
+            text.len() as i32,
             &attrs,
             None);
 
