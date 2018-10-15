@@ -27,6 +27,10 @@ struct State {
     selected: i32,
     /// All items in current popupmenu.
     items: Vec<CompletionItemWidgetWrap>,
+    /// Size available for the popupmenu to use (width and height).
+    available_size: gdk::Rectangle,
+    /// Our anchor position where the popupmenu should be "pointing" to.
+    anchor: gdk::Rectangle,
 }
 
 impl Default for State {
@@ -34,6 +38,14 @@ impl Default for State {
         State {
             selected: -1,
             items: vec!(),
+            available_size: gdk::Rectangle {
+                x: 0, y: 0,
+                width: 0, height: 0,
+            },
+            anchor: gdk::Rectangle {
+                x: 0, y: 0,
+                width: 0, height: 0,
+            },
         }
     }
 }
@@ -118,45 +130,6 @@ impl Popupmenu {
         let state = Arc::new(ThreadGuard::new(State::default()));
 
         let state_ref = state.clone();
-        let box_ref = box_.clone();
-        // Adjust our height when the list box' content changes.
-        list.connect_size_allocate(move |list, alloc| {
-            let state = state_ref.borrow();
-
-            let max_h = 500;
-
-            // Calculate height based on shown rows.
-            let count = list.get_children().len() as i32;
-            // Get the first non-selected row. Non-selected so that we don't
-            // take account of the height if `info` for each row.
-            let index = if state.selected == 0 { 1 } else { 0 };
-            let row_height = if let Some(item) = state.items.get(index) {
-                item.row.get_preferred_height().0
-            } else {
-                16
-            };
-            // If some of the displayed rows is selected, we need to add
-            // that extra height for the `info` row.
-            let extra = if state.selected == -1 { 0 } else { 1 };
-
-            let h = (row_height * (count + extra)).min(max_h);
-            let w = alloc.width;
-
-            let box_ = box_ref.clone();
-            // We'll have to wait for the next UI loop before setting the
-            // desired height of the container.
-            gtk::idle_add(move || {
-                box_.set_size_request(w, h);
-
-                // NOTE(ville): Seems like there is no other way to a widget
-                //              to resize it self.
-                box_.hide();
-                box_.show();
-                Continue(false)
-            });
-        });
-
-        let state_ref = state.clone();
         let nvim_ref = nvim.clone();
         // When a row is activated (by mouse click), notify neovim to change
         // the selection to the activated row.
@@ -196,6 +169,80 @@ impl Popupmenu {
         layout.put(&box_, 0, 0);
         layout.show_all();
         scrolled_info.hide();
+
+        let state_ref = state.clone();
+        layout.connect_size_allocate(move |layout, alloc| {
+            let mut state = state_ref.borrow_mut();
+            state.available_size = *alloc;
+        });
+
+        let state_ref = state.clone();
+        let box_ref = box_.clone();
+        let layout_ref = layout.clone();
+        // Adjust our size and position when the list box's content changes.
+        list.connect_size_allocate(move |list, alloc| {
+            let state = state_ref.borrow();
+            let box_ = box_ref.clone();
+            let layout = layout_ref.clone();
+
+            let max_h = 500;
+
+            // Calculate height based on shown rows.
+            let count = list.get_children().len() as i32;
+            // Get the first non-selected row. Non-selected so that we don't
+            // take account of the height if `info` for each row.
+            let index = if state.selected == 0 { 1 } else { 0 };
+            let row_height = if let Some(item) = state.items.get(index) {
+                item.row.get_preferred_height().0
+            } else {
+                16
+            };
+            // If some of the displayed rows is selected, we need to add
+            // that extra height for the `info` row.
+            let extra = if state.selected == -1 { 0 } else { 1 };
+
+            let mut h = (row_height * (count + extra)).min(max_h);
+            let mut w = alloc.width;
+
+            // Check if we need to adjust our position, x-axis wise.
+            let x2 = state.anchor.x + w;
+            if x2 > state.available_size.width {
+                // Magic number 5 here is making sure there is a small cap
+                // between the popupmenu and the window border.
+                let x_offset = x2 - state.available_size.width + 5;
+                let new_x = (state.anchor.x - x_offset).max(0);
+
+                // TODO(ville): Do we want to truncate the width of the popupmenu
+                //              in case when new_x == 0 && w > state.available_size.width?
+
+                layout.move_(&box_, new_x, state.anchor.y + state.anchor.height);
+            }
+
+            // Check if we need to adjust our position, y-axis wise.
+            // TODO(ville): Move the popupmenu upwards from the anchor position
+            //              of there is no room downwards.
+            let y2 = state.anchor.y + h;
+            if y2 > state.available_size.height {
+                h = state.available_size.height
+                    - state.anchor.y
+                    - state.anchor.height
+                    // Subtract one row height so there'll be small cap
+                    // between the popupmenu and the window border.
+                    - row_height;
+            }
+
+            // We'll have to wait for the next UI loop before setting the
+            // desired height of the container.
+            gtk::idle_add(move || {
+                box_.set_size_request(w, h);
+
+                // NOTE(ville): Seems like there is no other way to a widget
+                //              to resize it self.
+                box_.hide();
+                box_.show();
+                Continue(false)
+            });
+        });
 
         parent.add_overlay(&layout);
 
@@ -252,13 +299,10 @@ impl Popupmenu {
     }
 
     /// Sets the anchor point for popupmenu.
-    pub fn set_anchor(&self, rect: &gdk::Rectangle) {
-        self.set_position(rect.x, rect.y + rect.height);
-    }
-
-    /// Sets the position of popupmenu.
-    fn set_position(&self, x: i32, y: i32) {
-        self.layout.move_(&self.box_, x, y);
+    pub fn set_anchor(&self, rect: gdk::Rectangle) {
+        let mut state = self.state.borrow_mut();
+        self.layout.move_(&self.box_, rect.x, rect.y + rect.height);
+        state.anchor = rect;
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>) {

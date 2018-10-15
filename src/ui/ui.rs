@@ -434,7 +434,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 let grid = state.grids.get(&state.current_grid).unwrap();
                 let rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
-                state.popupmenu.set_anchor(&rect);
+                state.popupmenu.set_anchor(rect);
                 state.popupmenu.show();
             }
             RedrawEvent::PopupmenuHide() => {
