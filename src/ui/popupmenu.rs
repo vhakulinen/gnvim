@@ -245,6 +245,9 @@ impl Popupmenu {
         });
 
         parent.add_overlay(&layout);
+        // Hide the layout initially so it wont catch any input events that
+        // should go to the girds.
+        layout.hide();
 
         Popupmenu {
             box_,
