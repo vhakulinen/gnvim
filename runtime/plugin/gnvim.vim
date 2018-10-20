@@ -27,6 +27,4 @@ augroup GnvimColors
     autocmd ColorScheme * call SetGuiColors()
 augroup END
 
-call SetGuiColors()
-
 inoremap <expr> <C-s> CompletionMenuToggleInfo()

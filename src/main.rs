@@ -45,10 +45,10 @@ fn build(app: &gtk::Application) {
     let mut cmd = Command::new(&nvim_path);
     cmd.arg("--embed")
         .arg("--headless")
-        //.arg("-u")
-        //.arg("NONE")
         .arg("--cmd")
-        .arg("set termguicolors");
+        .arg("set termguicolors")
+        .arg("--cmd")
+        .arg("let &rtp.=',~/src/gnvim/runtime'");
 
     let mut session = NeovimSession::new_child_cmd(&mut cmd).unwrap();
     session.start_event_loop_handler(bridge);
@@ -62,7 +62,7 @@ fn build(app: &gtk::Application) {
     nvim.ui_attach(80, 30, &ui_opts).unwrap();
 
     nvim.subscribe("Gnvim").unwrap();
-    nvim.command("so ~/src/gnvim/runtime/plugin.vim").unwrap();
+    nvim.command("call SetGuiColors()").unwrap();
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();
