@@ -121,7 +121,7 @@ impl UI {
             // Set timeout to notify nvim about the new size.
             let new = glib::timeout_add(30, move || {
                 let mut nvim = nvim_ref.lock().unwrap();
-                nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+                nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
 
                 // Set the source_id to none, so we don't accidentally remove
                 // it since it used at this point.
@@ -402,7 +402,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                         let grid = state.grids.get(&1).unwrap();
                         let (rows, cols) = grid.calc_size();
                         let mut nvim = nvim.lock().unwrap();
-                        nvim.ui_try_resize(cols as u64, rows as u64).unwrap();
+                        nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
 
                         state.popupmenu.set_font(&font);
                     }

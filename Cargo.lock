@@ -175,7 +175,7 @@ dependencies = [
  "gio 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "neovim-lib 0.5.4 (git+https://github.com/daa84/neovim-lib)",
+ "neovim-lib 0.5.4 (git+https://github.com/vhakulinen/neovim-lib?branch=newgrid-to-linegrid)",
  "pango 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pangocairo 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -255,7 +255,7 @@ dependencies = [
 [[package]]
 name = "neovim-lib"
 version = "0.5.4"
-source = "git+https://github.com/daa84/neovim-lib#1c668cc45c0be9e1034296d584b761c450de423f"
+source = "git+https://github.com/vhakulinen/neovim-lib?branch=newgrid-to-linegrid#f2ef5f1a28286086f84c35a1320e460f5531cb35"
 dependencies = [
  "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -424,7 +424,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca488b89a5657b0a2ecd45b95609b3e848cf1755da332a0da46e2b2b1cb371a7"
 "checksum libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)" = "76e3a3ef172f1a0b9a9ff0dd1491ae5e6c948b94479a3021819ba7d860c8645d"
 "checksum log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "61bd98ae7f7b754bc53dca7d44b604f733c6bba044ea6f41bc8d89272d8161d2"
-"checksum neovim-lib 0.5.4 (git+https://github.com/daa84/neovim-lib)" = "<none>"
+"checksum neovim-lib 0.5.4 (git+https://github.com/vhakulinen/neovim-lib?branch=newgrid-to-linegrid)" = "<none>"
 "checksum num-traits 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)" = "92e5113e9fd4cc14ded8e499429f396a20f98c772a47cc8622a736e1ec843c31"
 "checksum num-traits 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "630de1ef5cc79d0cdd78b7e33b81f083cbfe90de0f4b2b2f07f905867c70e9fe"
 "checksum pango 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4c2cb169402a3eb1ba034a7cc7d95b8b1c106e9be5ba4be79a5a93dc1a2795f4"

@@ -21,4 +21,6 @@ features = ["v3_18"]
 
 [dependencies.neovim-lib]
 #version = "0.5"
-git = "https://github.com/daa84/neovim-lib"
+#git = "https://github.com/daa84/neovim-lib"
+git = "https://github.com/vhakulinen/neovim-lib"
+branch = "newgrid-to-linegrid"
