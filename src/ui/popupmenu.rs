@@ -12,6 +12,8 @@ use ui::color::Color;
 use nvim_bridge::CompletionItem;
 use thread_guard::ThreadGuard;
 
+/// Wraps completion item into a structure which contains the item and some
+/// of the widgets to display it.
 struct CompletionItemWidgetWrap {
     /// Actual completion item.
     item: CompletionItem,
@@ -28,7 +30,7 @@ struct State {
     /// All items in current popupmenu.
     items: Vec<CompletionItemWidgetWrap>,
     /// Size available for the popupmenu to use (width and height).
-    available_size: gdk::Rectangle,
+    available_size: Option<gdk::Rectangle>,
     /// Our anchor position where the popupmenu should be "pointing" to.
     anchor: gdk::Rectangle,
 }
@@ -38,10 +40,7 @@ impl Default for State {
         State {
             selected: -1,
             items: vec!(),
-            available_size: gdk::Rectangle {
-                x: 0, y: 0,
-                width: 0, height: 0,
-            },
+            available_size: None,
             anchor: gdk::Rectangle {
                 x: 0, y: 0,
                 width: 0, height: 0,
@@ -173,7 +172,7 @@ impl Popupmenu {
         let state_ref = state.clone();
         layout.connect_size_allocate(move |layout, alloc| {
             let mut state = state_ref.borrow_mut();
-            state.available_size = *alloc;
+            state.available_size = Some(*alloc);
         });
 
         let state_ref = state.clone();
@@ -206,29 +205,31 @@ impl Popupmenu {
 
             // Check if we need to adjust our position, x-axis wise.
             let x2 = state.anchor.x + w;
-            if x2 > state.available_size.width {
-                // Magic number 5 here is making sure there is a small cap
-                // between the popupmenu and the window border.
-                let x_offset = x2 - state.available_size.width + 5;
-                let new_x = (state.anchor.x - x_offset).max(0);
-
-                // TODO(ville): Do we want to truncate the width of the popupmenu
-                //              in case when new_x == 0 && w > state.available_size.width?
-
-                layout.move_(&box_, new_x, state.anchor.y + state.anchor.height);
-            }
-
-            // Check if we need to adjust our position, y-axis wise.
-            // TODO(ville): Move the popupmenu upwards from the anchor position
-            //              of there is no room downwards.
-            let y2 = state.anchor.y + h;
-            if y2 > state.available_size.height {
-                h = state.available_size.height
-                    - state.anchor.y
-                    - state.anchor.height
-                    // Subtract one row height so there'll be small cap
+            if let Some(available_size) = state.available_size {
+                if x2 > available_size.width {
+                    // Magic number 5 here is making sure there is a small cap
                     // between the popupmenu and the window border.
-                    - row_height;
+                    let x_offset = x2 - available_size.width + 5;
+                    let new_x = (state.anchor.x - x_offset).max(0);
+
+                    // TODO(ville): Do we want to truncate the width of the popupmenu
+                    //              in case when new_x == 0 && w > state.available_size.width?
+
+                    layout.move_(&box_, new_x, state.anchor.y + state.anchor.height);
+                }
+
+                // Check if we need to adjust our position, y-axis wise.
+                // TODO(ville): Move the popupmenu upwards from the anchor position
+                //              of there is no room downwards.
+                let y2 = state.anchor.y + h;
+                if y2 > available_size.height {
+                    h = available_size.height
+                        - state.anchor.y
+                        - state.anchor.height
+                        // Subtract one row height so there'll be small cap
+                        // between the popupmenu and the window border.
+                        - row_height;
+                }
             }
 
             // We'll have to wait for the next UI loop before setting the
