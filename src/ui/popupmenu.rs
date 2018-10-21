@@ -87,11 +87,8 @@ impl Popupmenu {
         let info_label = gtk::Label::new("");
         info_label.set_halign(gtk::Align::Start);
         info_label.set_valign(gtk::Align::Start);
-        info_label.set_margin_top(10);
-        info_label.set_margin_bottom(10);
-        info_label.set_margin_left(10);
-        info_label.set_margin_right(10);
         info_label.set_line_wrap(true);
+        gtk::WidgetExt::set_name(&info_label, "info-label");
         info_label.get_style_context()
             .unwrap()
             .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -189,7 +186,7 @@ impl Popupmenu {
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             // Get the first non-selected row. Non-selected so that we don't
-            // take account of the height if `info` for each row.
+            // take into account the height of `info` for each row.
             let index = if state.selected == 0 { 1 } else { 0 };
             let row_height = if let Some(item) = state.items.get(index) {
                 item.row.get_preferred_height().0
@@ -382,6 +379,10 @@ impl Popupmenu {
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
+            }}
+
+            #info-label {{
+                margin: 10px;
             }}
 
             row:selected, row:selected > grid, row:selected > grid > label {{
