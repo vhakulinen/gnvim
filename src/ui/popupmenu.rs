@@ -455,7 +455,7 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
 
     grid.attach(&info, 1, 1, 2, 1);
 
-    // NOTE(ville): We only need to explicitly a crate this row widget
+    // NOTE(ville): We only need to explicitly create this row widget
     //              so we can set css provider to it.
     let row = gtk::ListBoxRow::new();
     row.get_style_context()
@@ -470,6 +470,7 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
     }
 }
 
+/// Returns first line's first sentence of `info`.
 fn shorten_info(info: &String) -> String {
     let lines = info.split("\n").collect::<Vec<&str>>();
     let first_line = lines.get(0).unwrap();
