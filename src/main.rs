@@ -44,7 +44,8 @@ fn build(app: &gtk::Application) {
 
     let mut cmd = Command::new(&nvim_path);
     cmd.arg("--embed")
-        .arg("--headless")
+        .arg("--cmd")
+        .arg("let g:gnvim=1")
         .arg("--cmd")
         .arg("set termguicolors")
         .arg("--cmd")

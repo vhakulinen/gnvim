@@ -1,3 +1,4 @@
+
 function! ReturnHighlightTerm(group, term)
     " Store output of group to variable
     let output = execute('hi ' . a:group)
