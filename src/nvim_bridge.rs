@@ -207,7 +207,7 @@ pub enum RedrawEvent {
     DefaultColorsSet(Color, Color, Color),
     /// id, hl
     HlAttrDefine(Vec<(u64, Highlight)>),
-    OptionSet(OptionSet),
+    OptionSet(Vec<OptionSet>),
     /// cusror shape enabled, mode info
     ModeInfoSet(bool, Vec<ModeInfo>),
     /// name, index
@@ -418,18 +418,21 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 RedrawEvent::HlAttrDefine(hls)
             }
             "option_set" => {
-                let args = try_array!(args[1]);
-                let name = try_str!(args[0]);
+                let mut opts = vec!();
+                for arg in try_array!(args)[1..].into_iter() {
+                    let name = try_str!(arg[0]);
+                    let opt = match name {
+                        "guifont" => {
+                            let val = try_str!(arg[1]);
+                            OptionSet::GuiFont(String::from(val))
+                        }
+                        _ => OptionSet::NotSupported(String::from(name))
+                    };
 
-                let opt = match name {
-                    "guifont" => {
-                        let val = try_str!(args[1]);
-                        OptionSet::GuiFont(String::from(val))
-                    }
-                    _ => OptionSet::NotSupported(String::from(name))
-                };
+                    opts.push(opt);
+                }
 
-                RedrawEvent::OptionSet(opt)
+                RedrawEvent::OptionSet(opts)
             }
             "mode_info_set" => {
                 let args = try_array!(args[1]);

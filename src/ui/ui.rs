@@ -388,26 +388,28 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                     hl_defs.insert(*id, *hl);
                 }
             }
-            RedrawEvent::OptionSet(opt) => {
-                match opt {
-                    OptionSet::GuiFont(font) => {
-                        let font = get_font_from_string(font);
+            RedrawEvent::OptionSet(opts) => {
+                for opt in opts {
+                    match opt {
+                        OptionSet::GuiFont(font) => {
+                            let font = get_font_from_string(font);
 
-                        for grid in (state.grids).values() {
-                            grid.set_font(font.clone());
+                            for grid in (state.grids).values() {
+                                grid.set_font(font.clone());
+                            }
+
+                            // Channing the font affects the grid size, so we'll
+                            // need to tell nvim our new size.
+                            let grid = state.grids.get(&1).unwrap();
+                            let (rows, cols) = grid.calc_size();
+                            let mut nvim = nvim.lock().unwrap();
+                            nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
+
+                            state.popupmenu.set_font(&font);
                         }
-
-                        // Channing the font affects the grid size, so we'll
-                        // need to tell nvim our new size.
-                        let grid = state.grids.get(&1).unwrap();
-                        let (rows, cols) = grid.calc_size();
-                        let mut nvim = nvim.lock().unwrap();
-                        nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
-
-                        state.popupmenu.set_font(&font);
-                    }
-                    OptionSet::NotSupported(name) => {
-                        println!("Not supported option set: {}", name);
+                        OptionSet::NotSupported(name) => {
+                            println!("Not supported option set: {}", name);
+                        }
                     }
                 }
             }
