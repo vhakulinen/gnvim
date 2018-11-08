@@ -1,7 +1,8 @@
 use std::fmt;
+use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 
-use neovim_lib::{Handler, Value};
+use neovim_lib::{Handler, Value, neovim_api::Tabpage};
 
 use ui::color::{Color, Highlight};
 
@@ -83,7 +84,7 @@ impl Highlight {
             "cterm_fg" => {}
             "cterm_bg" => {}
             _ => {
-                panic!("Unknown highligh property: {}", prop);
+                println!("Unknown highligh property: {}", prop);
             }
         }
     }
@@ -218,6 +219,8 @@ pub enum RedrawEvent {
     PopupmenuHide(),
     PopupmenuSelect(i64),
 
+    TablineUpdate(Tabpage, Vec<(Tabpage, String)>),
+
     Unknown(String),
 }
 
@@ -238,6 +241,7 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::PopupmenuShow(..) => write!(fmt, "PopupmenuShow"),
             RedrawEvent::PopupmenuHide(..) => write!(fmt, "PopupmenuHide"),
             RedrawEvent::PopupmenuSelect(..) => write!(fmt, "PopupmenuSelect"),
+            RedrawEvent::TablineUpdate(..) => write!(fmt, "TablineUpdate"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
@@ -255,6 +259,13 @@ pub struct SetGuiColors {
     pub pmenu_fg: Color,
     pub pmenusel_bg: Color,
     pub pmenusel_fg: Color,
+
+    pub tabline_fg: Color,
+    pub tabline_bg: Color,
+    pub tablinefill_fg: Color,
+    pub tablinefill_bg: Color,
+    pub tablinesel_bg: Color,
+    pub tablinesel_fg: Color,
 }
 
 pub struct NvimBridge {
@@ -440,8 +451,6 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
 
                 let mut infos = vec!();
                 for info in try_array!(args[1]).into_iter() {
-                    //let args = try_array!(args);
-                    //let id = try_u64!(args[0]);
                     let map = try_map!(info);
 
                     let mut mode = ModeInfo::default();
@@ -497,8 +506,23 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 let selected = try_i64!(args[0]);
                 RedrawEvent::PopupmenuSelect(selected)
             }
+            "tabline_update" => {
+                let args = try_array!(args[1]);
+                let cur_tab = Tabpage::new(args[0].clone());
+                let tabs = try_array!(args[1])
+                    .iter()
+                    .map(|item| {
+                        let m = map_to_hash(&item);
+                        (
+                            Tabpage::new((*m.get("tab").unwrap()).clone()),
+                            try_str!(m.get("name").unwrap()).to_string(),
+                        )
+                    })
+                    .collect();
+
+                RedrawEvent::TablineUpdate(cur_tab, tabs)
+            }
             _ => {
-                //println!("Unknown redraw event: {}", cmd);
                 RedrawEvent::Unknown(cmd.to_string())
             }
         }
@@ -520,6 +544,12 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
                     "pmenu_fg" => colors.pmenu_fg = color,
                     "pmenusel_bg" => colors.pmenusel_bg = color,
                     "pmenusel_fg" => colors.pmenusel_fg = color,
+                    "tabline_fg" => colors.tabline_fg = color,
+                    "tabline_bg" => colors.tabline_bg = color,
+                    "tablinefill_fg" => colors.tablinefill_fg = color,
+                    "tablinefill_bg" => colors.tablinefill_bg = color,
+                    "tablinesel_fg" => colors.tablinesel_fg = color,
+                    "tablinesel_bg" => colors.tablinesel_bg = color,
                     _ => {
                         println!("Unknown SetGuiColor: {}", try_str!(e.0));
                     }
@@ -535,4 +565,13 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             GnvimEvent::Unknown(String::from("UGH"))
         }
     }
+}
+
+fn map_to_hash<'a>(val: &'a Value) -> HashMap<&'a str, &'a Value> {
+    let mut h = HashMap::new();
+    for (prop, val) in try_map!(val) {
+        h.insert(try_str!(prop), val);
+    }
+
+    h
 }

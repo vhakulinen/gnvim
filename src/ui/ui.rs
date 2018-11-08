@@ -16,6 +16,7 @@ use gtk::prelude::*;
 use nvim_bridge::{Notify, RedrawEvent, GnvimEvent, OptionSet, ModeInfo};
 use ui::color::{Highlight, Color};
 use ui::popupmenu::Popupmenu;
+use ui::tabline::Tabline;
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
 
@@ -57,9 +58,9 @@ struct UIState {
     current_grid: u64,
 
     popupmenu: Popupmenu,
+    tabline: Tabline,
 
-    /// Overlay is our root widget. Has one contianer widget for grids and such,
-    /// and overlays for popupmenu and such.
+    /// Overlay contains our grid(s) and popupmenu.
     overlay: gtk::Overlay,
 
     /// Source id for delayed call to ui_try_resize.
@@ -92,9 +93,16 @@ impl UI {
         window.set_title("Neovim");
         window.set_default_size(1280, 720);
 
+        // Top level widget.
+        let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        window.add(&b);
+
+        let tabline = Tabline::new(nvim.clone());
+        b.pack_start(&tabline.get_widget(), false, false, 0);
+
         // Our root widget.
         let overlay = gtk::Overlay::new();
-        window.add(&overlay);
+        b.pack_start(&overlay, true, true, 0);
 
         let grid_ = gtk::Grid::new();
         overlay.add(&grid_);
@@ -255,7 +263,8 @@ impl UI {
                 mode_infos: vec!(),
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
-                overlay: overlay,
+                overlay,
+                tabline,
                 resize_source_id: source_id,
             })),
             nvim,
@@ -331,7 +340,17 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState, nvim: Arc<Mutex<N
                 colors.pmenu_bg,
                 colors.pmenusel_fg,
                 colors.pmenusel_bg,
-            )
+            );
+
+            let hl_defs = state.hl_defs.lock().unwrap();
+            state.tabline.set_colors(
+                colors.tabline_fg,
+                colors.tabline_bg,
+                colors.tablinefill_fg,
+                colors.tablinefill_bg,
+                colors.tablinesel_fg,
+                colors.tablinesel_bg,
+            );
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
@@ -427,6 +446,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                             nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
 
                             state.popupmenu.set_font(&font);
+                            state.tabline.set_font(&font);
                         }
                         OptionSet::NotSupported(name) => {
                             println!("Not supported option set: {}", name);
@@ -455,7 +475,11 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 state.popupmenu.set_items(popupmenu.items.clone());
 
                 let grid = state.grids.get(&state.current_grid).unwrap();
-                let rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+                let mut rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+
+                let extra_h = state.tabline.get_height();
+                println!("H: {}", extra_h);
+                rect.y -= extra_h;
 
                 state.popupmenu.set_anchor(rect);
                 state.popupmenu.show();
@@ -465,6 +489,9 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::PopupmenuSelect(selected) => {
                 state.popupmenu.select(*selected as i32);
+            }
+            RedrawEvent::TablineUpdate(cur, tabs) => {
+                state.tabline.update(cur.clone(), tabs.clone());
             }
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);

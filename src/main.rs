@@ -59,6 +59,7 @@ fn build(app: &gtk::Application) {
     ui_opts.set_rgb(true);
     ui_opts.set_linegrid_external(true);
     ui_opts.set_popupmenu_external(true);
+    ui_opts.set_tabline_external(true);
     //ui_opts.set_cmdline_external(true);
     nvim.ui_attach(80, 30, &ui_opts).unwrap();
 
