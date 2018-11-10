@@ -402,8 +402,18 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                             // need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
                             let (rows, cols) = grid.calc_size();
-                            let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
+                            let nvim = nvim.clone();
+                            // NOTE(ville): We'll have to call ui_try_resize after
+                            //              (at least) 10ms, other wise neovim fails(?)
+                            //              to handle it after initial option_set
+                            //              message. Nvim handles it just fine if user
+                            //              calls `:set guifont` manually afterwards.
+                            //              I'm not sure if its bug in neovim or in our code.
+                            glib::timeout_add(10, move || {
+                                let mut nvim = nvim.lock().unwrap();
+                                nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
+                                Continue(false)
+                            });
 
                             state.popupmenu.set_font(&font);
                         }
