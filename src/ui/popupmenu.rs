@@ -12,6 +12,11 @@ use ui::color::Color;
 use nvim_bridge::CompletionItem;
 use thread_guard::ThreadGuard;
 
+/// Maximum height of completion menu.
+const MAX_HEIGHT: i32 = 500;
+/// Fixed width of completion menu.
+const FIXED_WIDTH: i32 = 800;
+
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.
 struct CompletionItemWidgetWrap {
@@ -181,8 +186,6 @@ impl Popupmenu {
             let box_ = box_ref.clone();
             let layout = layout_ref.clone();
 
-            let max_h = 500;
-
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             // Get the first non-selected row. Non-selected so that we don't
@@ -197,12 +200,11 @@ impl Popupmenu {
             // that extra height for the `info` row.
             let extra = if state.selected == -1 { 0 } else { 1 };
 
-            let mut h = (row_height * (count + extra)).min(max_h);
-            let mut w = alloc.width;
+            let mut h = (row_height * (count + extra)).min(MAX_HEIGHT);
 
-            // Check if we need to adjust our position, x-axis wise.
-            let x2 = state.anchor.x + w;
             if let Some(available_size) = state.available_size {
+                // Check if we need to adjust our position, x-axis wise.
+                let x2 = state.anchor.x + alloc.width;
                 if x2 > available_size.width {
                     // Magic number 5 here is making sure there is a small cap
                     // between the popupmenu and the window border.
@@ -215,7 +217,7 @@ impl Popupmenu {
                     layout.move_(&box_, new_x, state.anchor.y + state.anchor.height);
                 }
 
-                // Check if we need to adjust our position, y-axis wise.
+                // Check if we need to adjust our height.
                 // TODO(ville): Move the popupmenu upwards from the anchor position
                 //              of there is no room downwards.
                 let y2 = state.anchor.y + h;
@@ -223,21 +225,54 @@ impl Popupmenu {
                     h = available_size.height
                         - state.anchor.y
                         - state.anchor.height
-                        // Subtract one row height so there'll be small cap
-                        // between the popupmenu and the window border.
-                        - row_height;
+                        - 10;
                 }
             }
 
             // We'll have to wait for the next UI loop before setting the
             // desired height of the container.
             gtk::idle_add(move || {
-                box_.set_size_request(w, h);
+                box_.set_size_request(FIXED_WIDTH, h);
+
 
                 // NOTE(ville): Seems like there is no other way to a widget
                 //              to resize it self.
                 box_.hide();
                 box_.show();
+                Continue(false)
+            });
+        });
+
+        let state_ref = state.clone();
+        let list_ref = list.clone();
+        let info_label_ref = info_label.clone();
+        let box_ref = box_.clone();
+        info_box.connect_size_allocate(move |info_box, alloc| {
+            let state = state_ref.borrow();
+            let a = list_ref.get_allocation();
+
+            // When `info_box` is shown, make sure that we can show as much
+            // of its content - to the point its height reaches MAX_HEIGHT.
+            let mut h = alloc.height.max(a.height).min(MAX_HEIGHT);
+
+            if let Some(available_size) = state.available_size {
+                // Check if we need to adjust our height.
+                // TODO(ville): See comment from list's connect_size:allocate
+                let y2 = state.anchor.y + h;
+                if y2 > available_size.height {
+                    h = available_size.height
+                        - state.anchor.y
+                        - state.anchor.height
+                        - 10;
+                }
+            }
+
+            let box_ref = box_ref.clone();
+            gtk::idle_add(move || {
+                box_ref.set_size_request(FIXED_WIDTH, h);
+
+                box_ref.hide();
+                box_ref.show();
                 Continue(false)
             });
         });
@@ -424,6 +459,7 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
 
     let word = gtk::Label::new(item.word.as_str());
     word.set_halign(gtk::Align::Start);
+    word.set_ellipsize(pango::EllipsizeMode::End);
     word.get_style_context()
         .unwrap()
         .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -470,11 +506,9 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
     }
 }
 
-/// Returns first line's first sentence of `info`.
+/// Returns first line of `info`.
 fn shorten_info(info: &String) -> String {
     let lines = info.split("\n").collect::<Vec<&str>>();
     let first_line = lines.get(0).unwrap();
-    let sentences = first_line.split(".").collect::<Vec<&str>>();
-    let sentence = sentences.get(0).unwrap();
-    sentence.to_string()
+    first_line.to_string()
 }
