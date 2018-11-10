@@ -196,14 +196,39 @@ impl Grid {
         });
     }
 
-    /// Connects `f` to internal widget's mouse button events. `f` params are
-    /// button, row, col.
-    pub fn connect_mouse_button_events<F: 'static>(&self, f: F)
+    /// Connects `f` to internal widget's mouse button press event. `f` params
+    /// are button, row, col.
+    pub fn connect_mouse_button_press_events<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
         let eb = self.eb.borrow();
         let ctx = self.context.clone();
 
         eb.connect_button_press_event(move |_, e| {
+            let ctx = ctx.borrow();
+            let ctx = ctx.as_ref().unwrap();
+
+            let button = match e.get_button() {
+                3 => MouseButton::Right,
+                2 => MouseButton::Middle,
+                _ => MouseButton::Left,
+            };
+
+            let pos = e.get_position();
+            let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
+            let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
+
+            f(button, row, col)
+        });
+    }
+
+    /// Connects `f` to internal widget's mouse button release event. `f` params
+    /// are button, row, col.
+    pub fn connect_mouse_button_release_events<F: 'static>(&self, f: F)
+        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+        let eb = self.eb.borrow();
+        let ctx = self.context.clone();
+
+        eb.connect_button_release_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 

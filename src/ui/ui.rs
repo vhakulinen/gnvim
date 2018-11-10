@@ -147,11 +147,21 @@ impl UI {
             false
         });
 
-        // Mouse button click events.
+        // Mouse button press event.
         let nvim_ref = nvim.clone();
-        grid.connect_mouse_button_events(move |button, row, col| {
+        grid.connect_mouse_button_press_events(move |button, row, col| {
             let mut nvim = nvim_ref.lock().unwrap();
             let input = format!("<{}Mouse><{},{}>", button, col, row);
+            nvim.input(&input).expect("Couldn't send mouse input");
+
+            Inhibit(false)
+        });
+
+        // Mouse button release events.
+        let nvim_ref = nvim.clone();
+        grid.connect_mouse_button_release_events(move |button, row, col| {
+            let mut nvim = nvim_ref.lock().unwrap();
+            let input = format!("<{}Release><{},{}>", button, col, row);
             nvim.input(&input).expect("Couldn't send mouse input");
 
             Inhibit(false)
