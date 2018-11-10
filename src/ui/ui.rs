@@ -159,7 +159,7 @@ impl UI {
 
         // Mouse drag events.
         let nvim_ref = nvim.clone();
-        grid.connect_motion_events(move |button, row, col| {
+        grid.connect_motion_events_for_drag(move |button, row, col| {
             let mut nvim = nvim_ref.lock().unwrap();
             let input = format!("<{}Drag><{},{}>", button, col, row);
             nvim.input(&input).expect("Couldn't send mouse input");

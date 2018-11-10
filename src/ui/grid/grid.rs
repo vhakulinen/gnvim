@@ -62,6 +62,9 @@ pub struct Grid {
     context: Arc<ThreadGuard<Option<Context>>>,
     /// Reference to the highlight defs.
     hl_defs: Arc<Mutex<HlDefs>>,
+    /// Pointer position for dragging if we should call callback from
+    /// `connect_motion_events_for_drag`.
+    drag_position: Arc<ThreadGuard<(u64, u64)>>,
 }
 
 impl Grid {
@@ -110,6 +113,7 @@ impl Grid {
             eb: ThreadGuard::new(eb),
             context: ctx,
             hl_defs,
+            drag_position: Arc::new(ThreadGuard::new((0, 0))),
         }
     }
 
@@ -161,15 +165,17 @@ impl Grid {
     }
 
     /// Connects `f` to internal widget's motion events. `f` params are button,
-    /// row, col.
-    pub fn connect_motion_events<F: 'static>(&self, f: F)
+    /// row, col. `f` is only called when the cell under the pointer changes.
+    pub fn connect_motion_events_for_drag<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
         let eb = self.eb.borrow();
         let ctx = self.context.clone();
+        let drag_position = self.drag_position.clone();
 
         eb.connect_motion_notify_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
+            let mut drag_position = drag_position.borrow_mut();
 
             let button = match e.get_state() {
                 ModifierType::BUTTON3_MASK => MouseButton::Right,
@@ -181,7 +187,12 @@ impl Grid {
             let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
             let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
-            f(button, row, col)
+            if drag_position.0 != col || drag_position.1 != row {
+                *drag_position = (col, row);
+                f(button, row, col)
+            } else {
+                Inhibit(false)
+            }
         });
     }
 
