@@ -61,6 +61,9 @@ struct UIState {
     /// Overlay is our root widget. Has one contianer widget for grids and such,
     /// and overlays for popupmenu and such.
     overlay: gtk::Overlay,
+
+    /// Source id for delayed call to ui_try_resize.
+    resize_source_id: Arc<Mutex<Option<glib::SourceId>>>,
 }
 
 /// Main UI structure.
@@ -113,11 +116,12 @@ impl UI {
         // so we don't spam it multiple times a second. source_id is used to
         // track the function timeout.
         let source_id = Arc::new(Mutex::new(None));
+        let source_id_ref = source_id.clone();
         let nvim_ref = nvim.clone();
         grid.connect_da_resize(move |rows, cols| {
             let nvim_ref = nvim_ref.clone();
 
-            let source_id_moved = source_id.clone();
+            let source_id_moved = source_id_ref.clone();
             // Set timeout to notify nvim about the new size.
             let new = glib::timeout_add(30, move || {
                 let mut nvim = nvim_ref.lock().unwrap();
@@ -132,7 +136,7 @@ impl UI {
                 Continue(false)
             });
 
-            let source_id = source_id.clone();
+            let source_id = source_id_ref.clone();
             let mut source_id = source_id.lock().unwrap();
             {
                 // If we have earlier timeout, remove it.
@@ -252,6 +256,7 @@ impl UI {
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
                 overlay: overlay,
+                resize_source_id: source_id,
             })),
             nvim,
         }
@@ -408,22 +413,18 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                                 grid.set_font(font.clone());
                             }
 
+                            // Cancel any possible delayed call for ui_try_resize.
+                            let mut id = state.resize_source_id.lock().unwrap();
+                            if let Some(id) = id.take() {
+                                glib::source::source_remove(id);
+                            }
+
                             // Channing the font affects the grid size, so we'll
                             // need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
                             let (rows, cols) = grid.calc_size();
-                            let nvim = nvim.clone();
-                            // NOTE(ville): We'll have to call ui_try_resize after
-                            //              (at least) 10ms, other wise neovim fails(?)
-                            //              to handle it after initial option_set
-                            //              message. Nvim handles it just fine if user
-                            //              calls `:set guifont` manually afterwards.
-                            //              I'm not sure if its bug in neovim or in our code.
-                            glib::timeout_add(10, move || {
-                                let mut nvim = nvim.lock().unwrap();
-                                nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
-                                Continue(false)
-                            });
+                            let mut nvim = nvim.lock().unwrap();
+                            nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
 
                             state.popupmenu.set_font(&font);
                         }
