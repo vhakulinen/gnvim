@@ -55,9 +55,9 @@ impl Display for MouseButton {
 /// the ui.txt documentation for neovim.
 pub struct Grid {
     /// Our internal "widget". This is what is drawn to the screen.
-    da: ThreadGuard<DrawingArea>,
+    da: DrawingArea,
     /// EventBox to get mouse events for this grid.
-    eb: ThreadGuard<EventBox>,
+    eb: EventBox,
     /// Internal context that is manipulated and used when handling events.
     context: Arc<ThreadGuard<Option<Context>>>,
     /// Reference to the highlight defs.
@@ -109,8 +109,8 @@ impl Grid {
         parent.add(&eb);
 
         Grid {
-            da: ThreadGuard::new(da),
-            eb: ThreadGuard::new(eb),
+            da: da,
+            eb: eb,
             context: ctx,
             hl_defs,
             drag_position: Arc::new(ThreadGuard::new((0, 0))),
@@ -122,7 +122,6 @@ impl Grid {
     pub fn get_rect_for_cell(&self, row: u64, col: u64) -> gdk::Rectangle {
         let ctx = self.context.borrow();
         let ctx = ctx.as_ref().unwrap();
-        let eb = self.eb.borrow();
 
         let (x, y) = render::get_coords(
             ctx.cell_metrics.height,
@@ -130,8 +129,8 @@ impl Grid {
             row as f64,
             col as f64);
 
-        let (x, y) = eb.translate_coordinates(
-            &eb.get_toplevel().unwrap(), x as i32, y as i32).unwrap();
+        let (x, y) = self.eb.translate_coordinates(
+            &self.eb.get_toplevel().unwrap(), x as i32, y as i32).unwrap();
 
         gtk::Rectangle {
             x, y,
@@ -144,10 +143,9 @@ impl Grid {
     /// direction, row, col.
     pub fn connect_scroll_events<F: 'static>(&self, f: F)
         where F: Fn(ScrollDirection, u64, u64) -> Inhibit {
-        let eb = self.eb.borrow();
         let ctx = self.context.clone();
 
-        eb.connect_scroll_event(move |_, e| {
+        self.eb.connect_scroll_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 
@@ -168,11 +166,10 @@ impl Grid {
     /// row, col. `f` is only called when the cell under the pointer changes.
     pub fn connect_motion_events_for_drag<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
-        let eb = self.eb.borrow();
         let ctx = self.context.clone();
         let drag_position = self.drag_position.clone();
 
-        eb.connect_motion_notify_event(move |_, e| {
+        self.eb.connect_motion_notify_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
             let mut drag_position = drag_position.borrow_mut();
@@ -200,10 +197,9 @@ impl Grid {
     /// are button, row, col.
     pub fn connect_mouse_button_press_events<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
-        let eb = self.eb.borrow();
         let ctx = self.context.clone();
 
-        eb.connect_button_press_event(move |_, e| {
+        self.eb.connect_button_press_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 
@@ -225,10 +221,9 @@ impl Grid {
     /// are button, row, col.
     pub fn connect_mouse_button_release_events<F: 'static>(&self, f: F)
         where F: Fn(MouseButton, u64, u64) -> Inhibit {
-        let eb = self.eb.borrow();
         let ctx = self.context.clone();
 
-        eb.connect_button_release_event(move |_, e| {
+        self.eb.connect_button_release_event(move |_, e| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 
@@ -249,10 +244,9 @@ impl Grid {
     /// Connects `f` to internal widget's resize events. `f` params are rows, cols.
     pub fn connect_da_resize<F: 'static>(&self, f: F)
         where F: Fn(u64, u64) -> bool {
-        let da = self.da.borrow();
         let ctx = self.context.clone();
 
-        da.connect_configure_event(move |da, _| {
+        self.da.connect_configure_event(move |da, _| {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 
@@ -269,14 +263,12 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        let da = self.da.borrow();
-        render::put_line(&da, ctx, line, &mut *self.hl_defs.lock().unwrap());
+        render::put_line(&self.da, ctx, line, &mut *self.hl_defs.lock().unwrap());
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        let da = self.da.borrow();
 
         // Clear old cursor position.
         let (x, y, w, h) = {
@@ -287,7 +279,7 @@ impl Grid {
                                             ctx.cursor.1 as f64);
             (x, y, cm.width, cm.height)
         };
-        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
 
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
@@ -308,7 +300,7 @@ impl Grid {
                                             ctx.cursor.1 as f64);
             (x, y, cm.width, cm.height)
         };
-        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
     pub fn resize(&self, width: u64, height: u64) {
@@ -325,7 +317,6 @@ impl Grid {
     pub fn clear(&self) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        let da = self.da.borrow();
         let hl_defs = self.hl_defs.lock().unwrap();
 
         // Clear internal grid (rows).
@@ -333,16 +324,15 @@ impl Grid {
             row.clear();
         }
 
-        render::clear(&da, ctx, &hl_defs)
+        render::clear(&self.da, ctx, &hl_defs)
     }
 
     pub fn scroll(&self, reg: [u64;4], rows: i64, cols: i64) {
         let mut ctx = self.context.borrow_mut();
         let mut ctx = ctx.as_mut().unwrap();
-        let da = self.da.borrow();
         let hl_defs = self.hl_defs.lock().unwrap();
 
-        render::scroll(&da, &mut ctx, &hl_defs, reg, rows);
+        render::scroll(&self.da, &mut ctx, &hl_defs, reg, rows);
     }
 
     pub fn set_active(&self, active: bool) {
@@ -355,7 +345,6 @@ impl Grid {
     pub fn tick(&self) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        let da = self.da.borrow();
 
         ctx.cursor_alpha += 0.05;
         if ctx.cursor_alpha > 2.0 {
@@ -371,7 +360,7 @@ impl Grid {
             (x, y, cm.width, cm.height)
         };
 
-        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
     pub fn set_font(&self, font: FontDescription) {
@@ -396,12 +385,11 @@ impl Grid {
 
     /// Calculates the current gird size. Returns (rows, cols).
     pub fn calc_size(&self) -> (usize, usize) {
-        let da = self.da.borrow();
         let ctx = self.context.borrow();
         let ctx = ctx.as_ref().unwrap();
 
-        let w = da.get_allocated_width();
-        let h = da.get_allocated_height();
+        let w = self.da.get_allocated_width();
+        let h = self.da.get_allocated_height();
         let cols = (w / ctx.cell_metrics.width as i32) as usize;
         let rows = (h / ctx.cell_metrics.height as i32) as usize;
 
