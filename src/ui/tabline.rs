@@ -89,7 +89,7 @@ impl Tabline {
         let page =  current.get_number(&mut nvim).unwrap() - 1;
         self.notebook.set_current_page(Some(page as u32));
 
-        *self.tabpage_data.replace(
+        self.tabpage_data.replace(
             Box::new(tabs.iter().map(|t| t.0.clone()).collect()));
 
 

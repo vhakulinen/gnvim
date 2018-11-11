@@ -51,7 +51,7 @@ impl Display for MouseButton {
     }
 }
 
-/// Single grid in the neovim UI. This matches the `ui-newgrid` stuff in
+/// Single grid in the neovim UI. This matches the `ui-linegrid` stuff in
 /// the ui.txt documentation for neovim.
 pub struct Grid {
     /// Our internal "widget". This is what is drawn to the screen.

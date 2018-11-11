@@ -228,6 +228,8 @@ impl UI {
                     let mut nvim = nvim_ref.lock().unwrap();
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
+                } else {
+                    println!("Failed to turn input event into nvim key (keyval: {})", e.get_keyval())
                 }
 
                 Inhibit(false)
@@ -542,7 +544,7 @@ fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "Right" => Some("Right"),
         "Home" => Some("Home"),
         "End" => Some("End"),
-    _ => None,
+        _ => None,
     }
 }
 
@@ -550,7 +552,7 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     let mut input = String::from("");
 
     let keyval = e.get_keyval();
-    let keyname = gdk::keyval_name(keyval).unwrap();
+    let keyname = gdk::keyval_name(keyval)?;
 
     let state = e.get_state();
 
@@ -565,16 +567,10 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     }
 
     if keyname.chars().count() > 1 {
-        let n = keyname_to_nvim_key(keyname.as_str());
-
-        if let Some(n) = n {
-            input.push_str(n);
-        } else {
-            println!("NO KEY FOR NVIM ('{}')", keyname);
-            return None;
-        }
+        let n = keyname_to_nvim_key(keyname.as_str())?;
+        input.push_str(n);
     } else {
-        input.push(gdk::keyval_to_unicode(keyval).unwrap());
+        input.push(gdk::keyval_to_unicode(keyval)?);
     }
 
     Some(format!("<{}>", input))
