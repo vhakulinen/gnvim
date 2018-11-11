@@ -31,7 +31,7 @@ impl Tabline {
         let tabpage_data = Rc::new(RefCell::new(Box::new(vec!())));
         let tabpage_data_ref = tabpage_data.clone();
         let nvim_ref = nvim.clone();
-        let switch_tab_signal = notebook.connect_switch_page(move |notebook, page, page_num| {
+        let switch_tab_signal = notebook.connect_switch_page(move |_, _, page_num| {
 
             let pages = tabpage_data_ref.borrow();
             if let Some(ref page) = pages.get(page_num as usize) {

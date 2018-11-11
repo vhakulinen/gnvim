@@ -1,5 +1,4 @@
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
-use nvim_bridge;
 
 /// Wrapper for a leaf, that tells the leaf's position.
 pub struct Segment<'a> {
@@ -29,6 +28,7 @@ impl Leaf {
     }
 
     /// Length of this leaf (in utf8 characters).
+    #[allow(unused)] // Not used currently, but tested.
     pub fn len(&self) -> usize {
         self.len
     }
@@ -281,6 +281,7 @@ impl Row {
     }
 
     /// Returns the whole text of the row.
+    #[allow(unused)] // Not used currently, but tested.
     pub fn text(&self) -> String {
         self.rope.as_ref().unwrap().text()
     }
@@ -291,6 +292,7 @@ impl Row {
         self.rope.as_ref().unwrap().leaf_at(at)
     }
 
+    #[allow(unused)] // Not used currently, but tested.
     pub fn len(&self) -> usize {
         self.len
     }

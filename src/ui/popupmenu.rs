@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use gdk;
-use glib;
 use gtk;
 use gtk::prelude::*;
 use pango;
@@ -76,7 +75,6 @@ pub struct Popupmenu {
 
     /// State that is in Arc because its passed into widget signal handlers.
     state: Arc<ThreadGuard<State>>,
-    nvim: Arc<Mutex<Neovim>>,
 }
 
 impl Popupmenu {
@@ -134,8 +132,8 @@ impl Popupmenu {
         let nvim_ref = nvim.clone();
         // When a row is activated (by mouse click), notify neovim to change
         // the selection to the activated row.
-        list.connect_row_activated(move |list, row| {
-            let mut state = state_ref.borrow_mut();
+        list.connect_row_activated(move |_, row| {
+            let state = state_ref.borrow_mut();
             let new = row.get_index();
 
             let op = if new > state.selected {
@@ -155,7 +153,7 @@ impl Popupmenu {
 
         let nvim_ref = nvim.clone();
         // On (mouse) button press...
-        list.connect_button_press_event(move |list, e| {
+        list.connect_button_press_event(move |_, e| {
             // ...check if the button press is double click.
             if e.get_event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
@@ -172,7 +170,7 @@ impl Popupmenu {
         scrolled_info.hide();
 
         let state_ref = state.clone();
-        layout.connect_size_allocate(move |layout, alloc| {
+        layout.connect_size_allocate(move |_, alloc| {
             let mut state = state_ref.borrow_mut();
             state.available_size = Some(*alloc);
         });
@@ -245,9 +243,8 @@ impl Popupmenu {
 
         let state_ref = state.clone();
         let list_ref = list.clone();
-        let info_label_ref = info_label.clone();
         let box_ref = box_.clone();
-        info_box.connect_size_allocate(move |info_box, alloc| {
+        info_box.connect_size_allocate(move |_, alloc| {
             let state = state_ref.borrow();
             let a = list_ref.get_allocation();
 
@@ -291,13 +288,12 @@ impl Popupmenu {
             scrolled_info,
             info_label,
             state,
-            nvim,
             info_shown: false,
         }
     }
 
     pub fn toggle_show_info(&mut self) {
-        let mut state = self.state.borrow_mut();
+        let state = self.state.borrow_mut();
 
         if state.selected == -1 {
             return

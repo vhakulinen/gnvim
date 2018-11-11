@@ -6,7 +6,7 @@ use pango::FontDescription;
 use cairo;
 use gdk::{EventMask, ModifierType};
 use gdk;
-use gtk::{DrawingArea, EventBox, Overlay};
+use gtk::{DrawingArea, EventBox};
 use gtk;
 
 use cairo::prelude::*;
@@ -14,11 +14,9 @@ use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
 use ui::ui::HlDefs;
-use ui::popupmenu::Popupmenu;
 use ui::grid::context::Context;
 use ui::grid::render;
 use ui::grid::row::Row;
-use ui::color::Color;
 use thread_guard::ThreadGuard;
 
 pub enum ScrollDirection {
@@ -68,7 +66,7 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(id: u64, parent: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(_id: u64, parent: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
         let da = DrawingArea::new();
         da.set_vexpand(true);
         da.set_hexpand(true);
@@ -327,7 +325,7 @@ impl Grid {
         render::clear(&self.da, ctx, &hl_defs)
     }
 
-    pub fn scroll(&self, reg: [u64;4], rows: i64, cols: i64) {
+    pub fn scroll(&self, reg: [u64;4], rows: i64, _cols: i64) {
         let mut ctx = self.context.borrow_mut();
         let mut ctx = ctx.as_mut().unwrap();
         let hl_defs = self.hl_defs.lock().unwrap();
@@ -394,20 +392,6 @@ impl Grid {
         let rows = (h / ctx.cell_metrics.height as i32) as usize;
 
         (rows, cols)
-    }
-
-    pub fn get_row_text(&self, row: usize) -> String {
-        let ctx = self.context.borrow();
-        let ctx = ctx.as_ref().unwrap();
-
-        ctx.rows.get(row).unwrap().text()
-    }
-
-    pub fn hl_id_at(&self, row: usize, col: usize) -> u64 {
-        let ctx = self.context.borrow();
-        let ctx = ctx.as_ref().unwrap();
-
-        ctx.rows.get(row).unwrap().leaf_at(col).hl_id()
     }
 }
 

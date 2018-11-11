@@ -61,6 +61,7 @@ struct UIState {
     tabline: Tabline,
 
     /// Overlay contains our grid(s) and popupmenu.
+    #[allow(unused)]
     overlay: gtk::Overlay,
 
     /// Source id for delayed call to ui_try_resize.
@@ -329,12 +330,12 @@ fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>)
             handle_redraw_event(events, state, nvim);
         }
         Notify::GnvimEvent(event) => {
-            handle_gnvim_event(event, state, nvim);
+            handle_gnvim_event(event, state);
         }
     }
 }
 
-fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
+fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
             state.popupmenu.set_colors(
@@ -344,7 +345,6 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState, nvim: Arc<Mutex<N
                 colors.pmenusel_bg,
             );
 
-            let hl_defs = state.hl_defs.lock().unwrap();
             state.tabline.set_colors(
                 colors.tabline_fg,
                 colors.tabline_bg,
@@ -459,7 +459,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             RedrawEvent::ModeInfoSet(_cursor_shape_enabled, infos) => {
                 state.mode_infos = infos.clone();
             }
-            RedrawEvent::ModeChange(name, idx) => {
+            RedrawEvent::ModeChange(_name, idx) => {
                 let mode = state.mode_infos.get(*idx as usize).unwrap();
                 // Broadcast the mode change to all grids.
                 // TODO(ville): It might be enough to just set the mode to the

@@ -9,7 +9,6 @@ use nvim_bridge::GridLineSegment;
 use ui::grid::row::Segment;
 use ui::grid::context::{Context, CellMetrics};
 use ui::ui::HlDefs;
-use ui::color::{Highlight, Color};
 
 /// Renders `segments` to `da`.
 fn put_segments(da: &DrawingArea,
