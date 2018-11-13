@@ -108,6 +108,24 @@ impl Tabline {
         &self,
         fg: Color,
         bg: Color,
+        fill_fg: Color,
+        fill_bg: Color,
+        selected_fg: Color,
+        selected_bg: Color) {
+        if gtk::get_minor_version() < 20 {
+            self.set_colors_pre20(
+                fg, bg, fill_fg, fill_bg, selected_fg, selected_bg);
+        }
+        else {
+            self.set_colors_post20(
+                fg, bg, fill_fg, fill_bg, selected_fg, selected_bg);
+        }
+    }
+
+    fn set_colors_post20(
+        &self,
+        fg: Color,
+        bg: Color,
         _fill_fg: Color,
         _fill_bg: Color,
         selected_fg: Color,
@@ -130,11 +148,62 @@ impl Tabline {
                 box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
             }}
             tab:checked {{
-                box-shadow: none;
                 border: none;
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             tab:checked, tab:checked > label {{
+                color: #{selected_fg};
+                background-color: #{selected_bg};
+            }}
+            tab:hover {{
+                box-shadow: inset 73px 0px 0px -70px #{selected_fg};
+            }}
+            ",
+            normal_fg=fg.to_hex(),
+            normal_bg=bg.to_hex(),
+            selected_fg=selected_fg.to_hex(),
+            selected_bg=selected_bg.to_hex(),
+        );
+
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+    }
+
+    fn set_colors_pre20(
+        &self,
+        fg: Color,
+        bg: Color,
+        _fill_fg: Color,
+        _fill_bg: Color,
+        selected_fg: Color,
+        selected_bg: Color) {
+
+        let css = format!(
+            "GtkNotebook {{
+                padding: 0px;
+                background-color: #{normal_bg};
+
+                -GtkNotebook-initial-gap: 0;
+                -GtkNotebook-tab-overlap: 1;
+                -GtkNotebook-has-tab-gap: false;
+            }}
+            GtkLabel {{
+                color: #{normal_fg};
+                background: transparent;
+                font-weight: normal;
+                border: none;
+            }}
+            tab {{
+                padding: 5px;
+                outline: none;
+                background-color: #{normal_bg};
+                border: none;
+                box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
+            }}
+            tab:active {{
+                border: none;
+                box-shadow: inset 73px 0px 0px -70px #{selected_fg};
+            }}
+            tab:active, tab:active > GtkLabel {{
                 color: #{selected_fg};
                 background-color: #{selected_bg};
             }}

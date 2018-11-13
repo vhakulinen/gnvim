@@ -125,6 +125,9 @@ impl Popupmenu {
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
+        box_.get_style_context()
+            .unwrap()
+            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
@@ -404,16 +407,29 @@ impl Popupmenu {
                       normal_bg: Color,
                       selected_fg: Color,
                       selected_bg: Color) {
+        if gtk::get_minor_version() < 20 {
+            self.set_colors_pre20(
+                normal_fg, normal_bg, selected_fg, selected_bg);
+        } else {
+            self.set_colors_post20(
+                normal_fg, normal_bg, selected_fg, selected_bg);
+        }
+    }
+
+    fn set_colors_post20(&self,
+                      normal_fg: Color,
+                      normal_bg: Color,
+                      selected_fg: Color,
+                      selected_bg: Color) {
         let css = format!(
-            "scrolledwindow, layout, grid, label, list, row {{
-                border-color: #{normal_fg};
+            "box, grid, list, row, label {{
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
             }}
 
             #info-label {{
-                margin: 10px;
+                padding: 10px;
             }}
 
             row:selected, row:selected > grid, row:selected > grid > label {{
@@ -421,7 +437,40 @@ impl Popupmenu {
                 background-color: #{selected_bg};
             }}
 
-            scrolledwindow {{
+            box {{
+                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
+            }}
+            ", normal_fg=normal_fg.to_hex(),
+               normal_bg=normal_bg.to_hex(),
+               selected_bg=selected_bg.to_hex(),
+               selected_fg=selected_fg.to_hex());
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+    }
+
+    fn set_colors_pre20(&self,
+                      normal_fg: Color,
+                      normal_bg: Color,
+                      selected_fg: Color,
+                      selected_bg: Color) {
+        let css = format!(
+            "GtkBox, GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
+                color: #{normal_fg};
+                background-color: #{normal_bg};
+                outline: none;
+            }}
+
+            #info-label {{
+                padding: 10px;
+            }}
+
+            GtkListBoxRow:selected,
+            GtkListBoxRow:selected > GtkGrid,
+            GtkListBoxRow:selected > GtkGrid > GtkLabel {{
+                color: #{selected_fg};
+                background-color: #{selected_bg};
+            }}
+
+            GtkBox {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
             ", normal_fg=normal_fg.to_hex(),
