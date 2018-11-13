@@ -1,4 +1,6 @@
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
+#[cfg(test)]
+use nvim_bridge;
 
 /// Wrapper for a leaf, that tells the leaf's position.
 pub struct Segment<'a> {

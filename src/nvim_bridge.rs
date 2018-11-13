@@ -43,6 +43,14 @@ macro_rules! try_bool {
 }
 
 impl Highlight {
+    fn from_map_val(map: &Vec<(Value, Value)>) -> Self {
+        let mut hl = Highlight::default();
+        for (prop, val) in map {
+            hl.set(try_str!(prop), val.clone());
+        }
+        hl
+    }
+
     fn set(&mut self, prop: &str, val: Value) {
         match prop {
             "foreground" => {
@@ -193,6 +201,15 @@ pub struct PopupmenuShow {
     pub col: u64,
 }
 
+pub struct CmdlineShow {
+    pub content: Vec<(u64, String)>,
+    pub pos: u64,
+    pub firstc: String,
+    pub prompt: String,
+    pub indent: u64,
+    pub level: u64,
+}
+
 pub enum RedrawEvent {
     GridLine(Vec<GridLineSegment>),
     /// grid, width, height
@@ -221,6 +238,14 @@ pub enum RedrawEvent {
 
     TablineUpdate(Tabpage, Vec<(Tabpage, String)>),
 
+    CmdlineShow(CmdlineShow),
+    CmdlineHide(),
+    CmdlinePos(u64, u64),
+    CmdlineSpecialChar(String, bool, u64),
+    CmdlineBlockShow(Vec<(u64, String)>),
+    CmdlineBlockAppend((u64, String)),
+    CmdlineBlockHide(),
+
     Unknown(String),
 }
 
@@ -242,6 +267,13 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::PopupmenuHide(..) => write!(fmt, "PopupmenuHide"),
             RedrawEvent::PopupmenuSelect(..) => write!(fmt, "PopupmenuSelect"),
             RedrawEvent::TablineUpdate(..) => write!(fmt, "TablineUpdate"),
+            RedrawEvent::CmdlineShow(..) => write!(fmt, "CmdlineShow"),
+            RedrawEvent::CmdlineHide(..) => write!(fmt, "CmdlineHide"),
+            RedrawEvent::CmdlinePos(..) => write!(fmt, "CmdlinePos"),
+            RedrawEvent::CmdlineSpecialChar(..) => write!(fmt, "CmdlineSpecialChar"),
+            RedrawEvent::CmdlineBlockShow(..) => write!(fmt, "CmdlineBlockShow"),
+            RedrawEvent::CmdlineBlockAppend(..) => write!(fmt, "CmdlineBlockAppend"),
+            RedrawEvent::CmdlineBlockHide(..) => write!(fmt, "CmdlineBlockHide"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
@@ -254,18 +286,38 @@ pub enum GnvimEvent {
 }
 
 #[derive(Default)]
-pub struct SetGuiColors {
-    pub pmenu_bg: Color,
-    pub pmenu_fg: Color,
-    pub pmenusel_bg: Color,
-    pub pmenusel_fg: Color,
+pub struct PmenuColors {
+    pub bg: Color,
+    pub fg: Color,
+    pub sel_bg: Color,
+    pub sel_fg: Color,
+}
 
-    pub tabline_fg: Color,
-    pub tabline_bg: Color,
-    pub tablinefill_fg: Color,
-    pub tablinefill_bg: Color,
-    pub tablinesel_bg: Color,
-    pub tablinesel_fg: Color,
+#[derive(Default)]
+pub struct TablineColors {
+    pub fg: Color,
+    pub bg: Color,
+    pub fill_fg: Color,
+    pub fill_bg: Color,
+    pub sel_bg: Color,
+    pub sel_fg: Color,
+}
+
+#[derive(Default)]
+pub struct CmdlineColors {
+    pub fg: Color,
+    pub bg: Color,
+    pub fill_fg: Color,
+    pub fill_bg: Color,
+    pub sel_bg: Color,
+    pub sel_fg: Color,
+}
+
+#[derive(Default)]
+pub struct SetGuiColors {
+    pub pmenu: PmenuColors,
+    pub tabline: TablineColors,
+    pub cmdline: CmdlineColors,
 }
 
 pub struct NvimBridge {
@@ -398,7 +450,6 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 let rows = try_i64!(args[5]);
                 let cols = try_i64!(args[6]);
 
-                //RedrawEvent::Unknown(cmd.to_string())
                 RedrawEvent::GridScroll(id, [top, bot, left, right], rows, cols)
             }
             "default_colors_set" => {
@@ -418,10 +469,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let id = try_u64!(args[0]);
                     let map = try_map!(args[1]);
 
-                    let mut hl = Highlight::default();
-                    for (prop, val) in map {
-                        hl.set(try_str!(prop), val.clone());
-                    }
+                    let hl = Highlight::from_map_val(map);
 
                     hls.push((id, hl));
                 }
@@ -522,6 +570,71 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
 
                 RedrawEvent::TablineUpdate(cur_tab, tabs)
             }
+            "cmdline_show" => {
+                let args = try_array!(args[1]);
+                let content: Vec<(u64, String)> = try_array!(args[0]).into_iter().map(|v| {
+                    let hl_id = try_u64!(v[0]);
+                    let text = try_str!(v[1]);
+
+                    (hl_id, String::from(text))
+                }).collect();
+                let pos = try_u64!(args[1]);
+                let firstc = String::from(try_str!(args[2]));
+                let prompt = String::from(try_str!(args[3]));
+                let indent = try_u64!(args[4]);
+                let level = try_u64!(args[5]);
+
+                RedrawEvent::CmdlineShow(CmdlineShow{
+                    content,
+                    pos,
+                    firstc,
+                    prompt,
+                    indent,
+                    level,
+                })
+            }
+            "cmdline_hide" => {
+                RedrawEvent::CmdlineHide()
+            }
+            "cmdline_pos" => {
+                let args = try_array!(args[1]);
+                let pos = try_u64!(args[0]);
+                let level = try_u64!(args[1]);
+                RedrawEvent::CmdlinePos(pos, level)
+            }
+            "cmdline_special_char" => {
+                let args = try_array!(args[1]);
+                let c = try_str!(args[0]);
+                let shift = try_bool!(args[1]);
+                let level = try_u64!(args[2]);
+                RedrawEvent::CmdlineSpecialChar(c.to_string(), shift, level)
+            }
+            "cmdline_block_show" => {
+                let args = try_array!(args[1]);
+                let args = try_array!(args[0]);
+
+                let lines: Vec<(u64, String)> = try_array!(args[0]).iter().map(|v| {
+                    let hl_id = try_u64!(v[0]);
+                    let text = try_str!(v[1]);
+
+                    (hl_id, text.to_string())
+                }).collect();
+
+                RedrawEvent::CmdlineBlockShow(lines)
+            }
+            "cmdline_block_append" => {
+                let args = try_array!(args[1]);
+                let args = try_array!(args[0]);
+                let line_raw = try_array!(args[0]);
+
+                RedrawEvent::CmdlineBlockAppend((
+                        try_u64!(line_raw[0]),
+                        try_str!(line_raw[1]).to_string(),
+                ))
+            }
+            "cmdline_block_hide" => {
+                RedrawEvent::CmdlineBlockHide()
+            }
             _ => {
                 RedrawEvent::Unknown(cmd.to_string())
             }
@@ -540,16 +653,24 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
                         String::from(try_str!(e.1))
                     ).unwrap_or(Color::default());
                 match try_str!(e.0) {
-                    "pmenu_bg" => colors.pmenu_bg = color,
-                    "pmenu_fg" => colors.pmenu_fg = color,
-                    "pmenusel_bg" => colors.pmenusel_bg = color,
-                    "pmenusel_fg" => colors.pmenusel_fg = color,
-                    "tabline_fg" => colors.tabline_fg = color,
-                    "tabline_bg" => colors.tabline_bg = color,
-                    "tablinefill_fg" => colors.tablinefill_fg = color,
-                    "tablinefill_bg" => colors.tablinefill_bg = color,
-                    "tablinesel_fg" => colors.tablinesel_fg = color,
-                    "tablinesel_bg" => colors.tablinesel_bg = color,
+                    "pmenu_bg" => colors.pmenu.bg = color,
+                    "pmenu_fg" => colors.pmenu.fg = color,
+                    "pmenusel_bg" => colors.pmenu.sel_bg = color,
+                    "pmenusel_fg" => colors.pmenu.sel_fg = color,
+
+                    "tabline_fg" => colors.tabline.fg = color,
+                    "tabline_bg" => colors.tabline.bg = color,
+                    "tablinefill_fg" => colors.tabline.fill_fg = color,
+                    "tablinefill_bg" => colors.tabline.fill_bg = color,
+                    "tablinesel_fg" => colors.tabline.sel_fg = color,
+                    "tablinesel_bg" => colors.tabline.sel_bg = color,
+
+                    "cmdline_fg" => colors.cmdline.fg = color,
+                    "cmdline_bg" => colors.cmdline.bg = color,
+                    "cmdlinefill_fg" => colors.cmdline.fill_fg = color,
+                    "cmdlinefill_bg" => colors.cmdline.fill_bg = color,
+                    "cmdlinesel_fg" => colors.cmdline.sel_fg = color,
+                    "cmdlinesel_bg" => colors.cmdline.sel_bg = color,
                     _ => {
                         println!("Unknown SetGuiColor: {}", try_str!(e.0));
                     }

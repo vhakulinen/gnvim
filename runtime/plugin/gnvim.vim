@@ -13,12 +13,20 @@ function! SetGuiColors()
                 \ 'pmenu_fg': ReturnHighlightTerm('Pmenu', 'guifg'),
                 \ 'pmenusel_bg': ReturnHighlightTerm('PmenuSel', 'guibg'),
                 \ 'pmenusel_fg': ReturnHighlightTerm('PmenuSel', 'guifg'),
+                \
                 \ 'tabline_fg': ReturnHighlightTerm('TabLine', 'guifg'),
                 \ 'tabline_bg': ReturnHighlightTerm('TabLine', 'guibg'),
                 \ 'tablinesel_fg': ReturnHighlightTerm('TabLineSel', 'guifg'),
                 \ 'tablinesel_bg': ReturnHighlightTerm('TabLineSel', 'guibg'),
                 \ 'tablinefill_fg': ReturnHighlightTerm('TabLineFill', 'guifg'),
                 \ 'tablinefill_bg': ReturnHighlightTerm('TabLineFill', 'guibg'),
+                \
+                \ 'cmdline_fg': ReturnHighlightTerm('Normal', 'guifg'),
+                \ 'cmdline_bg': ReturnHighlightTerm('Normal', 'guibg'),
+                \ 'cmdlinesel_fg': ReturnHighlightTerm('TabLineSel', 'guifg'),
+                \ 'cmdlinesel_bg': ReturnHighlightTerm('TabLineSel', 'guibg'),
+                \ 'cmdlinefill_fg': ReturnHighlightTerm('TabLineFill', 'guifg'),
+                \ 'cmdlinefill_bg': ReturnHighlightTerm('TabLineFill', 'guibg'),
                 \}
 
     call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)

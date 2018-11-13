@@ -66,10 +66,8 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(_id: u64, parent: &gtk::Container, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(_id: u64, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
         let da = DrawingArea::new();
-        da.set_vexpand(true);
-        da.set_hexpand(true);
         let ctx = Arc::new(ThreadGuard::new(None));
 
         let ctx_ref = ctx.clone();
@@ -78,7 +76,7 @@ impl Grid {
             if ctx.is_none() {
                 // On initial expose, we'll need to create our internal context,
                 // since this is the first time we'll have drawing area present...
-                *ctx = Some(Context::new(&da))
+                *ctx = Some(Context::new(&da));
             } else {
                 // ...but if we already have context, our size is changing, so
                 // we'll need to update our internals.
@@ -104,8 +102,6 @@ impl Grid {
         eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
         eb.add(&da);
 
-        parent.add(&eb);
-
         Grid {
             da: da,
             eb: eb,
@@ -113,6 +109,10 @@ impl Grid {
             hl_defs,
             drag_position: Arc::new(ThreadGuard::new((0, 0))),
         }
+    }
+
+    pub fn widget(&self) -> gtk::Widget {
+        self.eb.clone().upcast()
     }
 
     /// Returns position (+ width and height) for cell (row, col) relative

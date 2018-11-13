@@ -8,7 +8,7 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
 use ui::color::Color;
-use nvim_bridge::CompletionItem;
+use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
 
 /// Maximum height of completion menu.
@@ -167,6 +167,7 @@ impl Popupmenu {
             Inhibit(false)
         });
 
+        // TODO(ville): Should use gtk::Fixed here.
         let layout = gtk::Layout::new(None, None);
         layout.put(&box_, 0, 0);
         layout.show_all();
@@ -402,25 +403,15 @@ impl Popupmenu {
         }
     }
 
-    pub fn set_colors(&self,
-                      normal_fg: Color,
-                      normal_bg: Color,
-                      selected_fg: Color,
-                      selected_bg: Color) {
+    pub fn set_colors(&self, colors: &PmenuColors) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(
-                normal_fg, normal_bg, selected_fg, selected_bg);
+            self.set_colors_pre20(colors);
         } else {
-            self.set_colors_post20(
-                normal_fg, normal_bg, selected_fg, selected_bg);
+            self.set_colors_post20(colors);
         }
     }
 
-    fn set_colors_post20(&self,
-                      normal_fg: Color,
-                      normal_bg: Color,
-                      selected_fg: Color,
-                      selected_bg: Color) {
+    fn set_colors_post20(&self, colors: &PmenuColors) {
         let css = format!(
             "box, grid, list, row, label {{
                 color: #{normal_fg};
@@ -440,18 +431,14 @@ impl Popupmenu {
             box {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
-            ", normal_fg=normal_fg.to_hex(),
-               normal_bg=normal_bg.to_hex(),
-               selected_bg=selected_bg.to_hex(),
-               selected_fg=selected_fg.to_hex());
+            ", normal_fg=colors.fg.to_hex(),
+               normal_bg=colors.bg.to_hex(),
+               selected_bg=colors.sel_bg.to_hex(),
+               selected_fg=colors.sel_fg.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
 
-    fn set_colors_pre20(&self,
-                      normal_fg: Color,
-                      normal_bg: Color,
-                      selected_fg: Color,
-                      selected_bg: Color) {
+    fn set_colors_pre20(&self, colors: &PmenuColors) {
         let css = format!(
             "GtkBox, GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
                 color: #{normal_fg};
@@ -473,10 +460,10 @@ impl Popupmenu {
             GtkBox {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
-            ", normal_fg=normal_fg.to_hex(),
-               normal_bg=normal_bg.to_hex(),
-               selected_bg=selected_bg.to_hex(),
-               selected_fg=selected_fg.to_hex());
+            ", normal_fg=colors.fg.to_hex(),
+               normal_bg=colors.bg.to_hex(),
+               selected_bg=colors.sel_bg.to_hex(),
+               selected_fg=colors.sel_fg.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
 
