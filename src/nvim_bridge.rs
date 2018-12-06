@@ -308,10 +308,7 @@ pub struct TablineColors {
 pub struct CmdlineColors {
     pub fg: Color,
     pub bg: Color,
-    pub fill_fg: Color,
-    pub fill_bg: Color,
-    pub sel_bg: Color,
-    pub sel_fg: Color,
+    pub border: Color,
 }
 
 #[derive(Default)]
@@ -668,10 +665,7 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
 
                     "cmdline_fg" => colors.cmdline.fg = color,
                     "cmdline_bg" => colors.cmdline.bg = color,
-                    "cmdlinefill_fg" => colors.cmdline.fill_fg = color,
-                    "cmdlinefill_bg" => colors.cmdline.fill_bg = color,
-                    "cmdlinesel_fg" => colors.cmdline.sel_fg = color,
-                    "cmdlinesel_bg" => colors.cmdline.sel_bg = color,
+                    "cmdline_border" => colors.cmdline.border = color,
                     _ => {
                         println!("Unknown SetGuiColor: {}", try_str!(e.0));
                     }

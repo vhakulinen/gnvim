@@ -355,7 +355,7 @@ impl Cmdline {
                 background: #{bg};
                 padding: 6px;
             }}",
-            bg=colors.sel_bg.to_hex());
+            bg=colors.border.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
 
         self.input.set_colors(colors);

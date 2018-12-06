@@ -23,10 +23,7 @@ function! SetGuiColors()
                 \
                 \ 'cmdline_fg': ReturnHighlightTerm('Normal', 'guifg'),
                 \ 'cmdline_bg': ReturnHighlightTerm('Normal', 'guibg'),
-                \ 'cmdlinesel_fg': ReturnHighlightTerm('TabLineSel', 'guifg'),
-                \ 'cmdlinesel_bg': ReturnHighlightTerm('TabLineSel', 'guibg'),
-                \ 'cmdlinefill_fg': ReturnHighlightTerm('TabLineFill', 'guifg'),
-                \ 'cmdlinefill_bg': ReturnHighlightTerm('TabLineFill', 'guibg'),
+                \ 'cmdline_border': ReturnHighlightTerm('TabLineSel', 'guibg'),
                 \}
 
     call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)
