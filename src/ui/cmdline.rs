@@ -8,7 +8,7 @@ use nvim_bridge;
 use ui::grid::Grid;
 use ui::ui::HlDefs;
 
-const FIXED_WIDTH: i32 = 650;
+const MAX_WIDTH: i32 = 650;
 
 struct CmdlineBlock {
     box_: gtk::Box,
@@ -262,7 +262,6 @@ impl CmdlineInput {
             }}
 
             textview, text {{
-                caret-color: #{fg};
                 color: #{fg};
                 background: #{bg};
             }}
@@ -317,7 +316,7 @@ impl Cmdline {
             .unwrap()
             .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        box_.set_size_request(FIXED_WIDTH, -1);
+        box_.set_size_request(MAX_WIDTH, -1);
 
         let block = CmdlineBlock::new();
         box_.pack_start(&block.widget(), true, true, 0);
@@ -333,7 +332,12 @@ impl Cmdline {
         let fixed_ref = fixed.clone();
         let box_ref = box_.clone();
         parent.connect_size_allocate(move |_, alloc| {
-            let x = alloc.width / 2 - FIXED_WIDTH / 2;
+
+            // Make sure we'll fit to the available space.
+            let width = MAX_WIDTH.min(alloc.width);
+            box_ref.set_size_request(width, -1);
+
+            let x = alloc.width / 2 - width / 2;
             fixed_ref.move_(&box_ref, x, 0);
         });
 
