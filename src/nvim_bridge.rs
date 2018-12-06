@@ -201,6 +201,7 @@ pub struct PopupmenuShow {
     pub col: u64,
 }
 
+#[derive(Debug)]
 pub struct CmdlineShow {
     pub content: Vec<(u64, String)>,
     pub pos: u64,

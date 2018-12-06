@@ -167,6 +167,8 @@ struct CmdlineInput {
     prompt_len: i32,
     // Cursor position in `content` (in bytes).
     cursor_pos: usize,
+    // Level from the latest `cmdline_show`.
+    current_level: u64,
 }
 
 impl CmdlineInput {
@@ -198,6 +200,7 @@ impl CmdlineInput {
             content: String::new(),
             prompt_len: 0,
             cursor_pos: 0,
+            current_level: 0,
         }
     }
 
@@ -234,6 +237,7 @@ impl CmdlineInput {
             buffer.insert_markup(&mut iter, &markup);
         }
 
+        self.current_level = content.level;
         self.content = content.content.iter().map(|c| c.1.clone()).collect();
 
         self.textview.grab_focus();
@@ -252,11 +256,7 @@ impl CmdlineInput {
 
     fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
         let css = format!(
-            "scrolledwindow {{
-                border: 1px solid #{border};
-            }}
-
-            box {{
+            "box {{
                 padding: 5px;
                 background: #{bg};
             }}
@@ -267,13 +267,16 @@ impl CmdlineInput {
                 background: #{bg};
             }}
             ",
-            border=colors.fg.to_hex(),
             fg=colors.fg.to_hex(),
             bg=colors.bg.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
 
-    fn set_cursor(&mut self, pos: usize) {
+    fn set_cursor(&mut self, pos: usize, level: u64) {
+        if (level != self.current_level) {
+            return;
+        }
+
         self.cursor_pos = pos;
         self.ensure_cursor_pos();
     }
@@ -391,7 +394,7 @@ impl Cmdline {
     }
 
     pub fn set_pos(&mut self, pos: u64, level: u64) {
-        self.input.set_cursor(pos as usize);
+        self.input.set_cursor(pos as usize, level);
     }
 
     pub fn show_block(&mut self, lines: &Vec<(u64, String)>) {
