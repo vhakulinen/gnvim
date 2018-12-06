@@ -99,8 +99,7 @@ impl CmdlineBlock {
     fn append(&mut self, line: &(u64, String), hl_defs: &HlDefs) {
         let buffer = self.textview.get_buffer().unwrap();
 
-        let mark_insert = buffer.get_insert().unwrap();
-        let mut iter = buffer.get_iter_at_mark(&mark_insert);
+        let mut iter = buffer.get_end_iter();
 
         let hl = hl_defs.get(&line.0).unwrap();
 
@@ -262,6 +261,7 @@ impl CmdlineInput {
             }}
 
             textview, text {{
+                caret-color: #{fg};
                 color: #{fg};
                 background: #{bg};
             }}
