@@ -11,7 +11,7 @@ use ui::ui::HlDefs;
 const MAX_WIDTH: i32 = 650;
 
 struct CmdlineBlock {
-    box_: gtk::Box,
+    frame: gtk::Frame,
     scrolledwindow: gtk::ScrolledWindow,
 
     textview: gtk::TextView,
@@ -36,13 +36,13 @@ impl CmdlineBlock {
             gtk::PolicyType::Automatic,
             gtk::PolicyType::Never);
 
-        let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        box_.get_style_context()
+        let frame = gtk::Frame::new(None);
+        frame.get_style_context()
             .unwrap()
             .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         scrolledwindow.add(&textview);
-        box_.pack_start(&scrolledwindow, true, true, 0);
+        frame.add(&scrolledwindow);
 
         let scrolledwindow_ref = scrolledwindow.clone();
         textview.connect_size_allocate(move |tv, alloc| {
@@ -62,7 +62,7 @@ impl CmdlineBlock {
         });
 
         CmdlineBlock {
-            box_,
+            frame,
             scrolledwindow,
             textview,
             css_provider,
@@ -70,11 +70,11 @@ impl CmdlineBlock {
     }
 
     fn widget(&self) -> gtk::Widget {
-        self.box_.clone().upcast()
+        self.frame.clone().upcast()
     }
 
     fn show(&mut self, lines: &Vec<(u64, String)>, hl_defs: &HlDefs) {
-        self.box_.show();
+        self.frame.show();
         let buffer = self.textview.get_buffer().unwrap();
         let mut iter = buffer.get_iter_at_offset(0);
 
@@ -124,7 +124,7 @@ impl CmdlineBlock {
 
 
     fn hide(&self) {
-        self.box_.hide();
+        self.frame.hide();
         self.scrolledwindow.set_size_request(-1, -1);
         self.scrolledwindow.set_policy(
             gtk::PolicyType::Automatic,
@@ -135,18 +135,45 @@ impl CmdlineBlock {
     }
 
     fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+        if gtk::get_minor_version() < 20 {
+            self.set_colors_pre20(colors);
+        } else {
+            self.set_colors_post20(colors);
+        }
+    }
+
+    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
         let css = format!(
-            "box {{
+            "GtkFrame {{
+                border: none;
                 padding: 5px;
                 background: #{bg};
+            }}
+
+            GtkTextView {{
+                color: #{fg};
+                background: #{bg};
+            }}",
+            fg=colors.fg.to_hex(),
+            bg=colors.bg.to_hex());
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+    }
+
+    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
+        let css = format!(
+            "frame {{
+                padding: 5px;
+                background: #{bg};
+            }}
+
+            frame > border {{
+                border: none;
             }}
 
             textview, text {{
                 color: #{fg};
                 background: #{bg};
-            }}
-            ",
-            //border=colors.fg.to_hex(),
+            }}",
             fg=colors.fg.to_hex(),
             bg=colors.bg.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
@@ -154,7 +181,7 @@ impl CmdlineBlock {
 }
 
 struct CmdlineInput {
-    box_: gtk::Box,
+    frame: gtk::Frame,
     textview: gtk::TextView,
     css_provider: gtk::CssProvider,
 
@@ -184,15 +211,15 @@ impl CmdlineInput {
             Inhibit(true)
         });
 
-        // Wrap the textview into a box, mainly to add some padding (with css).
-        let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        box_.pack_start(&textview, true, true, 0);
-        box_.get_style_context()
+        // Wrap the textview into a frame, mainly to add some padding (with css).
+        let frame = gtk::Frame::new(None);
+        frame.add(&textview);
+        frame.get_style_context()
             .unwrap()
             .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         CmdlineInput {
-            box_,
+            frame,
             textview,
             css_provider,
 
@@ -204,7 +231,7 @@ impl CmdlineInput {
     }
 
     fn widget(&self) -> gtk::Widget {
-        self.box_.clone().upcast()
+        self.frame.clone().upcast()
     }
 
     fn set_text(&mut self, content: &nvim_bridge::CmdlineShow, hl_defs: &HlDefs) {
@@ -254,18 +281,46 @@ impl CmdlineInput {
     }
 
     fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+        if gtk::get_minor_version() < 20 {
+            self.set_colors_pre20(colors);
+        } else {
+            self.set_colors_post20(colors);
+        }
+    }
+
+    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
         let css = format!(
-            "box {{
+            "GtkFrame {{
+                border: none;
                 padding: 5px;
                 background: #{bg};
+            }}
+
+            GtkTextView {{
+                color: #{fg};
+                background: #{bg};
+            }}",
+            fg=colors.fg.to_hex(),
+            bg=colors.bg.to_hex());
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+    }
+
+    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
+        let css = format!(
+            "frame {{
+                padding: 5px;
+                background: #{bg};
+            }}
+
+            frame > border {{
+                border: none;
             }}
 
             textview, text {{
                 caret-color: #{fg};
                 color: #{fg};
                 background: #{bg};
-            }}
-            ",
+            }}",
             fg=colors.fg.to_hex(),
             bg=colors.bg.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
@@ -312,11 +367,6 @@ impl Cmdline {
         let css_provider = gtk::CssProvider::new();
 
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        box_.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
-
-        box_.set_size_request(MAX_WIDTH, -1);
 
         let block = CmdlineBlock::new();
         box_.pack_start(&block.widget(), true, true, 0);
@@ -324,21 +374,47 @@ impl Cmdline {
         let input = CmdlineInput::new();
         box_.pack_start(&input.widget(), true, true, 0);
 
+        // Depending on which gtk version we're running, the top container
+        // for cmdline varies. It'll be GtkBox either way.
+        let mut container: gtk::Widget = box_.clone().upcast();
+        if gtk::get_minor_version() < 20 {
+            // For gtk versions < 20, we'll need to have a GtkFrame around our
+            // box where the input/block is to get padding, but to get box-shadow,
+            // we'll have to have another container around the frame because
+            // frame it self cant have shadows.
+            let outer_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            let frame = gtk::Frame::new(None);
+            frame.get_style_context()
+                .unwrap()
+                .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+            outer_box.get_style_context()
+                .unwrap()
+                .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+            frame.add(&box_);
+            outer_box.add(&frame);
+            container = outer_box.clone().upcast();
+        }
+
+        // Add style provider to the container.
+        container.get_style_context()
+            .unwrap()
+            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+
         let fixed = gtk::Fixed::new();
-        fixed.put(&box_, 0, 0);
+        fixed.put(&container, 0, 0);
 
         parent.add_overlay(&fixed);
 
         let fixed_ref = fixed.clone();
-        let box_ref = box_.clone();
+        let container_ref = container.clone();
         parent.connect_size_allocate(move |_, alloc| {
 
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
-            box_ref.set_size_request(width, -1);
+            container_ref.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;
-            fixed_ref.move_(&box_ref, x, 0);
+            fixed_ref.move_(&container, x, 0);
         });
 
         Cmdline{
@@ -353,6 +429,17 @@ impl Cmdline {
     }
 
     pub fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+        if gtk::get_minor_version() < 20 {
+            self.set_colors_pre20(colors);
+        } else {
+            self.set_colors_post20(colors);
+        }
+
+        self.input.set_colors(colors);
+        self.block.set_colors(colors);
+    }
+
+    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
         let css = format!(
             "box {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
@@ -361,9 +448,21 @@ impl Cmdline {
             }}",
             bg=colors.border.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+    }
 
-        self.input.set_colors(colors);
-        self.block.set_colors(colors);
+    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
+        let css = format!(
+            "GtkBox {{
+                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
+            }}
+
+            GtkFrame {{
+                background: #{bg};
+                padding: 6px;
+                border: none;
+            }}",
+            bg=colors.border.to_hex());
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
 
     pub fn hide(&self) {
