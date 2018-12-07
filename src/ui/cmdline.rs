@@ -202,6 +202,7 @@ impl CmdlineInput {
         let css_provider = gtk::CssProvider::new();
 
         let textview = gtk::TextView::new();
+        textview.set_editable(false);
         textview.get_style_context()
             .unwrap()
             .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
