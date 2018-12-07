@@ -39,6 +39,9 @@ pub struct Context {
     pub current_hl: Highlight,
     /// If the grid that this context belongs to is active or not.
     pub active: bool,
+
+    /// Areas to call queue_draw_area on the drawing area on flush.
+    pub queue_draw_area: Vec<(i32, i32, i32, i32)>,
 }
 
 impl Context {
@@ -72,6 +75,8 @@ impl Context {
 
             current_hl: Highlight::default(),
             active: false,
+
+            queue_draw_area: vec!(),
         }
     }
 

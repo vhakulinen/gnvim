@@ -14,6 +14,7 @@ use ui::ui::HlDefs;
 fn put_segments(da: &DrawingArea,
                 cr: &cairo::Context,
                 pango_context: &pango::Context,
+                queue_draw_area: &mut Vec<(i32, i32, i32, i32)>,
                 cm: &CellMetrics,
                 hl_defs: &mut HlDefs,
                 segments: Vec<Segment>,
@@ -117,7 +118,7 @@ fn put_segments(da: &DrawingArea,
 
         cr.restore();
 
-        da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
     }
 }
 
@@ -141,6 +142,7 @@ pub fn put_line(da: &DrawingArea,
     put_segments(da,
                  &context.cairo_context,
                  &context.pango_context,
+                 &mut context.queue_draw_area,
                  &context.cell_metrics,
                  hl_defs,
                  affected_segments,
@@ -148,7 +150,7 @@ pub fn put_line(da: &DrawingArea,
 }
 
 /// Clears whole `da` with `hl_defs.default_bg`.
-pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
+pub fn clear(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs) {
     let cr = &ctx.cairo_context;
     let w = da.get_allocated_width();
     let h = da.get_allocated_height();
@@ -160,7 +162,7 @@ pub fn clear(da: &DrawingArea, ctx: &Context, hl_defs: &HlDefs) {
     cr.fill();
     cr.restore();
 
-    da.queue_draw_area(0, 0, w, h);
+    ctx.queue_draw_area.push((0, 0, w, h));
 }
 
 /// Scrolls contents in `da` and `ctx.rows`, based on `reg`.
@@ -239,7 +241,7 @@ pub fn scroll(da: &DrawingArea,
     cr.set_operator(cairo::Operator::Source);
     cr.rectangle(x1, y1, w, h);
     cr.fill();
-    da.queue_draw_area(x1 as i32, y1 as i32, w as i32, h as i32);
+    ctx.queue_draw_area.push((x1 as i32, y1 as i32, w as i32, h as i32));
 
     // Clear the area that is left "dirty".
     let (x1, y1, x2, y2) = get_rect(cm.height, cm.width, clr_top, clr_bot, left as f64, right as f64);
@@ -248,7 +250,7 @@ pub fn scroll(da: &DrawingArea,
     cr.rectangle(x1, y1, x2 - x1, y2 - y1);
     cr.set_source_rgb(bg.r, bg.g, bg.b);
     cr.fill();
-    da.queue_draw_area(x1 as i32, y1 as i32, w as i32, h as i32);
+    ctx.queue_draw_area.push((x1 as i32, y1 as i32, w as i32, h as i32));
 
     cr.restore();
 }

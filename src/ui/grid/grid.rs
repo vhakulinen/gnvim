@@ -115,6 +115,15 @@ impl Grid {
         self.eb.clone().upcast()
     }
 
+    pub fn flush(&self) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+
+        while let Some(area) = ctx.queue_draw_area.pop() {
+            self.da.queue_draw_area(area.0, area.1, area.2, area.3);
+        }
+    }
+
     /// Returns position (+ width and height) for cell (row, col) relative
     /// to the top level window of this grid.
     pub fn get_rect_for_cell(&self, row: u64, col: u64) -> gdk::Rectangle {
@@ -277,7 +286,7 @@ impl Grid {
                                             ctx.cursor.1 as f64);
             (x, y, cm.width, cm.height)
         };
-        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        ctx.queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
 
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
@@ -298,7 +307,7 @@ impl Grid {
                                             ctx.cursor.1 as f64);
             (x, y, cm.width, cm.height)
         };
-        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        ctx.queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
     }
 
     pub fn resize(&self, width: u64, height: u64) {
@@ -358,6 +367,9 @@ impl Grid {
             (x, y, cm.width, cm.height)
         };
 
+        // Don't use the ctx.queue_draw_area, because those draws will only
+        // happen once nvim sends 'flush' event. This draw needs to happen
+        // on each tick so the cursor blinks.
         self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 

@@ -233,6 +233,8 @@ pub enum RedrawEvent {
     ModeChange(String, u64),
     SetBusy(bool),
 
+    Flush(),
+
     PopupmenuShow(PopupmenuShow),
     PopupmenuHide(),
     PopupmenuSelect(i64),
@@ -264,6 +266,7 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::ModeInfoSet(..) => write!(fmt, "ModeInfoSet"),
             RedrawEvent::ModeChange(..) => write!(fmt, "ModeChange"),
             RedrawEvent::SetBusy(..) => write!(fmt, "SetBusy"),
+            RedrawEvent::Flush(..) => write!(fmt, "Flush"),
             RedrawEvent::PopupmenuShow(..) => write!(fmt, "PopupmenuShow"),
             RedrawEvent::PopupmenuHide(..) => write!(fmt, "PopupmenuHide"),
             RedrawEvent::PopupmenuSelect(..) => write!(fmt, "PopupmenuSelect"),
@@ -520,6 +523,9 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
             }
             "busy_stop" => {
                 RedrawEvent::SetBusy(false)
+            }
+            "flush" => {
+                RedrawEvent::Flush()
             }
             "popupmenu_show" => {
                 let args = try_array!(args[1]);

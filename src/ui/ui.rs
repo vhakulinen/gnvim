@@ -468,6 +468,11 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                     grid.set_busy(*busy);
                 }
             }
+            RedrawEvent::Flush() => {
+                for grid in state.grids.values() {
+                    grid.flush();
+                }
+            }
             RedrawEvent::PopupmenuShow(popupmenu) => {
                 state.popupmenu.set_items(popupmenu.items.clone());
 
