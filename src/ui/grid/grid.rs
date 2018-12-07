@@ -119,6 +119,13 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
+        // Update cursor color.
+        let hl_defs = self.hl_defs.lock().unwrap();
+        let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
+        let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
+        let hl = hl_defs.get(&leaf.hl_id()).unwrap();
+        ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
+
         while let Some(area) = ctx.queue_draw_area.pop() {
             self.da.queue_draw_area(area.0, area.1, area.2, area.3);
         }
@@ -290,13 +297,6 @@ impl Grid {
 
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
-
-        // Update cursor color.
-        let hl_defs = self.hl_defs.lock().unwrap();
-        let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-        let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
-        let hl = hl_defs.get(&leaf.hl_id()).unwrap();
-        ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
