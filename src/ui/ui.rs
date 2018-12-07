@@ -16,6 +16,7 @@ use gtk::prelude::*;
 use nvim_bridge::{Notify, RedrawEvent, GnvimEvent, OptionSet, ModeInfo};
 use ui::color::{Highlight, Color};
 use ui::popupmenu::Popupmenu;
+use ui::cmdline::Cmdline;
 use ui::tabline::Tabline;
 use ui::grid::Grid;
 use thread_guard::ThreadGuard;
@@ -58,6 +59,7 @@ struct UIState {
     current_grid: u64,
 
     popupmenu: Popupmenu,
+    cmdline: Cmdline,
     tabline: Tabline,
 
     /// Overlay contains our grid(s) and popupmenu.
@@ -105,8 +107,8 @@ impl UI {
         let overlay = gtk::Overlay::new();
         b.pack_start(&overlay, true, true, 0);
 
-        let grid_ = gtk::Grid::new();
-        overlay.add(&grid_);
+        let box_ = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        overlay.add(&box_);
 
         // Create hl defs and initialize 0th element because we'll need to have
         // something that is accessible for the default grid that we're gonna
@@ -116,9 +118,8 @@ impl UI {
         let hl_defs = Arc::new(Mutex::new(hl_defs));
 
         // Create default grid.
-        let grid = Grid::new(1,
-                             &grid_.clone().upcast::<gtk::Container>(),
-                             hl_defs.clone());
+        let grid = Grid::new(1, hl_defs.clone());
+        box_.pack_start(&grid.widget(), true, true, 0);
 
         // When resizing our window (main grid), we'll have to tell neovim to
         // resize it self also. The notify to nvim is send with a small delay,
@@ -255,20 +256,25 @@ impl UI {
             Inhibit(false)
         });
 
+        let cmdline = Cmdline::new(&overlay, hl_defs.clone());
+
         window.show_all();
+
+        cmdline.hide();
 
         UI {
             win: Arc::new(ThreadGuard::new(window)),
             rx,
             state: Arc::new(ThreadGuard::new(UIState {
                 grids: grids,
-                hl_defs,
                 mode_infos: vec!(),
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
+                cmdline,
                 overlay,
                 tabline,
                 resize_source_id: source_id,
+                hl_defs,
             })),
             nvim,
         }
@@ -338,21 +344,9 @@ fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>)
 fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
-            state.popupmenu.set_colors(
-                colors.pmenu_fg,
-                colors.pmenu_bg,
-                colors.pmenusel_fg,
-                colors.pmenusel_bg,
-            );
-
-            state.tabline.set_colors(
-                colors.tabline_fg,
-                colors.tabline_bg,
-                colors.tablinefill_fg,
-                colors.tablinefill_bg,
-                colors.tablinesel_fg,
-                colors.tablinesel_bg,
-            );
+            state.popupmenu.set_colors(&colors.pmenu);
+            state.tabline.set_colors(&colors.tabline);
+            state.cmdline.set_colors(&colors.cmdline);
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
@@ -449,6 +443,7 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
 
                             state.popupmenu.set_font(&font);
                             state.tabline.set_font(&font);
+                            state.cmdline.set_font(&font);
                         }
                         OptionSet::NotSupported(name) => {
                             println!("Not supported option set: {}", name);
@@ -494,6 +489,27 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::TablineUpdate(cur, tabs) => {
                 state.tabline.update(cur.clone(), tabs.clone());
+            }
+            RedrawEvent::CmdlineShow(cmdline_show) => {
+                state.cmdline.show(cmdline_show);
+            }
+            RedrawEvent::CmdlineHide() => {
+                state.cmdline.hide();
+            }
+            RedrawEvent::CmdlinePos(pos, level) => {
+                state.cmdline.set_pos(*pos, *level);
+            }
+            RedrawEvent::CmdlineSpecialChar(ch, shift, level) => {
+                state.cmdline.show_special_char(ch.clone(), *shift, *level);
+            }
+            RedrawEvent::CmdlineBlockShow(lines) => {
+                state.cmdline.show_block(lines);
+            }
+            RedrawEvent::CmdlineBlockAppend(line) => {
+                state.cmdline.block_append(line);
+            }
+            RedrawEvent::CmdlineBlockHide() => {
+                state.cmdline.hide_block();
             }
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);

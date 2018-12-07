@@ -9,6 +9,8 @@ use gtk::prelude::*;
 use neovim_lib::{Neovim, neovim_api::{Tabpage, NeovimApi}};
 use ui::color::Color;
 
+use nvim_bridge;
+
 pub struct Tabline {
     notebook: gtk::Notebook,
     css_provider: gtk::CssProvider,
@@ -104,33 +106,15 @@ impl Tabline {
         gtk::WidgetExt::override_font(&self.notebook, font);
     }
 
-    pub fn set_colors(
-        &self,
-        fg: Color,
-        bg: Color,
-        fill_fg: Color,
-        fill_bg: Color,
-        selected_fg: Color,
-        selected_bg: Color) {
+    pub fn set_colors(&self, colors: &nvim_bridge::TablineColors) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(
-                fg, bg, fill_fg, fill_bg, selected_fg, selected_bg);
-        }
-        else {
-            self.set_colors_post20(
-                fg, bg, fill_fg, fill_bg, selected_fg, selected_bg);
+            self.set_colors_pre20(colors);
+        } else {
+            self.set_colors_post20(colors);
         }
     }
 
-    fn set_colors_post20(
-        &self,
-        fg: Color,
-        bg: Color,
-        _fill_fg: Color,
-        _fill_bg: Color,
-        selected_fg: Color,
-        selected_bg: Color) {
-
+    fn set_colors_post20(&self, colors: &nvim_bridge::TablineColors) {
         let css = format!(
             "header {{
                 padding: 0px;
@@ -159,24 +143,16 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg=fg.to_hex(),
-            normal_bg=bg.to_hex(),
-            selected_fg=selected_fg.to_hex(),
-            selected_bg=selected_bg.to_hex(),
+            normal_fg=colors.fg.to_hex(),
+            normal_bg=colors.bg.to_hex(),
+            selected_fg=colors.sel_fg.to_hex(),
+            selected_bg=colors.sel_bg.to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
 
-    fn set_colors_pre20(
-        &self,
-        fg: Color,
-        bg: Color,
-        _fill_fg: Color,
-        _fill_bg: Color,
-        selected_fg: Color,
-        selected_bg: Color) {
-
+    fn set_colors_pre20(&self, colors: &nvim_bridge::TablineColors) {
         let css = format!(
             "GtkNotebook {{
                 padding: 0px;
@@ -211,10 +187,10 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg=fg.to_hex(),
-            normal_bg=bg.to_hex(),
-            selected_fg=selected_fg.to_hex(),
-            selected_bg=selected_bg.to_hex(),
+            normal_fg=colors.fg.to_hex(),
+            normal_bg=colors.bg.to_hex(),
+            selected_fg=colors.sel_fg.to_hex(),
+            selected_bg=colors.sel_bg.to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();

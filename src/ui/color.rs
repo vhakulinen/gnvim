@@ -1,3 +1,4 @@
+use glib;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Highlight {
@@ -10,6 +11,46 @@ pub struct Highlight {
     pub bold: bool,
     pub underline: bool,
     pub undercurl: bool,
+}
+
+impl Highlight {
+    pub fn pango_markup(
+        &self,
+        text: &str,
+        default_fg: &Color,
+        default_bg: &Color,
+        default_sp: &Color) -> String {
+
+        let fg = self.foreground.as_ref().unwrap_or(default_fg);
+        let bg = self.background.as_ref().unwrap_or(default_bg);
+        let sp = self.special.as_ref().unwrap_or(default_sp);
+
+        let weight = if self.bold { "bold" } else { "normal" };
+        let underline = if self.undercurl {
+            "error"
+        } else if self.underline {
+            "underline"
+        } else {
+            "none"
+        };
+
+        let fontstyle = if self.italic { "italic" } else { "normal" };
+
+        format!("<span
+            foreground=\"#{fg}\"
+            background=\"#{bg}\"
+            underline_color=\"#{sp}\"
+            weight=\"{weight}\"
+            font_style=\"{fontstyle}\"
+            underline=\"{underline}\">{text}</span>",
+            fg=fg.to_hex(),
+            bg=bg.to_hex(),
+            sp=sp.to_hex(),
+            weight=weight,
+            fontstyle=fontstyle,
+            underline=underline,
+            text=glib::markup_escape_text(text))
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
