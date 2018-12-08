@@ -4,9 +4,13 @@ use gtk;
 use gtk::prelude::*;
 use gdk::prelude::*;
 
+use neovim_lib::neovim::Neovim;
+use neovim_lib::neovim_api::NeovimApi;
+
 use nvim_bridge;
 use ui::grid::Grid;
 use ui::ui::HlDefs;
+use ui::wildmenu::Wildmenu;
 #[macro_use]
 use ui;
 
@@ -351,67 +355,68 @@ pub struct Cmdline {
     input: CmdlineInput,
     block: CmdlineBlock,
 
+    wildmenu: Wildmenu,
+
     show_block: bool,
+    show_wildmenu: bool,
 }
 
 impl Cmdline {
-    pub fn new(parent: &gtk::Overlay, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(parent: &gtk::Overlay,
+               hl_defs: Arc<Mutex<HlDefs>>,
+               nvim: Arc<Mutex<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
-        let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
-
-        let block = CmdlineBlock::new();
-        box_.pack_start(&block.widget(), true, true, 0);
+        // Inner box contains cmdline block and input.
+        let inner_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
 
         let input = CmdlineInput::new();
-        box_.pack_start(&input.widget(), true, true, 0);
+        let block = CmdlineBlock::new();
+        inner_box.pack_start(&block.widget(), true, true, 0);
+        inner_box.pack_start(&input.widget(), true, true, 0);
 
-        // Depending on which gtk version we're running, the top container
-        // for cmdline varies. It'll be GtkBox either way.
-        let mut container: gtk::Widget = box_.clone().upcast();
-        if gtk::get_minor_version() < 20 {
-            // For gtk versions < 20, we'll need to have a GtkFrame around our
-            // box where the input/block is to get padding, but to get box-shadow,
-            // we'll have to have another container around the frame because
-            // frame it self cant have shadows.
-            let outer_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
-            let frame = gtk::Frame::new(None);
+        // Frame will contain inner_box. This is so we can add some padding
+        // around them without adding padding around the wildmenu.
+        let frame = gtk::Frame::new(None);
+        frame.add(&inner_box);
 
-            add_css_provider!(&css_provider, frame, outer_box);
+        let wildmenu = Wildmenu::new(hl_defs.clone(), nvim.clone());
 
-            frame.add(&box_);
-            outer_box.add(&frame);
-            container = outer_box.clone().upcast();
-        }
+        // box_ is the actual container for cmdline and wildmenu.
+        let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        box_.pack_start(&frame, true, true, 0);
+        box_.pack_start(&wildmenu.widget(), true, true, 0);
 
-        add_css_provider!(&css_provider, container);
+        add_css_provider!(&css_provider, box_, frame, inner_box);
 
         let fixed = gtk::Fixed::new();
-        fixed.put(&container, 0, 0);
+        fixed.put(&box_, 0, 0);
 
         parent.add_overlay(&fixed);
 
         let fixed_ref = fixed.clone();
-        let container_ref = container.clone();
+        let box_ref = box_.clone();
         parent.connect_size_allocate(move |_, alloc| {
 
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
             println!("WIDHT: {}", width);
-            container_ref.set_size_request(width, -1);
+            box_ref.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;
-            fixed_ref.move_(&container, x, 0);
+            fixed_ref.move_(&box_ref, x, 0);
         });
 
-        Cmdline{
+        Cmdline {
             css_provider,
             box_,
             fixed,
             hl_defs,
             input,
             block,
+            wildmenu,
             show_block: false,
+            show_wildmenu: false,
         }
     }
 
@@ -428,11 +433,23 @@ impl Cmdline {
 
     fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
         let css = format!(
-            "box {{
-                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
+            "frame > border {{
+                border: none;
+            }}
+
+            frame {{
                 background: #{bg};
                 padding: 6px;
-            }}",
+            }}
+
+            box {{
+                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
+            }}
+
+            frame > box {{
+                box-shadow: none;
+            }}
+            ",
             bg=colors.border.to_hex());
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
     }
@@ -441,6 +458,10 @@ impl Cmdline {
         let css = format!(
             "GtkBox {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
+            }}
+
+            GtkFrame > GtkBox {{
+                box-shadow: none;
             }}
 
             GtkFrame {{
@@ -463,6 +484,10 @@ impl Cmdline {
 
         if !self.show_block {
             self.block.hide();
+        }
+
+        if !self.show_wildmenu {
+            self.wildmenu.hide();
         }
     }
 
@@ -501,5 +526,29 @@ impl Cmdline {
     pub fn block_append(&mut self, line: &(u64, String)) {
         let hl_defs = self.hl_defs.lock().unwrap();
         self.block.append(line, &hl_defs);
+    }
+
+    pub fn wildmenu_show(&mut self, items: &Vec<String>) {
+        self.show_wildmenu = true;
+        self.wildmenu.set_items(items);
+        self.wildmenu.show();
+
+        self.fixed.check_resize();
+    }
+
+    pub fn wildmenu_hide(&mut self) {
+        self.show_wildmenu = false;
+        self.wildmenu.clear();
+        self.wildmenu.hide();
+
+        self.fixed.check_resize();
+    }
+
+    pub fn wildmenu_select(&mut self, item_num: i64) {
+        self.wildmenu.select(item_num as i32);
+    }
+
+    pub fn wildmenu_set_colors(&self, colors: &nvim_bridge::WildmenuColors) {
+        self.wildmenu.set_colors(colors);
     }
 }

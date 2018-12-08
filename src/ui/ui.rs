@@ -251,7 +251,7 @@ impl UI {
             Inhibit(false)
         });
 
-        let cmdline = Cmdline::new(&overlay, hl_defs.clone());
+        let cmdline = Cmdline::new(&overlay, hl_defs.clone(), nvim.clone());
 
         window.show_all();
 
@@ -347,6 +347,7 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
             state.popupmenu.set_colors(&colors.pmenu);
             state.tabline.set_colors(&colors.tabline);
             state.cmdline.set_colors(&colors.cmdline);
+            state.cmdline.wildmenu_set_colors(&colors.wildmenu);
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
@@ -515,6 +516,15 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
             }
             RedrawEvent::CmdlineBlockHide() => {
                 state.cmdline.hide_block();
+            }
+            RedrawEvent::WildmenuShow(items) => {
+                state.cmdline.wildmenu_show(items);
+            }
+            RedrawEvent::WildmenuHide() => {
+                state.cmdline.wildmenu_hide();
+            }
+            RedrawEvent::WildmenuSelect(item) => {
+                state.cmdline.wildmenu_select(*item);
             }
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);

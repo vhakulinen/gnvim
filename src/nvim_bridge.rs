@@ -249,6 +249,10 @@ pub enum RedrawEvent {
     CmdlineBlockAppend((u64, String)),
     CmdlineBlockHide(),
 
+    WildmenuShow(Vec<String>),
+    WildmenuHide(),
+    WildmenuSelect(i64),
+
     Unknown(String),
 }
 
@@ -278,6 +282,9 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::CmdlineBlockShow(..) => write!(fmt, "CmdlineBlockShow"),
             RedrawEvent::CmdlineBlockAppend(..) => write!(fmt, "CmdlineBlockAppend"),
             RedrawEvent::CmdlineBlockHide(..) => write!(fmt, "CmdlineBlockHide"),
+            RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
+            RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
+            RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
@@ -287,6 +294,14 @@ pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
     Unknown(String),
+}
+
+#[derive(Default)]
+pub struct WildmenuColors {
+    pub bg: Color,
+    pub fg: Color,
+    pub sel_bg: Color,
+    pub sel_fg: Color,
 }
 
 #[derive(Default)]
@@ -319,6 +334,7 @@ pub struct SetGuiColors {
     pub pmenu: PmenuColors,
     pub tabline: TablineColors,
     pub cmdline: CmdlineColors,
+    pub wildmenu: WildmenuColors,
 }
 
 pub struct NvimBridge {
@@ -639,6 +655,23 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
             "cmdline_block_hide" => {
                 RedrawEvent::CmdlineBlockHide()
             }
+            "wildmenu_show" => {
+                let args = try_array!(args[1]);
+                let items: Vec<String> = try_array!(args[0])
+                    .iter()
+                    .map(|v| try_str!(v).to_string())
+                    .collect();
+
+                RedrawEvent::WildmenuShow(items)
+            }
+            "wildmenu_hide" => {
+                RedrawEvent::WildmenuHide()
+            }
+            "wildmenu_select" => {
+                let args = try_array!(args[1]);
+                let item = try_i64!(args[0]);
+                RedrawEvent::WildmenuSelect(item)
+            }
             _ => {
                 RedrawEvent::Unknown(cmd.to_string())
             }
@@ -672,6 +705,11 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
                     "cmdline_fg" => colors.cmdline.fg = color,
                     "cmdline_bg" => colors.cmdline.bg = color,
                     "cmdline_border" => colors.cmdline.border = color,
+
+                    "wildmenu_bg" => colors.wildmenu.bg = color,
+                    "wildmenu_fg" => colors.wildmenu.fg = color,
+                    "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
+                    "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
                     _ => {
                         println!("Unknown SetGuiColor: {}", try_str!(e.0));
                     }

@@ -24,6 +24,11 @@ function! SetGuiColors()
                 \ 'cmdline_fg': ReturnHighlightTerm('Normal', 'guifg'),
                 \ 'cmdline_bg': ReturnHighlightTerm('Normal', 'guibg'),
                 \ 'cmdline_border': ReturnHighlightTerm('TabLineSel', 'guibg'),
+                \
+                \ 'wildmenu_bg': ReturnHighlightTerm('Pmenu', 'guibg'),
+                \ 'wildmenu_fg': ReturnHighlightTerm('Pmenu', 'guifg'),
+                \ 'wildmenusel_bg': ReturnHighlightTerm('PmenuSel', 'guibg'),
+                \ 'wildmenusel_fg': ReturnHighlightTerm('PmenuSel', 'guifg'),
                 \}
 
     call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)
