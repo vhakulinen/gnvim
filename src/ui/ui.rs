@@ -118,7 +118,7 @@ impl UI {
         let hl_defs = Arc::new(Mutex::new(hl_defs));
 
         // Create default grid.
-        let grid = Grid::new(1, hl_defs.clone());
+        let mut grid = Grid::new(1, hl_defs.clone());
         box_.pack_start(&grid.widget(), true, true, 0);
 
         // When resizing our window (main grid), we'll have to tell neovim to
@@ -201,22 +201,17 @@ impl UI {
             Inhibit(false)
         });
 
-        let mut grids = HashMap::new();
-        grids.insert(1, grid);
-
         // IMMulticontext is used to handle most of the inputs.
         let im_context = gtk::IMMulticontext::new();
         let nvim_ref = nvim.clone();
+        im_context.set_use_preedit(false);
         im_context.connect_commit(move |_, mut input| {
 
-            // Some quirk with gtk and/or neovim. The python-gui
-            // does the same thing.
-            if input == "<" {
-                input = "<lt>"
-            }
+            // "<" needs to be escaped for nvim.input()
+            let nvim_input = input.replace("<", "<lt>");
 
             let mut nvim = nvim_ref.lock().unwrap();
-            nvim.input(input).expect("Couldn't send input");
+            nvim.input(&nvim_input).expect("Couldn't send input");
         });
 
         let im_ref = im_context.clone();
@@ -260,7 +255,12 @@ impl UI {
 
         window.show_all();
 
+        grid.set_im_context(&im_context);
+
         cmdline.hide();
+
+        let mut grids = HashMap::new();
+        grids.insert(1, grid);
 
         UI {
             win: Arc::new(ThreadGuard::new(window)),
