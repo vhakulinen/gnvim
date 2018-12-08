@@ -63,6 +63,8 @@ pub struct Grid {
     /// Pointer position for dragging if we should call callback from
     /// `connect_motion_events_for_drag`.
     drag_position: Arc<ThreadGuard<(u64, u64)>>,
+    /// Input context that need to be updated for the cursor position
+    im_context: Option<gtk::IMMulticontext>
 }
 
 impl Grid {
@@ -108,6 +110,7 @@ impl Grid {
             context: ctx,
             hl_defs,
             drag_position: Arc::new(ThreadGuard::new((0, 0))),
+            im_context: None,
         }
     }
 
@@ -129,6 +132,11 @@ impl Grid {
         while let Some(area) = ctx.queue_draw_area.pop() {
             self.da.queue_draw_area(area.0, area.1, area.2, area.3);
         }
+    }
+
+    pub fn set_im_context(&mut self, im_context : &gtk::IMMulticontext) {
+        im_context.set_client_window(&self.da.get_window());
+        self.im_context = Some(im_context.clone());
     }
 
     /// Returns position (+ width and height) for cell (row, col) relative
@@ -308,6 +316,11 @@ impl Grid {
             (x, y, cm.width, cm.height)
         };
         ctx.queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
+
+        if let Some(ref im_context) = self.im_context {
+            let rect = gdk::Rectangle{x:x as i32,y:y as i32,width:w as i32,height:h as i32};
+            im_context.set_cursor_location(&rect);
+        }
     }
 
     pub fn resize(&self, width: u64, height: u64) {
