@@ -7,6 +7,8 @@ use gdk::prelude::*;
 use nvim_bridge;
 use ui::grid::Grid;
 use ui::ui::HlDefs;
+#[macro_use]
+use ui;
 
 const MAX_WIDTH: i32 = 650;
 
@@ -24,22 +26,13 @@ impl CmdlineBlock {
         let css_provider = gtk::CssProvider::new();
 
         let textview = gtk::TextView::new();
-        textview.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         let scrolledwindow = gtk::ScrolledWindow::new(None, None);
-        scrolledwindow.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
         scrolledwindow.set_policy(
             gtk::PolicyType::Automatic,
             gtk::PolicyType::Never);
 
         let frame = gtk::Frame::new(None);
-        frame.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         scrolledwindow.add(&textview);
         frame.add(&scrolledwindow);
@@ -60,6 +53,8 @@ impl CmdlineBlock {
                 adj.set_value(adj.get_upper());
             }
         });
+
+        add_css_provider!(&css_provider, textview, scrolledwindow, frame);
 
         CmdlineBlock {
             frame,
@@ -203,9 +198,6 @@ impl CmdlineInput {
 
         let textview = gtk::TextView::new();
         textview.set_editable(false);
-        textview.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         // Catch all button events to prevent selection of text etc.
         textview.connect_button_press_event(|_, _| {
@@ -215,9 +207,8 @@ impl CmdlineInput {
         // Wrap the textview into a frame, mainly to add some padding (with css).
         let frame = gtk::Frame::new(None);
         frame.add(&textview);
-        frame.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        add_css_provider!(&css_provider, frame, textview);
 
         CmdlineInput {
             frame,
@@ -385,21 +376,15 @@ impl Cmdline {
             // frame it self cant have shadows.
             let outer_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
             let frame = gtk::Frame::new(None);
-            frame.get_style_context()
-                .unwrap()
-                .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
-            outer_box.get_style_context()
-                .unwrap()
-                .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+            add_css_provider!(&css_provider, frame, outer_box);
+
             frame.add(&box_);
             outer_box.add(&frame);
             container = outer_box.clone().upcast();
         }
 
-        // Add style provider to the container.
-        container.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        add_css_provider!(&css_provider, container);
 
         let fixed = gtk::Fixed::new();
         fixed.put(&container, 0, 0);
@@ -412,6 +397,7 @@ impl Cmdline {
 
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
+            println!("WIDHT: {}", width);
             container_ref.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;

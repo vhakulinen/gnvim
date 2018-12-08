@@ -7,6 +7,8 @@ use pango;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
+#[macro_use]
+use ui;
 use ui::color::Color;
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
@@ -92,9 +94,6 @@ impl Popupmenu {
         info_label.set_valign(gtk::Align::Start);
         info_label.set_line_wrap(true);
         gtk::WidgetExt::set_name(&info_label, "info-label");
-        info_label.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         // Because we're setting valign and halign to the info label, we'll
         // need to have some container in between the label and scrolled window.
@@ -105,29 +104,24 @@ impl Popupmenu {
         let scrolled_info = gtk::ScrolledWindow::new(None, None);
         scrolled_info.add(&info_box);
         scrolled_info.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
-        scrolled_info.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         let list = gtk::ListBox::new();
         list.set_selection_mode(gtk::SelectionMode::Single);
-        list.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         let scrolled_list = gtk::ScrolledWindow::new(None, None);
         scrolled_list.add(&list);
         scrolled_list.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
-        scrolled_list.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
-        box_.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        add_css_provider!(&css_provider,
+                          info_label,
+                          scrolled_info,
+                          list,
+                          scrolled_list,
+                          box_);
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
@@ -476,25 +470,16 @@ impl Popupmenu {
 fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssProvider) -> CompletionItemWidgetWrap {
     let grid = gtk::Grid::new();
     grid.set_column_spacing(10);
-    grid.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
     let kind = gtk::Label::new(item.kind.as_str());
     kind.set_halign(gtk::Align::Start);
     kind.set_margin_left(5);
     kind.set_margin_right(5);
-    kind.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
     grid.attach(&kind, 0, 0, 1, 1);
 
     let word = gtk::Label::new(item.word.as_str());
     word.set_halign(gtk::Align::Start);
     word.set_ellipsize(pango::EllipsizeMode::End);
-    word.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
     grid.attach(&word, 1, 0, 1, 1);
 
     let menu = gtk::Label::new(item.menu.as_str());
@@ -502,17 +487,11 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
     menu.set_hexpand(true);
     menu.set_margin_left(5);
     menu.set_margin_right(5);
-    menu.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
     grid.attach(&menu, 2, 0, 1, 1);
 
     let info = gtk::Label::new(shorten_info(&item.info).as_str());
     info.set_halign(gtk::Align::Start);
     info.set_ellipsize(pango::EllipsizeMode::End);
-    info.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
     <gtk::Widget as WidgetExt>::set_name(&info.clone().upcast(), "gnvim-info");
 
     // On initially shown, set the info label hidden. We'll show it when
@@ -526,10 +505,9 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
     // NOTE(ville): We only need to explicitly create this row widget
     //              so we can set css provider to it.
     let row = gtk::ListBoxRow::new();
-    row.get_style_context()
-        .unwrap()
-        .add_provider(css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
     row.add(&grid);
+
+    add_css_provider!(css_provider, grid, kind, word, menu, info, row);
 
     CompletionItemWidgetWrap {
         item,

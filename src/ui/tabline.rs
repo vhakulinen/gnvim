@@ -10,6 +10,8 @@ use neovim_lib::{Neovim, neovim_api::{Tabpage, NeovimApi}};
 use ui::color::Color;
 
 use nvim_bridge;
+#[macro_use]
+use ui;
 
 pub struct Tabline {
     notebook: gtk::Notebook,
@@ -26,9 +28,7 @@ impl Tabline {
         notebook.set_show_border(false);
 
         let css_provider = gtk::CssProvider::new();
-        notebook.get_style_context()
-            .unwrap()
-            .add_provider(&css_provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        add_css_provider!(&css_provider, notebook);
 
         let tabpage_data = Rc::new(RefCell::new(Box::new(vec!())));
         let tabpage_data_ref = tabpage_data.clone();
@@ -74,11 +74,7 @@ impl Tabline {
             let tab_label = gtk::Label::new(tab.1.as_str());
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
-            tab_label.get_style_context()
-                .unwrap()
-                .add_provider(
-                    &self.css_provider,
-                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+            add_css_provider!(&self.css_provider, tab_label);
 
             self.notebook.append_page(
                 &gtk::Box::new(gtk::Orientation::Vertical, 0),
