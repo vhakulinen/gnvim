@@ -13,11 +13,11 @@ macro_rules! add_css_provider {
     );
 }
 
+mod cmdline;
+pub mod color;
 mod grid;
-mod ui;
 mod popupmenu;
 mod tabline;
-mod cmdline;
+mod ui;
 mod wildmenu;
-pub mod color;
 pub use self::ui::UI;

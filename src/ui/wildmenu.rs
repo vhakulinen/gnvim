@@ -1,10 +1,10 @@
-use std::sync::{Arc, Mutex};
+use glib;
+use gtk;
+use gtk::prelude::*;
+use pango;
 use std::cell::RefCell;
 use std::rc::Rc;
-use pango;
-use gtk;
-use glib;
-use gtk::prelude::*;
+use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
@@ -41,9 +41,8 @@ impl Wildmenu {
         list.set_selection_mode(gtk::SelectionMode::Single);
 
         let scrolledwindow = gtk::ScrolledWindow::new(None, None);
-        scrolledwindow.set_policy(
-            gtk::PolicyType::Automatic,
-            gtk::PolicyType::Automatic);
+        scrolledwindow
+            .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scrolledwindow.add(&list);
 
         frame.add(&scrolledwindow);
@@ -51,7 +50,6 @@ impl Wildmenu {
         let frame_ref = frame.clone();
         // Make sure our container grows to certain height.
         list.connect_size_allocate(move |list, alloc| {
-
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             let row_height = if let Some(item) = list.get_children().get(0) {
@@ -73,11 +71,7 @@ impl Wildmenu {
             let prev = state_ref.borrow().selected;
             let new = row.get_index();
 
-            let op = if new > prev {
-                "<Tab>"
-            } else {
-                "<S-Tab>"
-            };
+            let op = if new > prev { "<Tab>" } else { "<S-Tab>" };
 
             let mut nvim = nvim.lock().unwrap();
             for _ in 0..(new - prev).abs() {
@@ -175,12 +169,13 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex(),
-            sel_fg=colors.sel_fg.to_hex(),
-            sel_bg=colors.sel_bg.to_hex(),
-            );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex(),
+            sel_fg = colors.sel_fg.to_hex(),
+            sel_bg = colors.sel_bg.to_hex(),
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_post20(&self, colors: &nvim_bridge::WildmenuColors) {
@@ -200,11 +195,12 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex(),
-            sel_fg=colors.sel_fg.to_hex(),
-            sel_bg=colors.sel_bg.to_hex(),
-            );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex(),
+            sel_fg = colors.sel_fg.to_hex(),
+            sel_bg = colors.sel_bg.to_hex(),
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 }

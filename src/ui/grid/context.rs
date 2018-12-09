@@ -1,8 +1,8 @@
-use pango::FontDescription;
-use pango;
-use pangocairo;
 use cairo;
-use gtk::{DrawingArea};
+use gtk::DrawingArea;
+use pango;
+use pango::FontDescription;
+use pangocairo;
 
 use gtk::prelude::*;
 use pango::prelude::*;
@@ -49,10 +49,13 @@ impl Context {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();
         let h = da.get_allocated_height();
-        let surface = win.create_similar_surface(cairo::Content::Color, w, h).unwrap();
+        let surface = win
+            .create_similar_surface(cairo::Content::Color, w, h)
+            .unwrap();
 
         let cairo_context = cairo::Context::new(&surface);
-        let pango_context = pangocairo::functions::create_context(&cairo_context).unwrap();
+        let pango_context =
+            pangocairo::functions::create_context(&cairo_context).unwrap();
 
         let font_desc = FontDescription::from_string("Monospace 12");
         pango_context.set_font_description(&font_desc);
@@ -65,7 +68,7 @@ impl Context {
             pango_context,
             font_desc,
             cell_metrics,
-            rows: vec!(),
+            rows: vec![],
 
             cursor: (0, 0),
             cursor_alpha: 1.0,
@@ -76,7 +79,7 @@ impl Context {
             current_hl: Highlight::default(),
             active: false,
 
-            queue_draw_area: vec!(),
+            queue_draw_area: vec![],
         }
     }
 
@@ -84,7 +87,8 @@ impl Context {
     pub fn update_font(&mut self, font_desc: FontDescription) {
         self.pango_context.set_font_description(&font_desc);
         self.font_desc = font_desc;
-        self.cell_metrics.update(&self.pango_context, &self.font_desc);
+        self.cell_metrics
+            .update(&self.pango_context, &self.font_desc);
     }
 
     /// Updates internals that are dependant on the drawing area.
@@ -92,7 +96,9 @@ impl Context {
         let win = da.get_window().unwrap();
         let w = da.get_allocated_width();
         let h = da.get_allocated_height();
-        let surface = win.create_similar_surface(cairo::Content::Color, w, h).unwrap();
+        let surface = win
+            .create_similar_surface(cairo::Content::Color, w, h)
+            .unwrap();
         let ctx = cairo::Context::new(&surface);
 
         let s = self.cairo_context.get_target();
@@ -108,7 +114,8 @@ impl Context {
         self.cairo_context = ctx;
         self.pango_context = pctx;
 
-        self.cell_metrics.update(&self.pango_context, &self.font_desc);
+        self.cell_metrics
+            .update(&self.pango_context, &self.font_desc);
     }
 }
 
@@ -131,8 +138,10 @@ impl CellMetrics {
         self.height = self.ascent + self.decent;
         self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
 
-        self.underline_position = fm.get_underline_position() as f64 / pango::SCALE as f64;
+        self.underline_position =
+            fm.get_underline_position() as f64 / pango::SCALE as f64;
         // TODO(ville): make the underline thickness a bit thicker (one 10th of the cell height?).
-        self.underline_thickness = fm.get_underline_thickness() as f64 / pango::SCALE as f64 * 2.0;
+        self.underline_thickness =
+            fm.get_underline_thickness() as f64 / pango::SCALE as f64 * 2.0;
     }
 }

@@ -3,15 +3,15 @@ use std::sync::{Arc, Mutex};
 use gdk;
 use gtk;
 use gtk::prelude::*;
-use pango;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
+use pango;
 
 #[macro_use]
 use ui;
-use ui::color::Color;
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
+use ui::color::Color;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -45,11 +45,13 @@ impl Default for State {
     fn default() -> Self {
         State {
             selected: -1,
-            items: vec!(),
+            items: vec![],
             available_size: None,
             anchor: gdk::Rectangle {
-                x: 0, y: 0,
-                width: 0, height: 0,
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
             },
         }
     }
@@ -103,25 +105,29 @@ impl Popupmenu {
 
         let scrolled_info = gtk::ScrolledWindow::new(None, None);
         scrolled_info.add(&info_box);
-        scrolled_info.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+        scrolled_info
+            .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
 
         let list = gtk::ListBox::new();
         list.set_selection_mode(gtk::SelectionMode::Single);
 
         let scrolled_list = gtk::ScrolledWindow::new(None, None);
         scrolled_list.add(&list);
-        scrolled_list.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+        scrolled_list
+            .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
 
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
 
-        add_css_provider!(&css_provider,
-                          info_label,
-                          scrolled_info,
-                          list,
-                          scrolled_list,
-                          box_);
+        add_css_provider!(
+            &css_provider,
+            info_label,
+            scrolled_info,
+            list,
+            scrolled_list,
+            box_
+        );
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
@@ -210,7 +216,11 @@ impl Popupmenu {
                     // TODO(ville): Do we want to truncate the width of the popupmenu
                     //              in case when new_x == 0 && w > state.available_size.width?
 
-                    layout.move_(&box_, new_x, state.anchor.y + state.anchor.height);
+                    layout.move_(
+                        &box_,
+                        new_x,
+                        state.anchor.y + state.anchor.height,
+                    );
                 }
 
                 // Check if we need to adjust our height.
@@ -229,7 +239,6 @@ impl Popupmenu {
             // desired height of the container.
             gtk::idle_add(move || {
                 box_.set_size_request(FIXED_WIDTH, h);
-
 
                 // NOTE(ville): Seems like there is no other way to a widget
                 //              to resize it self.
@@ -294,7 +303,7 @@ impl Popupmenu {
         let state = self.state.borrow_mut();
 
         if state.selected == -1 {
-            return
+            return;
         }
 
         self.info_shown = !self.info_shown;
@@ -425,11 +434,14 @@ impl Popupmenu {
             box {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
-            ", normal_fg=colors.fg.to_hex(),
-               normal_bg=colors.bg.to_hex(),
-               selected_bg=colors.sel_bg.to_hex(),
-               selected_fg=colors.sel_fg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            ",
+            normal_fg = colors.fg.to_hex(),
+            normal_bg = colors.bg.to_hex(),
+            selected_bg = colors.sel_bg.to_hex(),
+            selected_fg = colors.sel_fg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_pre20(&self, colors: &PmenuColors) {
@@ -454,20 +466,25 @@ impl Popupmenu {
             GtkBox {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
-            ", normal_fg=colors.fg.to_hex(),
-               normal_bg=colors.bg.to_hex(),
-               selected_bg=colors.sel_bg.to_hex(),
-               selected_fg=colors.sel_fg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            ",
+            normal_fg = colors.fg.to_hex(),
+            normal_bg = colors.bg.to_hex(),
+            selected_bg = colors.sel_bg.to_hex(),
+            selected_fg = colors.sel_fg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
-
 
     pub fn set_font(&self, font: &pango::FontDescription) {
         gtk::WidgetExt::override_font(&self.layout, font);
     }
 }
 
-fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssProvider) -> CompletionItemWidgetWrap {
+fn create_completionitem_widget(
+    item: CompletionItem,
+    css_provider: &gtk::CssProvider,
+) -> CompletionItemWidgetWrap {
     let grid = gtk::Grid::new();
     grid.set_column_spacing(10);
 
@@ -509,11 +526,7 @@ fn create_completionitem_widget(item: CompletionItem, css_provider: &gtk::CssPro
 
     add_css_provider!(css_provider, grid, kind, word, menu, info, row);
 
-    CompletionItemWidgetWrap {
-        item,
-        info,
-        row,
-    }
+    CompletionItemWidgetWrap { item, info, row }
 }
 
 /// Returns first line of `info`.

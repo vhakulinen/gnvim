@@ -1,8 +1,8 @@
-use std::sync::{Arc, Mutex};
-use pango;
+use gdk::prelude::*;
 use gtk;
 use gtk::prelude::*;
-use gdk::prelude::*;
+use pango;
+use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
@@ -32,9 +32,8 @@ impl CmdlineBlock {
         let textview = gtk::TextView::new();
 
         let scrolledwindow = gtk::ScrolledWindow::new(None, None);
-        scrolledwindow.set_policy(
-            gtk::PolicyType::Automatic,
-            gtk::PolicyType::Never);
+        scrolledwindow
+            .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
 
         let frame = gtk::Frame::new(None);
 
@@ -43,14 +42,15 @@ impl CmdlineBlock {
 
         let scrolledwindow_ref = scrolledwindow.clone();
         textview.connect_size_allocate(move |tv, alloc| {
-            let h =  tv.get_preferred_height();
+            let h = tv.get_preferred_height();
 
             if h.1 > 250 {
                 if scrolledwindow_ref.get_size_request().1 == -1 {
                     scrolledwindow_ref.set_size_request(-1, h.1);
                     scrolledwindow_ref.set_policy(
                         gtk::PolicyType::Automatic,
-                        gtk::PolicyType::Automatic);
+                        gtk::PolicyType::Automatic,
+                    );
                 }
 
                 let adj = scrolledwindow_ref.get_vadjustment().unwrap();
@@ -107,7 +107,7 @@ impl CmdlineBlock {
             &hl_defs.default_fg,
             &hl_defs.default_bg,
             &hl_defs.default_sp,
-            );
+        );
 
         buffer.insert(&mut iter, "\n");
         buffer.insert_markup(&mut iter, &markup);
@@ -118,16 +118,15 @@ impl CmdlineBlock {
         //              scrolled window, makes the scrolling to be not smooth.
         iter.backward_line();
         let mark = buffer.create_mark(None, &iter, false).unwrap();
-        self.textview.scroll_to_mark(&mark, 0.0000000001, false, 0.0, 0.0);
+        self.textview
+            .scroll_to_mark(&mark, 0.0000000001, false, 0.0, 0.0);
     }
-
 
     fn hide(&self) {
         self.frame.hide();
         self.scrolledwindow.set_size_request(-1, -1);
-        self.scrolledwindow.set_policy(
-            gtk::PolicyType::Automatic,
-            gtk::PolicyType::Never);
+        self.scrolledwindow
+            .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
 
         let buffer = self.textview.get_buffer().unwrap();
         buffer.set_text("");
@@ -153,9 +152,11 @@ impl CmdlineBlock {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
@@ -173,9 +174,11 @@ impl CmdlineBlock {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 }
 
@@ -204,9 +207,7 @@ impl CmdlineInput {
         textview.set_editable(false);
 
         // Catch all button events to prevent selection of text etc.
-        textview.connect_button_press_event(|_, _| {
-            Inhibit(true)
-        });
+        textview.connect_button_press_event(|_, _| Inhibit(true));
 
         // Wrap the textview into a frame, mainly to add some padding (with css).
         let frame = gtk::Frame::new(None);
@@ -230,7 +231,11 @@ impl CmdlineInput {
         self.frame.clone().upcast()
     }
 
-    fn set_text(&mut self, content: &nvim_bridge::CmdlineShow, hl_defs: &HlDefs) {
+    fn set_text(
+        &mut self,
+        content: &nvim_bridge::CmdlineShow,
+        hl_defs: &HlDefs,
+    ) {
         let mut buffer = self.textview.get_buffer().unwrap();
 
         // Reset the buffer.
@@ -238,10 +243,12 @@ impl CmdlineInput {
         // Get iter from the beginning.
         let mut iter = buffer.get_iter_at_offset(0);
         // Write the prompt.
-        let prompt = format!("{}{}{}",
-                             content.firstc,
-                             " ".repeat(content.indent as usize),
-                             content.prompt);
+        let prompt = format!(
+            "{}{}{}",
+            content.firstc,
+            " ".repeat(content.indent as usize),
+            content.prompt
+        );
         buffer.insert(&mut iter, &prompt);
         self.prompt_len = prompt.chars().count() as i32;
 
@@ -296,9 +303,11 @@ impl CmdlineInput {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
@@ -317,9 +326,11 @@ impl CmdlineInput {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg=colors.fg.to_hex(),
-            bg=colors.bg.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            fg = colors.fg.to_hex(),
+            bg = colors.bg.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_cursor(&mut self, pos: usize, level: u64) {
@@ -362,9 +373,11 @@ pub struct Cmdline {
 }
 
 impl Cmdline {
-    pub fn new(parent: &gtk::Overlay,
-               hl_defs: Arc<Mutex<HlDefs>>,
-               nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(
+        parent: &gtk::Overlay,
+        hl_defs: Arc<Mutex<HlDefs>>,
+        nvim: Arc<Mutex<Neovim>>,
+    ) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         // Inner box contains cmdline block and input.
@@ -397,7 +410,6 @@ impl Cmdline {
         let fixed_ref = fixed.clone();
         let box_ref = box_.clone();
         parent.connect_size_allocate(move |_, alloc| {
-
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
             println!("WIDHT: {}", width);
@@ -450,8 +462,10 @@ impl Cmdline {
                 box-shadow: none;
             }}
             ",
-            bg=colors.border.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            bg = colors.border.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
@@ -469,8 +483,10 @@ impl Cmdline {
                 padding: 6px;
                 border: none;
             }}",
-            bg=colors.border.to_hex());
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+            bg = colors.border.to_hex()
+        );
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     pub fn hide(&self) {

@@ -2,11 +2,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use pango;
-use gtk;
 use glib;
+use gtk;
 use gtk::prelude::*;
-use neovim_lib::{Neovim, neovim_api::{Tabpage, NeovimApi}};
+use neovim_lib::{
+    neovim_api::{NeovimApi, Tabpage},
+    Neovim,
+};
+use pango;
 use ui::color::Color;
 
 use nvim_bridge;
@@ -30,19 +33,19 @@ impl Tabline {
         let css_provider = gtk::CssProvider::new();
         add_css_provider!(&css_provider, notebook);
 
-        let tabpage_data = Rc::new(RefCell::new(Box::new(vec!())));
+        let tabpage_data = Rc::new(RefCell::new(Box::new(vec![])));
         let tabpage_data_ref = tabpage_data.clone();
         let nvim_ref = nvim.clone();
-        let switch_tab_signal = notebook.connect_switch_page(move |_, _, page_num| {
-
-            let pages = tabpage_data_ref.borrow();
-            if let Some(ref page) = pages.get(page_num as usize) {
-                let mut nvim = nvim_ref.lock().unwrap();
-                nvim.set_current_tabpage(&page).unwrap();
-            } else {
-                println!("Failed to get tab page {}", page_num);
-            }
-        });
+        let switch_tab_signal =
+            notebook.connect_switch_page(move |_, _, page_num| {
+                let pages = tabpage_data_ref.borrow();
+                if let Some(ref page) = pages.get(page_num as usize) {
+                    let mut nvim = nvim_ref.lock().unwrap();
+                    nvim.set_current_tabpage(&page).unwrap();
+                } else {
+                    println!("Failed to get tab page {}", page_num);
+                }
+            });
 
         Tabline {
             notebook,
@@ -78,18 +81,18 @@ impl Tabline {
 
             self.notebook.append_page(
                 &gtk::Box::new(gtk::Orientation::Vertical, 0),
-                Some(&tab_label));
+                Some(&tab_label),
+            );
         }
 
         self.notebook.show_all();
 
         let mut nvim = self.nvim.lock().unwrap();
-        let page =  current.get_number(&mut nvim).unwrap() - 1;
+        let page = current.get_number(&mut nvim).unwrap() - 1;
         self.notebook.set_current_page(Some(page as u32));
 
-        self.tabpage_data.replace(
-            Box::new(tabs.iter().map(|t| t.0.clone()).collect()));
-
+        self.tabpage_data
+            .replace(Box::new(tabs.iter().map(|t| t.0.clone()).collect()));
 
         glib::signal_handler_unblock(&self.notebook, &self.switch_tab_signal);
     }
@@ -139,13 +142,14 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg=colors.fg.to_hex(),
-            normal_bg=colors.bg.to_hex(),
-            selected_fg=colors.sel_fg.to_hex(),
-            selected_bg=colors.sel_bg.to_hex(),
+            normal_fg = colors.fg.to_hex(),
+            normal_bg = colors.bg.to_hex(),
+            selected_fg = colors.sel_fg.to_hex(),
+            selected_bg = colors.sel_bg.to_hex(),
         );
 
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     fn set_colors_pre20(&self, colors: &nvim_bridge::TablineColors) {
@@ -183,12 +187,13 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg=colors.fg.to_hex(),
-            normal_bg=colors.bg.to_hex(),
-            selected_fg=colors.sel_fg.to_hex(),
-            selected_bg=colors.sel_bg.to_hex(),
+            normal_fg = colors.fg.to_hex(),
+            normal_bg = colors.bg.to_hex(),
+            selected_fg = colors.sel_fg.to_hex(),
+            selected_bg = colors.sel_bg.to_hex(),
         );
 
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 }

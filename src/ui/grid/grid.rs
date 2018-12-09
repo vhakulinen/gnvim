@@ -1,23 +1,23 @@
-use std::sync::{Arc, Mutex};
-use std::fmt::Display;
 use std::fmt;
+use std::fmt::Display;
+use std::sync::{Arc, Mutex};
 
-use pango::FontDescription;
 use cairo;
-use gdk::{EventMask, ModifierType};
 use gdk;
-use gtk::{DrawingArea, EventBox};
+use gdk::{EventMask, ModifierType};
 use gtk;
+use gtk::{DrawingArea, EventBox};
+use pango::FontDescription;
 
 use cairo::prelude::*;
 use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
-use ui::ui::HlDefs;
+use thread_guard::ThreadGuard;
 use ui::grid::context::Context;
 use ui::grid::render;
 use ui::grid::row::Row;
-use thread_guard::ThreadGuard;
+use ui::ui::HlDefs;
 
 pub enum ScrollDirection {
     Up,
@@ -64,7 +64,7 @@ pub struct Grid {
     /// `connect_motion_events_for_drag`.
     drag_position: Arc<ThreadGuard<(u64, u64)>>,
     /// Input context that need to be updated for the cursor position
-    im_context: Option<gtk::IMMulticontext>
+    im_context: Option<gtk::IMMulticontext>,
 }
 
 impl Grid {
@@ -98,7 +98,6 @@ impl Grid {
             }
             Inhibit(false)
         });
-
 
         let eb = EventBox::new();
         eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
@@ -134,7 +133,7 @@ impl Grid {
         }
     }
 
-    pub fn set_im_context(&mut self, im_context : &gtk::IMMulticontext) {
+    pub fn set_im_context(&mut self, im_context: &gtk::IMMulticontext) {
         im_context.set_client_window(&self.da.get_window());
         self.im_context = Some(im_context.clone());
     }
@@ -149,13 +148,21 @@ impl Grid {
             ctx.cell_metrics.height,
             ctx.cell_metrics.width,
             row as f64,
-            col as f64);
+            col as f64,
+        );
 
-        let (x, y) = self.eb.translate_coordinates(
-            &self.eb.get_toplevel().unwrap(), x as i32, y as i32).unwrap();
+        let (x, y) = self
+            .eb
+            .translate_coordinates(
+                &self.eb.get_toplevel().unwrap(),
+                x as i32,
+                y as i32,
+            )
+            .unwrap();
 
         gtk::Rectangle {
-            x, y,
+            x,
+            y,
             width: ctx.cell_metrics.width as i32,
             height: ctx.cell_metrics.height as i32,
         }
@@ -164,7 +171,9 @@ impl Grid {
     /// Connects `f` to internal widget's scroll events. `f` params are scroll
     /// direction, row, col.
     pub fn connect_scroll_events<F: 'static>(&self, f: F)
-        where F: Fn(ScrollDirection, u64, u64) -> Inhibit {
+    where
+        F: Fn(ScrollDirection, u64, u64) -> Inhibit,
+    {
         let ctx = self.context.clone();
 
         self.eb.connect_scroll_event(move |_, e| {
@@ -187,7 +196,9 @@ impl Grid {
     /// Connects `f` to internal widget's motion events. `f` params are button,
     /// row, col. `f` is only called when the cell under the pointer changes.
     pub fn connect_motion_events_for_drag<F: 'static>(&self, f: F)
-        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+    where
+        F: Fn(MouseButton, u64, u64) -> Inhibit,
+    {
         let ctx = self.context.clone();
         let drag_position = self.drag_position.clone();
 
@@ -218,7 +229,9 @@ impl Grid {
     /// Connects `f` to internal widget's mouse button press event. `f` params
     /// are button, row, col.
     pub fn connect_mouse_button_press_events<F: 'static>(&self, f: F)
-        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+    where
+        F: Fn(MouseButton, u64, u64) -> Inhibit,
+    {
         let ctx = self.context.clone();
 
         self.eb.connect_button_press_event(move |_, e| {
@@ -242,7 +255,9 @@ impl Grid {
     /// Connects `f` to internal widget's mouse button release event. `f` params
     /// are button, row, col.
     pub fn connect_mouse_button_release_events<F: 'static>(&self, f: F)
-        where F: Fn(MouseButton, u64, u64) -> Inhibit {
+    where
+        F: Fn(MouseButton, u64, u64) -> Inhibit,
+    {
         let ctx = self.context.clone();
 
         self.eb.connect_button_release_event(move |_, e| {
@@ -265,7 +280,9 @@ impl Grid {
 
     /// Connects `f` to internal widget's resize events. `f` params are rows, cols.
     pub fn connect_da_resize<F: 'static>(&self, f: F)
-        where F: Fn(u64, u64) -> bool {
+    where
+        F: Fn(u64, u64) -> bool,
+    {
         let ctx = self.context.clone();
 
         self.da.connect_configure_event(move |da, _| {
@@ -285,7 +302,12 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        render::put_line(&self.da, ctx, line, &mut *self.hl_defs.lock().unwrap());
+        render::put_line(
+            &self.da,
+            ctx,
+            line,
+            &mut *self.hl_defs.lock().unwrap(),
+        );
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
@@ -295,13 +317,16 @@ impl Grid {
         // Clear old cursor position.
         let (x, y, w, h) = {
             let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(cm.height,
-                                            cm.width,
-                                            ctx.cursor.0 as f64,
-                                            ctx.cursor.1 as f64);
+            let (x, y) = render::get_coords(
+                cm.height,
+                cm.width,
+                ctx.cursor.0 as f64,
+                ctx.cursor.1 as f64,
+            );
             (x, y, cm.width, cm.height)
         };
-        ctx.queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area
+            .push((x as i32, y as i32, w as i32, h as i32));
 
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
@@ -309,16 +334,24 @@ impl Grid {
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
             let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(cm.height,
-                                            cm.width,
-                                            ctx.cursor.0 as f64,
-                                            ctx.cursor.1 as f64);
+            let (x, y) = render::get_coords(
+                cm.height,
+                cm.width,
+                ctx.cursor.0 as f64,
+                ctx.cursor.1 as f64,
+            );
             (x, y, cm.width, cm.height)
         };
-        ctx.queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area
+            .push((x as i32, y as i32, w as i32, h as i32));
 
         if let Some(ref im_context) = self.im_context {
-            let rect = gdk::Rectangle{x:x as i32,y:y as i32,width:w as i32,height:h as i32};
+            let rect = gdk::Rectangle {
+                x: x as i32,
+                y: y as i32,
+                width: w as i32,
+                height: h as i32,
+            };
             im_context.set_cursor_location(&rect);
         }
     }
@@ -328,7 +361,7 @@ impl Grid {
         let ctx = ctx.as_mut().unwrap();
 
         // Clear internal grid (rows).
-        ctx.rows = vec!();
+        ctx.rows = vec![];
         for _ in 0..height {
             ctx.rows.push(Row::new(width as usize));
         }
@@ -347,7 +380,7 @@ impl Grid {
         render::clear(&self.da, ctx, &hl_defs)
     }
 
-    pub fn scroll(&self, reg: [u64;4], rows: i64, _cols: i64) {
+    pub fn scroll(&self, reg: [u64; 4], rows: i64, _cols: i64) {
         let mut ctx = self.context.borrow_mut();
         let mut ctx = ctx.as_mut().unwrap();
         let hl_defs = self.hl_defs.lock().unwrap();
@@ -373,17 +406,20 @@ impl Grid {
 
         let (x, y, w, h) = {
             let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(cm.height,
-                                            cm.width,
-                                            ctx.cursor.0 as f64,
-                                            ctx.cursor.1 as f64);
+            let (x, y) = render::get_coords(
+                cm.height,
+                cm.width,
+                ctx.cursor.0 as f64,
+                ctx.cursor.1 as f64,
+            );
             (x, y, cm.width, cm.height)
         };
 
         // Don't use the ctx.queue_draw_area, because those draws will only
         // happen once nvim sends 'flush' event. This draw needs to happen
         // on each tick so the cursor blinks.
-        self.da.queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da
+            .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
     pub fn set_font(&self, font: FontDescription) {
@@ -433,13 +469,14 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
 
     // If we're not "busy", draw the cursor.
     if !ctx.busy {
-
         let (x, y, w, h) = {
             let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(cm.height,
-                                            cm.width,
-                                            ctx.cursor.0 as f64,
-                                            ctx.cursor.1 as f64);
+            let (x, y) = render::get_coords(
+                cm.height,
+                cm.width,
+                ctx.cursor.0 as f64,
+                ctx.cursor.1 as f64,
+            );
             (x, y, cm.width, cm.height)
         };
 
@@ -450,10 +487,12 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
 
         cr.save();
         cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
-        cr.set_source_rgba(ctx.cursor_color.r,
-                           ctx.cursor_color.g,
-                           ctx.cursor_color.b,
-                           alpha);
+        cr.set_source_rgba(
+            ctx.cursor_color.r,
+            ctx.cursor_color.g,
+            ctx.cursor_color.b,
+            alpha,
+        );
         cr.fill();
         cr.restore();
     }

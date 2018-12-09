@@ -1,4 +1,4 @@
-use std::cell::{RefCell, Ref, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::thread;
 
 /// TheardGuard is a _runtime_ thread guard for its internal data. It panics if
@@ -22,12 +22,12 @@ impl<T> ThreadGuard<T> {
 
     pub fn borrow(&self) -> Ref<T> {
         match self.check_thread() {
-            Ok(_) => {
-                self.data.borrow()
-            }
+            Ok(_) => self.data.borrow(),
             Err(_) => {
-                panic!("Data is only accessible on thread {:?} (current is {:?})",
-                self.thread_id, thread::current().id(),
+                panic!(
+                    "Data is only accessible on thread {:?} (current is {:?})",
+                    self.thread_id,
+                    thread::current().id(),
                 );
             }
         }
@@ -35,12 +35,12 @@ impl<T> ThreadGuard<T> {
 
     pub fn borrow_mut(&self) -> RefMut<T> {
         match self.check_thread() {
-            Ok(_) => {
-                self.data.borrow_mut()
-            }
+            Ok(_) => self.data.borrow_mut(),
             Err(_) => {
-                panic!("Data is only accessible on thread {:?} (current is {:?})",
-                self.thread_id, thread::current().id(),
+                panic!(
+                    "Data is only accessible on thread {:?} (current is {:?})",
+                    self.thread_id,
+                    thread::current().id(),
                 );
             }
         }
@@ -48,7 +48,7 @@ impl<T> ThreadGuard<T> {
 
     fn check_thread(&self) -> Result<(), ()> {
         if self.thread_id == thread::current().id() {
-            return Ok(())
+            return Ok(());
         }
         Err(())
     }
@@ -67,7 +67,9 @@ mod tests {
 
         thread::spawn(move || {
             guard.borrow();
-        }).join().unwrap();
+        })
+        .join()
+        .unwrap();
     }
 
     #[test]

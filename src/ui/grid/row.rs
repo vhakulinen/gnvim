@@ -1,4 +1,4 @@
-use nvim_bridge::{GridLineSegment, Cell as NvimCell};
+use nvim_bridge::{Cell as NvimCell, GridLineSegment};
 
 #[cfg(test)]
 use nvim_bridge;
@@ -91,7 +91,8 @@ impl Rope {
     fn from_nvim_cells(cells: &Vec<NvimCell>) -> Self {
         let mut rope = Rope::new(String::new(), 0);
         for cell in cells {
-            let leaf = Leaf::new(cell.text.repeat(cell.repeat as usize), cell.hl_id);
+            let leaf =
+                Leaf::new(cell.text.repeat(cell.repeat as usize), cell.hl_id);
             rope = rope.concat(Rope::Leaf(leaf));
         }
 
@@ -103,9 +104,7 @@ impl Rope {
     fn len(&self) -> usize {
         match self {
             Rope::Leaf(leaf) => leaf.len,
-            Rope::Node(left, right) => {
-                left.len() + right.len()
-            }
+            Rope::Node(left, right) => left.len() + right.len(),
         }
     }
 
@@ -115,9 +114,7 @@ impl Rope {
     pub fn weight(&self) -> usize {
         match self {
             Rope::Leaf(leaf) => leaf.len,
-            Rope::Node(left, right) => {
-                right.weight() + left.weight()
-            }
+            Rope::Node(left, right) => right.weight() + left.weight(),
         }
     }
 
@@ -125,9 +122,7 @@ impl Rope {
     pub fn text(&self) -> String {
         match self {
             Rope::Leaf(leaf) => leaf.text.clone(),
-            Rope::Node(left, right) => {
-                left.text() + &right.text()
-            }
+            Rope::Node(left, right) => left.text() + &right.text(),
         }
     }
 
@@ -150,17 +145,16 @@ impl Rope {
                         } else {
                             Rope::Node(
                                 Box::new(Rope::Leaf(leaf)),
-                                Box::new(Rope::Leaf(other)))
+                                Box::new(Rope::Leaf(other)),
+                            )
                         }
                     }
                     _ => {
                         Rope::Node(Box::new(Rope::Leaf(leaf)), Box::new(other))
                     }
                 }
-            },
-            Rope::Node(left, right) => {
-                left.concat(right.concat(other))
             }
+            Rope::Node(left, right) => left.concat(right.concat(other)),
         }
     }
 
@@ -194,9 +188,7 @@ impl Rope {
     /// Returns our leafs as mutable references.
     pub fn leafs_mut(&mut self) -> Vec<&mut Leaf> {
         match self {
-            Rope::Leaf(leaf) => {
-                vec!(leaf)
-            }
+            Rope::Leaf(leaf) => vec![leaf],
             Rope::Node(left, right) => {
                 let mut left = left.leafs_mut();
                 left.append(&mut right.leafs_mut());
@@ -208,9 +200,7 @@ impl Rope {
     /// Returns our leafs as reference.
     pub fn leafs(&self) -> Vec<&Leaf> {
         match self {
-            Rope::Leaf(leaf) => {
-                vec!(leaf)
-            }
+            Rope::Leaf(leaf) => vec![leaf],
             Rope::Node(left, right) => {
                 let mut left = left.leafs();
                 left.append(&mut right.leafs());
@@ -222,9 +212,7 @@ impl Rope {
     /// Returns leaf at `at`.
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         match self {
-            Rope::Leaf(leaf) => {
-                &leaf
-            }
+            Rope::Leaf(leaf) => &leaf,
             Rope::Node(left, right) => {
                 let weight = left.weight();
                 if at <= weight {
@@ -239,8 +227,10 @@ impl Rope {
 
     /// Combines leafs together, based on hl_id.
     pub fn combine_leafs(&self) -> Rope {
-        assert!(self.len() > 0,
-            "Rope needs to have length greater than 0 in order to be combine_leafs");
+        assert!(
+            self.len() > 0,
+            "Rope needs to have length greater than 0 in order to be combine_leafs"
+        );
 
         let mut rope = None;
 
@@ -327,7 +317,6 @@ impl Row {
     /// Inserts rope to `at`. What ever is between `at` and `rope.len()` is
     /// replaced.
     pub fn insert_rope_at(&mut self, at: usize, rope: Rope) {
-
         let (left, right) = self.rope.take().unwrap().split(at);
         let (_, right) = right.split(rope.len());
         self.rope = Some(left.concat(rope).concat(right));
@@ -338,7 +327,6 @@ impl Row {
     /// Updates row. `line` should be coming straight from nvim's 'grid_line'.
     /// event.
     pub fn update(&mut self, line: &GridLineSegment) -> Vec<Segment> {
-
         // Construct a rope from give cells in `line` and insert it into us.
         let other = Rope::from_nvim_cells(&line.cells);
         let other_len = other.len();
@@ -352,7 +340,7 @@ impl Row {
 
         // Compute segments that were affected by this update and return
         // them to the caller.
-        let mut segs = vec!();
+        let mut segs = vec![];
         let mut start = 0;
         let rope = self.rope.as_mut().unwrap();
         let leafs = rope.leafs_mut();
@@ -397,23 +385,23 @@ mod benches {
         row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
 
         b.iter(move || {
-            row.clone()
-                .update(&GridLineSegment{
-                    grid: 0,
-                    row: 0,
-                    col_start: 3,
-                    cells: vec!(
-                        nvim_bridge::Cell {
-                            text: String::from("1"),
-                            hl_id: 1,
-                            repeat: 3,
-                        },
-                        nvim_bridge::Cell {
-                            text: String::from("1"),
-                            hl_id: 1,
-                            repeat: 3,
-                        },
-                    )});
+            row.clone().update(&GridLineSegment {
+                grid: 0,
+                row: 0,
+                col_start: 3,
+                cells: vec![
+                    nvim_bridge::Cell {
+                        text: String::from("1"),
+                        hl_id: 1,
+                        repeat: 3,
+                    },
+                    nvim_bridge::Cell {
+                        text: String::from("1"),
+                        hl_id: 1,
+                        repeat: 3,
+                    },
+                ],
+            });
         });
     }
 
@@ -423,23 +411,23 @@ mod benches {
         row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
 
         b.iter(move || {
-            row.clone()
-                .update(&GridLineSegment{
-                    grid: 0,
-                    row: 0,
-                    col_start: 3,
-                    cells: vec!(
-                        nvim_bridge::Cell {
-                            text: String::from("1"),
-                            hl_id: 1,
-                            repeat: 3,
-                        },
-                        nvim_bridge::Cell {
-                            text: String::from("1"),
-                            hl_id: 2,
-                            repeat: 3,
-                        },
-                    )});
+            row.clone().update(&GridLineSegment {
+                grid: 0,
+                row: 0,
+                col_start: 3,
+                cells: vec![
+                    nvim_bridge::Cell {
+                        text: String::from("1"),
+                        hl_id: 1,
+                        repeat: 3,
+                    },
+                    nvim_bridge::Cell {
+                        text: String::from("1"),
+                        hl_id: 2,
+                        repeat: 3,
+                    },
+                ],
+            });
         });
     }
 
@@ -448,14 +436,11 @@ mod benches {
         let mut row = Row::new(10);
         row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
 
-        b.iter(move || {
-            row.clone().clear_range(3, 6)
-        });
+        b.iter(move || row.clone().clear_range(3, 6));
     }
 
     #[bench]
     fn bench_rope_concat(b: &mut Bencher) {
-
         b.iter(move || {
             let rope = Rope::new(String::from("first"), 0);
             let rope2 = Rope::new(String::from("second"), 0);
@@ -472,14 +457,11 @@ mod benches {
 
         //let rope = rope.combine_leafs();
 
-        b.iter(move || {
-            rope.clone().split(3)
-        });
+        b.iter(move || rope.clone().split(3));
     }
 
     #[bench]
     fn bench_insert_rope(b: &mut Bencher) {
-
         b.iter(move || {
             let mut row = Row::new(30);
             let rope = Rope::new(String::from("first"), 0);
@@ -489,7 +471,6 @@ mod benches {
 
     #[bench]
     fn bench_leaf_split(b: &mut Bencher) {
-
         b.iter(move || {
             let mut leaf = Leaf::new(String::from("123123123"), 0);
             leaf.split(4)
@@ -504,7 +485,7 @@ mod tests {
 
     #[test]
     fn test_rope_from_nvim_cells() {
-        let cells = vec!(
+        let cells = vec![
             nvim_bridge::Cell {
                 text: String::from("1"),
                 hl_id: 1,
@@ -514,7 +495,8 @@ mod tests {
                 text: String::from("2"),
                 hl_id: 2,
                 repeat: 3,
-            });
+            },
+        ];
 
         let rope = Rope::from_nvim_cells(&cells);
 
@@ -551,9 +533,7 @@ mod tests {
     fn test_rope_len() {
         let left = Rope::Leaf(Leaf::new(String::from("123"), 0));
         let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0));
-        let rope = Rope::Node(
-            Box::new(left),
-            Box::new(right));
+        let rope = Rope::Node(Box::new(left), Box::new(right));
 
         assert_eq!(rope.len(), 5);
     }
@@ -562,9 +542,7 @@ mod tests {
     fn test_rope_weight() {
         let left = Rope::Leaf(Leaf::new(String::from("123"), 0));
         let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0));
-        let rope = Rope::Node(
-            Box::new(left),
-            Box::new(right));
+        let rope = Rope::Node(Box::new(left), Box::new(right));
 
         assert_eq!(rope.weight(), 5);
     }
@@ -683,12 +661,11 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs() {
         let rope = Rope::new(String::from("first"), 0);
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("second"), 1)));
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("third"), 0)));
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("fourth"), 1)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("fourth"), 1)));
 
         assert_eq!(rope.leafs().len(), 4);
 
@@ -709,14 +686,11 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs2() {
         let rope = Rope::new(String::from(""), 3);
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("first"), 0)));
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("second"), 1)));
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from("third"), 0)));
-        let rope = rope.concat(
-            Rope::Leaf(Leaf::new(String::from(""), 1)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from(""), 1)));
 
         assert_eq!(rope.leafs().len(), 5);
 

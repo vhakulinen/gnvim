@@ -4,22 +4,22 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
 
+use gdk;
 use glib;
 use gtk;
-use gdk;
-use pango;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
+use pango;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{Notify, RedrawEvent, GnvimEvent, OptionSet, ModeInfo};
-use ui::color::{Highlight, Color};
-use ui::popupmenu::Popupmenu;
-use ui::cmdline::Cmdline;
-use ui::tabline::Tabline;
-use ui::grid::Grid;
+use nvim_bridge::{GnvimEvent, ModeInfo, Notify, OptionSet, RedrawEvent};
 use thread_guard::ThreadGuard;
+use ui::cmdline::Cmdline;
+use ui::color::{Color, Highlight};
+use ui::grid::Grid;
+use ui::popupmenu::Popupmenu;
+use ui::tabline::Tabline;
 
 type Grids = HashMap<u64, Grid>;
 
@@ -90,7 +90,11 @@ impl UI {
     /// * `rx` - Channel to receive nvim UI events.
     /// * `nvim` - Neovim instance to use. Should be the same that is the source
     ///            of `rx` events.
-    pub fn init(app: &gtk::Application, rx: Receiver<Notify>, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn init(
+        app: &gtk::Application,
+        rx: Receiver<Notify>,
+        nvim: Arc<Mutex<Neovim>>,
+    ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
         window.set_title("Neovim");
@@ -206,7 +210,6 @@ impl UI {
         let nvim_ref = nvim.clone();
         im_context.set_use_preedit(false);
         im_context.connect_commit(move |_, mut input| {
-
             // "<" needs to be escaped for nvim.input()
             let nvim_input = input.replace("<", "<lt>");
 
@@ -217,7 +220,6 @@ impl UI {
         let im_ref = im_context.clone();
         let nvim_ref = nvim.clone();
         window.connect_key_press_event(move |_, e| {
-
             if im_ref.filter_keypress(e) {
                 Inhibit(true)
             } else {
@@ -226,7 +228,10 @@ impl UI {
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
                 } else {
-                    println!("Failed to turn input event into nvim key (keyval: {})", e.get_keyval())
+                    println!(
+                        "Failed to turn input event into nvim key (keyval: {})",
+                        e.get_keyval()
+                    )
                 }
 
                 Inhibit(false)
@@ -267,7 +272,7 @@ impl UI {
             rx,
             state: Arc::new(ThreadGuard::new(UIState {
                 grids: grids,
-                mode_infos: vec!(),
+                mode_infos: vec![],
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
                 cmdline,
@@ -305,7 +310,6 @@ impl UI {
                 let state = state.clone();
                 let nvim = nvim.clone();
                 glib::idle_add(move || {
-
                     let mut state = state.borrow_mut();
 
                     // Handle any events that we might have.
@@ -330,7 +334,11 @@ impl UI {
     }
 }
 
-fn handle_notify(notify: &Notify, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
+fn handle_notify(
+    notify: &Notify,
+    state: &mut UIState,
+    nvim: Arc<Mutex<Neovim>>,
+) {
     match notify {
         Notify::RedrawEvent(events) => {
             handle_redraw_event(events, state, nvim);
@@ -358,7 +366,11 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
     }
 }
 
-fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc<Mutex<Neovim>>) {
+fn handle_redraw_event(
+    events: &Vec<RedrawEvent>,
+    state: &mut UIState,
+    nvim: Arc<Mutex<Neovim>>,
+) {
     for event in events {
         match event {
             RedrawEvent::GridLine(lines) => {
@@ -373,7 +385,11 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 let grid = if *grid_id != state.current_grid {
                     // ...so if the grid_id is not same as the state tells us,
                     // set the previous current grid to inactive state.
-                    state.grids.get(&state.current_grid).unwrap().set_active(false);
+                    state
+                        .grids
+                        .get(&state.current_grid)
+                        .unwrap()
+                        .set_active(false);
                     state.current_grid = *grid_id;
 
                     // And set the new current grid to active.
@@ -400,7 +416,6 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 grid.scroll(*reg, *rows, *cols);
             }
             RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
-
                 let mut hl_defs = state.hl_defs.lock().unwrap();
                 hl_defs.default_fg = *fg;
                 hl_defs.default_bg = *bg;
@@ -440,7 +455,8 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                             let grid = state.grids.get(&1).unwrap();
                             let (rows, cols) = grid.calc_size();
                             let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
+                            nvim.ui_try_resize(cols as i64, rows as i64)
+                                .unwrap();
 
                             state.popupmenu.set_font(&font);
                             state.tabline.set_font(&font);
@@ -478,7 +494,8 @@ fn handle_redraw_event(events: &Vec<RedrawEvent>, state: &mut UIState, nvim: Arc
                 state.popupmenu.set_items(popupmenu.items.clone());
 
                 let grid = state.grids.get(&state.current_grid).unwrap();
-                let mut rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+                let mut rect =
+                    grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
                 let extra_h = state.tabline.get_height();
                 println!("H: {}", extra_h);

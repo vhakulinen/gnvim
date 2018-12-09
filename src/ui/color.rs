@@ -19,8 +19,8 @@ impl Highlight {
         text: &str,
         default_fg: &Color,
         default_bg: &Color,
-        default_sp: &Color) -> String {
-
+        default_sp: &Color,
+    ) -> String {
         let fg = self.foreground.as_ref().unwrap_or(default_fg);
         let bg = self.background.as_ref().unwrap_or(default_bg);
         let sp = self.special.as_ref().unwrap_or(default_sp);
@@ -36,20 +36,22 @@ impl Highlight {
 
         let fontstyle = if self.italic { "italic" } else { "normal" };
 
-        format!("<span
+        format!(
+            "<span
             foreground=\"#{fg}\"
             background=\"#{bg}\"
             underline_color=\"#{sp}\"
             weight=\"{weight}\"
             font_style=\"{fontstyle}\"
             underline=\"{underline}\">{text}</span>",
-            fg=fg.to_hex(),
-            bg=bg.to_hex(),
-            sp=sp.to_hex(),
-            weight=weight,
-            fontstyle=fontstyle,
-            underline=underline,
-            text=glib::markup_escape_text(text))
+            fg = fg.to_hex(),
+            bg = bg.to_hex(),
+            sp = sp.to_hex(),
+            weight = weight,
+            fontstyle = fontstyle,
+            underline = underline,
+            text = glib::markup_escape_text(text)
+        )
     }
 }
 
@@ -61,7 +63,6 @@ pub struct Color {
 }
 
 impl Color {
-
     pub fn from_hex_string(mut hex: String) -> Result<Color, String> {
         let l = hex.chars().count();
         if l == 7 {
@@ -75,7 +76,11 @@ impl Color {
         if let Ok(res) = res {
             return Ok(Color::from_u64(res));
         } else {
-            return Err(format!("Failed to parse hex string '{}': {:?}", hex, res.err()));
+            return Err(format!(
+                "Failed to parse hex string '{}': {:?}",
+                hex,
+                res.err()
+            ));
         }
     }
 
@@ -88,9 +93,11 @@ impl Color {
     }
 
     pub fn to_hex(&self) -> String {
-        format!("{:02x}{:02x}{:02x}",
-                (self.r * 255.0) as u8,
-                (self.g * 255.0) as u8,
-                (self.b * 255.0) as u8)
+        format!(
+            "{:02x}{:02x}{:02x}",
+            (self.r * 255.0) as u8,
+            (self.g * 255.0) as u8,
+            (self.b * 255.0) as u8
+        )
     }
 }

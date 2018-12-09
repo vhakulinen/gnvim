@@ -1,5 +1,5 @@
-mod grid;
 mod context;
+mod grid;
 mod render;
 mod row;
 

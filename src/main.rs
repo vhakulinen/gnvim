@@ -2,42 +2,37 @@
 
 extern crate cairo;
 
+extern crate gdk;
 extern crate gio;
 extern crate glib;
-extern crate gdk;
 extern crate gtk;
+extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
-extern crate neovim_lib;
 
 use gio::prelude::*;
 
-use neovim_lib::NeovimApi;
 use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::session::Session as NeovimSession;
+use neovim_lib::NeovimApi;
 
+use std::env;
+use std::process::Command;
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
-use std::process::Command;
-use std::env;
 
 mod nvim_bridge;
-mod ui;
 mod thread_guard;
+mod ui;
 
 fn build(app: &gtk::Application) {
-
     let (tx, rx) = channel();
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
     let nvim_path = env::args()
-        .find(|arg| {
-            arg.starts_with("--nvim")
-        })
-        .and_then(|arg| {
-            arg.split("=").nth(1).map(str::to_owned)
-        })
+        .find(|arg| arg.starts_with("--nvim"))
+        .and_then(|arg| arg.split("=").nth(1).map(str::to_owned))
         .unwrap_or(String::from("nvim"));
 
     println!("nvim: {:?}", nvim_path);
@@ -75,7 +70,8 @@ fn main() {
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
     flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
-    let app = gtk::Application::new("com.github.vhakulinen.gnvim", flags).unwrap();
+    let app =
+        gtk::Application::new("com.github.vhakulinen.gnvim", flags).unwrap();
 
     app.connect_activate(|app| {
         build(app);
