@@ -1,4 +1,5 @@
 use nvim_bridge::{GridLineSegment, Cell as NvimCell};
+
 #[cfg(test)]
 use nvim_bridge;
 
@@ -383,10 +384,9 @@ impl Row {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(feature = "unstable", test))]
+mod benches {
     extern crate test;
-
     use self::test::Bencher;
 
     use super::*;
@@ -443,35 +443,6 @@ mod tests {
         });
     }
 
-    #[test]
-    fn test_rope_from_nvim_cells() {
-        let cells = vec!(
-            nvim_bridge::Cell {
-                text: String::from("1"),
-                hl_id: 1,
-                repeat: 3,
-            },
-            nvim_bridge::Cell {
-                text: String::from("2"),
-                hl_id: 2,
-                repeat: 3,
-            });
-
-        let rope = Rope::from_nvim_cells(&cells);
-
-        assert_eq!(rope.text(), "111222");
-        let leafs = rope.leafs();
-        assert_eq!(leafs.len(), 3);
-        assert_eq!(leafs[1].hl_id, 1);
-        assert_eq!(leafs[2].hl_id, 2);
-
-        let rope = rope.combine_leafs();
-        let leafs = rope.leafs();
-        assert_eq!(leafs.len(), 2);
-        assert_eq!(leafs[0].hl_id, 1);
-        assert_eq!(leafs[1].hl_id, 2);
-    }
-
     #[bench]
     fn bench_row_clear_range(b: &mut Bencher) {
         let mut row = Row::new(10);
@@ -523,6 +494,41 @@ mod tests {
             let mut leaf = Leaf::new(String::from("123123123"), 0);
             leaf.split(4)
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_rope_from_nvim_cells() {
+        let cells = vec!(
+            nvim_bridge::Cell {
+                text: String::from("1"),
+                hl_id: 1,
+                repeat: 3,
+            },
+            nvim_bridge::Cell {
+                text: String::from("2"),
+                hl_id: 2,
+                repeat: 3,
+            });
+
+        let rope = Rope::from_nvim_cells(&cells);
+
+        assert_eq!(rope.text(), "111222");
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 3);
+        assert_eq!(leafs[1].hl_id, 1);
+        assert_eq!(leafs[2].hl_id, 2);
+
+        let rope = rope.combine_leafs();
+        let leafs = rope.leafs();
+        assert_eq!(leafs.len(), 2);
+        assert_eq!(leafs[0].hl_id, 1);
+        assert_eq!(leafs[1].hl_id, 2);
     }
 
     #[test]

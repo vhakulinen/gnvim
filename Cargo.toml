@@ -6,6 +6,9 @@ authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 [profile.dev]
 debug = true
 
+[features]
+unstable = []
+
 [dependencies]
 
 gio = "0.5"

@@ -1,4 +1,4 @@
-#![feature(test)]
+#![cfg_attr(feature = "unstable", feature(test))]
 
 extern crate cairo;
 
