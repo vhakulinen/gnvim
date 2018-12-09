@@ -412,7 +412,6 @@ impl Cmdline {
         parent.connect_size_allocate(move |_, alloc| {
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
-            println!("WIDHT: {}", width);
             box_ref.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;
