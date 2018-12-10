@@ -108,7 +108,6 @@ pub enum CursorShape {
     Block,
     Horizontal,
     Vertical,
-    Unknown,
 }
 
 impl CursorShape {

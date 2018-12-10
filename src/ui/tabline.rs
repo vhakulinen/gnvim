@@ -10,11 +10,8 @@ use neovim_lib::{
     Neovim,
 };
 use pango;
-use ui::color::Color;
 
 use nvim_bridge;
-#[macro_use]
-use ui;
 
 pub struct Tabline {
     notebook: gtk::Notebook,

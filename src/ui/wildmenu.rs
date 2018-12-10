@@ -1,7 +1,5 @@
-use glib;
 use gtk;
 use gtk::prelude::*;
-use pango;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -10,9 +8,6 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
 use nvim_bridge;
-use ui::ui::HlDefs;
-#[macro_use]
-use ui;
 
 const MAX_HEIGHT: i32 = 500;
 
@@ -26,13 +21,12 @@ pub struct Wildmenu {
     css_provider: gtk::CssProvider,
     frame: gtk::Frame,
     list: gtk::ListBox,
-    scrolledwindow: gtk::ScrolledWindow,
 
     state: Rc<RefCell<State>>,
 }
 
 impl Wildmenu {
-    pub fn new(hl_defs: Arc<Mutex<HlDefs>>, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(nvim: Arc<Mutex<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let frame = gtk::Frame::new(None);
@@ -49,7 +43,7 @@ impl Wildmenu {
 
         let frame_ref = frame.clone();
         // Make sure our container grows to certain height.
-        list.connect_size_allocate(move |list, alloc| {
+        list.connect_size_allocate(move |list, _| {
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             let row_height = if let Some(item) = list.get_children().get(0) {
@@ -67,7 +61,7 @@ impl Wildmenu {
 
         let state_ref = state.clone();
         // If user selects some row with a mouse, notify nvim about it.
-        list.connect_row_activated(move |list, row| {
+        list.connect_row_activated(move |_, row| {
             let prev = state_ref.borrow().selected;
             let new = row.get_index();
 
@@ -87,7 +81,6 @@ impl Wildmenu {
         Wildmenu {
             css_provider,
             list,
-            scrolledwindow,
             frame,
 
             state,

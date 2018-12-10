@@ -10,9 +10,8 @@ use ui::grid::context::{CellMetrics, Context};
 use ui::grid::row::Segment;
 use ui::ui::HlDefs;
 
-/// Renders `segments` to `da`.
+/// Renders `segments` to `cr`.
 fn put_segments(
-    da: &DrawingArea,
     cr: &cairo::Context,
     pango_context: &pango::Context,
     queue_draw_area: &mut Vec<(i32, i32, i32, i32)>,
@@ -135,9 +134,8 @@ fn put_segments(
     }
 }
 
-/// Renders `line` to `da`.
+/// Renders `line` to `context.cairo_context`.
 pub fn put_line(
-    da: &DrawingArea,
     context: &mut Context,
     line: &GridLineSegment,
     hl_defs: &mut HlDefs,
@@ -156,7 +154,6 @@ pub fn put_line(
     // is overflowing to the right.
     affected_segments.reverse();
     put_segments(
-        da,
         &context.cairo_context,
         &context.pango_context,
         &mut context.queue_draw_area,
@@ -183,14 +180,8 @@ pub fn clear(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs) {
     ctx.queue_draw_area.push((0, 0, w, h));
 }
 
-/// Scrolls contents in `da` and `ctx.rows`, based on `reg`.
-pub fn scroll(
-    da: &DrawingArea,
-    ctx: &mut Context,
-    hl_defs: &HlDefs,
-    reg: [u64; 4],
-    count: i64,
-) {
+/// Scrolls contents in `ctx.cairo_context` and `ctx.rows`, based on `reg`.
+pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
     let bg = &hl_defs.default_bg;

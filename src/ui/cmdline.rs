@@ -1,18 +1,13 @@
-use gdk::prelude::*;
 use gtk;
 use gtk::prelude::*;
 use pango;
 use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;
-use neovim_lib::neovim_api::NeovimApi;
 
 use nvim_bridge;
-use ui::grid::Grid;
 use ui::ui::HlDefs;
 use ui::wildmenu::Wildmenu;
-#[macro_use]
-use ui;
 
 const MAX_WIDTH: i32 = 650;
 
@@ -41,7 +36,7 @@ impl CmdlineBlock {
         frame.add(&scrolledwindow);
 
         let scrolledwindow_ref = scrolledwindow.clone();
-        textview.connect_size_allocate(move |tv, alloc| {
+        textview.connect_size_allocate(move |tv, _| {
             let h = tv.get_preferred_height();
 
             if h.1 > 250 {
@@ -236,7 +231,7 @@ impl CmdlineInput {
         content: &nvim_bridge::CmdlineShow,
         hl_defs: &HlDefs,
     ) {
-        let mut buffer = self.textview.get_buffer().unwrap();
+        let buffer = self.textview.get_buffer().unwrap();
 
         // Reset the buffer.
         buffer.set_text("");
@@ -275,7 +270,8 @@ impl CmdlineInput {
         self.ensure_cursor_pos();
     }
 
-    fn show_special_char(&mut self, ch: String, shift: bool) {
+    fn show_special_char(&mut self, ch: String, _shift: bool, _level: u64) {
+        // TODO(ville): What to do with `_shift` and `_level`?
         let buffer = self.textview.get_buffer().unwrap();
         let mark_insert = buffer.get_insert().unwrap();
         let mut iter = buffer.get_iter_at_mark(&mark_insert);
@@ -334,7 +330,7 @@ impl CmdlineInput {
     }
 
     fn set_cursor(&mut self, pos: usize, level: u64) {
-        if (level != self.current_level) {
+        if level != self.current_level {
             return;
         }
 
@@ -358,7 +354,6 @@ impl CmdlineInput {
 
 pub struct Cmdline {
     css_provider: gtk::CssProvider,
-    box_: gtk::Box,
     fixed: gtk::Fixed,
 
     hl_defs: Arc<Mutex<HlDefs>>,
@@ -393,7 +388,7 @@ impl Cmdline {
         let frame = gtk::Frame::new(None);
         frame.add(&inner_box);
 
-        let wildmenu = Wildmenu::new(hl_defs.clone(), nvim.clone());
+        let wildmenu = Wildmenu::new(nvim.clone());
 
         // box_ is the actual container for cmdline and wildmenu.
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -420,7 +415,6 @@ impl Cmdline {
 
         Cmdline {
             css_provider,
-            box_,
             fixed,
             hl_defs,
             input,
@@ -507,7 +501,7 @@ impl Cmdline {
     }
 
     pub fn show_special_char(&mut self, ch: String, shift: bool, level: u64) {
-        self.input.show_special_char(ch, shift);
+        self.input.show_special_char(ch, shift, level);
     }
 
     pub fn set_font(&mut self, font: &pango::FontDescription) {

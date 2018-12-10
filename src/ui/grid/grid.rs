@@ -302,12 +302,7 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        render::put_line(
-            &self.da,
-            ctx,
-            line,
-            &mut *self.hl_defs.lock().unwrap(),
-        );
+        render::put_line(ctx, line, &mut *self.hl_defs.lock().unwrap());
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
@@ -385,7 +380,7 @@ impl Grid {
         let mut ctx = ctx.as_mut().unwrap();
         let hl_defs = self.hl_defs.lock().unwrap();
 
-        render::scroll(&self.da, &mut ctx, &hl_defs, reg, rows);
+        render::scroll(&mut ctx, &hl_defs, reg, rows);
     }
 
     pub fn set_active(&self, active: bool) {

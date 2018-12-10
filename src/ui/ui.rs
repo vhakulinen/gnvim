@@ -209,7 +209,7 @@ impl UI {
         let im_context = gtk::IMMulticontext::new();
         let nvim_ref = nvim.clone();
         im_context.set_use_preedit(false);
-        im_context.connect_commit(move |_, mut input| {
+        im_context.connect_commit(move |_, input| {
             // "<" needs to be escaped for nvim.input()
             let nvim_input = input.replace("<", "<lt>");
 

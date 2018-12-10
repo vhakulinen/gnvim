@@ -7,11 +7,8 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
-#[macro_use]
-use ui;
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
-use ui::color::Color;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
