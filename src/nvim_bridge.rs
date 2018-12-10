@@ -297,7 +297,7 @@ pub enum GnvimEvent {
     Unknown(String),
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct WildmenuColors {
     pub bg: Color,
     pub fg: Color,
@@ -305,7 +305,7 @@ pub struct WildmenuColors {
     pub sel_fg: Color,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct PmenuColors {
     pub bg: Color,
     pub fg: Color,
@@ -313,7 +313,7 @@ pub struct PmenuColors {
     pub sel_fg: Color,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct TablineColors {
     pub fg: Color,
     pub bg: Color,
@@ -323,7 +323,7 @@ pub struct TablineColors {
     pub sel_fg: Color,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct CmdlineColors {
     pub fg: Color,
     pub bg: Color,

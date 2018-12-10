@@ -17,6 +17,7 @@ use nvim_bridge::{GnvimEvent, ModeInfo, Notify, OptionSet, RedrawEvent};
 use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
+use ui::font::Font;
 use ui::grid::Grid;
 use ui::popupmenu::Popupmenu;
 use ui::tabline::Tabline;
@@ -352,9 +353,9 @@ fn handle_notify(
 fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
-            state.popupmenu.set_colors(&colors.pmenu);
-            state.tabline.set_colors(&colors.tabline);
-            state.cmdline.set_colors(&colors.cmdline);
+            state.popupmenu.set_colors(colors.pmenu);
+            state.tabline.set_colors(colors.tabline);
+            state.cmdline.set_colors(colors.cmdline);
             state.cmdline.wildmenu_set_colors(&colors.wildmenu);
         }
         GnvimEvent::CompletionMenuToggleInfo => {
@@ -438,10 +439,12 @@ fn handle_redraw_event(
                 for opt in opts {
                     match opt {
                         OptionSet::GuiFont(font) => {
-                            let font = get_font_from_string(font);
+                            let font = Font::from_guifont(font)
+                                .unwrap_or(Font::default());
+                            let pango_font = font.as_pango_font();
 
                             for grid in (state.grids).values() {
-                                grid.set_font(font.clone());
+                                grid.set_font(pango_font.clone());
                             }
 
                             // Cancel any possible delayed call for ui_try_resize.
@@ -458,9 +461,9 @@ fn handle_redraw_event(
                             nvim.ui_try_resize(cols as i64, rows as i64)
                                 .unwrap();
 
-                            state.popupmenu.set_font(&font);
-                            state.tabline.set_font(&font);
-                            state.cmdline.set_font(&font);
+                            state.popupmenu.set_font(font.clone());
+                            state.cmdline.set_font(font.clone());
+                            state.tabline.set_font(font.clone());
                         }
                         OptionSet::NotSupported(name) => {
                             println!("Not supported option set: {}", name);
@@ -622,16 +625,4 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     }
 
     Some(format!("<{}>", input))
-}
-
-fn get_font_from_string(font: &str) -> pango::FontDescription {
-    let mut font_desc = pango::FontDescription::from_string(font);
-
-    // Make sure we dont have a font with size of 0, otherwise we'll
-    // have problems later.
-    if font_desc.get_size() == 0 {
-        font_desc.set_size(12 * pango::SCALE);
-    }
-
-    font_desc
 }

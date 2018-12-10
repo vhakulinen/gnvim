@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use neovim_lib::neovim::Neovim;
 
 use nvim_bridge;
+use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
 use ui::wildmenu::Wildmenu;
 
@@ -182,15 +183,15 @@ struct CmdlineInput {
     textview: gtk::TextView,
     css_provider: gtk::CssProvider,
 
-    // Content, excluding prompt, firstc etc.
+    /// Content, excluding prompt, firstc etc.
     content: String,
 
-    // Length of the prompt part (firstc, prompt, etc. things before
-    // actual content) in chars.
+    /// Length of the prompt part (firstc, prompt, etc. things before
+    /// actual content) in chars.
     prompt_len: i32,
-    // Cursor position in `content` (in bytes).
+    /// Cursor position in `content` (in bytes).
     cursor_pos: usize,
-    // Level from the latest `cmdline_show`.
+    /// Level from the latest `cmdline_show`.
     current_level: u64,
 }
 
@@ -360,11 +361,17 @@ pub struct Cmdline {
 
     input: CmdlineInput,
     block: CmdlineBlock,
-
     wildmenu: Wildmenu,
 
+    /// If the block should be shown or not.
     show_block: bool,
+    /// If the wildmenu should be shown or not.
     show_wildmenu: bool,
+
+    colors: nvim_bridge::CmdlineColors,
+    /// Our font. This is inherited to input, block and wildmenu through our
+    /// styles.
+    font: Font,
 }
 
 impl Cmdline {
@@ -422,23 +429,32 @@ impl Cmdline {
             wildmenu,
             show_block: false,
             show_wildmenu: false,
+            font: Font::default(),
+            colors: nvim_bridge::CmdlineColors::default(),
         }
     }
 
-    pub fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+    pub fn set_colors(&mut self, colors: nvim_bridge::CmdlineColors) {
+        self.input.set_colors(&colors);
+        self.block.set_colors(&colors);
+        self.colors = colors;
+
+        self.set_styles();
+    }
+
+    fn set_styles(&self) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_styles_pre20();
         } else {
-            self.set_colors_post20(colors);
+            self.set_styles_post20();
         }
-
-        self.input.set_colors(colors);
-        self.block.set_colors(colors);
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_styles_post20(&self) {
         let css = format!(
-            "frame > border {{
+            "{font_wild}
+
+            frame > border {{
                 border: none;
             }}
 
@@ -455,15 +471,18 @@ impl Cmdline {
                 box-shadow: none;
             }}
             ",
-            bg = colors.border.to_hex()
+            font_wild = self.font.as_wild_css(FontUnit::Point),
+            bg = self.colors.border.to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_styles_pre20(&self) {
         let css = format!(
-            "GtkBox {{
+            "{font_wild}
+
+            GtkBox {{
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
 
@@ -476,7 +495,8 @@ impl Cmdline {
                 padding: 6px;
                 border: none;
             }}",
-            bg = colors.border.to_hex()
+            font_wild = self.font.as_wild_css(FontUnit::Pixel),
+            bg = self.colors.border.to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -504,8 +524,9 @@ impl Cmdline {
         self.input.show_special_char(ch, shift, level);
     }
 
-    pub fn set_font(&mut self, font: &pango::FontDescription) {
-        gtk::WidgetExt::override_font(&self.fixed, font);
+    pub fn set_font(&mut self, font: Font) {
+        self.font = font;
+        self.set_styles();
 
         // Some tricks to make sure the input has correct height after
         // font change.

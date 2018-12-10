@@ -12,6 +12,7 @@ use neovim_lib::{
 use pango;
 
 use nvim_bridge;
+use ui::font::{Font, FontUnit};
 
 pub struct Tabline {
     notebook: gtk::Notebook,
@@ -20,6 +21,11 @@ pub struct Tabline {
     switch_tab_signal: glib::SignalHandlerId,
 
     tabpage_data: Rc<RefCell<Box<Vec<Tabpage>>>>,
+
+    /// Our colors.
+    colors: nvim_bridge::TablineColors,
+    /// Our font.
+    font: Font,
 }
 
 impl Tabline {
@@ -50,6 +56,8 @@ impl Tabline {
             nvim,
             switch_tab_signal,
             tabpage_data,
+            colors: nvim_bridge::TablineColors::default(),
+            font: Font::default(),
         }
     }
 
@@ -98,21 +106,29 @@ impl Tabline {
         self.notebook.get_preferred_height().0
     }
 
-    pub fn set_font(&self, font: &pango::FontDescription) {
-        gtk::WidgetExt::override_font(&self.notebook, font);
+    pub fn set_font(&mut self, font: Font) {
+        self.font = font;
+        self.set_styles();
     }
 
-    pub fn set_colors(&self, colors: &nvim_bridge::TablineColors) {
+    pub fn set_colors(&mut self, colors: nvim_bridge::TablineColors) {
+        self.colors = colors;
+        self.set_styles();
+    }
+
+    fn set_styles(&self) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_styles_pre20();
         } else {
-            self.set_colors_post20(colors);
+            self.set_styles_post20();
         }
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::TablineColors) {
+    fn set_styles_post20(&self) {
         let css = format!(
-            "header {{
+            "{font_wild}
+
+            header {{
                 padding: 0px;
                 box-shadow: none;
             }}
@@ -139,19 +155,22 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg = colors.fg.to_hex(),
-            normal_bg = colors.bg.to_hex(),
-            selected_fg = colors.sel_fg.to_hex(),
-            selected_bg = colors.sel_bg.to_hex(),
+            font_wild = self.font.as_wild_css(FontUnit::Point),
+            normal_fg = self.colors.fg.to_hex(),
+            normal_bg = self.colors.bg.to_hex(),
+            selected_fg = self.colors.sel_fg.to_hex(),
+            selected_bg = self.colors.sel_bg.to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::TablineColors) {
+    fn set_styles_pre20(&self) {
         let css = format!(
-            "GtkNotebook {{
+            "{font_wild}
+
+            GtkNotebook {{
                 padding: 0px;
                 background-color: #{normal_bg};
 
@@ -184,10 +203,11 @@ impl Tabline {
                 box-shadow: inset 73px 0px 0px -70px #{selected_fg};
             }}
             ",
-            normal_fg = colors.fg.to_hex(),
-            normal_bg = colors.bg.to_hex(),
-            selected_fg = colors.sel_fg.to_hex(),
-            selected_bg = colors.sel_bg.to_hex(),
+            font_wild = self.font.as_wild_css(FontUnit::Pixel),
+            normal_fg = self.colors.fg.to_hex(),
+            normal_bg = self.colors.bg.to_hex(),
+            selected_fg = self.colors.sel_fg.to_hex(),
+            selected_bg = self.colors.sel_bg.to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())

@@ -9,6 +9,7 @@ use pango;
 
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
+use ui::font::{Font, FontUnit};
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -76,6 +77,11 @@ pub struct Popupmenu {
 
     /// State that is in Arc because its passed into widget signal handlers.
     state: Arc<ThreadGuard<State>>,
+
+    /// Our colors.
+    colors: PmenuColors,
+    /// Our font.
+    font: Font,
 }
 
 impl Popupmenu {
@@ -293,6 +299,8 @@ impl Popupmenu {
             info_label,
             state,
             info_shown: false,
+            colors: PmenuColors::default(),
+            font: Font::default(),
         }
     }
 
@@ -403,17 +411,24 @@ impl Popupmenu {
         }
     }
 
-    pub fn set_colors(&self, colors: &PmenuColors) {
+    pub fn set_colors(&mut self, colors: PmenuColors) {
+        self.colors = colors;
+        self.set_styles();
+    }
+
+    fn set_styles(&self) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_styles_pre20();
         } else {
-            self.set_colors_post20(colors);
+            self.set_styles_post20();
         }
     }
 
-    fn set_colors_post20(&self, colors: &PmenuColors) {
+    fn set_styles_post20(&self) {
         let css = format!(
-            "box, grid, list, row, label {{
+            "{font_wild}
+
+            box, grid, list, row, label {{
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
@@ -432,18 +447,21 @@ impl Popupmenu {
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
             ",
-            normal_fg = colors.fg.to_hex(),
-            normal_bg = colors.bg.to_hex(),
-            selected_bg = colors.sel_bg.to_hex(),
-            selected_fg = colors.sel_fg.to_hex()
+            font_wild = self.font.as_wild_css(FontUnit::Point),
+            normal_fg = self.colors.fg.to_hex(),
+            normal_bg = self.colors.bg.to_hex(),
+            selected_bg = self.colors.sel_bg.to_hex(),
+            selected_fg = self.colors.sel_fg.to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_pre20(&self, colors: &PmenuColors) {
+    fn set_styles_pre20(&self) {
         let css = format!(
-            "GtkBox, GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
+            "{font_wild}
+
+            GtkBox, GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
@@ -464,17 +482,19 @@ impl Popupmenu {
                 box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
             ",
-            normal_fg = colors.fg.to_hex(),
-            normal_bg = colors.bg.to_hex(),
-            selected_bg = colors.sel_bg.to_hex(),
-            selected_fg = colors.sel_fg.to_hex()
+            font_wild = self.font.as_wild_css(FontUnit::Pixel),
+            normal_fg = self.colors.fg.to_hex(),
+            normal_bg = self.colors.bg.to_hex(),
+            selected_bg = self.colors.sel_bg.to_hex(),
+            selected_fg = self.colors.sel_fg.to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    pub fn set_font(&self, font: &pango::FontDescription) {
-        gtk::WidgetExt::override_font(&self.layout, font);
+    pub fn set_font(&mut self, font: Font) {
+        self.font = font;
+        self.set_styles();
     }
 }
 
