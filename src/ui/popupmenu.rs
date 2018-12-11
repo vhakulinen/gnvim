@@ -507,8 +507,8 @@ fn create_completionitem_widget(
 
     let kind = gtk::Label::new(item.kind.as_str());
     kind.set_halign(gtk::Align::Start);
-    kind.set_margin_left(5);
-    kind.set_margin_right(5);
+    kind.set_margin_start(5);
+    kind.set_margin_end(5);
     grid.attach(&kind, 0, 0, 1, 1);
 
     let word = gtk::Label::new(item.word.as_str());
@@ -519,8 +519,8 @@ fn create_completionitem_widget(
     let menu = gtk::Label::new(item.menu.as_str());
     menu.set_halign(gtk::Align::End);
     menu.set_hexpand(true);
-    menu.set_margin_left(5);
-    menu.set_margin_right(5);
+    menu.set_margin_start(5);
+    menu.set_margin_end(5);
     grid.attach(&menu, 2, 0, 1, 1);
 
     let info = gtk::Label::new(shorten_info(&item.info).as_str());

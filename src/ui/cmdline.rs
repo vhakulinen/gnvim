@@ -1,6 +1,5 @@
 use gtk;
 use gtk::prelude::*;
-use pango;
 use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;

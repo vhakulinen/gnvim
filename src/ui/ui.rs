@@ -9,7 +9,6 @@ use glib;
 use gtk;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
-use pango;
 
 use gtk::prelude::*;
 
