@@ -50,6 +50,8 @@ fn build(app: &gtk::Application) {
     session.start_event_loop_handler(bridge);
 
     let mut nvim = Neovim::new(session);
+    nvim.subscribe("Gnvim").unwrap();
+
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_linegrid_external(true);
@@ -58,9 +60,6 @@ fn build(app: &gtk::Application) {
     ui_opts.set_cmdline_external(true);
     ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts).unwrap();
-
-    nvim.subscribe("Gnvim").unwrap();
-    nvim.command("call SetGuiColors()").unwrap();
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();

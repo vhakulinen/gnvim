@@ -1,5 +1,11 @@
 
-function! ReturnHighlightTerm(group, term)
+if has("g:gnvim_runtime_loaded")
+    exit
+endif
+
+let g:gnvim_runtime_loaded = 1
+
+function! gnvim#get_hl_term(group, term)
     " Store output of group to variable
     let output = execute('hi ' . a:group)
 
@@ -7,41 +13,42 @@ function! ReturnHighlightTerm(group, term)
     return matchstr(output, a:term.'=\zs\S*')
 endfunction
 
-function! SetGuiColors()
+function! gnvim#set_gui_colors()
     let colors = {
-                \ 'pmenu_bg': ReturnHighlightTerm('Pmenu', 'guibg'),
-                \ 'pmenu_fg': ReturnHighlightTerm('Pmenu', 'guifg'),
-                \ 'pmenusel_bg': ReturnHighlightTerm('PmenuSel', 'guibg'),
-                \ 'pmenusel_fg': ReturnHighlightTerm('PmenuSel', 'guifg'),
+                \ 'pmenu_bg': gnvim#get_hl_term('Pmenu', 'guibg'),
+                \ 'pmenu_fg': gnvim#get_hl_term('Pmenu', 'guifg'),
+                \ 'pmenusel_bg': gnvim#get_hl_term('PmenuSel', 'guibg'),
+                \ 'pmenusel_fg': gnvim#get_hl_term('PmenuSel', 'guifg'),
                 \
-                \ 'tabline_fg': ReturnHighlightTerm('TabLine', 'guifg'),
-                \ 'tabline_bg': ReturnHighlightTerm('TabLine', 'guibg'),
-                \ 'tablinesel_fg': ReturnHighlightTerm('TabLineSel', 'guifg'),
-                \ 'tablinesel_bg': ReturnHighlightTerm('TabLineSel', 'guibg'),
-                \ 'tablinefill_fg': ReturnHighlightTerm('TabLineFill', 'guifg'),
-                \ 'tablinefill_bg': ReturnHighlightTerm('TabLineFill', 'guibg'),
+                \ 'tabline_fg': gnvim#get_hl_term('TabLine', 'guifg'),
+                \ 'tabline_bg': gnvim#get_hl_term('TabLine', 'guibg'),
+                \ 'tablinesel_fg': gnvim#get_hl_term('TabLineSel', 'guifg'),
+                \ 'tablinesel_bg': gnvim#get_hl_term('TabLineSel', 'guibg'),
+                \ 'tablinefill_fg': gnvim#get_hl_term('TabLineFill', 'guifg'),
+                \ 'tablinefill_bg': gnvim#get_hl_term('TabLineFill', 'guibg'),
                 \
-                \ 'cmdline_fg': ReturnHighlightTerm('Normal', 'guifg'),
-                \ 'cmdline_bg': ReturnHighlightTerm('Normal', 'guibg'),
-                \ 'cmdline_border': ReturnHighlightTerm('TabLineSel', 'guibg'),
+                \ 'cmdline_fg': gnvim#get_hl_term('Normal', 'guifg'),
+                \ 'cmdline_bg': gnvim#get_hl_term('Normal', 'guibg'),
+                \ 'cmdline_border': gnvim#get_hl_term('TabLineSel', 'guibg'),
                 \
-                \ 'wildmenu_bg': ReturnHighlightTerm('Pmenu', 'guibg'),
-                \ 'wildmenu_fg': ReturnHighlightTerm('Pmenu', 'guifg'),
-                \ 'wildmenusel_bg': ReturnHighlightTerm('PmenuSel', 'guibg'),
-                \ 'wildmenusel_fg': ReturnHighlightTerm('PmenuSel', 'guifg'),
+                \ 'wildmenu_bg': gnvim#get_hl_term('Pmenu', 'guibg'),
+                \ 'wildmenu_fg': gnvim#get_hl_term('Pmenu', 'guifg'),
+                \ 'wildmenusel_bg': gnvim#get_hl_term('PmenuSel', 'guibg'),
+                \ 'wildmenusel_fg': gnvim#get_hl_term('PmenuSel', 'guifg'),
                 \}
 
     call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)
 endfunction
 
-function! CompletionMenuToggleInfo()
+function! gnvim#completion_menu_toggle_info()
     call rpcnotify(0, 'Gnvim', 'CompletionMenuToggleInfo')
     return ''
 endfunction
 
 augroup GnvimColors
     autocmd!
-    autocmd ColorScheme * call SetGuiColors()
+    autocmd ColorScheme * call gnvim#set_gui_colors()
+    autocmd VimEnter * call gnvim#set_gui_colors()
 augroup END
 
-inoremap <expr> <C-s> CompletionMenuToggleInfo()
+inoremap <expr> <C-s> gnvim#completion_menu_toggle_info()
