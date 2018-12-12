@@ -93,6 +93,7 @@ impl Tabline {
         self.notebook.show_all();
 
         let mut nvim = self.nvim.lock().unwrap();
+        // TODO(ville): This fails sometimes. Figure out why!
         let page = current.get_number(&mut nvim).unwrap() - 1;
         self.notebook.set_current_page(Some(page as u32));
 
