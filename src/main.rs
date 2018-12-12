@@ -25,6 +25,9 @@ mod nvim_bridge;
 mod thread_guard;
 mod ui;
 
+static GNVIM_RUNTIME_PATH_VAR: &str = "GNVIM_RUNTIME_PATH";
+static GNVIM_RUNTIME_PATH: &str = "/usr/local/share/gnvim/runtime";
+
 fn build(app: &gtk::Application) {
     let (tx, rx) = channel();
 
@@ -35,7 +38,8 @@ fn build(app: &gtk::Application) {
         .and_then(|arg| arg.split("=").nth(1).map(str::to_owned))
         .unwrap_or(String::from("nvim"));
 
-    println!("nvim: {:?}", nvim_path);
+    let rtp = env::var(GNVIM_RUNTIME_PATH_VAR)
+        .unwrap_or(GNVIM_RUNTIME_PATH.to_string());
 
     let mut cmd = Command::new(&nvim_path);
     cmd.arg("--embed")
@@ -44,13 +48,19 @@ fn build(app: &gtk::Application) {
         .arg("--cmd")
         .arg("set termguicolors")
         .arg("--cmd")
-        .arg("let &rtp.=',~/src/gnvim/runtime'");
+        .arg(format!("let &rtp.=',{}'", rtp));
+
+    let print_nvim_cmd = env::args().find(|arg| arg == "--print-nvim-cmd");
+    if print_nvim_cmd.is_some() {
+        println!("nvim cmd: {:?}", cmd);
+    }
 
     let mut session = NeovimSession::new_child_cmd(&mut cmd).unwrap();
     session.start_event_loop_handler(bridge);
 
     let mut nvim = Neovim::new(session);
-    nvim.subscribe("Gnvim").unwrap();
+    nvim.subscribe("Gnvim")
+        .expect("Failed to subscribe to 'Gnvim' events");
 
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);
@@ -59,7 +69,8 @@ fn build(app: &gtk::Application) {
     ui_opts.set_tabline_external(true);
     ui_opts.set_cmdline_external(true);
     ui_opts.set_wildmenu_external(true);
-    nvim.ui_attach(80, 30, &ui_opts).unwrap();
+    nvim.ui_attach(80, 30, &ui_opts)
+        .expect("Failed to attach UI");
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();
