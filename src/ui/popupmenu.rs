@@ -10,6 +10,7 @@ use pango;
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
 use ui::font::{Font, FontUnit};
+use ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -411,20 +412,20 @@ impl Popupmenu {
         }
     }
 
-    pub fn set_colors(&mut self, colors: PmenuColors) {
+    pub fn set_colors(&mut self, colors: PmenuColors, hl_defs: &HlDefs) {
         self.colors = colors;
-        self.set_styles();
+        self.set_styles(hl_defs);
     }
 
-    fn set_styles(&self) {
+    fn set_styles(&self, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20();
+            self.set_styles_pre20(hl_defs);
         } else {
-            self.set_styles_post20();
+            self.set_styles_post20(hl_defs);
         }
     }
 
-    fn set_styles_post20(&self) {
+    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -448,16 +449,16 @@ impl Popupmenu {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            normal_fg = self.colors.fg.to_hex(),
-            normal_bg = self.colors.bg.to_hex(),
-            selected_bg = self.colors.sel_bg.to_hex(),
-            selected_fg = self.colors.sel_fg.to_hex()
+            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_styles_pre20(&self) {
+    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -483,18 +484,18 @@ impl Popupmenu {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
-            normal_fg = self.colors.fg.to_hex(),
-            normal_bg = self.colors.bg.to_hex(),
-            selected_bg = self.colors.sel_bg.to_hex(),
-            selected_fg = self.colors.sel_fg.to_hex()
+            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    pub fn set_font(&mut self, font: Font) {
+    pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
-        self.set_styles();
+        self.set_styles(hl_defs);
     }
 }
 

@@ -12,6 +12,7 @@ use neovim_lib::{
 use pango;
 
 use nvim_bridge;
+use ui::ui::HlDefs;
 use ui::font::{Font, FontUnit};
 
 pub struct Tabline {
@@ -107,25 +108,25 @@ impl Tabline {
         self.notebook.get_preferred_height().0
     }
 
-    pub fn set_font(&mut self, font: Font) {
+    pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
-        self.set_styles();
+        self.set_styles(hl_defs);
     }
 
-    pub fn set_colors(&mut self, colors: nvim_bridge::TablineColors) {
+    pub fn set_colors(&mut self, colors: nvim_bridge::TablineColors, hl_defs: &HlDefs) {
         self.colors = colors;
-        self.set_styles();
+        self.set_styles(hl_defs);
     }
 
-    fn set_styles(&self) {
+    fn set_styles(&self, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20();
+            self.set_styles_pre20(hl_defs);
         } else {
-            self.set_styles_post20();
+            self.set_styles_post20(hl_defs);
         }
     }
 
-    fn set_styles_post20(&self) {
+    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -157,17 +158,17 @@ impl Tabline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            normal_fg = self.colors.fg.to_hex(),
-            normal_bg = self.colors.bg.to_hex(),
-            selected_fg = self.colors.sel_fg.to_hex(),
-            selected_bg = self.colors.sel_bg.to_hex(),
+            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_styles_pre20(&self) {
+    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -205,10 +206,10 @@ impl Tabline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
-            normal_fg = self.colors.fg.to_hex(),
-            normal_bg = self.colors.bg.to_hex(),
-            selected_fg = self.colors.sel_fg.to_hex(),
-            selected_bg = self.colors.sel_bg.to_hex(),
+            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())

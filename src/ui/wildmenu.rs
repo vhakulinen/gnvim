@@ -8,6 +8,7 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
 use nvim_bridge;
+use ui::ui::HlDefs;
 
 const MAX_HEIGHT: i32 = 500;
 
@@ -137,15 +138,15 @@ impl Wildmenu {
         }
     }
 
-    pub fn set_colors(&self, colors: &nvim_bridge::WildmenuColors) {
+    pub fn set_colors(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_colors_pre20(colors, hl_defs);
         } else {
-            self.set_colors_post20(colors);
+            self.set_colors_post20(colors, hl_defs);
         }
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::WildmenuColors) {
+    fn set_colors_pre20(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
         let css = format!(
             "GtkFrame {{
                 border: none;
@@ -162,16 +163,16 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex(),
-            sel_fg = colors.sel_fg.to_hex(),
-            sel_bg = colors.sel_bg.to_hex(),
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            sel_fg = colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            sel_bg = colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::WildmenuColors) {
+    fn set_colors_post20(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
         let css = format!(
             "frame > border {{
                 border: none;
@@ -188,10 +189,10 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex(),
-            sel_fg = colors.sel_fg.to_hex(),
-            sel_bg = colors.sel_bg.to_hex(),
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            sel_fg = colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            sel_bg = colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();

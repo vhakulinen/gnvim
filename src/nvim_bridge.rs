@@ -299,35 +299,35 @@ pub enum GnvimEvent {
 
 #[derive(Default, Clone, Copy)]
 pub struct WildmenuColors {
-    pub bg: Color,
-    pub fg: Color,
-    pub sel_bg: Color,
-    pub sel_fg: Color,
+    pub bg: Option<Color>,
+    pub fg: Option<Color>,
+    pub sel_bg: Option<Color>,
+    pub sel_fg: Option<Color>,
 }
 
 #[derive(Default, Clone, Copy)]
 pub struct PmenuColors {
-    pub bg: Color,
-    pub fg: Color,
-    pub sel_bg: Color,
-    pub sel_fg: Color,
+    pub bg: Option<Color>,
+    pub fg: Option<Color>,
+    pub sel_bg: Option<Color>,
+    pub sel_fg: Option<Color>,
 }
 
 #[derive(Default, Clone, Copy)]
 pub struct TablineColors {
-    pub fg: Color,
-    pub bg: Color,
-    pub fill_fg: Color,
-    pub fill_bg: Color,
-    pub sel_bg: Color,
-    pub sel_fg: Color,
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
+    pub fill_fg: Option<Color>,
+    pub fill_bg: Option<Color>,
+    pub sel_bg: Option<Color>,
+    pub sel_fg: Option<Color>,
 }
 
 #[derive(Default, Clone, Copy)]
 pub struct CmdlineColors {
-    pub fg: Color,
-    pub bg: Color,
-    pub border: Color,
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
+    pub border: Option<Color>,
 }
 
 #[derive(Default)]
@@ -690,8 +690,7 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             let mut colors = SetGuiColors::default();
 
             for e in try_map!(args[1]) {
-                let color = Color::from_hex_string(String::from(try_str!(e.1)))
-                    .unwrap_or(Color::default());
+                let color = Color::from_hex_string(String::from(try_str!(e.1))).ok();
                 match try_str!(e.0) {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,

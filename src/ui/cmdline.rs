@@ -128,15 +128,15 @@ impl CmdlineBlock {
         buffer.set_text("");
     }
 
-    fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_colors_pre20(colors, hl_defs);
         } else {
-            self.set_colors_post20(colors);
+            self.set_colors_post20(colors, hl_defs);
         }
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "GtkFrame {{
                 border: none;
@@ -148,14 +148,14 @@ impl CmdlineBlock {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "frame {{
                 padding: 5px;
@@ -170,8 +170,8 @@ impl CmdlineBlock {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -280,15 +280,15 @@ impl CmdlineInput {
         iter.backward_char();
     }
 
-    fn set_colors(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors);
+            self.set_colors_pre20(colors, hl_defs);
         } else {
-            self.set_colors_post20(colors);
+            self.set_colors_post20(colors, hl_defs);
         }
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors_pre20(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "GtkFrame {{
                 border: none;
@@ -300,14 +300,14 @@ impl CmdlineInput {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors) {
+    fn set_colors_post20(&self, colors: &nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "frame {{
                 padding: 5px;
@@ -323,8 +323,8 @@ impl CmdlineInput {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.to_hex(),
-            bg = colors.bg.to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -427,23 +427,23 @@ impl Cmdline {
         }
     }
 
-    pub fn set_colors(&mut self, colors: nvim_bridge::CmdlineColors) {
-        self.input.set_colors(&colors);
-        self.block.set_colors(&colors);
+    pub fn set_colors(&mut self, colors: nvim_bridge::CmdlineColors, hl_defs: &HlDefs) {
+        self.input.set_colors(&colors, hl_defs);
+        self.block.set_colors(&colors, hl_defs);
         self.colors = colors;
 
-        self.set_styles();
+        self.set_styles(hl_defs);
     }
 
-    fn set_styles(&self) {
+    fn set_styles(&self, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20();
+            self.set_styles_pre20(hl_defs);
         } else {
-            self.set_styles_post20();
+            self.set_styles_post20(hl_defs);
         }
     }
 
-    fn set_styles_post20(&self) {
+    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -465,13 +465,13 @@ impl Cmdline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            bg = self.colors.border.to_hex()
+            bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
-    fn set_styles_pre20(&self) {
+    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -489,7 +489,7 @@ impl Cmdline {
                 border: none;
             }}",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
-            bg = self.colors.border.to_hex()
+            bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -520,9 +520,9 @@ impl Cmdline {
         self.input.show_special_char(ch, shift, level);
     }
 
-    pub fn set_font(&mut self, font: Font) {
+    pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
-        self.set_styles();
+        self.set_styles(hl_defs);
 
         // Some tricks to make sure the input has correct height after
         // font change.
@@ -572,7 +572,7 @@ impl Cmdline {
         self.wildmenu.select(item_num as i32);
     }
 
-    pub fn wildmenu_set_colors(&self, colors: &nvim_bridge::WildmenuColors) {
-        self.wildmenu.set_colors(colors);
+    pub fn wildmenu_set_colors(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
+        self.wildmenu.set_colors(colors, hl_defs);
     }
 }
