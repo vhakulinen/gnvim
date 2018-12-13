@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_leaf_split() {
-        let mut leaf = Leaf::new(String::from("1234"), 0);
+        let leaf = Leaf::new(String::from("1234"), 0);
         let (left, right) = leaf.split(2);
         assert_eq!("12", left.text());
         assert_eq!("34", right.text());

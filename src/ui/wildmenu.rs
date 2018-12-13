@@ -138,7 +138,11 @@ impl Wildmenu {
         }
     }
 
-    pub fn set_colors(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
+    pub fn set_colors(
+        &self,
+        colors: &nvim_bridge::WildmenuColors,
+        hl_defs: &HlDefs,
+    ) {
         if gtk::get_minor_version() < 20 {
             self.set_colors_pre20(colors, hl_defs);
         } else {
@@ -146,7 +150,11 @@ impl Wildmenu {
         }
     }
 
-    fn set_colors_pre20(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
+    fn set_colors_pre20(
+        &self,
+        colors: &nvim_bridge::WildmenuColors,
+        hl_defs: &HlDefs,
+    ) {
         let css = format!(
             "GtkFrame {{
                 border: none;
@@ -172,7 +180,11 @@ impl Wildmenu {
             .unwrap();
     }
 
-    fn set_colors_post20(&self, colors: &nvim_bridge::WildmenuColors, hl_defs: &HlDefs) {
+    fn set_colors_post20(
+        &self,
+        colors: &nvim_bridge::WildmenuColors,
+        hl_defs: &HlDefs,
+    ) {
         let css = format!(
             "frame > border {{
                 border: none;

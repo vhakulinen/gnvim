@@ -354,7 +354,9 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
             state.popupmenu.set_colors(colors.pmenu, &state.hl_defs);
             state.tabline.set_colors(colors.tabline, &state.hl_defs);
             state.cmdline.set_colors(colors.cmdline, &state.hl_defs);
-            state.cmdline.wildmenu_set_colors(&colors.wildmenu, &state.hl_defs);
+            state
+                .cmdline
+                .wildmenu_set_colors(&colors.wildmenu, &state.hl_defs);
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
@@ -456,9 +458,15 @@ fn handle_redraw_event(
                             nvim.ui_try_resize(cols as i64, rows as i64)
                                 .unwrap();
 
-                            state.popupmenu.set_font(font.clone(), &state.hl_defs);
-                            state.cmdline.set_font(font.clone(), &state.hl_defs);
-                            state.tabline.set_font(font.clone(), &state.hl_defs);
+                            state
+                                .popupmenu
+                                .set_font(font.clone(), &state.hl_defs);
+                            state
+                                .cmdline
+                                .set_font(font.clone(), &state.hl_defs);
+                            state
+                                .tabline
+                                .set_font(font.clone(), &state.hl_defs);
                         }
                         OptionSet::NotSupported(name) => {
                             println!("Not supported option set: {}", name);

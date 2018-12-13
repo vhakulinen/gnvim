@@ -12,8 +12,8 @@ use neovim_lib::{
 use pango;
 
 use nvim_bridge;
-use ui::ui::HlDefs;
 use ui::font::{Font, FontUnit};
+use ui::ui::HlDefs;
 
 pub struct Tabline {
     notebook: gtk::Notebook,
@@ -113,7 +113,11 @@ impl Tabline {
         self.set_styles(hl_defs);
     }
 
-    pub fn set_colors(&mut self, colors: nvim_bridge::TablineColors, hl_defs: &HlDefs) {
+    pub fn set_colors(
+        &mut self,
+        colors: nvim_bridge::TablineColors,
+        hl_defs: &HlDefs,
+    ) {
         self.colors = colors;
         self.set_styles(hl_defs);
     }
@@ -160,8 +164,10 @@ impl Tabline {
             font_wild = self.font.as_wild_css(FontUnit::Point),
             normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
             normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg =
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            selected_bg =
+                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
@@ -208,8 +214,10 @@ impl Tabline {
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
             normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
             normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg =
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            selected_bg =
+                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())

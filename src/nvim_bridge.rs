@@ -690,7 +690,8 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             let mut colors = SetGuiColors::default();
 
             for e in try_map!(args[1]) {
-                let color = Color::from_hex_string(String::from(try_str!(e.1))).ok();
+                let color =
+                    Color::from_hex_string(String::from(try_str!(e.1))).ok();
                 match try_str!(e.0) {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,

@@ -451,8 +451,10 @@ impl Popupmenu {
             font_wild = self.font.as_wild_css(FontUnit::Point),
             normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
             normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
+            selected_bg =
+                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg =
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -486,8 +488,10 @@ impl Popupmenu {
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
             normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
             normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_bg = self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
+            selected_bg =
+                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            selected_fg =
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
