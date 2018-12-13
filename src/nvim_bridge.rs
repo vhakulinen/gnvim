@@ -203,6 +203,8 @@ pub struct CmdlineShow {
 }
 
 pub enum RedrawEvent {
+    SetTitle(String),
+
     GridLine(Vec<GridLineSegment>),
     /// grid, width, height
     GridResize(u64, u64, u64),
@@ -250,6 +252,7 @@ pub enum RedrawEvent {
 impl fmt::Display for RedrawEvent {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            RedrawEvent::SetTitle(..) => write!(fmt, "SetTitle"),
             RedrawEvent::GridLine(..) => write!(fmt, "GridLine"),
             RedrawEvent::GridResize(..) => write!(fmt, "GridResize"),
             RedrawEvent::GridCursorGoto(..) => write!(fmt, "GridCursorGoto"),
@@ -390,6 +393,11 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
         .map(|args| {
             let cmd = try_str!(args[0]);
             match cmd {
+                "set_title" => {
+                    let args = try_array!(args[1]);
+                    let title = try_str!(args[0]);
+                    RedrawEvent::SetTitle(title.to_string())
+                }
                 "grid_line" => {
                     let mut lines = vec![];
 

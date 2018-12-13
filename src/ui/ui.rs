@@ -308,12 +308,13 @@ impl UI {
 
                 let state = state.clone();
                 let nvim = nvim.clone();
+                let win = win.clone();
                 glib::idle_add(move || {
                     let mut state = state.borrow_mut();
 
                     // Handle any events that we might have.
                     if let Ok(ref notify) = notify {
-                        handle_notify(notify, &mut state, nvim.clone());
+                        handle_notify(&win.borrow(), notify, &mut state, nvim.clone());
                     }
 
                     // Tick the current active grid.
@@ -334,13 +335,14 @@ impl UI {
 }
 
 fn handle_notify(
+    window: &gtk::ApplicationWindow,
     notify: &Notify,
     state: &mut UIState,
     nvim: Arc<Mutex<Neovim>>,
 ) {
     match notify {
         Notify::RedrawEvent(events) => {
-            handle_redraw_event(events, state, nvim);
+            handle_redraw_event(window, events, state, nvim);
         }
         Notify::GnvimEvent(event) => {
             handle_gnvim_event(event, state);
@@ -368,12 +370,16 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
 }
 
 fn handle_redraw_event(
+    window: &gtk::ApplicationWindow,
     events: &Vec<RedrawEvent>,
     state: &mut UIState,
     nvim: Arc<Mutex<Neovim>>,
 ) {
     for event in events {
         match event {
+            RedrawEvent::SetTitle(title) => {
+                window.set_title(title);
+            }
             RedrawEvent::GridLine(lines) => {
                 for line in lines {
                     let grid = state.grids.get(&line.grid).unwrap();
