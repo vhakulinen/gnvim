@@ -16,7 +16,7 @@ fn put_segments(
     pango_context: &pango::Context,
     queue_draw_area: &mut Vec<(i32, i32, i32, i32)>,
     cm: &CellMetrics,
-    hl_defs: &mut HlDefs,
+    hl_defs: &HlDefs,
     segments: Vec<Segment>,
     row: usize,
 ) {
@@ -24,7 +24,7 @@ fn put_segments(
     let ch = cm.height;
 
     for seg in segments {
-        let hl = *hl_defs.get(&seg.leaf.hl_id()).unwrap();
+        let hl = hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
         let (fg, bg) = if hl.reverse {
             (
@@ -138,7 +138,7 @@ fn put_segments(
 pub fn put_line(
     context: &mut Context,
     line: &GridLineSegment,
-    hl_defs: &mut HlDefs,
+    hl_defs: &HlDefs,
 ) {
     let row = line.row as usize;
     let mut affected_segments = context

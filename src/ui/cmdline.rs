@@ -1,6 +1,7 @@
+use std::sync::{Arc, Mutex};
+
 use gtk;
 use gtk::prelude::*;
-use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;
 
@@ -356,8 +357,6 @@ pub struct Cmdline {
     css_provider: gtk::CssProvider,
     fixed: gtk::Fixed,
 
-    hl_defs: Arc<Mutex<HlDefs>>,
-
     input: CmdlineInput,
     block: CmdlineBlock,
     wildmenu: Wildmenu,
@@ -374,11 +373,7 @@ pub struct Cmdline {
 }
 
 impl Cmdline {
-    pub fn new(
-        parent: &gtk::Overlay,
-        hl_defs: Arc<Mutex<HlDefs>>,
-        nvim: Arc<Mutex<Neovim>>,
-    ) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         // Inner box contains cmdline block and input.
@@ -422,7 +417,6 @@ impl Cmdline {
         Cmdline {
             css_provider,
             fixed,
-            hl_defs,
             input,
             block,
             wildmenu,
@@ -505,9 +499,12 @@ impl Cmdline {
         self.fixed.hide();
     }
 
-    pub fn show(&mut self, content: &nvim_bridge::CmdlineShow) {
-        let hl_defs = self.hl_defs.lock().unwrap();
-        self.input.set_text(content, &hl_defs);
+    pub fn show(
+        &mut self,
+        content: &nvim_bridge::CmdlineShow,
+        hl_defs: &HlDefs,
+    ) {
+        self.input.set_text(content, hl_defs);
         self.fixed.show_all();
 
         if !self.show_block {
@@ -541,9 +538,8 @@ impl Cmdline {
         self.input.set_cursor(pos as usize, level);
     }
 
-    pub fn show_block(&mut self, lines: &Vec<(u64, String)>) {
-        let hl_defs = self.hl_defs.lock().unwrap();
-        self.block.show(lines, &hl_defs);
+    pub fn show_block(&mut self, lines: &Vec<(u64, String)>, hl_defs: &HlDefs) {
+        self.block.show(lines, hl_defs);
         self.show_block = true;
     }
 
@@ -552,8 +548,7 @@ impl Cmdline {
         self.show_block = false;
     }
 
-    pub fn block_append(&mut self, line: &(u64, String)) {
-        let hl_defs = self.hl_defs.lock().unwrap();
+    pub fn block_append(&mut self, line: &(u64, String), hl_defs: &HlDefs) {
         self.block.append(line, &hl_defs);
     }
 

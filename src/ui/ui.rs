@@ -50,8 +50,8 @@ impl HlDefs {
 struct UIState {
     /// All grids currently in the UI.
     grids: Grids,
-    /// Highlight definitions. This is shared across all grids.
-    hl_defs: Arc<Mutex<HlDefs>>,
+    /// Highlight definitions.
+    hl_defs: HlDefs,
     /// Mode infos. When a mode is activated, the activated mode is passed
     /// to the gird(s).
     mode_infos: Vec<ModeInfo>,
@@ -119,10 +119,9 @@ impl UI {
         // make next.
         let mut hl_defs = HlDefs::default();
         hl_defs.insert(0, Highlight::default());
-        let hl_defs = Arc::new(Mutex::new(hl_defs));
 
         // Create default grid.
-        let mut grid = Grid::new(1, hl_defs.clone());
+        let mut grid = Grid::new(1);
         box_.pack_start(&grid.widget(), true, true, 0);
 
         // When resizing our window (main grid), we'll have to tell neovim to
@@ -256,7 +255,7 @@ impl UI {
             Inhibit(false)
         });
 
-        let cmdline = Cmdline::new(&overlay, hl_defs.clone(), nvim.clone());
+        let cmdline = Cmdline::new(&overlay, nvim.clone());
 
         window.show_all();
 
@@ -376,7 +375,7 @@ fn handle_redraw_event(
             RedrawEvent::GridLine(lines) => {
                 for line in lines {
                     let grid = state.grids.get(&line.grid).unwrap();
-                    grid.put_line(line);
+                    grid.put_line(line, &state.hl_defs);
                 }
             }
             RedrawEvent::GridCursorGoto(grid_id, row, col) => {
@@ -409,29 +408,26 @@ fn handle_redraw_event(
             }
             RedrawEvent::GridClear(grid) => {
                 let grid = state.grids.get(grid).unwrap();
-                grid.clear();
+                grid.clear(&state.hl_defs);
             }
             RedrawEvent::GridScroll(grid, reg, rows, cols) => {
                 let grid = state.grids.get(grid).unwrap();
-                grid.scroll(*reg, *rows, *cols);
+                grid.scroll(*reg, *rows, *cols, &state.hl_defs);
             }
             RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
-                let mut hl_defs = state.hl_defs.lock().unwrap();
-                hl_defs.default_fg = *fg;
-                hl_defs.default_bg = *bg;
-                hl_defs.default_sp = *sp;
+                state.hl_defs.default_fg = *fg;
+                state.hl_defs.default_bg = *bg;
+                state.hl_defs.default_sp = *sp;
 
                 // NOTE(ville): Not sure if these are actually needed.
-                let hl = hl_defs.get_mut(&0).unwrap();
+                let hl = state.hl_defs.get_mut(&0).unwrap();
                 hl.foreground = Some(*fg);
                 hl.background = Some(*bg);
                 hl.special = Some(*sp);
             }
             RedrawEvent::HlAttrDefine(defs) => {
-                let mut hl_defs = state.hl_defs.lock().unwrap();
-
                 for (id, hl) in defs {
-                    hl_defs.insert(*id, *hl);
+                    state.hl_defs.insert(*id, *hl);
                 }
             }
             RedrawEvent::OptionSet(opts) => {
@@ -489,7 +485,7 @@ fn handle_redraw_event(
             }
             RedrawEvent::Flush() => {
                 for grid in state.grids.values() {
-                    grid.flush();
+                    grid.flush(&state.hl_defs);
                 }
             }
             RedrawEvent::PopupmenuShow(popupmenu) => {
@@ -516,7 +512,7 @@ fn handle_redraw_event(
                 state.tabline.update(cur.clone(), tabs.clone());
             }
             RedrawEvent::CmdlineShow(cmdline_show) => {
-                state.cmdline.show(cmdline_show);
+                state.cmdline.show(cmdline_show, &state.hl_defs);
             }
             RedrawEvent::CmdlineHide() => {
                 state.cmdline.hide();
@@ -528,10 +524,10 @@ fn handle_redraw_event(
                 state.cmdline.show_special_char(ch.clone(), *shift, *level);
             }
             RedrawEvent::CmdlineBlockShow(lines) => {
-                state.cmdline.show_block(lines);
+                state.cmdline.show_block(lines, &state.hl_defs);
             }
             RedrawEvent::CmdlineBlockAppend(line) => {
-                state.cmdline.block_append(line);
+                state.cmdline.block_append(line, &state.hl_defs);
             }
             RedrawEvent::CmdlineBlockHide() => {
                 state.cmdline.hide_block();

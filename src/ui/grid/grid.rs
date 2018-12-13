@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use cairo;
 use gdk;
@@ -58,8 +58,6 @@ pub struct Grid {
     eb: EventBox,
     /// Internal context that is manipulated and used when handling events.
     context: Arc<ThreadGuard<Option<Context>>>,
-    /// Reference to the highlight defs.
-    hl_defs: Arc<Mutex<HlDefs>>,
     /// Pointer position for dragging if we should call callback from
     /// `connect_motion_events_for_drag`.
     drag_position: Arc<ThreadGuard<(u64, u64)>>,
@@ -68,7 +66,7 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new(_id: u64, hl_defs: Arc<Mutex<HlDefs>>) -> Self {
+    pub fn new(_id: u64) -> Self {
         let da = DrawingArea::new();
         let ctx = Arc::new(ThreadGuard::new(None));
 
@@ -107,7 +105,6 @@ impl Grid {
             da: da,
             eb: eb,
             context: ctx,
-            hl_defs,
             drag_position: Arc::new(ThreadGuard::new((0, 0))),
             im_context: None,
         }
@@ -117,12 +114,11 @@ impl Grid {
         self.eb.clone().upcast()
     }
 
-    pub fn flush(&self) {
+    pub fn flush(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
         // Update cursor color.
-        let hl_defs = self.hl_defs.lock().unwrap();
         let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
         let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
         let hl = hl_defs.get(&leaf.hl_id()).unwrap();
@@ -298,11 +294,11 @@ impl Grid {
         });
     }
 
-    pub fn put_line(&self, line: &GridLineSegment) {
+    pub fn put_line(&self, line: &GridLineSegment, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        render::put_line(ctx, line, &mut *self.hl_defs.lock().unwrap());
+        render::put_line(ctx, line, hl_defs);
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
@@ -362,25 +358,29 @@ impl Grid {
         }
     }
 
-    pub fn clear(&self) {
+    pub fn clear(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        let hl_defs = self.hl_defs.lock().unwrap();
 
         // Clear internal grid (rows).
         for row in ctx.rows.iter_mut() {
             row.clear();
         }
 
-        render::clear(&self.da, ctx, &hl_defs)
+        render::clear(&self.da, ctx, hl_defs)
     }
 
-    pub fn scroll(&self, reg: [u64; 4], rows: i64, _cols: i64) {
+    pub fn scroll(
+        &self,
+        reg: [u64; 4],
+        rows: i64,
+        _cols: i64,
+        hl_defs: &HlDefs,
+    ) {
         let mut ctx = self.context.borrow_mut();
         let mut ctx = ctx.as_mut().unwrap();
-        let hl_defs = self.hl_defs.lock().unwrap();
 
-        render::scroll(&mut ctx, &hl_defs, reg, rows);
+        render::scroll(&mut ctx, hl_defs, reg, rows);
     }
 
     pub fn set_active(&self, active: bool) {
