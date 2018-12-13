@@ -2,6 +2,8 @@
 
 Highly experimental.
 
+[Find some screenshots here](https://github.com/vhakulinen/gnvim/wiki)
+
 ## Requirements
 
 GNvim requires
