@@ -510,7 +510,6 @@ fn handle_redraw_event(
                     grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
                 let extra_h = state.tabline.get_height();
-                println!("H: {}", extra_h);
                 rect.y -= extra_h;
 
                 state.popupmenu.set_anchor(rect);
