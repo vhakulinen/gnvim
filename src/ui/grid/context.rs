@@ -42,6 +42,9 @@ pub struct Context {
 
     /// Areas to call queue_draw_area on the drawing area on flush.
     pub queue_draw_area: Vec<(i32, i32, i32, i32)>,
+
+    /// Space between lines.
+    line_space: i64,
 }
 
 impl Context {
@@ -60,8 +63,9 @@ impl Context {
         let font_desc = FontDescription::from_string("Monospace 12");
         pango_context.set_font_description(&font_desc);
 
+        let line_space = 0;
         let mut cell_metrics = CellMetrics::default();
-        cell_metrics.update(&pango_context, &font_desc);
+        cell_metrics.update(&pango_context, &font_desc, line_space);
 
         Context {
             cairo_context,
@@ -80,6 +84,7 @@ impl Context {
             active: false,
 
             queue_draw_area: vec![],
+            line_space,
         }
     }
 
@@ -88,7 +93,7 @@ impl Context {
         self.pango_context.set_font_description(&font_desc);
         self.font_desc = font_desc;
         self.cell_metrics
-            .update(&self.pango_context, &self.font_desc);
+            .update(&self.pango_context, &self.font_desc, self.line_space);
     }
 
     /// Updates internals that are dependant on the drawing area.
@@ -115,7 +120,13 @@ impl Context {
         self.pango_context = pctx;
 
         self.cell_metrics
-            .update(&self.pango_context, &self.font_desc);
+            .update(&self.pango_context, &self.font_desc, self.line_space);
+    }
+
+    pub fn set_line_space(&mut self, space: i64) {
+        self.line_space = space;
+        self.cell_metrics
+            .update(&self.pango_context, &self.font_desc, self.line_space);
     }
 }
 
@@ -131,10 +142,11 @@ pub struct CellMetrics {
 }
 
 impl CellMetrics {
-    pub fn update(&mut self, ctx: &pango::Context, desc: &FontDescription) {
+    pub fn update(&mut self, ctx: &pango::Context, desc: &FontDescription, line_space: i64) {
         let fm = ctx.get_metrics(Some(desc), None).unwrap();
-        self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64;
-        self.decent = fm.get_descent() as f64 / pango::SCALE as f64;
+        let extra = line_space as f64 / 2.0;
+        self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64 + extra;
+        self.decent = fm.get_descent() as f64 / pango::SCALE as f64 + extra;
         self.height = self.ascent + self.decent;
         self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
 

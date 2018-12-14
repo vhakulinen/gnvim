@@ -480,6 +480,23 @@ fn handle_redraw_event(
                                 .tabline
                                 .set_font(font.clone(), &state.hl_defs);
                         }
+                        OptionSet::LineSpace(val) => {
+                            for grid in state.grids.values() {
+                                grid.set_line_space(*val);
+                            }
+
+                            // Channing the linespace affects the grid size,
+                            // so we'll need to tell nvim our new size.
+                            let grid = state.grids.get(&1).unwrap();
+                            let (rows, cols) = grid.calc_size();
+                            let mut nvim = nvim.lock().unwrap();
+                            nvim.ui_try_resize(cols as i64, rows as i64)
+                                .unwrap();
+
+                            state.cmdline.set_line_space(*val);
+                            state.popupmenu.set_line_space(*val, &state.hl_defs);
+                            state.tabline.set_line_space(*val, &state.hl_defs);
+                        }
                         OptionSet::NotSupported(name) => {
                             println!("Not supported option set: {}", name);
                         }

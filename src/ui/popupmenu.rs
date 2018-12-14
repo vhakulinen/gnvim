@@ -11,6 +11,7 @@ use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
+use ui::common::calc_line_space;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -83,6 +84,9 @@ pub struct Popupmenu {
     colors: PmenuColors,
     /// Our font.
     font: Font,
+
+    /// Line spacing.
+    line_space: i64,
 }
 
 impl Popupmenu {
@@ -302,6 +306,7 @@ impl Popupmenu {
             info_shown: false,
             colors: PmenuColors::default(),
             font: Font::default(),
+            line_space: 0,
         }
     }
 
@@ -417,6 +422,17 @@ impl Popupmenu {
         self.set_styles(hl_defs);
     }
 
+    pub fn set_line_space(&mut self, space: i64, hl_defs: &HlDefs) {
+        self.line_space = space;
+        self.set_styles(hl_defs);
+
+        // Set line space to the info_label with pango attrs.
+        let attrs = pango::AttrList::new();
+        let attr = pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE).unwrap();
+        attrs.insert(attr);
+        self.info_label.set_attributes(&attrs);
+    }
+
     fn set_styles(&self, hl_defs: &HlDefs) {
         if gtk::get_minor_version() < 20 {
             self.set_styles_pre20(hl_defs);
@@ -426,6 +442,8 @@ impl Popupmenu {
     }
 
     fn set_styles_post20(&self, hl_defs: &HlDefs) {
+        let (above, below) = calc_line_space(self.line_space);
+
         let css = format!(
             "{font_wild}
 
@@ -437,6 +455,11 @@ impl Popupmenu {
 
             #info-label {{
                 padding: 10px;
+            }}
+
+            row {{
+                padding-top: {above}px;
+                padding-bottom: {below}px;
             }}
 
             row:selected, row:selected > grid, row:selected > grid > label {{
@@ -454,13 +477,17 @@ impl Popupmenu {
             selected_bg =
                 self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
             selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            above = above.max(0),
+            below = below.max(0),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
     }
 
     fn set_styles_pre20(&self, hl_defs: &HlDefs) {
+        let (above, below) = calc_line_space(self.line_space);
+
         let css = format!(
             "{font_wild}
 
@@ -472,6 +499,11 @@ impl Popupmenu {
 
             #info-label {{
                 padding: 10px;
+            }}
+
+            GtkListBoxRow {{
+                padding-top: {above}px;
+                padding-bottom: {below}px;
             }}
 
             GtkListBoxRow:selected,
@@ -491,7 +523,9 @@ impl Popupmenu {
             selected_bg =
                 self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
             selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex()
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            above = above.max(0),
+            below = below.max(0),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();

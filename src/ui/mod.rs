@@ -13,6 +13,7 @@ macro_rules! add_css_provider {
     );
 }
 
+mod common;
 mod cmdline;
 pub mod color;
 mod font;

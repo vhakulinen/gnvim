@@ -423,6 +423,12 @@ impl Grid {
             .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
+    pub fn set_line_space(&self, space: i64) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        ctx.set_line_space(space);
+    }
+
     pub fn set_font(&self, font: FontDescription) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();

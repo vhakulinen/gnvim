@@ -12,6 +12,7 @@ use neovim_lib::{
 use pango;
 
 use nvim_bridge;
+use ui::common::calc_line_space;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
 
@@ -27,6 +28,8 @@ pub struct Tabline {
     colors: nvim_bridge::TablineColors,
     /// Our font.
     font: Font,
+
+    line_space: i64,
 }
 
 impl Tabline {
@@ -59,6 +62,7 @@ impl Tabline {
             tabpage_data,
             colors: nvim_bridge::TablineColors::default(),
             font: Font::default(),
+            line_space: 0,
         }
     }
 
@@ -113,6 +117,11 @@ impl Tabline {
         self.set_styles(hl_defs);
     }
 
+    pub fn set_line_space(&mut self, space: i64, hl_defs: &HlDefs) {
+        self.line_space = space;
+        self.set_styles(hl_defs);
+    }
+
     pub fn set_colors(
         &mut self,
         colors: nvim_bridge::TablineColors,
@@ -131,6 +140,7 @@ impl Tabline {
     }
 
     fn set_styles_post20(&self, hl_defs: &HlDefs) {
+        let (above, below) = calc_line_space(self.line_space);
         let css = format!(
             "{font_wild}
 
@@ -141,6 +151,9 @@ impl Tabline {
             label {{
                 color: #{normal_fg};
                 background: transparent;
+
+                padding-top: {above}px;
+                padding-bottom: {below}px;
             }}
             tab {{
                 padding: 5px;
@@ -168,6 +181,8 @@ impl Tabline {
                 self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
             selected_bg =
                 self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            above = above.max(0),
+            below = below.max(0),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
@@ -175,6 +190,7 @@ impl Tabline {
     }
 
     fn set_styles_pre20(&self, hl_defs: &HlDefs) {
+        let (above, below) = calc_line_space(self.line_space);
         let css = format!(
             "{font_wild}
 
@@ -191,6 +207,9 @@ impl Tabline {
                 background: transparent;
                 font-weight: normal;
                 border: none;
+
+                padding-top: {above}px;
+                padding-bottom: {below}px;
             }}
             tab {{
                 padding: 5px;
@@ -218,6 +237,8 @@ impl Tabline {
                 self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
             selected_bg =
                 self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            above = above.max(0),
+            below = below.max(0),
         );
 
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())

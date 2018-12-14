@@ -171,9 +171,11 @@ pub struct GridLineSegment {
 }
 
 pub enum OptionSet {
-    /// font name
+    /// Font name.
     GuiFont(String),
-    /// event name
+    /// Space between lines.
+    LineSpace(i64),
+    /// Event name.
     NotSupported(String),
 }
 
@@ -517,6 +519,10 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                             "guifont" => {
                                 let val = try_str!(arg[1]);
                                 OptionSet::GuiFont(String::from(val))
+                            }
+                            "linespace" => {
+                                let val = try_i64!(arg[1]);
+                                OptionSet::LineSpace(val)
                             }
                             _ => OptionSet::NotSupported(String::from(name)),
                         };

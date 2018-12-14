@@ -6,6 +6,7 @@ use gtk::prelude::*;
 use neovim_lib::neovim::Neovim;
 
 use nvim_bridge;
+use ui::common::calc_line_space;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
 use ui::wildmenu::Wildmenu;
@@ -62,6 +63,12 @@ impl CmdlineBlock {
             textview,
             css_provider,
         }
+    }
+
+    fn set_line_space(&self, space: i64) {
+        let (above, below) = calc_line_space(space);
+        self.textview.set_pixels_above_lines(above as i32);
+        self.textview.set_pixels_below_lines(below as i32);
     }
 
     fn widget(&self) -> gtk::Widget {
@@ -375,6 +382,12 @@ impl CmdlineInput {
         let mark = buffer.create_mark(None, &iter, false).unwrap();
         self.textview.scroll_to_mark(&mark, 0.1, false, 0.0, 0.0);
     }
+
+    fn set_line_space(&self, space: i64) {
+        let (above, below) = calc_line_space(space);
+        self.textview.set_pixels_above_lines(above as i32);
+        self.textview.set_pixels_below_lines(below as i32);
+    }
 }
 
 pub struct Cmdline {
@@ -546,6 +559,11 @@ impl Cmdline {
 
     pub fn show_special_char(&mut self, ch: String, shift: bool, level: u64) {
         self.input.show_special_char(ch, shift, level);
+    }
+
+    pub fn set_line_space(&self, space: i64) {
+        self.block.set_line_space(space);
+        self.input.set_line_space(space);
     }
 
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
