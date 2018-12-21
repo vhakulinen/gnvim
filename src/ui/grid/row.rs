@@ -5,7 +5,7 @@ use nvim_bridge;
 
 /// Wrapper for a leaf, that tells the leaf's position.
 pub struct Segment<'a> {
-    pub leaf: &'a mut Leaf,
+    pub leaf: &'a Leaf,
     pub start: usize,
     pub len: usize,
 }
@@ -185,18 +185,6 @@ impl Rope {
         }
     }
 
-    /// Returns our leafs as mutable references.
-    pub fn leafs_mut(&mut self) -> Vec<&mut Leaf> {
-        match self {
-            Rope::Leaf(leaf) => vec![leaf],
-            Rope::Node(left, right) => {
-                let mut left = left.leafs_mut();
-                left.append(&mut right.leafs_mut());
-                left
-            }
-        }
-    }
-
     /// Returns our leafs as reference.
     pub fn leafs(&self) -> Vec<&Leaf> {
         match self {
@@ -343,7 +331,7 @@ impl Row {
         let mut segs = vec![];
         let mut start = 0;
         let rope = self.rope.as_mut().unwrap();
-        let leafs = rope.leafs_mut();
+        let leafs = rope.leafs();
         for leaf in leafs {
             // If we're past the affected range, break early.
             if start > other_end {
@@ -358,6 +346,27 @@ impl Row {
                 start = end;
                 continue;
             }
+
+            segs.push(Segment {
+                leaf: leaf,
+                start: start,
+                len: len,
+            });
+
+            start = end;
+        }
+
+        segs
+    }
+
+    pub fn as_segments(&self) -> Vec<Segment> {
+        let mut segs = vec![];
+        let mut start = 0;
+        let rope = self.rope.as_ref().unwrap();
+        let leafs = rope.leafs();
+        for leaf in leafs {
+            let len = leaf.len;
+            let end = start + len;
 
             segs.push(Segment {
                 leaf: leaf,
@@ -705,5 +714,33 @@ mod tests {
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 1);
         assert_eq!(leafs[0].text, "firstthird");
+    }
+
+    #[test]
+    fn test_row_as_segments() {
+        let mut row = Row::new(3);
+        let rope = Rope::new(String::from("1"), 0);
+        let rope = rope.concat(Rope::new(String::from("2"), 1));
+        let rope = rope.concat(Rope::new(String::from("3"), 3));
+
+        row.insert_rope_at(0, rope);
+        row.rope = Some(row.rope.take().unwrap().combine_leafs());
+
+        let segments = row.as_segments();
+
+        let first = &segments[0];
+        assert_eq!(first.leaf.text, "1");
+        assert_eq!(first.start, 0);
+        assert_eq!(first.len, 1);
+
+        let second = &segments[1];
+        assert_eq!(second.leaf.text, "2");
+        assert_eq!(second.start, 1);
+        assert_eq!(second.len, 1);
+
+        let third = &segments[2];
+        assert_eq!(third.leaf.text, "3");
+        assert_eq!(third.start, 2);
+        assert_eq!(third.len, 1);
     }
 }

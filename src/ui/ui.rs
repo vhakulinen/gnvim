@@ -427,11 +427,17 @@ fn handle_redraw_event(
                 state.hl_defs.default_bg = *bg;
                 state.hl_defs.default_sp = *sp;
 
-                // NOTE(ville): Not sure if these are actually needed.
-                let hl = state.hl_defs.get_mut(&0).unwrap();
-                hl.foreground = Some(*fg);
-                hl.background = Some(*bg);
-                hl.special = Some(*sp);
+                {
+                    // NOTE(ville): Not sure if these are actually needed.
+                    let hl = state.hl_defs.get_mut(&0).unwrap();
+                    hl.foreground = Some(*fg);
+                    hl.background = Some(*bg);
+                    hl.special = Some(*sp);
+                }
+
+                for grid in state.grids.values() {
+                    grid.redraw(&state.hl_defs);
+                }
             }
             RedrawEvent::HlAttrDefine(defs) => {
                 for (id, hl) in defs {

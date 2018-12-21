@@ -301,6 +301,12 @@ impl Grid {
         render::put_line(ctx, line, hl_defs);
     }
 
+    pub fn redraw(&self, hl_defs: &HlDefs) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
+        render::redraw(ctx, hl_defs);
+    }
+
     pub fn cursor_goto(&self, row: u64, col: u64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
