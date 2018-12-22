@@ -19,7 +19,6 @@ use ui::ui::HlDefs;
 pub struct Tabline {
     notebook: gtk::Notebook,
     css_provider: gtk::CssProvider,
-    nvim: Arc<Mutex<Neovim>>,
     switch_tab_signal: glib::SignalHandlerId,
 
     tabpage_data: Rc<RefCell<Box<Vec<Tabpage>>>>,
@@ -57,7 +56,6 @@ impl Tabline {
         Tabline {
             notebook,
             css_provider,
-            nvim,
             switch_tab_signal,
             tabpage_data,
             colors: nvim_bridge::TablineColors::default(),
@@ -83,7 +81,9 @@ impl Tabline {
         }
 
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
-        for tab in tabs.iter() {
+
+        let mut page = 0;
+        for (i, tab) in tabs.iter().enumerate() {
             let tab_label = gtk::Label::new(tab.1.as_str());
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
@@ -93,13 +93,14 @@ impl Tabline {
                 &gtk::Box::new(gtk::Orientation::Vertical, 0),
                 Some(&tab_label),
             );
+
+            if tab.0 == current {
+                page = i;
+            }
         }
 
         self.notebook.show_all();
 
-        let mut nvim = self.nvim.lock().unwrap();
-        // TODO(ville): This fails sometimes. Figure out why!
-        let page = current.get_number(&mut nvim).unwrap() - 1;
         self.notebook.set_current_page(Some(page as u32));
 
         self.tabpage_data
