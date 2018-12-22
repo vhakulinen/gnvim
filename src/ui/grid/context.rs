@@ -92,8 +92,11 @@ impl Context {
     pub fn update_font(&mut self, font_desc: FontDescription) {
         self.pango_context.set_font_description(&font_desc);
         self.font_desc = font_desc;
-        self.cell_metrics
-            .update(&self.pango_context, &self.font_desc, self.line_space);
+        self.cell_metrics.update(
+            &self.pango_context,
+            &self.font_desc,
+            self.line_space,
+        );
     }
 
     /// Updates internals that are dependant on the drawing area.
@@ -119,14 +122,20 @@ impl Context {
         self.cairo_context = ctx;
         self.pango_context = pctx;
 
-        self.cell_metrics
-            .update(&self.pango_context, &self.font_desc, self.line_space);
+        self.cell_metrics.update(
+            &self.pango_context,
+            &self.font_desc,
+            self.line_space,
+        );
     }
 
     pub fn set_line_space(&mut self, space: i64) {
         self.line_space = space;
-        self.cell_metrics
-            .update(&self.pango_context, &self.font_desc, self.line_space);
+        self.cell_metrics.update(
+            &self.pango_context,
+            &self.font_desc,
+            self.line_space,
+        );
     }
 }
 
@@ -142,7 +151,12 @@ pub struct CellMetrics {
 }
 
 impl CellMetrics {
-    pub fn update(&mut self, ctx: &pango::Context, desc: &FontDescription, line_space: i64) {
+    pub fn update(
+        &mut self,
+        ctx: &pango::Context,
+        desc: &FontDescription,
+        line_space: i64,
+    ) {
         let fm = ctx.get_metrics(Some(desc), None).unwrap();
         let extra = line_space as f64 / 2.0;
         self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64 + extra;

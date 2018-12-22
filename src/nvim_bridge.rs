@@ -490,9 +490,12 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let args = try_array!(args[1]);
 
                     let fg = Color::from_u64(args[0].as_u64().unwrap_or(0));
-                    let bg = Color::from_u64(args[1].as_u64().unwrap_or(std::u64::MAX));
+                    let bg = Color::from_u64(
+                        args[1].as_u64().unwrap_or(std::u64::MAX),
+                    );
                     // Default to red.
-                    let sp = Color::from_u64(args[0].as_u64().unwrap_or(16711680));
+                    let sp =
+                        Color::from_u64(args[0].as_u64().unwrap_or(16711680));
 
                     RedrawEvent::DefaultColorsSet(fg, bg, sp)
                 }

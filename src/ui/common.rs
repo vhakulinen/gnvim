@@ -1,4 +1,3 @@
-
 pub fn calc_line_space(space: i64) -> (i32, i32) {
     let half = space as f64 / 2.0;
     if half as f64 % 2.0 != 0.0 {

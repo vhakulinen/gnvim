@@ -9,9 +9,9 @@ use pango;
 
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
+use ui::common::calc_line_space;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
-use ui::common::calc_line_space;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -428,7 +428,9 @@ impl Popupmenu {
 
         // Set line space to the info_label with pango attrs.
         let attrs = pango::AttrList::new();
-        let attr = pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE).unwrap();
+        let attr =
+            pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE)
+                .unwrap();
         attrs.insert(attr);
         self.info_label.set_attributes(&attrs);
     }

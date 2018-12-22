@@ -314,7 +314,12 @@ impl UI {
 
                     // Handle any events that we might have.
                     if let Ok(ref notify) = notify {
-                        handle_notify(&win.borrow(), notify, &mut state, nvim.clone());
+                        handle_notify(
+                            &win.borrow(),
+                            notify,
+                            &mut state,
+                            nvim.clone(),
+                        );
                     }
 
                     // Tick the current active grid.
@@ -494,7 +499,9 @@ fn handle_redraw_event(
                                 .unwrap();
 
                             state.cmdline.set_line_space(*val);
-                            state.popupmenu.set_line_space(*val, &state.hl_defs);
+                            state
+                                .popupmenu
+                                .set_line_space(*val, &state.hl_defs);
                             state.tabline.set_line_space(*val, &state.hl_defs);
                         }
                         OptionSet::NotSupported(name) => {
