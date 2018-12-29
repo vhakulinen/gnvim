@@ -42,7 +42,7 @@ struct Options {
     print_nvim_cmd: bool,
 
     /// Path to neovim binary.
-    #[structopt(long = "nvim-path", name = "BIN", default_value = "nvim")]
+    #[structopt(long = "nvim", name = "BIN", default_value = "nvim")]
     nvim_path: String,
 
     /// Path for gnvim runtime files.
