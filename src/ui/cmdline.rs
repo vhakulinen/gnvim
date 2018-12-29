@@ -157,6 +157,7 @@ impl CmdlineBlock {
                 border: none;
                 padding: 5px;
                 background: #{bg};
+                border-radius: 0;
             }}
 
             GtkTextView {{
@@ -321,6 +322,7 @@ impl CmdlineInput {
                 border: none;
                 padding: 5px;
                 background: #{bg};
+                border-radius: 0;
             }}
 
             GtkTextView {{
@@ -528,6 +530,7 @@ impl Cmdline {
                 background: #{bg};
                 padding: 6px;
                 border: none;
+                border-radius: 0;
             }}",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
             bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
