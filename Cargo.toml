@@ -10,6 +10,7 @@ debug = true
 unstable = []
 
 [dependencies]
+structopt = "0.2"
 
 gio = "0.5"
 cairo-rs = "0.5"

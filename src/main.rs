@@ -1,7 +1,8 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
-extern crate cairo;
+extern crate structopt;
 
+extern crate cairo;
 extern crate gdk;
 extern crate gio;
 extern crate glib;
@@ -16,42 +17,72 @@ use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::session::Session as NeovimSession;
 use neovim_lib::NeovimApi;
 
-use std::env;
 use std::process::Command;
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
+
+use structopt::StructOpt;
+
+include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
 
 mod nvim_bridge;
 mod thread_guard;
 mod ui;
 
-static GNVIM_RUNTIME_PATH_VAR: &str = "GNVIM_RUNTIME_PATH";
-static GNVIM_RUNTIME_PATH: &str = "/usr/local/share/gnvim/runtime";
+/// Gnvim is a graphical UI for neovim.
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "gnvim",
+    raw(version = "VERSION"),
+    author = "Ville Hakulinen"
+)]
+struct Options {
+    /// Prints the executed neovim command.
+    #[structopt(long = "print-nvim-cmd")]
+    print_nvim_cmd: bool,
 
-fn build(app: &gtk::Application) {
+    /// Path to neovim binary.
+    #[structopt(long = "nvim-path", name = "BIN", default_value = "nvim")]
+    nvim_path: String,
+
+    /// Path for gnvim runtime files.
+    #[structopt(
+        long = "gnvim-rtp",
+        default_value = "/usr/local/share/gnvim/runtime",
+        env = "GNVIM_RUNTIME_PATH"
+    )]
+    gnvim_rtp: String,
+
+    /// Files to open. Files after the first one are opened in new tabs.
+    #[structopt(value_name = "FILES")]
+    open_files: Vec<String>,
+
+    /// Arguments that are passed to nvim.
+    #[structopt(value_name = "ARGS", last = true)]
+    nvim_args: Vec<String>,
+}
+
+fn build(app: &gtk::Application, opts: &Options) {
     let (tx, rx) = channel();
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
-    let nvim_path = env::args()
-        .find(|arg| arg.starts_with("--nvim"))
-        .and_then(|arg| arg.split("=").nth(1).map(str::to_owned))
-        .unwrap_or(String::from("nvim"));
-
-    let rtp = env::var(GNVIM_RUNTIME_PATH_VAR)
-        .unwrap_or(GNVIM_RUNTIME_PATH.to_string());
-
-    let mut cmd = Command::new(&nvim_path);
+    let mut cmd = Command::new(&opts.nvim_path);
     cmd.arg("--embed")
         .arg("--cmd")
         .arg("let g:gnvim=1")
         .arg("--cmd")
         .arg("set termguicolors")
         .arg("--cmd")
-        .arg(format!("let &rtp.=',{}'", rtp));
+        .arg(format!("let &rtp.=',{}'", opts.gnvim_rtp));
 
-    let print_nvim_cmd = env::args().find(|arg| arg == "--print-nvim-cmd");
-    if print_nvim_cmd.is_some() {
+    // Pass arguments from cli to nvim.
+    for arg in opts.nvim_args.iter() {
+        cmd.arg(arg);
+    }
+
+    // Print the nvim cmd which is executed if asked.
+    if opts.print_nvim_cmd {
         println!("nvim cmd: {:?}", cmd);
     }
 
@@ -72,19 +103,30 @@ fn build(app: &gtk::Application) {
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
 
+    // Open the first file using :e.
+    if let Some(first) = opts.open_files.get(0) {
+        nvim.command(format!("e {}", first).as_str()).unwrap();
+    }
+    // Open rest of the files into new tabs.
+    for file in opts.open_files.iter().skip(1) {
+        nvim.command(format!("tabe {}", file).as_str()).unwrap();
+    }
+
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();
 }
 
 fn main() {
+    let opts = Options::from_args();
+
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
     flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
     let app =
         gtk::Application::new("com.github.vhakulinen.gnvim", flags).unwrap();
 
-    app.connect_activate(|app| {
-        build(app);
+    app.connect_activate(move |app| {
+        build(app, &opts);
     });
 
     app.run(&vec![]);
