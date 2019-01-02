@@ -544,6 +544,7 @@ fn handle_redraw_event(
 
                 state.popupmenu.set_anchor(rect);
                 state.popupmenu.show();
+                state.popupmenu.select(popupmenu.selected as i32);
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();
