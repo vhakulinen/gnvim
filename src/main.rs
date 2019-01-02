@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
+extern crate ammonia;
+extern crate pulldown_cmark;
 extern crate structopt;
 
 extern crate cairo;
@@ -10,6 +12,7 @@ extern crate gtk;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
+extern crate webkit2gtk;
 
 use gio::prelude::*;
 

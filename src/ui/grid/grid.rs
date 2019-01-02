@@ -461,6 +461,13 @@ impl Grid {
 
         (rows, cols)
     }
+
+    pub fn get_cursor_pos(&self) -> (u64, u64) {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+
+        ctx.cursor
+    }
 }
 
 /// Handler for grid's drawingarea's draw event. Draws the internal cairo

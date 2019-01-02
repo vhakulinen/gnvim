@@ -18,6 +18,7 @@ pub mod color;
 mod common;
 mod font;
 mod grid;
+mod cursor_tooltip;
 mod popupmenu;
 mod tabline;
 mod ui;

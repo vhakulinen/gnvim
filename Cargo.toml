@@ -19,6 +19,10 @@ pangocairo = "0.6"
 glib = "0.6"
 gdk = "0.9"
 
+webkit2gtk = "0.5"
+pulldown-cmark = { version = "0.2", default-features = false }
+ammonia = "2"
+
 [dependencies.gtk]
 version = "0.5"
 features = ["v3_18"]

@@ -18,6 +18,7 @@ use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
 use ui::font::Font;
 use ui::grid::Grid;
+use ui::cursor_tooltip::CursorTooltip;
 use ui::popupmenu::Popupmenu;
 use ui::tabline::Tabline;
 
@@ -61,6 +62,7 @@ struct UIState {
     popupmenu: Popupmenu,
     cmdline: Cmdline,
     tabline: Tabline,
+    cursor_tooltip: CursorTooltip,
 
     /// Overlay contains our grid(s) and popupmenu.
     #[allow(unused)]
@@ -256,12 +258,14 @@ impl UI {
         });
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
+        let cursor_tooltip = CursorTooltip::new(&overlay);
 
         window.show_all();
 
         grid.set_im_context(&im_context);
 
         cmdline.hide();
+        cursor_tooltip.hide();
 
         let mut grids = HashMap::new();
         grids.insert(1, grid);
@@ -277,6 +281,7 @@ impl UI {
                 cmdline,
                 overlay,
                 tabline,
+                cursor_tooltip,
                 resize_source_id: source_id,
                 hl_defs,
             })),
@@ -368,6 +373,16 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
         }
+        GnvimEvent::ShowHover(content, row, col) => {
+            state.cursor_tooltip.show(content.clone());
+
+            let grid = state.grids.get(&state.current_grid).unwrap();
+            //let cursor = grid.get_cursor_pos();
+            let rect = grid.get_rect_for_cell(*row, *col);
+
+            state.cursor_tooltip.move_to(&rect);
+        }
+        GnvimEvent::HideHover => state.cursor_tooltip.hide(),
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }
@@ -443,6 +458,8 @@ fn handle_redraw_event(
                 for grid in state.grids.values() {
                     grid.redraw(&state.hl_defs);
                 }
+
+                state.cursor_tooltip.set_colors(*fg, *bg);
             }
             RedrawEvent::HlAttrDefine(defs) => {
                 for (id, hl) in defs {
@@ -484,6 +501,7 @@ fn handle_redraw_event(
                             state
                                 .tabline
                                 .set_font(font.clone(), &state.hl_defs);
+                            state.cursor_tooltip.set_font(font.clone());
                         }
                         OptionSet::LineSpace(val) => {
                             for grid in state.grids.values() {
@@ -544,6 +562,7 @@ fn handle_redraw_event(
 
                 state.popupmenu.set_anchor(rect);
                 state.popupmenu.show();
+                state.popupmenu.select(popupmenu.selected as i32);
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();

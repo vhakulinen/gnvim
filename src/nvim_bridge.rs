@@ -299,6 +299,8 @@ impl fmt::Display for RedrawEvent {
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
+    ShowHover(String, u64, u64),
+    HideHover,
     Unknown(String),
 }
 
@@ -740,6 +742,13 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             GnvimEvent::SetGuiColors(colors)
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
+        "ShowHover" => {
+            let content = try_str!(args[1]);
+            let row = try_u64!(args[2]);
+            let col = try_u64!(args[3]);
+            GnvimEvent::ShowHover(content.to_string(), row, col)
+        }
+        "HideHover" => GnvimEvent::HideHover,
         _ => GnvimEvent::Unknown(String::from("UGH")),
     }
 }
