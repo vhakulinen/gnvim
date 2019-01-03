@@ -110,20 +110,12 @@ fn put_segments(
             );
         }
         if hl.underline {
-            // TODO(ville): The ui.txt doc clearly states that underline and
-            //              undercurl should use the special color. From my
-            //              (short) test, I only got white special color for
-            //              underline - which would be _ok_ except the
-            //              background was also white so the underline was not
-            //              visible unless the underlined text had some glyphs
-            //              under the underline.
-            cr.set_source_rgb(fg.r, fg.g, fg.b);
             let y = y + h + cm.underline_position;
             cr.rectangle(
                 x,
                 y,
                 w,
-                cm.underline_thickness - cm.underline_thickness,
+                cm.underline_thickness,
             );
             cr.fill();
         }
