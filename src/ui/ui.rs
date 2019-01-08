@@ -16,9 +16,9 @@ use nvim_bridge::{GnvimEvent, ModeInfo, Notify, OptionSet, RedrawEvent};
 use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
+use ui::cursor_tooltip::CursorTooltip;
 use ui::font::Font;
 use ui::grid::Grid;
-use ui::cursor_tooltip::CursorTooltip;
 use ui::popupmenu::Popupmenu;
 use ui::tabline::Tabline;
 
@@ -96,6 +96,7 @@ impl UI {
         app: &gtk::Application,
         rx: Receiver<Notify>,
         nvim: Arc<Mutex<Neovim>>,
+        resource_path: String,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
@@ -258,7 +259,7 @@ impl UI {
         });
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
-        let cursor_tooltip = CursorTooltip::new(&overlay);
+        let cursor_tooltip = CursorTooltip::new(&overlay, resource_path);
 
         window.show_all();
 
@@ -355,12 +356,16 @@ fn handle_notify(
             handle_redraw_event(window, events, state, nvim);
         }
         Notify::GnvimEvent(event) => {
-            handle_gnvim_event(event, state);
+            handle_gnvim_event(event, state, nvim);
         }
     }
 }
 
-fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
+fn handle_gnvim_event(
+    event: &GnvimEvent,
+    state: &mut UIState,
+    nvim: Arc<Mutex<Neovim>>,
+) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
             state.popupmenu.set_colors(colors.pmenu, &state.hl_defs);
@@ -378,11 +383,29 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
 
             let grid = state.grids.get(&state.current_grid).unwrap();
             //let cursor = grid.get_cursor_pos();
-            let rect = grid.get_rect_for_cell(*row, *col);
+            let mut rect = grid.get_rect_for_cell(*row, *col);
+
+            let extra_h = state.tabline.get_height();
+            rect.y -= extra_h;
 
             state.cursor_tooltip.move_to(&rect);
         }
         GnvimEvent::HideHover => state.cursor_tooltip.hide(),
+        GnvimEvent::SetCursorTooltipStyle(style) => {
+            if let Err(reason) = state.cursor_tooltip.set_style(style.clone()) {
+                let mut nvim = nvim.lock().unwrap();
+                nvim.command("echohl ErrorMsg").unwrap();
+                nvim.command(
+                    format!(
+                        "echo \"Failed to set cursor tooltip style: {}\"",
+                        reason
+                    )
+                    .as_str(),
+                )
+                .unwrap();
+                nvim.command("echohl None").unwrap();
+            }
+        }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }

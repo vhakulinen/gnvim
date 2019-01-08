@@ -301,6 +301,7 @@ pub enum GnvimEvent {
     CompletionMenuToggleInfo,
     ShowHover(String, u64, u64),
     HideHover,
+    SetCursorTooltipStyle(String),
     Unknown(String),
 }
 
@@ -747,6 +748,10 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             let row = try_u64!(args[2]);
             let col = try_u64!(args[3]);
             GnvimEvent::ShowHover(content.to_string(), row, col)
+        }
+        "SetCursorTooltipStyle" => {
+            let style = try_str!(args[1]);
+            GnvimEvent::SetCursorTooltipStyle(style.to_string())
         }
         "HideHover" => GnvimEvent::HideHover,
         _ => GnvimEvent::Unknown(String::from("UGH")),

@@ -6,10 +6,8 @@ use gtk;
 use gtk::prelude::*;
 
 use webkit2gtk as webkit;
-use webkit2gtk::SettingsExt;
-use webkit2gtk::WebViewExt;
+use webkit2gtk::{SettingsExt, UserContentManagerExt, WebViewExt};
 
-//use pulldown_cmark::{Parser, html};
 use ammonia;
 use pulldown_cmark as md;
 
@@ -22,24 +20,26 @@ const MAX_HEIGHT: i32 = 300;
 
 pub struct CursorTooltip {
     css_provider: gtk::CssProvider,
-
     frame: gtk::Frame,
     webview: webkit::WebView,
-
+    user_content_manager: webkit::UserContentManager,
     position: Rc<RefCell<gdk::Rectangle>>,
 
     fg: Color,
     bg: Color,
-
     font: Font,
+
+    resource_path: String,
 }
 
 impl CursorTooltip {
-    pub fn new(parent: &gtk::Overlay) -> Self {
+    pub fn new(parent: &gtk::Overlay, resource_path: String) -> Self {
         let css_provider = gtk::CssProvider::new();
 
-        let context = webkit::WebContext::get_default().unwrap();
-        let webview = webkit::WebView::new_with_context(&context);
+        let user_content_manager = webkit::UserContentManager::new();
+        let webview = webkit::WebView::new_with_user_content_manager(
+            &user_content_manager,
+        );
 
         let frame = gtk::Frame::new(None);
         frame.add(&webview);
@@ -97,13 +97,47 @@ impl CursorTooltip {
             css_provider,
             frame,
             webview,
-
+            user_content_manager,
             position,
 
             fg: Color::default(),
             bg: Color::default(),
             font: Font::default(),
+
+            resource_path,
         }
+    }
+
+    pub fn set_style(&mut self, name: String) -> Result<(), String> {
+        if let Ok(path) = self.find_style(&name) {
+            let css = fs::read_to_string(path).unwrap();
+            let style = webkit::UserStyleSheet::new(
+                &css,
+                webkit::UserContentInjectedFrames::AllFrames,
+                webkit::UserStyleLevel::Author,
+                &[],
+                &[],
+            );
+            self.user_content_manager.add_style_sheet(&style);
+            Ok(())
+        } else {
+            Err(format!("style '{}' not found", name))
+        }
+    }
+
+    fn find_style(&self, name: &str) -> Result<String, ()> {
+        let fname = format!("{}.css", name);
+        let paths =
+            fs::read_dir(format!("{}/styles", self.resource_path)).unwrap();
+
+        for path in paths {
+            if let Ok(path) = path {
+                if fname == path.file_name().to_str().unwrap() {
+                    return Ok(path.path().to_str().unwrap().to_string());
+                }
+            }
+        }
+        Err(())
     }
 
     pub fn set_colors(&mut self, fg: Color, bg: Color) {
@@ -129,12 +163,13 @@ impl CursorTooltip {
         self.frame.hide();
     }
 
-    pub fn show(&self, content: String) {
+    pub fn show(&mut self, content: String) {
+        self.webview.get_user_content_manager().unwrap();
+
         let js_path = "./runtime/web-resources/highlight.pack.js";
-        let css_path = "./runtime/web-resources/styles/nord.css";
 
         let js = fs::read_to_string(js_path).unwrap();
-        let css = fs::read_to_string(css_path).unwrap();
+        //let css = fs::read_to_string(self.css_path.clone()).unwrap();
 
         let parser = md::Parser::new(&content);
         let mut target = String::new();
@@ -148,7 +183,6 @@ impl CursorTooltip {
             <head>
                 <meta charset=\"utf8\">
                 <script>{js}</script>
-                <style>{css}</style>
                 <style>
                     * {{
                         color: #{fg};
@@ -191,7 +225,6 @@ impl CursorTooltip {
             </body>
         </html>",
             js = js,
-            css = css,
             content = clean,
             fg = self.fg.to_hex(),
             bg = self.bg.to_hex(),
@@ -219,6 +252,7 @@ fn webview_load_finished(
         fixed.clone(),
         position.clone(),
         available_area.clone(),
+        webview.clone(),
     ));
 
     let cb = move |res: Result<webkit::JavascriptResult, webkit::Error>| {
@@ -240,7 +274,8 @@ fn webview_load_finished(
                 let pos = widgets.2.borrow();
                 let area = widgets.3.borrow();
 
-                let (x, width) = get_preferred_horizontal_position(&area, &pos, MAX_WIDTH);
+                let (x, width) =
+                    get_preferred_horizontal_position(&area, &pos, MAX_WIDTH);
                 let (y, height) =
                     get_preferred_vertical_position(&area, &pos, height);
 
@@ -400,15 +435,18 @@ mod test {
     #[test]
     fn test_get_preferred_horizontal_position1() {
         // Case 1: Everything fits.
-        let area = gdk::Rectangle{
+        let area = gdk::Rectangle {
             x: 0,
             y: 0,
             height: 0,
             width: 10,
         };
 
-        let pos = gdk::Rectangle{
-            x: 0, y: 0, width: 0, height: 0,
+        let pos = gdk::Rectangle {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
         };
 
         let width = 10;
@@ -420,15 +458,18 @@ mod test {
     #[test]
     fn test_get_preferred_horizontal_position2() {
         // Case 2: Width is trucated.
-        let area = gdk::Rectangle{
+        let area = gdk::Rectangle {
             x: 0,
             y: 0,
             height: 0,
             width: 5,
         };
 
-        let pos = gdk::Rectangle{
-            x: 0, y: 0, width: 0, height: 0,
+        let pos = gdk::Rectangle {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
         };
 
         let width = 10;
@@ -440,15 +481,18 @@ mod test {
     #[test]
     fn test_get_preferred_horizontal_position3() {
         // Case 3: X is moved to left.
-        let area = gdk::Rectangle{
+        let area = gdk::Rectangle {
             x: 0,
             y: 0,
             height: 0,
             width: 20,
         };
 
-        let pos = gdk::Rectangle{
-            x: 15, y: 0, width: 0, height: 0,
+        let pos = gdk::Rectangle {
+            x: 15,
+            y: 0,
+            width: 0,
+            height: 0,
         };
 
         let width = 15;
@@ -460,15 +504,18 @@ mod test {
     #[test]
     fn test_get_preferred_horizontal_position4() {
         // Case 4: X is moved to left and width is truncated
-        let area = gdk::Rectangle{
+        let area = gdk::Rectangle {
             x: 0,
             y: 0,
             height: 0,
             width: 20,
         };
 
-        let pos = gdk::Rectangle{
-            x: 15, y: 0, width: 0, height: 0,
+        let pos = gdk::Rectangle {
+            x: 15,
+            y: 0,
+            width: 0,
+            height: 0,
         };
 
         let width = 150;

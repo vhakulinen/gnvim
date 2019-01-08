@@ -56,6 +56,14 @@ struct Options {
     )]
     gnvim_rtp: String,
 
+    /// Path for gnvim resource files.
+    #[structopt(
+        long = "gnvim-resource-path",
+        default_value = "/usr/local/share/gnvim/resources",
+        env = "GNVIM_RESOURCE_PATH"
+    )]
+    gnvim_resource_path: String,
+
     /// Files to open. Files after the first one are opened in new tabs.
     #[structopt(value_name = "FILES")]
     open_files: Vec<String>,
@@ -115,7 +123,12 @@ fn build(app: &gtk::Application, opts: &Options) {
         nvim.command(format!("tabe {}", file).as_str()).unwrap();
     }
 
-    let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
+    let ui = ui::UI::init(
+        app,
+        rx,
+        Arc::new(Mutex::new(nvim)),
+        opts.gnvim_resource_path.clone(),
+    );
     ui.start();
 }
 

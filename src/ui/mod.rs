@@ -16,9 +16,9 @@ macro_rules! add_css_provider {
 mod cmdline;
 pub mod color;
 mod common;
+mod cursor_tooltip;
 mod font;
 mod grid;
-mod cursor_tooltip;
 mod popupmenu;
 mod tabline;
 mod ui;
