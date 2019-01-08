@@ -37,6 +37,20 @@ impl CursorTooltip {
         let css_provider = gtk::CssProvider::new();
 
         let user_content_manager = webkit::UserContentManager::new();
+
+        let js_path = "./runtime/web-resources/highlight.pack.js";
+        let js = fs::read_to_string(js_path).unwrap();
+
+        let script = webkit::UserScript::new(
+            &js,
+            webkit::UserContentInjectedFrames::TopFrame,
+            webkit::UserScriptInjectionTime::Start,
+            &[],
+            &[]
+        );
+
+        user_content_manager.add_script(&script);
+
         let webview = webkit::WebView::new_with_user_content_manager(
             &user_content_manager,
         );
@@ -118,6 +132,7 @@ impl CursorTooltip {
                 &[],
                 &[],
             );
+            self.user_content_manager.remove_all_style_sheets();
             self.user_content_manager.add_style_sheet(&style);
             Ok(())
         } else {
@@ -166,11 +181,6 @@ impl CursorTooltip {
     pub fn show(&mut self, content: String) {
         self.webview.get_user_content_manager().unwrap();
 
-        let js_path = "./runtime/web-resources/highlight.pack.js";
-
-        let js = fs::read_to_string(js_path).unwrap();
-        //let css = fs::read_to_string(self.css_path.clone()).unwrap();
-
         let parser = md::Parser::new(&content);
         let mut target = String::new();
         md::html::push_html(&mut target, parser);
@@ -182,7 +192,6 @@ impl CursorTooltip {
             <html> 
             <head>
                 <meta charset=\"utf8\">
-                <script>{js}</script>
                 <style>
                     * {{
                         color: #{fg};
@@ -224,7 +233,6 @@ impl CursorTooltip {
                 <script>hljs.initHighlightingOnLoad();</script>
             </body>
         </html>",
-            js = js,
             content = clean,
             fg = self.fg.to_hex(),
             bg = self.bg.to_hex(),
