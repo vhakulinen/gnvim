@@ -3,6 +3,7 @@
 extern crate ammonia;
 extern crate pulldown_cmark;
 extern crate structopt;
+extern crate syntect;
 
 extern crate cairo;
 extern crate gdk;

@@ -1,5 +1,8 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use gtk;
@@ -10,6 +13,11 @@ use webkit2gtk::{SettingsExt, UserContentManagerExt, WebViewExt};
 
 use ammonia;
 use pulldown_cmark as md;
+
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::{Color as SyntectColor, ThemeSet};
+use syntect::html::highlighted_html_for_string;
+
 
 use thread_guard::ThreadGuard;
 use ui::color::Color;
@@ -22,7 +30,6 @@ pub struct CursorTooltip {
     css_provider: gtk::CssProvider,
     frame: gtk::Frame,
     webview: webkit::WebView,
-    user_content_manager: webkit::UserContentManager,
     position: Rc<RefCell<gdk::Rectangle>>,
 
     fg: Color,
@@ -36,24 +43,8 @@ impl CursorTooltip {
     pub fn new(parent: &gtk::Overlay, resource_path: String) -> Self {
         let css_provider = gtk::CssProvider::new();
 
-        let user_content_manager = webkit::UserContentManager::new();
-
-        let js_path = "./runtime/web-resources/highlight.pack.js";
-        let js = fs::read_to_string(js_path).unwrap();
-
-        let script = webkit::UserScript::new(
-            &js,
-            webkit::UserContentInjectedFrames::TopFrame,
-            webkit::UserScriptInjectionTime::Start,
-            &[],
-            &[]
-        );
-
-        user_content_manager.add_script(&script);
-
-        let webview = webkit::WebView::new_with_user_content_manager(
-            &user_content_manager,
-        );
+        let context = webkit::WebContext::get_default().unwrap();
+        let webview = webkit::WebView::new_with_context(&context);
 
         let frame = gtk::Frame::new(None);
         frame.add(&webview);
@@ -111,7 +102,6 @@ impl CursorTooltip {
             css_provider,
             frame,
             webview,
-            user_content_manager,
             position,
 
             fg: Color::default(),
@@ -120,39 +110,6 @@ impl CursorTooltip {
 
             resource_path,
         }
-    }
-
-    pub fn set_style(&mut self, name: String) -> Result<(), String> {
-        if let Ok(path) = self.find_style(&name) {
-            let css = fs::read_to_string(path).unwrap();
-            let style = webkit::UserStyleSheet::new(
-                &css,
-                webkit::UserContentInjectedFrames::AllFrames,
-                webkit::UserStyleLevel::Author,
-                &[],
-                &[],
-            );
-            self.user_content_manager.remove_all_style_sheets();
-            self.user_content_manager.add_style_sheet(&style);
-            Ok(())
-        } else {
-            Err(format!("style '{}' not found", name))
-        }
-    }
-
-    fn find_style(&self, name: &str) -> Result<String, ()> {
-        let fname = format!("{}.css", name);
-        let paths =
-            fs::read_dir(format!("{}/styles", self.resource_path)).unwrap();
-
-        for path in paths {
-            if let Ok(path) = path {
-                if fname == path.file_name().to_str().unwrap() {
-                    return Ok(path.path().to_str().unwrap().to_string());
-                }
-            }
-        }
-        Err(())
     }
 
     pub fn set_colors(&mut self, fg: Color, bg: Color) {
@@ -181,11 +138,61 @@ impl CursorTooltip {
     pub fn show(&mut self, content: String) {
         self.webview.get_user_content_manager().unwrap();
 
-        let parser = md::Parser::new(&content);
-        let mut target = String::new();
-        md::html::push_html(&mut target, parser);
+        let ss = SyntaxSet::load_defaults_newlines();
+        let ts = ThemeSet::load_defaults();
+        let theme = &ts.themes["base16-ocean.dark"];
+        let syntax = ss.find_syntax_by_name("HTML").unwrap();
 
-        let clean = ammonia::clean(&target);
+        //let parser = md::Parser::new(&content);
+        let mut opts = md::Options::empty();
+        opts.insert(md::Options::ENABLE_TABLES);
+        let parser = md::Parser::new_ext(&content, opts);
+
+        let mut events = Vec::new();
+        let mut to_highlight = String::new();
+        let mut in_code_block = false;
+
+        for event in parser {
+            match event {
+                md::Event::Start(md::Tag::CodeBlock(_)) => {
+                    in_code_block = true;
+                }
+                md::Event::End(md::Tag::CodeBlock(_)) => {
+                    if in_code_block {
+                        let html = syntect::html::highlighted_html_for_string(
+                            &to_highlight, &ss, &syntax, &theme);
+                        events.push(md::Event::Html(Cow::Owned(html)));
+                    }
+                    in_code_block = false;
+                }
+                md::Event::Text(text) => {
+                    if in_code_block {
+                        to_highlight.push_str(&text);
+                    } else {
+                        events.push(md::Event::Text(text));
+                    }
+                }
+                e => {
+                    events.push(e);
+                }
+            }
+        }
+
+        let mut attrs = HashMap::new();
+        let mut set = HashSet::new();
+        set.insert("style");
+        attrs.insert("span", set);
+
+        let mut builder = ammonia::Builder::default();
+        builder.tag_attributes(attrs);
+        builder.attribute_filter(attribute_filter);
+
+        let mut parsed = String::new();
+        md::html::push_html(&mut parsed, events.into_iter());
+
+        let html = builder.clean(&parsed).to_string();
+
+        println!("{}", html);
 
         let all = format!(
             "<!DOCTYPE html>
@@ -230,10 +237,9 @@ impl CursorTooltip {
                         {content}
                     </div>
                 </div>
-                <script>hljs.initHighlightingOnLoad();</script>
             </body>
         </html>",
-            content = clean,
+            content = html,
             fg = self.fg.to_hex(),
             bg = self.bg.to_hex(),
             font = self.font.as_wild_css(FontUnit::Point)
@@ -346,6 +352,47 @@ fn get_preferred_vertical_position(
     }
 
     return (y, height);
+}
+
+fn attribute_filter<'u>(element: &str, attribute: &str, value: &'u str) -> Option<Cow<'u, str>> {
+    match (element, attribute) {
+        ("span", "style") => {
+            let mut allowed_fixed = HashMap::new();
+            allowed_fixed.insert("text-decorator", [ "underline" ]);
+            allowed_fixed.insert("font-weight", [ "bold" ]);
+            allowed_fixed.insert("font-style", [ "italic" ]);
+            let allowed_color = [
+                "color",
+                "background-color",
+            ];
+
+            let mut new = String::new();
+
+            for attrs in value.split(";") {
+                if let [prop, val] = attrs.split(":").collect::<Vec<&str>>()[..] {
+                    if let Some(vals) = allowed_fixed.get(&prop) {
+                        if vals.contains(&val) {
+                            new.push_str(&prop);
+                            new.push_str(":");
+                            new.push_str(val);
+                            new.push_str(";");
+                        }
+                    } else if allowed_color.contains(&prop) {
+                        if let Ok(color) = Color::from_hex_string(val.to_string()) {
+                            new.push_str(&prop);
+                            new.push_str(":#");
+                            new.push_str(&color.to_hex());
+                            new.push_str(";");
+                        }
+                    }
+                }
+            }
+
+
+            Some(new.into())
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

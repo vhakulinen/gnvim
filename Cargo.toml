@@ -21,6 +21,7 @@ gdk = "0.9"
 
 pulldown-cmark = { version = "0.2", default-features = false }
 ammonia = "2"
+syntect = "3"
 
 [dependencies.gtk]
 version = "0.5"

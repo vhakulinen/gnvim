@@ -58,3 +58,21 @@ augroup GnvimCursor
 augroup END
 
 inoremap <expr> <C-s> gnvim#completion_menu_toggle_info()
+
+
+function! UGH()
+
+    let l:content = "<script>alert(1)</script>\n\n"
+    let l:content .= "```html\n\n"
+    let l:content .= "<script>alert(1)</script>\n\n"
+    let l:content .= "```\n\n"
+    let l:content .= "<b style=\"color:red\">bold</b><script>alert(1);</script>"
+    let l:content .= "<span style=\"color:url('proxy.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.planwallpaper.com%2Fstatic%2Fimages%2FsO0mRdKW.jpeg&f=1');\">I'M IN SPAN</span>"
+    let l:content .= "|table|\n\n"
+    let l:content .= "table|yup\n"
+    let l:content .= "---|---\n"
+    let l:content .= "col|hahaa"
+
+    call rpcnotify(0, 'Gnvim', 'ShowHover',
+                \ l:content, 3, 3)
+endfunction

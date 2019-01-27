@@ -392,19 +392,19 @@ fn handle_gnvim_event(
         }
         GnvimEvent::HideHover => state.cursor_tooltip.hide(),
         GnvimEvent::SetCursorTooltipStyle(style) => {
-            if let Err(reason) = state.cursor_tooltip.set_style(style.clone()) {
-                let mut nvim = nvim.lock().unwrap();
-                nvim.command("echohl ErrorMsg").unwrap();
-                nvim.command(
-                    format!(
-                        "echo \"Failed to set cursor tooltip style: {}\"",
-                        reason
-                    )
-                    .as_str(),
-                )
-                .unwrap();
-                nvim.command("echohl None").unwrap();
-            }
+            //if let Err(reason) = state.cursor_tooltip.set_style(style.clone()) {
+                //let mut nvim = nvim.lock().unwrap();
+                //nvim.command("echohl ErrorMsg").unwrap();
+                //nvim.command(
+                    //format!(
+                        //"echo \"Failed to set cursor tooltip style: {}\"",
+                        //reason
+                    //)
+                    //.as_str(),
+                //)
+                //.unwrap();
+                //nvim.command("echohl None").unwrap();
+            //}
         }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
