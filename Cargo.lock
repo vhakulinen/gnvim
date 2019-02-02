@@ -317,6 +317,7 @@ dependencies = [
  "gio 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "neovim-lib 0.5.4 (git+https://github.com/vhakulinen/neovim-lib?branch=newgrid-to-linegrid)",
  "pango 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pangocairo 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",

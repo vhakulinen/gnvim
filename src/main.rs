@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
+#[macro_use]
+extern crate lazy_static;
 extern crate ammonia;
 extern crate pulldown_cmark;
 extern crate structopt;

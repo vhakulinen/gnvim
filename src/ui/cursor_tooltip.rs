@@ -24,6 +24,24 @@ use thread_guard::ThreadGuard;
 use ui::color::Color;
 use ui::font::{Font, FontUnit};
 
+lazy_static! {
+    /// Our custom ammonia builder to clean untrusted HTML.
+    static ref AMMONIA: ammonia::Builder<'static> = {
+        let builder = ammonia::Builder::default();
+
+        let mut attrs = HashMap::new();
+        let mut set = HashSet::new();
+        set.insert("style");
+        attrs.insert("span", set);
+
+        let mut builder = ammonia::Builder::default();
+        builder.tag_attributes(attrs);
+        builder.attribute_filter(attribute_filter);
+
+        builder
+    };
+}
+
 const MAX_WIDTH: i32 = 600;
 const MAX_HEIGHT: i32 = 300;
 
@@ -142,17 +160,10 @@ impl CursorTooltip {
         self.frame.hide();
     }
 
-    pub fn show(&mut self, content: String) {
-        self.webview.get_user_content_manager().unwrap();
+    fn parse_events<'a>(&self, parser: md::Parser<'a>) -> Vec<md::Event<'a>> {
 
         let theme = &self.theme_set.themes["base16-ocean.dark"];
-
-        let scope = Scope::new("text.plain").unwrap();
-        let mut syntax = self.syntax_set.find_syntax_by_scope(scope).unwrap();
-
-        let mut opts = md::Options::empty();
-        opts.insert(md::Options::ENABLE_TABLES);
-        let parser = md::Parser::new_ext(&content, opts);
+        let mut syntax = self.syntax_set.find_syntax_plain_text();
 
         let mut events = Vec::new();
         let mut to_highlight = String::new();
@@ -202,19 +213,26 @@ impl CursorTooltip {
             }
         }
 
-        let mut attrs = HashMap::new();
-        let mut set = HashSet::new();
-        set.insert("style");
-        attrs.insert("span", set);
+        events
+    }
 
-        let mut builder = ammonia::Builder::default();
-        builder.tag_attributes(attrs);
-        builder.attribute_filter(attribute_filter);
+    pub fn show(&mut self, content: String) {
+        self.webview.get_user_content_manager().unwrap();
 
+        // Parse the content (that should be markdown document).
+        let mut opts = md::Options::empty();
+        opts.insert(md::Options::ENABLE_TABLES);
+        let parser = md::Parser::new_ext(&content, opts);
+
+        // And parse the parser events so that we have highlighting for code blocks.
+        let events = self.parse_events(parser);
+
+        // And turn the markdown events into HTML.
         let mut parsed = String::new();
         md::html::push_html(&mut parsed, events.into_iter());
 
-        let html = builder.clean(&parsed).to_string();
+        // Finally, clean up the html (e.g. remove any javascript and such).
+        let html = AMMONIA.clean(&parsed).to_string();
 
         let all = format!(
             "<!DOCTYPE html>
