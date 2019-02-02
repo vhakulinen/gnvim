@@ -6,6 +6,10 @@ build:
 	cargo build --release
 
 syntect-pack:
+	git submodule update --init
+	find sublime-syntaxes/sources \
+	    -name '*.sublime-syntax' \
+	    -exec cp -- "{}" sublime-syntaxes/syntaxes/ \;
 	cargo run --example build-syntect-pack
 
 install:
@@ -17,8 +21,3 @@ install:
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"
 	rm "$(DESTDIR)$(PREFIX)/share/gnvim"
-
-syntect-bundle:
-	find sublime-syntaxes/sources \
-	    -name '*.sublime-syntax' \
-	    -exec cp -- "{}" sublime-syntaxes/syntaxes/ \;
