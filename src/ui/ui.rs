@@ -96,7 +96,6 @@ impl UI {
         app: &gtk::Application,
         rx: Receiver<Notify>,
         nvim: Arc<Mutex<Neovim>>,
-        resource_path: String,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
@@ -259,7 +258,7 @@ impl UI {
         });
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
-        let cursor_tooltip = CursorTooltip::new(&overlay, resource_path);
+        let cursor_tooltip = CursorTooltip::new(&overlay);
 
         window.show_all();
 

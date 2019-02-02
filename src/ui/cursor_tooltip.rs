@@ -15,9 +15,10 @@ use ammonia;
 use pulldown_cmark as md;
 
 use syntect::parsing::SyntaxSet;
+use syntect::parsing::Scope;
 use syntect::highlighting::{Color as SyntectColor, ThemeSet};
 use syntect::html::highlighted_html_for_string;
-
+use syntect::dumps::from_binary;
 
 use thread_guard::ThreadGuard;
 use ui::color::Color;
@@ -36,11 +37,12 @@ pub struct CursorTooltip {
     bg: Color,
     font: Font,
 
-    resource_path: String,
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
 }
 
 impl CursorTooltip {
-    pub fn new(parent: &gtk::Overlay, resource_path: String) -> Self {
+    pub fn new(parent: &gtk::Overlay) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let context = webkit::WebContext::get_default().unwrap();
@@ -98,6 +100,10 @@ impl CursorTooltip {
             *a = alloc.clone();
         });
 
+        let syntax_set: SyntaxSet = from_binary(
+            include_bytes!("../../sublime-syntaxes/all.pack"));
+        let theme_set = ThemeSet::load_defaults();
+
         CursorTooltip {
             css_provider,
             frame,
@@ -108,7 +114,8 @@ impl CursorTooltip {
             bg: Color::default(),
             font: Font::default(),
 
-            resource_path,
+            syntax_set,
+            theme_set,
         }
     }
 
@@ -138,12 +145,11 @@ impl CursorTooltip {
     pub fn show(&mut self, content: String) {
         self.webview.get_user_content_manager().unwrap();
 
-        let ss = SyntaxSet::load_defaults_newlines();
-        let ts = ThemeSet::load_defaults();
-        let theme = &ts.themes["base16-ocean.dark"];
-        let syntax = ss.find_syntax_by_name("HTML").unwrap();
+        let theme = &self.theme_set.themes["base16-ocean.dark"];
 
-        //let parser = md::Parser::new(&content);
+        let scope = Scope::new("text.plain").unwrap();
+        let mut syntax = self.syntax_set.find_syntax_by_scope(scope).unwrap();
+
         let mut opts = md::Options::empty();
         opts.insert(md::Options::ENABLE_TABLES);
         let parser = md::Parser::new_ext(&content, opts);
@@ -154,16 +160,34 @@ impl CursorTooltip {
 
         for event in parser {
             match event {
-                md::Event::Start(md::Tag::CodeBlock(_)) => {
+                md::Event::Start(md::Tag::CodeBlock(lang)) => {
+                    syntax = self.syntax_set
+                        // Try to find the syntax by token.
+                        .find_syntax_by_token(&lang)
+                        .unwrap_or({
+                            // If its not found, try more relaxed way of finding it.
+                            self.syntax_set
+                                .syntaxes()
+                                .iter()
+                                .rev()
+                                .find(|&syntax| {
+                                    syntax.name.to_lowercase().contains(&lang.to_string())
+                                })
+                            // And if not still found, use the plain text one.
+                            .unwrap_or(self.syntax_set.find_syntax_plain_text())
+                        });
+
                     in_code_block = true;
                 }
                 md::Event::End(md::Tag::CodeBlock(_)) => {
                     if in_code_block {
                         let html = syntect::html::highlighted_html_for_string(
-                            &to_highlight, &ss, &syntax, &theme);
+                            &to_highlight, &self.syntax_set, &syntax, &theme);
                         events.push(md::Event::Html(Cow::Owned(html)));
                     }
                     in_code_block = false;
+
+                    to_highlight.clear();
                 }
                 md::Event::Text(text) => {
                     if in_code_block {
@@ -191,8 +215,6 @@ impl CursorTooltip {
         md::html::push_html(&mut parsed, events.into_iter());
 
         let html = builder.clean(&parsed).to_string();
-
-        println!("{}", html);
 
         let all = format!(
             "<!DOCTYPE html>

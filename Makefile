@@ -5,6 +5,9 @@ endif
 build:
 	cargo build --release
 
+syntect-pack:
+	cargo run --example build-syntect-pack
+
 install:
 	install -v -d "$(DESTDIR)$(PREFIX)/bin"
 	install -v -t "$(DESTDIR)$(PREFIX)/bin" ./target/release/gnvim
@@ -14,3 +17,8 @@ install:
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"
 	rm "$(DESTDIR)$(PREFIX)/share/gnvim"
+
+syntect-bundle:
+	find sublime-syntaxes/sources \
+	    -name '*.sublime-syntax' \
+	    -exec cp -- "{}" sublime-syntaxes/syntaxes/ \;
