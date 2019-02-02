@@ -118,11 +118,7 @@ fn build(app: &gtk::Application, opts: &Options) {
         nvim.command(format!("tabe {}", file).as_str()).unwrap();
     }
 
-    let ui = ui::UI::init(
-        app,
-        rx,
-        Arc::new(Mutex::new(nvim)),
-    );
+    let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();
 }
 

@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::fs;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs;
 use std::rc::Rc;
 
 use gtk;
@@ -14,11 +14,11 @@ use webkit2gtk::{SettingsExt, UserContentManagerExt, WebViewExt};
 use ammonia;
 use pulldown_cmark as md;
 
-use syntect::parsing::SyntaxSet;
-use syntect::parsing::Scope;
+use syntect::dumps::from_binary;
 use syntect::highlighting::{Color as SyntectColor, ThemeSet};
 use syntect::html::highlighted_html_for_string;
-use syntect::dumps::from_binary;
+use syntect::parsing::Scope;
+use syntect::parsing::SyntaxSet;
 
 use thread_guard::ThreadGuard;
 use ui::color::Color;
@@ -118,8 +118,8 @@ impl CursorTooltip {
             *a = alloc.clone();
         });
 
-        let syntax_set: SyntaxSet = from_binary(
-            include_bytes!("../../sublime-syntaxes/all.pack"));
+        let syntax_set: SyntaxSet =
+            from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
         let theme_set = ThemeSet::load_defaults();
 
         CursorTooltip {
@@ -161,7 +161,6 @@ impl CursorTooltip {
     }
 
     fn parse_events<'a>(&self, parser: md::Parser<'a>) -> Vec<md::Event<'a>> {
-
         let theme = &self.theme_set.themes["base16-ocean.dark"];
         let mut syntax = self.syntax_set.find_syntax_plain_text();
 
@@ -172,7 +171,8 @@ impl CursorTooltip {
         for event in parser {
             match event {
                 md::Event::Start(md::Tag::CodeBlock(lang)) => {
-                    syntax = self.syntax_set
+                    syntax = self
+                        .syntax_set
                         // Try to find the syntax by token.
                         .find_syntax_by_token(&lang)
                         .unwrap_or({
@@ -182,10 +182,15 @@ impl CursorTooltip {
                                 .iter()
                                 .rev()
                                 .find(|&syntax| {
-                                    syntax.name.to_lowercase().contains(&lang.to_string())
+                                    syntax
+                                        .name
+                                        .to_lowercase()
+                                        .contains(&lang.to_string())
                                 })
-                            // And if not still found, use the plain text one.
-                            .unwrap_or(self.syntax_set.find_syntax_plain_text())
+                                // And if not still found, use the plain text one.
+                                .unwrap_or(
+                                    self.syntax_set.find_syntax_plain_text(),
+                                )
                         });
 
                     in_code_block = true;
@@ -193,7 +198,11 @@ impl CursorTooltip {
                 md::Event::End(md::Tag::CodeBlock(_)) => {
                     if in_code_block {
                         let html = syntect::html::highlighted_html_for_string(
-                            &to_highlight, &self.syntax_set, &syntax, &theme);
+                            &to_highlight,
+                            &self.syntax_set,
+                            &syntax,
+                            &theme,
+                        );
                         events.push(md::Event::Html(Cow::Owned(html)));
                     }
                     in_code_block = false;
@@ -394,22 +403,24 @@ fn get_preferred_vertical_position(
     return (y, height);
 }
 
-fn attribute_filter<'u>(element: &str, attribute: &str, value: &'u str) -> Option<Cow<'u, str>> {
+fn attribute_filter<'u>(
+    element: &str,
+    attribute: &str,
+    value: &'u str,
+) -> Option<Cow<'u, str>> {
     match (element, attribute) {
         ("span", "style") => {
             let mut allowed_fixed = HashMap::new();
-            allowed_fixed.insert("text-decorator", [ "underline" ]);
-            allowed_fixed.insert("font-weight", [ "bold" ]);
-            allowed_fixed.insert("font-style", [ "italic" ]);
-            let allowed_color = [
-                "color",
-                "background-color",
-            ];
+            allowed_fixed.insert("text-decorator", ["underline"]);
+            allowed_fixed.insert("font-weight", ["bold"]);
+            allowed_fixed.insert("font-style", ["italic"]);
+            let allowed_color = ["color", "background-color"];
 
             let mut new = String::new();
 
             for attrs in value.split(";") {
-                if let [prop, val] = attrs.split(":").collect::<Vec<&str>>()[..] {
+                if let [prop, val] = attrs.split(":").collect::<Vec<&str>>()[..]
+                {
                     if let Some(vals) = allowed_fixed.get(&prop) {
                         if vals.contains(&val) {
                             new.push_str(&prop);
@@ -418,7 +429,9 @@ fn attribute_filter<'u>(element: &str, attribute: &str, value: &'u str) -> Optio
                             new.push_str(";");
                         }
                     } else if allowed_color.contains(&prop) {
-                        if let Ok(color) = Color::from_hex_string(val.to_string()) {
+                        if let Ok(color) =
+                            Color::from_hex_string(val.to_string())
+                        {
                             new.push_str(&prop);
                             new.push_str(":#");
                             new.push_str(&color.to_hex());
@@ -427,7 +440,6 @@ fn attribute_filter<'u>(element: &str, attribute: &str, value: &'u str) -> Optio
                     }
                 }
             }
-
 
             Some(new.into())
         }
