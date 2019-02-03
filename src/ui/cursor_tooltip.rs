@@ -15,7 +15,7 @@ use ammonia;
 use pulldown_cmark as md;
 
 use syntect::dumps::from_binary;
-use syntect::highlighting::{Color as SyntectColor, ThemeSet};
+use syntect::highlighting::{Color as SyntectColor, Theme, ThemeSet};
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::Scope;
 use syntect::parsing::SyntaxSet;
@@ -27,8 +27,6 @@ use ui::font::{Font, FontUnit};
 lazy_static! {
     /// Our custom ammonia builder to clean untrusted HTML.
     static ref AMMONIA: ammonia::Builder<'static> = {
-        let builder = ammonia::Builder::default();
-
         let mut attrs = HashMap::new();
         let mut set = HashSet::new();
         set.insert("style");
@@ -57,6 +55,8 @@ pub struct CursorTooltip {
 
     syntax_set: SyntaxSet,
     theme_set: ThemeSet,
+
+    current_theme: Theme,
 }
 
 impl CursorTooltip {
@@ -122,6 +122,8 @@ impl CursorTooltip {
             from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
         let theme_set = ThemeSet::load_defaults();
 
+        let current_theme = theme_set.themes["base16-ocean.dark"].clone();
+
         CursorTooltip {
             css_provider,
             frame,
@@ -134,6 +136,7 @@ impl CursorTooltip {
 
             syntax_set,
             theme_set,
+            current_theme,
         }
     }
 
@@ -152,6 +155,16 @@ impl CursorTooltip {
             .unwrap();
     }
 
+    pub fn get_styles(&self) -> Vec<String> {
+        self.theme_set.themes.keys().cloned().collect()
+    }
+
+    pub fn set_style(&mut self, style: &str) {
+        if let Some(theme) = self.theme_set.themes.get(style) {
+            self.current_theme = theme.clone();
+        }
+    }
+
     pub fn set_font(&mut self, font: Font) {
         self.font = font;
     }
@@ -161,7 +174,6 @@ impl CursorTooltip {
     }
 
     fn parse_events<'a>(&self, parser: md::Parser<'a>) -> Vec<md::Event<'a>> {
-        let theme = &self.theme_set.themes["base16-ocean.dark"];
         let mut syntax = self.syntax_set.find_syntax_plain_text();
 
         let mut events = Vec::new();
@@ -201,7 +213,7 @@ impl CursorTooltip {
                             &to_highlight,
                             &self.syntax_set,
                             &syntax,
-                            &theme,
+                            &self.current_theme,
                         );
                         events.push(md::Event::Html(Cow::Owned(html)));
                     }

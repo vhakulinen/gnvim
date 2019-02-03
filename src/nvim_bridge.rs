@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use neovim_lib::{neovim_api::Tabpage, Handler, Value};
 
@@ -346,24 +346,67 @@ pub struct SetGuiColors {
     pub wildmenu: WildmenuColors,
 }
 
+pub enum Request {
+    CursorTooltipStyles,
+}
+
+pub enum Message {
+    Notify(Notify),
+    Request(Sender<Result<Value, Value>>, Request),
+}
+
 pub struct NvimBridge {
-    tx: Sender<Notify>,
+    tx: Sender<Message>,
+
+    request_tx: Sender<Result<Value, Value>>,
+    request_rx: Receiver<Result<Value, Value>>,
 }
 
 impl NvimBridge {
-    pub fn new(tx: Sender<Notify>) -> Self {
-        NvimBridge { tx }
+    pub fn new(tx: Sender<Message>) -> Self {
+        let (request_tx, request_rx) = channel();
+
+        NvimBridge {
+            tx,
+            request_tx,
+            request_rx,
+        }
     }
 }
 
 impl Handler for NvimBridge {
     fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
-        //println!("{}", name);
-
         if let Some(notify) = parse_notify(name, args) {
-            self.tx.send(notify).unwrap();
+            self.tx.send(Message::Notify(notify)).unwrap();
         } else {
             println!("Unknown notify: {}", name);
+        }
+    }
+
+    fn handle_request(
+        &mut self,
+        name: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, Value> {
+        match name {
+            "Gnvim" => {
+                let cmd = try_str!(args[0]);
+
+                self.tx
+                    .send(Message::Request(
+                        self.request_tx.clone(),
+                        Request::CursorTooltipStyles,
+                    ))
+                    .unwrap();
+
+                self.request_rx.recv().unwrap()
+
+                //Ok(cmd.into())
+            }
+            _ => {
+                println!("Unknown request: {}", name);
+                Err("Unkown request".into())
+            }
         }
     }
 }
@@ -749,11 +792,11 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             let col = try_u64!(args[3]);
             GnvimEvent::ShowHover(content.to_string(), row, col)
         }
+        "HideHover" => GnvimEvent::HideHover,
         "SetCursorTooltipStyle" => {
             let style = try_str!(args[1]);
             GnvimEvent::SetCursorTooltipStyle(style.to_string())
         }
-        "HideHover" => GnvimEvent::HideHover,
         _ => GnvimEvent::Unknown(String::from("UGH")),
     }
 }

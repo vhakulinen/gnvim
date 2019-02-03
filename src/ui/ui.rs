@@ -9,10 +9,13 @@ use glib;
 use gtk;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
+use neovim_lib::Value;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{GnvimEvent, ModeInfo, Notify, OptionSet, RedrawEvent};
+use nvim_bridge::{
+    GnvimEvent, Message, ModeInfo, Notify, OptionSet, RedrawEvent, Request,
+};
 use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
@@ -79,7 +82,7 @@ pub struct UI {
     /// Neovim instance.
     nvim: Arc<Mutex<Neovim>>,
     /// Channel to receive event from nvim.
-    rx: Receiver<Notify>,
+    rx: Receiver<Message>,
     /// Our internal state, containing basically everything we manipulate
     /// when we receive an event from nvim.
     state: Arc<ThreadGuard<UIState>>,
@@ -94,7 +97,7 @@ impl UI {
     ///            of `rx` events.
     pub fn init(
         app: &gtk::Application,
-        rx: Receiver<Notify>,
+        rx: Receiver<Message>,
         nvim: Arc<Mutex<Neovim>>,
     ) -> Self {
         // Create the main window.
@@ -303,36 +306,64 @@ impl UI {
             loop {
                 // Use timeout, so we can use this loop to "tick" the current
                 // grid (mainly to just blink the cursor).
-                let notify = rx.recv_timeout(timeout);
+                let message = rx.recv_timeout(timeout);
 
-                if let Err(RecvTimeoutError::Disconnected) = notify {
-                    // Neovim closed and the sender is disconnected
-                    // so we need to exit too.
-                    break;
-                }
-
-                let state = state.clone();
-                let nvim = nvim.clone();
-                let win = win.clone();
-                glib::idle_add(move || {
-                    let mut state = state.borrow_mut();
-
-                    // Handle any events that we might have.
-                    if let Ok(ref notify) = notify {
-                        handle_notify(
-                            &win.borrow(),
-                            notify,
-                            &mut state,
-                            nvim.clone(),
-                        );
+                match message {
+                    // If the sender disconnects, then neovim exited. This
+                    // means that we need to exit too.
+                    Err(RecvTimeoutError::Disconnected) => {
+                        break;
                     }
+                    // If we 'just' got a timeout, then we should tick the
+                    // current grid (e.g. blink the cursor).
+                    Err(RecvTimeoutError::Timeout) => {
+                        // TODO(ville): Can we combine this with Ok(Message::Notify(notify))?
+                        let state = state.clone();
+                        glib::idle_add(move || {
+                            let mut state = state.borrow_mut();
+                            let grid =
+                                state.grids.get(&state.current_grid).unwrap();
+                            grid.tick();
 
-                    // Tick the current active grid.
-                    let grid = state.grids.get(&state.current_grid).unwrap();
-                    grid.tick();
+                            glib::Continue(false)
+                        });
+                    }
+                    // Handle a notify.
+                    Ok(Message::Notify(notify)) => {
+                        let state = state.clone();
+                        let nvim = nvim.clone();
+                        let win = win.clone();
+                        glib::idle_add(move || {
+                            let mut state = state.borrow_mut();
 
-                    glib::Continue(false)
-                });
+                            handle_notify(
+                                &win.borrow(),
+                                &notify,
+                                &mut state,
+                                nvim.clone(),
+                            );
+
+                            // Tick the current active grid.
+                            let grid =
+                                state.grids.get(&state.current_grid).unwrap();
+                            grid.tick();
+
+                            glib::Continue(false)
+                        });
+                    }
+                    // Handle a request.
+                    Ok(Message::Request(tx, request)) => {
+                        let state = state.clone();
+
+                        glib::idle_add(move || {
+                            let mut state = state.borrow_mut();
+                            let res = handle_request(&request, &mut state);
+                            tx.send(res);
+
+                            glib::Continue(false)
+                        });
+                    }
+                }
             }
 
             // Close the window once the recv loop exits.
@@ -341,6 +372,22 @@ impl UI {
                 glib::Continue(false)
             });
         });
+    }
+}
+
+fn handle_request(
+    request: &Request,
+    state: &mut UIState,
+) -> Result<Value, Value> {
+    match request {
+        Request::CursorTooltipStyles => {
+            let styles = state.cursor_tooltip.get_styles();
+
+            let mut res: Vec<Value> =
+                styles.into_iter().map(|s| s.into()).collect();
+
+            Ok(res.into())
+        }
     }
 }
 
@@ -391,19 +438,7 @@ fn handle_gnvim_event(
         }
         GnvimEvent::HideHover => state.cursor_tooltip.hide(),
         GnvimEvent::SetCursorTooltipStyle(style) => {
-            //if let Err(reason) = state.cursor_tooltip.set_style(style.clone()) {
-            //let mut nvim = nvim.lock().unwrap();
-            //nvim.command("echohl ErrorMsg").unwrap();
-            //nvim.command(
-            //format!(
-            //"echo \"Failed to set cursor tooltip style: {}\"",
-            //reason
-            //)
-            //.as_str(),
-            //)
-            //.unwrap();
-            //nvim.command("echohl None").unwrap();
-            //}
+            state.cursor_tooltip.set_style(style)
         }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
