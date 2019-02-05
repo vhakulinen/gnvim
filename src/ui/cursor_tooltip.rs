@@ -356,8 +356,8 @@ fn webview_load_finished(
 
                 widgets.1.move_(&widgets.0, x, y);
 
-                widgets.0.set_size_request(width, height);
                 widgets.0.show();
+                widgets.0.set_size_request(width, height);
             }
         }
     };

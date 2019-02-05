@@ -797,7 +797,7 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             let style = try_str!(args[1]);
             GnvimEvent::SetCursorTooltipStyle(style.to_string())
         }
-        _ => GnvimEvent::Unknown(String::from("UGH")),
+        _ => GnvimEvent::Unknown(String::from("Unknown event")),
     }
 }
 

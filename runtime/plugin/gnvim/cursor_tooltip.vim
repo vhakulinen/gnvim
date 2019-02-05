@@ -27,4 +27,10 @@ function! gnvim#cursor_tooltip#get_styles()
     return rpcrequest(1, 'Gnvim', 'GetCursorTooltipStyles')
 endfunction
 
-CursorTooltipStyle nord
+function! gnvim#cursor_tooltip#show(content, row, col)
+    call rpcnotify(0, 'Gnvim', 'ShowHover', a:content, a:row, a:col)
+endfunction
+
+function! gnvim#cursor_tooltip#hide()
+    call rpcnotify(0, 'Gnvim', 'HideHover')
+endfunction
