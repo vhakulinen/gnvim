@@ -109,6 +109,7 @@ impl CursorTooltip {
         settings.set_enable_javascript(true);
 
         parent.add_overlay(&fixed);
+        parent.set_overlay_pass_through(&fixed, true);
 
         fixed.show_all();
 
