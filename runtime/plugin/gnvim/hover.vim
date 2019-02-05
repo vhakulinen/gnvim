@@ -56,6 +56,7 @@ function! gnvim#hover#show_hover() abort
 
     let l:pos = lsp#get_position()
     let l:screencol = screencol()
+    let l:screenrow = screenrow()
 
     for l:server in l:servers
         call lsp#send_request(l:server, {
@@ -64,12 +65,12 @@ function! gnvim#hover#show_hover() abort
             \   'textDocument': lsp#get_text_document_identifier(),
             \   'position': l:pos,
             \ },
-            \ 'on_notification': function('s:handle_hover', [l:server, l:pos, l:screencol]),
+            \ 'on_notification': function('s:handle_hover', [l:server, l:pos, l:screencol, l:screenrow]),
             \ })
     endfor
 endfunction
 
-function! s:handle_hover(server, pos, screencol, data) abort
+function! s:handle_hover(server, pos, screencol, screenrow, data) abort
     if lsp#client#is_error(a:data['response'])
         call lsp#utils#error('Failed to retrieve hover information for ' . a:server)
         return
@@ -103,17 +104,13 @@ function! s:handle_hover(server, pos, screencol, data) abort
             let s:gnvim_hover_pos = a:data['response']['result']['range']
             let l:pos[0] = s:gnvim_hover_pos['start']['line']
             let l:pos[1] = s:gnvim_hover_pos['start']['character']
-            echo 'got position from response ' . l:pos[1]
         else
             let s:gnvim_hover_pos = 0
         endif
 
-        let line_offset = line('w0') - 1
-
         let l:content = s:to_string(a:data['response']['result']['contents'])
 
-        call gnvim#cursor_tooltip#show(l:content, l:pos[0] - line_offset, max([l:pos[1] + col_offset, 0]))
-        return
+        call gnvim#cursor_tooltip#show(l:content, a:screenrow - 1, max([l:pos[1] + col_offset, 0]))
     endif
 endfunction
 
