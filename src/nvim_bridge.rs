@@ -386,12 +386,10 @@ impl Handler for NvimBridge {
     fn handle_request(
         &mut self,
         name: &str,
-        args: Vec<Value>,
+        _args: Vec<Value>,
     ) -> Result<Value, Value> {
         match name {
             "Gnvim" => {
-                let cmd = try_str!(args[0]);
-
                 self.tx
                     .send(Message::Request(
                         self.request_tx.clone(),
@@ -400,8 +398,6 @@ impl Handler for NvimBridge {
                     .unwrap();
 
                 self.request_rx.recv().unwrap()
-
-                //Ok(cmd.into())
             }
             _ => {
                 println!("Unknown request: {}", name);

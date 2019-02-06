@@ -320,7 +320,7 @@ impl UI {
                         // TODO(ville): Can we combine this with Ok(Message::Notify(notify))?
                         let state = state.clone();
                         glib::idle_add(move || {
-                            let mut state = state.borrow_mut();
+                            let state = state.borrow_mut();
                             let grid =
                                 state.grids.get(&state.current_grid).unwrap();
                             grid.tick();
@@ -358,7 +358,7 @@ impl UI {
                         glib::idle_add(move || {
                             let mut state = state.borrow_mut();
                             let res = handle_request(&request, &mut state);
-                            tx.send(res);
+                            tx.send(res).expect("Failed to respond to a request");
 
                             glib::Continue(false)
                         });
@@ -402,7 +402,7 @@ fn handle_notify(
             handle_redraw_event(window, events, state, nvim);
         }
         Notify::GnvimEvent(event) => {
-            handle_gnvim_event(event, state, nvim);
+            handle_gnvim_event(event, state);
         }
     }
 }
@@ -410,7 +410,6 @@ fn handle_notify(
 fn handle_gnvim_event(
     event: &GnvimEvent,
     state: &mut UIState,
-    nvim: Arc<Mutex<Neovim>>,
 ) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
@@ -428,7 +427,6 @@ fn handle_gnvim_event(
             state.cursor_tooltip.show(content.clone());
 
             let grid = state.grids.get(&state.current_grid).unwrap();
-            //let cursor = grid.get_cursor_pos();
             let mut rect = grid.get_rect_for_cell(*row, *col);
 
             let extra_h = state.tabline.get_height();

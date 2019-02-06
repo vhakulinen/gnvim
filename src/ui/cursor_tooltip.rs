@@ -2,22 +2,19 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs;
 use std::rc::Rc;
 
 use gtk;
 use gtk::prelude::*;
 
 use webkit2gtk as webkit;
-use webkit2gtk::{SettingsExt, UserContentManagerExt, WebViewExt};
+use webkit2gtk::{SettingsExt, WebViewExt};
 
 use ammonia;
 use pulldown_cmark as md;
 
 use syntect::dumps::from_binary;
-use syntect::highlighting::{Color as SyntectColor, Theme, ThemeSet};
-use syntect::html::highlighted_html_for_string;
-use syntect::parsing::Scope;
+use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use thread_guard::ThreadGuard;
