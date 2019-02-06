@@ -358,7 +358,8 @@ impl UI {
                         glib::idle_add(move || {
                             let mut state = state.borrow_mut();
                             let res = handle_request(&request, &mut state);
-                            tx.send(res).expect("Failed to respond to a request");
+                            tx.send(res)
+                                .expect("Failed to respond to a request");
 
                             glib::Continue(false)
                         });
@@ -407,10 +408,7 @@ fn handle_notify(
     }
 }
 
-fn handle_gnvim_event(
-    event: &GnvimEvent,
-    state: &mut UIState,
-) {
+fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
             state.popupmenu.set_colors(colors.pmenu, &state.hl_defs);

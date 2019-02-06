@@ -390,23 +390,15 @@ impl Handler for NvimBridge {
         args: Vec<Value>,
     ) -> Result<Value, Value> {
         match name {
-            "Gnvim" => {
-
-                match parse_request(args) {
-                    Ok(msg) => {
-                        self.tx
-                            .send(Message::Request(
-                                    self.request_tx.clone(),
-                                    msg,
-                            ))
-                            .unwrap();
-                        self.request_rx.recv().unwrap()
-                    }
-                    Err(_) => {
-                        Err("Failed to parse request".into())
-                    }
+            "Gnvim" => match parse_request(args) {
+                Ok(msg) => {
+                    self.tx
+                        .send(Message::Request(self.request_tx.clone(), msg))
+                        .unwrap();
+                    self.request_rx.recv().unwrap()
                 }
-            }
+                Err(_) => Err("Failed to parse request".into()),
+            },
             _ => {
                 println!("Unknown request: {}", name);
                 Err("Unkown request".into())
@@ -419,10 +411,8 @@ fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
     let cmd = try_str!(args[0]);
 
     match cmd {
-        "CursorTooltipGetStyles" => {
-            Ok(Request::CursorTooltipStyles)
-        }
-        _ => Err(())
+        "CursorTooltipGetStyles" => Ok(Request::CursorTooltipStyles),
+        _ => Err(()),
     }
 }
 
