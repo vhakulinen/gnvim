@@ -51,7 +51,7 @@ augroup GnvimColors
     autocmd VimEnter * call gnvim#set_gui_colors()
 augroup END
 
-augroup GnvimCursor
+augroup GnvimHover
     autocmd!
     autocmd CursorMoved,CursorMovedI * call gnvim#hover#cursor_moved()
     autocmd InsertEnter,CmdlineEnter * call gnvim#hover#abort()

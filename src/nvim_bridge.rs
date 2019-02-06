@@ -351,15 +351,23 @@ pub enum Request {
     CursorTooltipStyles,
 }
 
+/// Message type that we are sending to the UI.
 pub enum Message {
+    /// RPC notify (see `:h rpcnotify()`).
     Notify(Notify),
+    /// RPC Request (see `: rpcrequest()`).
     Request(Sender<Result<Value, Value>>, Request),
 }
 
 pub struct NvimBridge {
+    /// Channel to send messages to the ui.
     tx: Sender<Message>,
 
+    /// Channel to pass to the UI when we receive a request from nvim.
+    /// The UI should send values to this channel when ever it gets a message
+    /// Message::Request on its receiving end of `tx`.
     request_tx: Sender<Result<Value, Value>>,
+    /// Receiving end of `request_tx`.
     request_rx: Receiver<Result<Value, Value>>,
 }
 

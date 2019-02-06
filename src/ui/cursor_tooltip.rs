@@ -40,6 +40,8 @@ lazy_static! {
 const MAX_WIDTH: i32 = 600;
 const MAX_HEIGHT: i32 = 300;
 
+/// Cursor tooltip to display markdown documents on given grid position.
+/// Internally uses `syntect` to do code highlighting.
 pub struct CursorTooltip {
     css_provider: gtk::CssProvider,
     frame: gtk::Frame,
@@ -50,9 +52,12 @@ pub struct CursorTooltip {
     bg: Color,
     font: Font,
 
+    /// Our current syntax set.
     syntax_set: SyntaxSet,
+    /// Our current theme set.
     theme_set: ThemeSet,
 
+    /// Currently selected theme.
     current_theme: Theme,
 }
 
@@ -102,7 +107,6 @@ impl CursorTooltip {
         });
 
         let settings = WebViewExt::get_settings(&webview).unwrap();
-        settings.set_enable_developer_extras(true);
         settings.set_enable_javascript(true);
 
         parent.add_overlay(&fixed);
@@ -153,10 +157,12 @@ impl CursorTooltip {
             .unwrap();
     }
 
+    /// Get list of available code highlighting styles.
     pub fn get_styles(&self) -> Vec<String> {
         self.theme_set.themes.keys().cloned().collect()
     }
 
+    /// Set the current code highlighting style.
     pub fn set_style(&mut self, style: &str) {
         if let Some(theme) = self.theme_set.themes.get(style) {
             self.current_theme = theme.clone();
@@ -171,6 +177,7 @@ impl CursorTooltip {
         self.frame.hide();
     }
 
+    /// Parse markdown parser events into a form where we have syntax highlighting.
     fn parse_events<'a>(&self, parser: md::Parser<'a>) -> Vec<md::Event<'a>> {
         let mut syntax = self.syntax_set.find_syntax_plain_text();
 
@@ -313,6 +320,9 @@ impl CursorTooltip {
     }
 }
 
+/// Once the webview has loaded its content, we need to check how much
+/// height and width does the rendered content take. After this, we can set
+/// the size of the webview's container.
 fn webview_load_finished(
     webview: &webkit::WebView,
     frame: gtk::Frame,
@@ -367,6 +377,7 @@ fn webview_load_finished(
     );
 }
 
+/// Calculate the preferred width and x-position.
 fn get_preferred_horizontal_position(
     area: &gdk::Rectangle,
     pos: &gdk::Rectangle,
@@ -390,6 +401,7 @@ fn get_preferred_horizontal_position(
     (x, width)
 }
 
+/// Calculate the preferred height and y-position.
 fn get_preferred_vertical_position(
     area: &gdk::Rectangle,
     pos: &gdk::Rectangle,
@@ -413,6 +425,9 @@ fn get_preferred_vertical_position(
     return (y, height);
 }
 
+/// Filters some HTML element attributes. Only allows `style` attribute
+/// for `span` element, with allowed CSS styles that are outputted by
+/// `syntect` HTML renderer.
 fn attribute_filter<'u>(
     element: &str,
     attribute: &str,
@@ -420,10 +435,14 @@ fn attribute_filter<'u>(
 ) -> Option<Cow<'u, str>> {
     match (element, attribute) {
         ("span", "style") => {
+
+            // Allowed CSS properties (other than colors).
             let mut allowed_fixed = HashMap::new();
             allowed_fixed.insert("text-decorator", ["underline"]);
             allowed_fixed.insert("font-weight", ["bold"]);
             allowed_fixed.insert("font-style", ["italic"]);
+
+            // Allowed (color) CSS properties.
             let allowed_color = ["color", "background-color"];
 
             let mut new = String::new();
@@ -439,6 +458,9 @@ fn attribute_filter<'u>(
                             new.push_str(";");
                         }
                     } else if allowed_color.contains(&prop) {
+                        // Some tinfoil hat action going on with the colors.
+                        // Parse the colors "properly" so we know that we
+                        // have a valid color value.
                         if let Ok(color) =
                             Color::from_hex_string(val.to_string())
                         {
