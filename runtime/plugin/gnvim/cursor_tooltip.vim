@@ -14,7 +14,6 @@ function! s:complete(lead, line, pos)
     let items = []
 
     for item in s:get_styles()
-        "if item =~ a:lead
         if match(item, a:lead) == 0
             let items += [ item ]
         endif

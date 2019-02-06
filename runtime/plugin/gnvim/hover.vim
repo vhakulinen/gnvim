@@ -44,7 +44,13 @@ function! gnvim#hover#cursor_moved()
 endfunction
 
 function! s:timer_cb(id)
-	call gnvim#hover#show_hover()
+    call gnvim#hover#show_hover()
+endfunction
+
+function! gnvim#hover#abort()
+    call timer_stop(s:gnvim_hover_timer)
+    let s:gnvim_hover_pos = 0
+    call gnvim#cursor_tooltip#hide()
 endfunction
 
 function! gnvim#hover#show_hover() abort
