@@ -423,7 +423,7 @@ fn handle_gnvim_event(
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
         }
-        GnvimEvent::ShowHover(content, row, col) => {
+        GnvimEvent::CursorTooltipShow(content, row, col) => {
             state.cursor_tooltip.show(content.clone());
 
             let grid = state.grids.get(&state.current_grid).unwrap();
@@ -434,8 +434,8 @@ fn handle_gnvim_event(
 
             state.cursor_tooltip.move_to(&rect);
         }
-        GnvimEvent::HideHover => state.cursor_tooltip.hide(),
-        GnvimEvent::SetCursorTooltipStyle(style) => {
+        GnvimEvent::CursorTooltipHide => state.cursor_tooltip.hide(),
+        GnvimEvent::CursorTooltipSetStyle(style) => {
             state.cursor_tooltip.set_style(style)
         }
         GnvimEvent::Unknown(msg) => {

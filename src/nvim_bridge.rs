@@ -299,9 +299,10 @@ impl fmt::Display for RedrawEvent {
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
-    ShowHover(String, u64, u64),
-    HideHover,
-    SetCursorTooltipStyle(String),
+
+    CursorTooltipShow(String, u64, u64),
+    CursorTooltipHide,
+    CursorTooltipSetStyle(String),
     Unknown(String),
 }
 
@@ -782,16 +783,16 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             GnvimEvent::SetGuiColors(colors)
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
-        "ShowHover" => {
+        "CursorTooltipShow" => {
             let content = try_str!(args[1]);
             let row = try_u64!(args[2]);
             let col = try_u64!(args[3]);
-            GnvimEvent::ShowHover(content.to_string(), row, col)
+            GnvimEvent::CursorTooltipShow(content.to_string(), row, col)
         }
-        "HideHover" => GnvimEvent::HideHover,
-        "SetCursorTooltipStyle" => {
+        "CursorTooltipHide" => GnvimEvent::CursorTooltipHide,
+        "CursorTooltipSetStyle" => {
             let style = try_str!(args[1]);
-            GnvimEvent::SetCursorTooltipStyle(style.to_string())
+            GnvimEvent::CursorTooltipSetStyle(style.to_string())
         }
         _ => GnvimEvent::Unknown(String::from("Unknown event")),
     }
