@@ -37,7 +37,7 @@ lazy_static! {
     };
 }
 
-const MAX_WIDTH: i32 = 600;
+const MAX_WIDTH: i32 = 700;
 const MAX_HEIGHT: i32 = 300;
 
 /// Cursor tooltip to display markdown documents on given grid position.
@@ -108,6 +108,7 @@ impl CursorTooltip {
 
         let settings = WebViewExt::get_settings(&webview).unwrap();
         settings.set_enable_javascript(true);
+        settings.set_enable_developer_extras(true);
 
         parent.add_overlay(&fixed);
         parent.set_overlay_pass_through(&fixed, true);
@@ -243,8 +244,6 @@ impl CursorTooltip {
     }
 
     pub fn show(&mut self, content: String) {
-        self.webview.get_user_content_manager().unwrap();
-
         // Parse the content (that should be markdown document).
         let mut opts = md::Options::empty();
         opts.insert(md::Options::ENABLE_TABLES);
@@ -338,42 +337,64 @@ fn webview_load_finished(
         webview.clone(),
     ));
 
-    let cb = move |res: Result<webkit::JavascriptResult, webkit::Error>| {
-        if !res.is_ok() {
-            return;
-        }
+    let cb =
+        move |width: Option<f64>,
+              res: Result<webkit::JavascriptResult, webkit::Error>| {
+            let res = res.unwrap();
+            let height = match (res.get_value(), res.get_global_context()) {
+                (Some(val), Some(ctx)) => val.to_number(&ctx),
+                _ => None,
+            };
 
-        let res = res.unwrap();
-        if let (Some(val), Some(ctx)) =
-            (res.get_value(), res.get_global_context())
-        {
-            if let Some(height) = val.to_number(&ctx) {
-                let widgets = widgets.borrow();
-                // NOTE(ville): Extra height coming from GTK styles
-                //              (parent container's border).
-                let extra_height = 2;
-                let mut height = (height as i32 + extra_height).min(MAX_HEIGHT);
+            let widgets = widgets.borrow();
+            // NOTE(ville): Extra height coming from GTK styles
+            //              (parent container's border).
+            let extra_height = 2;
+            let height = height
+                .map_or(MAX_HEIGHT, |v| v as i32 + extra_height)
+                .min(MAX_HEIGHT);
 
-                let pos = widgets.2.borrow();
-                let area = widgets.3.borrow();
+            let pos = widgets.2.borrow();
+            let area = widgets.3.borrow();
 
-                let (x, width) =
-                    get_preferred_horizontal_position(&area, &pos, MAX_WIDTH);
-                let (y, height) =
-                    get_preferred_vertical_position(&area, &pos, height);
+            let (x, width) = get_preferred_horizontal_position(
+                &area,
+                &pos,
+                width.map_or(MAX_WIDTH, |v| v as i32).min(MAX_WIDTH),
+            );
+            let (y, height) =
+                get_preferred_vertical_position(&area, &pos, height);
 
-                widgets.1.move_(&widgets.0, x, y);
+            widgets.1.move_(&widgets.0, x, y);
 
-                widgets.0.show();
-                widgets.0.set_size_request(width, height);
-            }
-        }
-    };
+            widgets.0.show();
+            widgets.0.set_size_request(width, height);
+        };
 
-    webview.run_javascript(
-        "document.getElementById('wrapper').getBoundingClientRect().height",
+    let webview_ref = ThreadGuard::new(webview.clone());
+    webview.run_javascript("
+        document.body.style.width = '-webkit-max-content';
+        let width = document.body.getBoundingClientRect().width;
+        document.body.style.width = '';
+        // Add some extra (16) to adjust for padding.
+        width + 16",
         None,
-        cb,
+        move |res: Result<webkit::JavascriptResult, webkit::Error>| {
+
+            let res = res.unwrap();
+            let width = match (res.get_value(), res.get_global_context()) {
+                (Some(val), Some(ctx)) => val.to_number(&ctx),
+                _ => None,
+            };
+
+            webview_ref.borrow().run_javascript(
+                "document.getElementById('wrapper').getBoundingClientRect().height",
+                None,
+                move |res| {
+                    cb(width, res);
+                },
+            );
+        },
     );
 }
 
@@ -435,7 +456,6 @@ fn attribute_filter<'u>(
 ) -> Option<Cow<'u, str>> {
     match (element, attribute) {
         ("span", "style") => {
-
             // Allowed CSS properties (other than colors).
             let mut allowed_fixed = HashMap::new();
             allowed_fixed.insert("text-decorator", ["underline"]);
