@@ -6,37 +6,37 @@ use neovim_lib::{neovim_api::Tabpage, Handler, Value};
 
 use ui::color::{Color, Highlight};
 
-macro_rules! try_str {
+macro_rules! unwrap_str {
     ($val:expr) => {
         $val.as_str().unwrap();
     };
 }
 
-macro_rules! try_u64 {
+macro_rules! unwrap_u64 {
     ($val:expr) => {
         $val.as_u64().unwrap();
     };
 }
 
-macro_rules! try_i64 {
+macro_rules! unwrap_i64 {
     ($val:expr) => {
         $val.as_i64().unwrap();
     };
 }
 
-macro_rules! try_array {
+macro_rules! unwrap_array {
     ($val:expr) => {
         $val.as_array().unwrap();
     };
 }
 
-macro_rules! try_map {
+macro_rules! unwrap_map {
     ($val:expr) => {
         $val.as_map().unwrap();
     };
 }
 
-macro_rules! try_bool {
+macro_rules! unwrap_bool {
     ($val:expr) => {
         $val.as_bool().unwrap();
     };
@@ -46,7 +46,7 @@ impl Highlight {
     fn from_map_val(map: &Vec<(Value, Value)>) -> Self {
         let mut hl = Highlight::default();
         for (prop, val) in map {
-            hl.set(try_str!(prop), val.clone());
+            hl.set(unwrap_str!(prop), val.clone());
         }
         hl
     }
@@ -75,19 +75,19 @@ impl Highlight {
                 }
             }
             "reverse" => {
-                self.reverse = try_bool!(val);
+                self.reverse = unwrap_bool!(val);
             }
             "italic" => {
-                self.italic = try_bool!(val);
+                self.italic = unwrap_bool!(val);
             }
             "bold" => {
-                self.bold = try_bool!(val);
+                self.bold = unwrap_bool!(val);
             }
             "underline" => {
-                self.underline = try_bool!(val);
+                self.underline = unwrap_bool!(val);
             }
             "undercurl" => {
-                self.undercurl = try_bool!(val);
+                self.undercurl = unwrap_bool!(val);
             }
             "cterm_fg" => {}
             "cterm_bg" => {}
@@ -141,10 +141,10 @@ impl ModeInfo {
     fn set(&mut self, prop: &str, val: Value) {
         match prop {
             "cursor_shape" => {
-                self.cursor_shape = CursorShape::from_string(try_str!(val))
+                self.cursor_shape = CursorShape::from_string(unwrap_str!(val))
             }
             "cell_percentage" => {
-                let mut val = try_u64!(val);
+                let mut val = unwrap_u64!(val);
 
                 // Ensure that the val is not zero.
                 if val == 0 {
@@ -417,7 +417,7 @@ impl Handler for NvimBridge {
 }
 
 fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
-    let cmd = try_str!(args[0]);
+    let cmd = unwrap_str!(args[0]);
 
     match cmd {
         "CursorTooltipGetStyles" => Ok(Request::CursorTooltipStyles),
@@ -453,33 +453,33 @@ GLOBALS:
 fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
     args.into_iter()
         .map(|args| {
-            let cmd = try_str!(args[0]);
+            let cmd = unwrap_str!(args[0]);
             match cmd {
                 "set_title" => {
-                    let args = try_array!(args[1]);
-                    let title = try_str!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let title = unwrap_str!(args[0]);
                     RedrawEvent::SetTitle(title.to_string())
                 }
                 "grid_line" => {
                     let mut lines = vec![];
 
-                    for entry in try_array!(args)[1..].into_iter() {
-                        let entry = try_array!(entry);
-                        let grid = try_u64!(entry[0]);
-                        let row = try_u64!(entry[1]);
-                        let col_start = try_u64!(entry[2]);
+                    for entry in unwrap_array!(args)[1..].into_iter() {
+                        let entry = unwrap_array!(entry);
+                        let grid = unwrap_u64!(entry[0]);
+                        let row = unwrap_u64!(entry[1]);
+                        let col_start = unwrap_u64!(entry[2]);
                         let mut cells: Vec<Cell> = vec![];
 
-                        for entry in try_array!(entry[3]) {
-                            let entry = try_array!(entry);
-                            let text = try_str!(entry[0]);
+                        for entry in unwrap_array!(entry[3]) {
+                            let entry = unwrap_array!(entry);
+                            let text = unwrap_str!(entry[0]);
                             let hl_id = if entry.len() >= 2 {
                                 entry[1].as_u64()
                             } else {
                                 None
                             };
                             let repeat = if entry.len() >= 3 {
-                                try_u64!(entry[2])
+                                unwrap_u64!(entry[2])
                             } else {
                                 1
                             };
@@ -508,36 +508,36 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::GridLine(lines)
                 }
                 "grid_cursor_goto" => {
-                    let args = try_array!(args[1]);
+                    let args = unwrap_array!(args[1]);
                     RedrawEvent::GridCursorGoto(
-                        try_u64!(args[0]),
-                        try_u64!(args[1]),
-                        try_u64!(args[2]),
+                        unwrap_u64!(args[0]),
+                        unwrap_u64!(args[1]),
+                        unwrap_u64!(args[2]),
                     )
                 }
                 "grid_resize" => {
-                    let args = try_array!(args[1]);
-                    let grid = try_u64!(args[0]);
-                    let width = try_u64!(args[1]);
-                    let height = try_u64!(args[2]);
+                    let args = unwrap_array!(args[1]);
+                    let grid = unwrap_u64!(args[0]);
+                    let width = unwrap_u64!(args[1]);
+                    let height = unwrap_u64!(args[2]);
 
                     RedrawEvent::GridResize(grid, width, height)
                 }
                 "grid_clear" => {
-                    let args = try_array!(args[1]);
-                    let id = try_u64!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let id = unwrap_u64!(args[0]);
                     RedrawEvent::GridClear(id)
                 }
                 "grid_scroll" => {
-                    let args = try_array!(args[1]);
+                    let args = unwrap_array!(args[1]);
 
-                    let id = try_u64!(args[0]);
-                    let top = try_u64!(args[1]);
-                    let bot = try_u64!(args[2]);
-                    let left = try_u64!(args[3]);
-                    let right = try_u64!(args[4]);
-                    let rows = try_i64!(args[5]);
-                    let cols = try_i64!(args[6]);
+                    let id = unwrap_u64!(args[0]);
+                    let top = unwrap_u64!(args[1]);
+                    let bot = unwrap_u64!(args[2]);
+                    let left = unwrap_u64!(args[3]);
+                    let right = unwrap_u64!(args[4]);
+                    let rows = unwrap_i64!(args[5]);
+                    let cols = unwrap_i64!(args[6]);
 
                     RedrawEvent::GridScroll(
                         id,
@@ -547,7 +547,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     )
                 }
                 "default_colors_set" => {
-                    let args = try_array!(args[1]);
+                    let args = unwrap_array!(args[1]);
 
                     let fg = Color::from_u64(args[0].as_u64().unwrap_or(0));
                     let bg = Color::from_u64(
@@ -562,10 +562,10 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 "hl_attr_define" => {
                     let mut hls = vec![];
 
-                    for args in try_array!(args)[1..].into_iter() {
-                        let args = try_array!(args);
-                        let id = try_u64!(args[0]);
-                        let map = try_map!(args[1]);
+                    for args in unwrap_array!(args)[1..].into_iter() {
+                        let args = unwrap_array!(args);
+                        let id = unwrap_u64!(args[0]);
+                        let map = unwrap_map!(args[1]);
 
                         let hl = Highlight::from_map_val(map);
 
@@ -576,15 +576,15 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 }
                 "option_set" => {
                     let mut opts = vec![];
-                    for arg in try_array!(args)[1..].into_iter() {
-                        let name = try_str!(arg[0]);
+                    for arg in unwrap_array!(args)[1..].into_iter() {
+                        let name = unwrap_str!(arg[0]);
                         let opt = match name {
                             "guifont" => {
-                                let val = try_str!(arg[1]);
+                                let val = unwrap_str!(arg[1]);
                                 OptionSet::GuiFont(String::from(val))
                             }
                             "linespace" => {
-                                let val = try_i64!(arg[1]);
+                                let val = unwrap_i64!(arg[1]);
                                 OptionSet::LineSpace(val)
                             }
                             _ => OptionSet::NotSupported(String::from(name)),
@@ -596,16 +596,16 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::OptionSet(opts)
                 }
                 "mode_info_set" => {
-                    let args = try_array!(args[1]);
-                    let cursor_style_enabled = try_bool!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let cursor_style_enabled = unwrap_bool!(args[0]);
 
                     let mut infos = vec![];
-                    for info in try_array!(args[1]).into_iter() {
-                        let map = try_map!(info);
+                    for info in unwrap_array!(args[1]).into_iter() {
+                        let map = unwrap_map!(info);
 
                         let mut mode = ModeInfo::default();
                         for (prop, val) in map {
-                            mode.set(try_str!(prop), val.clone());
+                            mode.set(unwrap_str!(prop), val.clone());
                         }
 
                         infos.push(mode);
@@ -614,27 +614,27 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::ModeInfoSet(cursor_style_enabled, infos)
                 }
                 "mode_change" => {
-                    let args = try_array!(args[1]);
-                    let name = try_str!(args[0]);
-                    let idx = try_u64!(args[1]);
+                    let args = unwrap_array!(args[1]);
+                    let name = unwrap_str!(args[0]);
+                    let idx = unwrap_u64!(args[1]);
                     RedrawEvent::ModeChange(String::from(name), idx)
                 }
                 "busy_start" => RedrawEvent::SetBusy(true),
                 "busy_stop" => RedrawEvent::SetBusy(false),
                 "flush" => RedrawEvent::Flush(),
                 "popupmenu_show" => {
-                    let args = try_array!(args[1]);
-                    let selected = try_i64!(args[1]);
-                    let row = try_u64!(args[2]);
-                    let col = try_u64!(args[3]);
+                    let args = unwrap_array!(args[1]);
+                    let selected = unwrap_i64!(args[1]);
+                    let row = unwrap_u64!(args[2]);
+                    let col = unwrap_u64!(args[3]);
 
                     let mut items = vec![];
-                    for item in try_array!(args[0]) {
-                        let item = try_array!(item);
-                        let word = try_str!(item[0]).to_owned();
-                        let kind = try_str!(item[1]).to_owned();
-                        let menu = try_str!(item[2]).to_owned();
-                        let info = try_str!(item[3]).to_owned();
+                    for item in unwrap_array!(args[0]) {
+                        let item = unwrap_array!(item);
+                        let word = unwrap_str!(item[0]).to_owned();
+                        let kind = unwrap_str!(item[1]).to_owned();
+                        let menu = unwrap_str!(item[2]).to_owned();
+                        let info = unwrap_str!(item[3]).to_owned();
 
                         items.push(CompletionItem {
                             word,
@@ -653,20 +653,20 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 }
                 "popupmenu_hide" => RedrawEvent::PopupmenuHide(),
                 "popupmenu_select" => {
-                    let args = try_array!(args[1]);
-                    let selected = try_i64!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let selected = unwrap_i64!(args[0]);
                     RedrawEvent::PopupmenuSelect(selected)
                 }
                 "tabline_update" => {
-                    let args = try_array!(args[1]);
+                    let args = unwrap_array!(args[1]);
                     let cur_tab = Tabpage::new(args[0].clone());
-                    let tabs = try_array!(args[1])
+                    let tabs = unwrap_array!(args[1])
                         .iter()
                         .map(|item| {
                             let m = map_to_hash(&item);
                             (
                                 Tabpage::new((*m.get("tab").unwrap()).clone()),
-                                try_str!(m.get("name").unwrap()).to_string(),
+                                unwrap_str!(m.get("name").unwrap()).to_string(),
                             )
                         })
                         .collect();
@@ -674,21 +674,21 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::TablineUpdate(cur_tab, tabs)
                 }
                 "cmdline_show" => {
-                    let args = try_array!(args[1]);
-                    let content: Vec<(u64, String)> = try_array!(args[0])
+                    let args = unwrap_array!(args[1]);
+                    let content: Vec<(u64, String)> = unwrap_array!(args[0])
                         .into_iter()
                         .map(|v| {
-                            let hl_id = try_u64!(v[0]);
-                            let text = try_str!(v[1]);
+                            let hl_id = unwrap_u64!(v[0]);
+                            let text = unwrap_str!(v[1]);
 
                             (hl_id, String::from(text))
                         })
                         .collect();
-                    let pos = try_u64!(args[1]);
-                    let firstc = String::from(try_str!(args[2]));
-                    let prompt = String::from(try_str!(args[3]));
-                    let indent = try_u64!(args[4]);
-                    let level = try_u64!(args[5]);
+                    let pos = unwrap_u64!(args[1]);
+                    let firstc = String::from(unwrap_str!(args[2]));
+                    let prompt = String::from(unwrap_str!(args[3]));
+                    let indent = unwrap_u64!(args[4]);
+                    let level = unwrap_u64!(args[5]);
 
                     RedrawEvent::CmdlineShow(CmdlineShow {
                         content,
@@ -701,27 +701,27 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 }
                 "cmdline_hide" => RedrawEvent::CmdlineHide(),
                 "cmdline_pos" => {
-                    let args = try_array!(args[1]);
-                    let pos = try_u64!(args[0]);
-                    let level = try_u64!(args[1]);
+                    let args = unwrap_array!(args[1]);
+                    let pos = unwrap_u64!(args[0]);
+                    let level = unwrap_u64!(args[1]);
                     RedrawEvent::CmdlinePos(pos, level)
                 }
                 "cmdline_special_char" => {
-                    let args = try_array!(args[1]);
-                    let c = try_str!(args[0]);
-                    let shift = try_bool!(args[1]);
-                    let level = try_u64!(args[2]);
+                    let args = unwrap_array!(args[1]);
+                    let c = unwrap_str!(args[0]);
+                    let shift = unwrap_bool!(args[1]);
+                    let level = unwrap_u64!(args[2]);
                     RedrawEvent::CmdlineSpecialChar(c.to_string(), shift, level)
                 }
                 "cmdline_block_show" => {
-                    let args = try_array!(args[1]);
-                    let args = try_array!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let args = unwrap_array!(args[0]);
 
-                    let lines: Vec<(u64, String)> = try_array!(args[0])
+                    let lines: Vec<(u64, String)> = unwrap_array!(args[0])
                         .iter()
                         .map(|v| {
-                            let hl_id = try_u64!(v[0]);
-                            let text = try_str!(v[1]);
+                            let hl_id = unwrap_u64!(v[0]);
+                            let text = unwrap_str!(v[1]);
 
                             (hl_id, text.to_string())
                         })
@@ -730,29 +730,29 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::CmdlineBlockShow(lines)
                 }
                 "cmdline_block_append" => {
-                    let args = try_array!(args[1]);
-                    let args = try_array!(args[0]);
-                    let line_raw = try_array!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let args = unwrap_array!(args[0]);
+                    let line_raw = unwrap_array!(args[0]);
 
                     RedrawEvent::CmdlineBlockAppend((
-                        try_u64!(line_raw[0]),
-                        try_str!(line_raw[1]).to_string(),
+                        unwrap_u64!(line_raw[0]),
+                        unwrap_str!(line_raw[1]).to_string(),
                     ))
                 }
                 "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
                 "wildmenu_show" => {
-                    let args = try_array!(args[1]);
-                    let items: Vec<String> = try_array!(args[0])
+                    let args = unwrap_array!(args[1]);
+                    let items: Vec<String> = unwrap_array!(args[0])
                         .iter()
-                        .map(|v| try_str!(v).to_string())
+                        .map(|v| unwrap_str!(v).to_string())
                         .collect();
 
                     RedrawEvent::WildmenuShow(items)
                 }
                 "wildmenu_hide" => RedrawEvent::WildmenuHide(),
                 "wildmenu_select" => {
-                    let args = try_array!(args[1]);
-                    let item = try_i64!(args[0]);
+                    let args = unwrap_array!(args[1]);
+                    let item = unwrap_i64!(args[0]);
                     RedrawEvent::WildmenuSelect(item)
                 }
                 _ => RedrawEvent::Unknown(cmd.to_string()),
@@ -762,15 +762,15 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
 }
 
 fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
-    let cmd = try_str!(args[0]);
+    let cmd = unwrap_str!(args[0]);
     match cmd {
         "SetGuiColors" => {
             let mut colors = SetGuiColors::default();
 
-            for e in try_map!(args[1]) {
+            for e in unwrap_map!(args[1]) {
                 let color =
-                    Color::from_hex_string(String::from(try_str!(e.1))).ok();
-                match try_str!(e.0) {
+                    Color::from_hex_string(String::from(unwrap_str!(e.1))).ok();
+                match unwrap_str!(e.0) {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,
                     "pmenusel_bg" => colors.pmenu.sel_bg = color,
@@ -792,7 +792,7 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
                     "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
                     "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
                     _ => {
-                        println!("Unknown SetGuiColor: {}", try_str!(e.0));
+                        println!("Unknown SetGuiColor: {}", unwrap_str!(e.0));
                     }
                 }
             }
@@ -801,18 +801,18 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
         "CursorTooltipLoadStyle" => {
-            let path = try_str!(args[1]);
+            let path = unwrap_str!(args[1]);
             GnvimEvent::CursorTooltipLoadStyle(path.to_string())
         }
         "CursorTooltipShow" => {
-            let content = try_str!(args[1]);
-            let row = try_u64!(args[2]);
-            let col = try_u64!(args[3]);
+            let content = unwrap_str!(args[1]);
+            let row = unwrap_u64!(args[2]);
+            let col = unwrap_u64!(args[3]);
             GnvimEvent::CursorTooltipShow(content.to_string(), row, col)
         }
         "CursorTooltipHide" => GnvimEvent::CursorTooltipHide,
         "CursorTooltipSetStyle" => {
-            let style = try_str!(args[1]);
+            let style = unwrap_str!(args[1]);
             GnvimEvent::CursorTooltipSetStyle(style.to_string())
         }
         _ => GnvimEvent::Unknown(String::from("Unknown event")),
@@ -821,8 +821,8 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
 
 fn map_to_hash<'a>(val: &'a Value) -> HashMap<&'a str, &'a Value> {
     let mut h = HashMap::new();
-    for (prop, val) in try_map!(val) {
-        h.insert(try_str!(prop), val);
+    for (prop, val) in unwrap_map!(val) {
+        h.insert(unwrap_str!(prop), val);
     }
 
     h
