@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use neovim_lib::{neovim_api::Tabpage, Handler, Value};
 
@@ -299,6 +299,11 @@ impl fmt::Display for RedrawEvent {
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
+
+    CursorTooltipLoadStyle(String),
+    CursorTooltipShow(String, u64, u64),
+    CursorTooltipHide,
+    CursorTooltipSetStyle(String),
     Unknown(String),
 }
 
@@ -343,25 +348,80 @@ pub struct SetGuiColors {
     pub wildmenu: WildmenuColors,
 }
 
+pub enum Request {
+    CursorTooltipStyles,
+}
+
+/// Message type that we are sending to the UI.
+pub enum Message {
+    /// RPC notify (see `:h rpcnotify()`).
+    Notify(Notify),
+    /// RPC Request (see `: rpcrequest()`).
+    Request(Sender<Result<Value, Value>>, Request),
+}
+
 pub struct NvimBridge {
-    tx: Sender<Notify>,
+    /// Channel to send messages to the ui.
+    tx: Sender<Message>,
+
+    /// Channel to pass to the UI when we receive a request from nvim.
+    /// The UI should send values to this channel when ever it gets a message
+    /// Message::Request on its receiving end of `tx`.
+    request_tx: Sender<Result<Value, Value>>,
+    /// Receiving end of `request_tx`.
+    request_rx: Receiver<Result<Value, Value>>,
 }
 
 impl NvimBridge {
-    pub fn new(tx: Sender<Notify>) -> Self {
-        NvimBridge { tx }
+    pub fn new(tx: Sender<Message>) -> Self {
+        let (request_tx, request_rx) = channel();
+
+        NvimBridge {
+            tx,
+            request_tx,
+            request_rx,
+        }
     }
 }
 
 impl Handler for NvimBridge {
     fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
-        //println!("{}", name);
-
         if let Some(notify) = parse_notify(name, args) {
-            self.tx.send(notify).unwrap();
+            self.tx.send(Message::Notify(notify)).unwrap();
         } else {
             println!("Unknown notify: {}", name);
         }
+    }
+
+    fn handle_request(
+        &mut self,
+        name: &str,
+        args: Vec<Value>,
+    ) -> Result<Value, Value> {
+        match name {
+            "Gnvim" => match parse_request(args) {
+                Ok(msg) => {
+                    self.tx
+                        .send(Message::Request(self.request_tx.clone(), msg))
+                        .unwrap();
+                    self.request_rx.recv().unwrap()
+                }
+                Err(_) => Err("Failed to parse request".into()),
+            },
+            _ => {
+                println!("Unknown request: {}", name);
+                Err("Unkown request".into())
+            }
+        }
+    }
+}
+
+fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
+    let cmd = try_str!(args[0]);
+
+    match cmd {
+        "CursorTooltipGetStyles" => Ok(Request::CursorTooltipStyles),
+        _ => Err(()),
     }
 }
 
@@ -740,7 +800,22 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             GnvimEvent::SetGuiColors(colors)
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
-        _ => GnvimEvent::Unknown(String::from("UGH")),
+        "CursorTooltipLoadStyle" => {
+            let path = try_str!(args[1]);
+            GnvimEvent::CursorTooltipLoadStyle(path.to_string())
+        }
+        "CursorTooltipShow" => {
+            let content = try_str!(args[1]);
+            let row = try_u64!(args[2]);
+            let col = try_u64!(args[3]);
+            GnvimEvent::CursorTooltipShow(content.to_string(), row, col)
+        }
+        "CursorTooltipHide" => GnvimEvent::CursorTooltipHide,
+        "CursorTooltipSetStyle" => {
+            let style = try_str!(args[1]);
+            GnvimEvent::CursorTooltipSetStyle(style.to_string())
+        }
+        _ => GnvimEvent::Unknown(String::from("Unknown event")),
     }
 }
 

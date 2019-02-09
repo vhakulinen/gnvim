@@ -1,6 +1,11 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
+#[macro_use]
+extern crate lazy_static;
+extern crate ammonia;
+extern crate pulldown_cmark;
 extern crate structopt;
+extern crate syntect;
 
 extern crate cairo;
 extern crate gdk;
@@ -10,6 +15,7 @@ extern crate gtk;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
+extern crate webkit2gtk;
 
 use gio::prelude::*;
 
@@ -92,6 +98,10 @@ fn build(app: &gtk::Application, opts: &Options) {
     let mut nvim = Neovim::new(session);
     nvim.subscribe("Gnvim")
         .expect("Failed to subscribe to 'Gnvim' events");
+
+    let api_info = nvim.get_api_info().expect("Failed to get API info");
+    nvim.set_var("gnvim_channel_id", api_info[0].clone())
+        .expect("Failed to set g:gnvim_channel_id");
 
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);

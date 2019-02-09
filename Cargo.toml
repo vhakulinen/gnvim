@@ -19,9 +19,18 @@ pangocairo = "0.6"
 glib = "0.6"
 gdk = "0.9"
 
+pulldown-cmark = { version = "0.2", default-features = false }
+ammonia = "2"
+syntect = "3"
+lazy_static = "1.2.0"
+
 [dependencies.gtk]
 version = "0.5"
 features = ["v3_18"]
+
+[dependencies.webkit2gtk]
+version = "0.5"
+features = ["v2_14"]
 
 [dependencies.neovim-lib]
 #version = "0.5"
