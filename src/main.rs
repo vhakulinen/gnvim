@@ -100,7 +100,8 @@ fn build(app: &gtk::Application, opts: &Options) {
         .expect("Failed to subscribe to 'Gnvim' events");
 
     let api_info = nvim.get_api_info().expect("Failed to get API info");
-    nvim.set_var("gnvim_channel_id", api_info[0].clone()).expect("Failed to set g:gnvim_channel_id");
+    nvim.set_var("gnvim_channel_id", api_info[0].clone())
+        .expect("Failed to set g:gnvim_channel_id");
 
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);

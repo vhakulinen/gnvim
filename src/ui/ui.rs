@@ -404,12 +404,16 @@ fn handle_notify(
             handle_redraw_event(window, events, state, nvim);
         }
         Notify::GnvimEvent(event) => {
-            handle_gnvim_event(event, state);
+            handle_gnvim_event(event, state, nvim);
         }
     }
 }
 
-fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
+fn handle_gnvim_event(
+    event: &GnvimEvent,
+    state: &mut UIState,
+    nvim: Arc<Mutex<Neovim>>,
+) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
             state.popupmenu.set_colors(colors.pmenu, &state.hl_defs);
@@ -421,6 +425,22 @@ fn handle_gnvim_event(event: &GnvimEvent, state: &mut UIState) {
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
+        }
+        GnvimEvent::CursorTooltipLoadStyle(path) => {
+            if let Err(err) = state.cursor_tooltip.load_style(path.clone()) {
+                let mut nvim = nvim.lock().unwrap();
+                nvim.command_async(&format!(
+                    "echom \"Cursor tooltip load style failed: '{}'\"",
+                    err
+                ))
+                .cb(|res| match res {
+                    Ok(_) => {}
+                    Err(err) => {
+                        println!("Failed to execute nvim command: {}", err)
+                    }
+                })
+                .call();
+            }
         }
         GnvimEvent::CursorTooltipShow(content, row, col) => {
             state.cursor_tooltip.show(content.clone());

@@ -33,3 +33,7 @@ endfunction
 function! gnvim#cursor_tooltip#hide()
     call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipHide')
 endfunction
+
+function! gnvim#cursor_tooltip#load_style(path)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipLoadStyle', a:path)
+endfunction

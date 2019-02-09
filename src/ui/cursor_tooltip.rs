@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::Path;
 use std::rc::Rc;
 
 use gtk;
@@ -175,6 +176,21 @@ impl CursorTooltip {
 
     pub fn hide(&self) {
         self.frame.hide();
+    }
+
+    pub fn load_style(&mut self, path: String) -> Result<(), &str> {
+        let path = Path::new(&path);
+        let theme =
+            ThemeSet::get_theme(&path).or(Err("Failed to load theme file"))?;
+
+        let name = if let Some(name) = theme.clone().name {
+            name
+        } else {
+            return Err("Failed to get theme name");
+        };
+        self.theme_set.themes.insert(name, theme);
+
+        Ok(())
     }
 
     /// Parse markdown parser events into a form where we have syntax highlighting.

@@ -300,6 +300,7 @@ pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
 
+    CursorTooltipLoadStyle(String),
     CursorTooltipShow(String, u64, u64),
     CursorTooltipHide,
     CursorTooltipSetStyle(String),
@@ -799,6 +800,10 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
             GnvimEvent::SetGuiColors(colors)
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
+        "CursorTooltipLoadStyle" => {
+            let path = try_str!(args[1]);
+            GnvimEvent::CursorTooltipLoadStyle(path.to_string())
+        }
         "CursorTooltipShow" => {
             let content = try_str!(args[1]);
             let row = try_u64!(args[2]);
