@@ -392,7 +392,9 @@ impl Popupmenu {
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
-                item.info.set_visible(true);
+                if item.item.info.len() > 0 {
+                    item.info.set_visible(true);
+                }
                 self.list.select_row(&item.row);
                 item.row.grab_focus();
 
