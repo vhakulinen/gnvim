@@ -2,7 +2,7 @@ command! -complete=customlist,s:complete
             \ -nargs=1 CursorTooltipStyle call s:set_style(<q-args>)
 
 function! s:set_style(style)
-    call rpcnotify(0, 'Gnvim', 'CursorTooltipSetStyle', a:style)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipSetStyle', a:style)
 endfunction
 
 function! s:get_styles()
@@ -23,13 +23,13 @@ function! s:complete(lead, line, pos)
 endfunction
 
 function! gnvim#cursor_tooltip#get_styles()
-    return rpcrequest(1, 'Gnvim', 'CursorTooltipGetStyles')
+    return rpcrequest(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipGetStyles')
 endfunction
 
 function! gnvim#cursor_tooltip#show(content, row, col)
-    call rpcnotify(0, 'Gnvim', 'CursorTooltipShow', a:content, a:row, a:col)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipShow', a:content, a:row, a:col)
 endfunction
 
 function! gnvim#cursor_tooltip#hide()
-    call rpcnotify(0, 'Gnvim', 'CursorTooltipHide')
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CursorTooltipHide')
 endfunction

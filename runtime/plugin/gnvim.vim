@@ -37,11 +37,11 @@ function! gnvim#set_gui_colors()
                 \ 'wildmenusel_fg': gnvim#get_hl_term('PmenuSel', 'guifg'),
                 \}
 
-    call rpcnotify(0, 'Gnvim', 'SetGuiColors', colors)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'SetGuiColors', colors)
 endfunction
 
 function! gnvim#completion_menu_toggle_info()
-    call rpcnotify(0, 'Gnvim', 'CompletionMenuToggleInfo')
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CompletionMenuToggleInfo')
     return ''
 endfunction
 
