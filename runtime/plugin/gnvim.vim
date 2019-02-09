@@ -54,6 +54,7 @@ augroup END
 augroup GnvimHover
     autocmd!
     autocmd CursorMoved,CursorMovedI * call gnvim#hover#cursor_moved()
+    autocmd User GnvimScroll call gnvim#hover#abort()
     autocmd InsertEnter,CmdlineEnter * call gnvim#hover#abort()
 augroup END
 

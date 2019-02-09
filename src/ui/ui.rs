@@ -9,6 +9,7 @@ use glib;
 use gtk;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
+use neovim_lib::NeovimApiAsync;
 use neovim_lib::Value;
 
 use gtk::prelude::*;
@@ -494,6 +495,16 @@ fn handle_redraw_event(
             RedrawEvent::GridScroll(grid, reg, rows, cols) => {
                 let grid = state.grids.get(grid).unwrap();
                 grid.scroll(*reg, *rows, *cols, &state.hl_defs);
+
+                let mut nvim = nvim.lock().unwrap();
+                // Since nvim doesn't have its own 'scroll' autocmd, we'll
+                // have to do it on our own. This use useful for the cursor tooltip.
+                nvim.command_async("doautocmd User GnvimScroll")
+                    .cb(|res| match res {
+                        Ok(_) => {}
+                        Err(err) => println!("GnvimScroll error: {:?}", err),
+                    })
+                    .call();
             }
             RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
                 state.hl_defs.default_fg = *fg;
