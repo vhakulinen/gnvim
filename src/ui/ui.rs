@@ -403,9 +403,23 @@ fn handle_notify(
         Notify::RedrawEvent(events) => {
             handle_redraw_event(window, events, state, nvim);
         }
-        Notify::GnvimEvent(event) => {
-            handle_gnvim_event(event, state, nvim);
-        }
+        Notify::GnvimEvent(event) => match event {
+            Ok(event) => handle_gnvim_event(event, state, nvim),
+            Err(err) => {
+                let mut nvim = nvim.lock().unwrap();
+                nvim.command_async(&format!(
+                    "echom \"Failed to parse gnvim notify: '{}'\"",
+                    err
+                ))
+                .cb(|res| match res {
+                    Ok(_) => {}
+                    Err(err) => {
+                        println!("Failed to execute nvim command: {}", err)
+                    }
+                })
+                .call();
+            }
+        },
     }
 }
 

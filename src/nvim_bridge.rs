@@ -42,6 +42,27 @@ macro_rules! unwrap_bool {
     };
 }
 
+macro_rules! try_str {
+    ($val:expr, $msg:expr) => {
+        $val.as_str()
+            .ok_or(format!("Value is not an str: {}", $msg))?
+    };
+}
+
+macro_rules! try_u64 {
+    ($val:expr, $msg:expr) => {
+        $val.as_u64()
+            .ok_or(format!("Value is not an u64: {}", $msg))?
+    };
+}
+
+macro_rules! try_map {
+    ($val:expr, $msg:expr) => {
+        $val.as_map()
+            .ok_or(format!("Value is not an map: {}", $msg))?
+    };
+}
+
 impl Highlight {
     fn from_map_val(map: &Vec<(Value, Value)>) -> Self {
         let mut hl = Highlight::default();
@@ -99,8 +120,13 @@ impl Highlight {
 }
 
 pub enum Notify {
+    /// Redraw event will always get parsed. If something goes wrong there,
+    /// we'll panic. Messages are coming from nvim so we should always be
+    /// able to parse them.
     RedrawEvent(Vec<RedrawEvent>),
-    GnvimEvent(GnvimEvent),
+    /// Gnvim event might fail parsing, because user can send basically
+    /// anything to the ('Gnvim') channel.
+    GnvimEvent(Result<GnvimEvent, String>),
 }
 
 #[derive(Clone)]
@@ -761,16 +787,22 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
         .collect()
 }
 
-fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
-    let cmd = unwrap_str!(args[0]);
-    match cmd {
+fn parse_gnvim_event(args: Vec<Value>) -> Result<GnvimEvent, String> {
+    let cmd = try_str!(args.get(0).ok_or("No command given")?, "cmd");
+    let res = match cmd {
         "SetGuiColors" => {
             let mut colors = SetGuiColors::default();
 
-            for e in unwrap_map!(args[1]) {
-                let color =
-                    Color::from_hex_string(String::from(unwrap_str!(e.1))).ok();
-                match unwrap_str!(e.0) {
+            for e in try_map!(
+                args.get(1).ok_or("No data for SetGuiColors")?,
+                "colors"
+            ) {
+                let color = Color::from_hex_string(String::from(try_str!(
+                    e.1,
+                    "color hex value"
+                )))
+                .ok();
+                match try_str!(e.0, "color name") {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,
                     "pmenusel_bg" => colors.pmenu.sel_bg = color,
@@ -792,7 +824,10 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
                     "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
                     "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
                     _ => {
-                        println!("Unknown SetGuiColor: {}", unwrap_str!(e.0));
+                        println!(
+                            "Unknown SetGuiColor: {}",
+                            try_str!(e.0, "color name")
+                        );
                     }
                 }
             }
@@ -801,22 +836,33 @@ fn parse_gnvim_event(args: Vec<Value>) -> GnvimEvent {
         }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
         "CursorTooltipLoadStyle" => {
-            let path = unwrap_str!(args[1]);
+            let path =
+                try_str!(args.get(1).ok_or("path missing")?, "style file path");
             GnvimEvent::CursorTooltipLoadStyle(path.to_string())
         }
         "CursorTooltipShow" => {
-            let content = unwrap_str!(args[1]);
-            let row = unwrap_u64!(args[2]);
-            let col = unwrap_u64!(args[3]);
+            let content = try_str!(
+                args.get(1).ok_or("content missing")?,
+                "tooltip content"
+            );
+            let row =
+                try_u64!(args.get(2).ok_or("row missing")?, "tooltip row");
+            let col =
+                try_u64!(args.get(3).ok_or("col missing")?, "tooltip col");
             GnvimEvent::CursorTooltipShow(content.to_string(), row, col)
         }
         "CursorTooltipHide" => GnvimEvent::CursorTooltipHide,
         "CursorTooltipSetStyle" => {
-            let style = unwrap_str!(args[1]);
+            let style = try_str!(
+                args.get(1).ok_or("path missing")?,
+                "tooltip style path"
+            );
             GnvimEvent::CursorTooltipSetStyle(style.to_string())
         }
         _ => GnvimEvent::Unknown(String::from("Unknown event")),
-    }
+    };
+
+    Ok(res)
 }
 
 fn map_to_hash<'a>(val: &'a Value) -> HashMap<&'a str, &'a Value> {

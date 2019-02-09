@@ -111,12 +111,7 @@ fn put_segments(
         }
         if hl.underline {
             let y = y + h + cm.underline_position;
-            cr.rectangle(
-                x,
-                y,
-                w,
-                cm.underline_thickness,
-            );
+            cr.rectangle(x, y, w, cm.underline_thickness);
             cr.fill();
         }
 
