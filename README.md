@@ -26,7 +26,7 @@ More externalized features will follow as they are implemented for neovim.
 GNvim requires
 
 * Stable rust to compile
-* Latest nvim master
+* Latest nvim master (gnvim 0.1.0 works with nvim 0.3.4)
 * Gtk version 3.18 or higher
 
 There are some benchmarks for internal data structures, but to run those you'll
