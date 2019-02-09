@@ -108,7 +108,6 @@ impl CursorTooltip {
 
         let settings = WebViewExt::get_settings(&webview).unwrap();
         settings.set_enable_javascript(true);
-        settings.set_enable_developer_extras(true);
 
         parent.add_overlay(&fixed);
         parent.set_overlay_pass_through(&fixed, true);
