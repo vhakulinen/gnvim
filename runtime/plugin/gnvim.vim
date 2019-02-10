@@ -1,6 +1,5 @@
-
 if has("g:gnvim_runtime_loaded")
-    exit
+    finish
 endif
 
 let g:gnvim_runtime_loaded = 1
