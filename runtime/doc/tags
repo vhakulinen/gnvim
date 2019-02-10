@@ -1,0 +1,13 @@
+CursorTooltipStyle	gnvim.txt	/*CursorTooltipStyle*
+gnvim	gnvim.txt	/*gnvim*
+gnvim#completion_menu_toggle_info	gnvim.txt	/*gnvim#completion_menu_toggle_info*
+gnvim#cursor_tooltip#get_styles	gnvim.txt	/*gnvim#cursor_tooltip#get_styles*
+gnvim#cursor_tooltip#hide	gnvim.txt	/*gnvim#cursor_tooltip#hide*
+gnvim#cursor_tooltip#load_style	gnvim.txt	/*gnvim#cursor_tooltip#load_style*
+gnvim#cursor_tooltip#show	gnvim.txt	/*gnvim#cursor_tooltip#show*
+gnvim-commands	gnvim.txt	/*gnvim-commands*
+gnvim-complete	gnvim.txt	/*gnvim-complete*
+gnvim-contents	gnvim.txt	/*gnvim-contents*
+gnvim-cursor-tooltip	gnvim.txt	/*gnvim-cursor-tooltip*
+gnvim-functions	gnvim.txt	/*gnvim-functions*
+gnvim-popupmenu	gnvim.txt	/*gnvim-popupmenu*

@@ -1,0 +1,78 @@
+*gnvim* GUI for Neovim.
+
+                      ____ _   _       _             ~
+                     / ___| \ | |_   _(_)_ __ ___    ~
+                    | |  _|  \| \ \ / / | '_ ` _ \   ~
+                    | |_| | |\  |\ V /| | | | | | |  ~
+                     \____|_| \_| \_/ |_|_| |_| |_|  ~
+
+
+================================================================================
+CONTENTS                                                       *gnvim-contents*
+
+            1. Cursor Tooltip.......................|gnvim-cursor-tooltip|
+            2. Popupmenu............................|gnvim-popupmenu|
+
+================================================================================
+Cursor Tooltip                                           *gnvim-cursor-tooltip*
+
+Gnvim comes with a cursor tooltip feature which allows users to render markdown
+documents in a pupup element. This tooltip will render markdown documents into
+html and displays them using webkit. Syntax highlighting is done by `syntect`,
+which uses sublime syntax and themes. It is not possible to load custom
+languages on the runtime - if support to some language is missing,
+open an issue to the gnvim's github repo. Color themes can be loaded with
+|gnvim#cursor_tooltip#load_style|.
+
+For integration with lsp, see: https://github.com/vhakulinen/gnvim-lsp/
+
+================================================================================
+Popup menu                                               *gnvim-popupmenu*
+                                                        *gnvim-complete*
+
+Gnvim utilizes neovim's ext_popupmenu to render the omni completion menu.
+The popupmenu that gnvim has can display `preview` contents (`into` entry
+in the completion item) in its entirety in the popupmenu itself. This is
+commonly found in other editors too. To open this view, while the completion
+is done, call |gnvim#completion_menu_toggle_info|. By default, this is bind
+to <C-s>.
+
+================================================================================
+Commands                                                       *gnvim-commands*
+
+CursorTooltipStyle                                         *CursorTooltipStyle*
+
+    Set the current cursor tooltip style.
+
+================================================================================
+Functions                                                     *gnvim-functions*
+
+gnvim#cursor_tooltip#load_style               *gnvim#cursor_tooltip#load_style*
+
+    Loads `.tmTheme` file to be used in the cursor tooltip.
+
+    Example:
+        call gnivm#cursor_tooltip#load_style("~/nord.tmTheme")
+
+gnvim#cursor_tooltip#get_styles               *gnvim#cursor_tooltip#get_styles*
+
+    Returns list of available styles for the cursor tooltip.
+
+gnvim#cursor_tooltip#show                           *gnvim#cursor_tooltip#show*
+
+    Shows the cursor tooltip.
+    Takes three parameters:
+
+        - Markdown content (string)
+        - Row (int)
+        - Col (int)
+
+gnvim#cursor_tooltip#hide                           *gnvim#cursor_tooltip#hide*
+
+    Hides the cursor tooltip.
+
+gnvim#completion_menu_toggle_info           *gnvim#completion_menu_toggle_info*
+
+    While in completion mode, opens the preview.
+
+ vim:tw=78:ts=8:ft=help:norl:
