@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use neovim_lib::{neovim_api::Tabpage, Handler, Value};
+use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
 
 use ui::color::{Color, Highlight};
 
@@ -410,15 +410,7 @@ impl NvimBridge {
     }
 }
 
-impl Handler for NvimBridge {
-    fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
-        if let Some(notify) = parse_notify(name, args) {
-            self.tx.send(Message::Notify(notify)).unwrap();
-        } else {
-            println!("Unknown notify: {}", name);
-        }
-    }
-
+impl RequestHandler for NvimBridge {
     fn handle_request(
         &mut self,
         name: &str,
@@ -438,6 +430,16 @@ impl Handler for NvimBridge {
                 println!("Unknown request: {}", name);
                 Err("Unkown request".into())
             }
+        }
+    }
+}
+
+impl Handler for NvimBridge {
+    fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
+        if let Some(notify) = parse_notify(name, args) {
+            self.tx.send(Message::Notify(notify)).unwrap();
+        } else {
+            println!("Unknown notify: {}", name);
         }
     }
 }

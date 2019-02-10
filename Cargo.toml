@@ -10,6 +10,7 @@ debug = true
 unstable = []
 
 [dependencies]
+neovim-lib = "0.6"
 structopt = "0.2"
 
 gio = "0.5"
@@ -31,9 +32,3 @@ features = ["v3_18"]
 [dependencies.webkit2gtk]
 version = "0.5"
 features = ["v2_14"]
-
-[dependencies.neovim-lib]
-#version = "0.5"
-#git = "https://github.com/daa84/neovim-lib"
-git = "https://github.com/vhakulinen/neovim-lib"
-branch = "newgrid-to-linegrid"
