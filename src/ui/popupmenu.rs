@@ -1,5 +1,8 @@
 use std::sync::{Arc, Mutex};
 
+use glib;
+use gio;
+use gdk_pixbuf::prelude::*;
 use gdk;
 use gtk;
 use gtk::prelude::*;
@@ -12,6 +15,16 @@ use thread_guard::ThreadGuard;
 use ui::common::calc_line_space;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
+use ui::color::Color;
+
+macro_rules! icon {
+    ($file:expr, $color:expr) => {
+        format!(
+            include_str!($file),
+            $color,
+        )
+    };
+}
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -26,6 +39,7 @@ struct CompletionItemWidgetWrap {
     /// Widget displaying the (shortened) info from `item`. This is only
     /// shown when this completion item is selected.
     info: gtk::Label,
+    kind: gtk::Image,
     /// Root container.
     row: gtk::ListBoxRow,
 }
@@ -355,7 +369,7 @@ impl Popupmenu {
         state.anchor = rect;
     }
 
-    pub fn set_items(&mut self, items: Vec<CompletionItem>) {
+    pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
         if self.info_shown {
             self.toggle_show_info();
         }
@@ -368,14 +382,19 @@ impl Popupmenu {
         }
 
         for item in items.into_iter() {
-            let wrap = create_completionitem_widget(item, &self.css_provider);
+            let wrap = create_completionitem_widget(
+                item,
+                &self.css_provider,
+                &self.colors.fg.unwrap_or(hl_defs.default_fg),
+            );
+
             self.list.add(&wrap.row);
             state.items.push(wrap);
         }
         self.list.show_all();
     }
 
-    pub fn select(&mut self, item_num: i32) {
+    pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
         if self.info_shown {
             self.toggle_show_info();
         }
@@ -384,6 +403,12 @@ impl Popupmenu {
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
                 item.info.set_visible(false);
+
+                // Update the `kind` icon with defualt fg color.
+                let buf = get_icon_pixbuf(
+                    &item.item.kind,
+                    &self.colors.fg.unwrap_or(hl_defs.default_fg));
+                item.kind.set_from_pixbuf(&buf);
             }
         }
 
@@ -392,11 +417,17 @@ impl Popupmenu {
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
-                if item.item.info.len() > 0 {
+                if item.item.menu.len() > 0 {
                     item.info.set_visible(true);
                 }
                 self.list.select_row(&item.row);
                 item.row.grab_focus();
+
+                // Update the `kind` icon with "selected" fg color.
+                let buf = get_icon_pixbuf(
+                    &item.item.kind,
+                    &self.colors.sel_fg.unwrap_or(hl_defs.default_fg));
+                item.kind.set_from_pixbuf(&buf);
 
                 // If we went from no selection to state where the last item
                 // is selected, we'll have to do some extra work to make sure
@@ -544,11 +575,14 @@ impl Popupmenu {
 fn create_completionitem_widget(
     item: CompletionItem,
     css_provider: &gtk::CssProvider,
+    fg: &Color,
 ) -> CompletionItemWidgetWrap {
     let grid = gtk::Grid::new();
     grid.set_column_spacing(10);
 
-    let kind = gtk::Label::new(item.kind.as_str());
+    let buf = get_icon_pixbuf(&item.kind.as_str(), &fg);
+    let kind = gtk::Image::new_from_pixbuf(&buf);
+
     kind.set_halign(gtk::Align::Start);
     kind.set_margin_start(5);
     kind.set_margin_end(5);
@@ -559,14 +593,7 @@ fn create_completionitem_widget(
     word.set_ellipsize(pango::EllipsizeMode::End);
     grid.attach(&word, 1, 0, 1, 1);
 
-    let menu = gtk::Label::new(item.menu.as_str());
-    menu.set_halign(gtk::Align::End);
-    menu.set_hexpand(true);
-    menu.set_margin_start(5);
-    menu.set_margin_end(5);
-    grid.attach(&menu, 2, 0, 1, 1);
-
-    let info = gtk::Label::new(shorten_info(&item.info).as_str());
+    let info = gtk::Label::new(item.menu.as_str());
     info.set_halign(gtk::Align::Start);
     info.set_ellipsize(pango::EllipsizeMode::End);
     <gtk::Widget as WidgetExt>::set_name(&info.clone().upcast(), "gnvim-info");
@@ -584,9 +611,9 @@ fn create_completionitem_widget(
     let row = gtk::ListBoxRow::new();
     row.add(&grid);
 
-    add_css_provider!(css_provider, grid, kind, word, menu, info, row);
+    add_css_provider!(css_provider, grid, kind, word, info, row);
 
-    CompletionItemWidgetWrap { item, info, row }
+    CompletionItemWidgetWrap { item, info, row, kind }
 }
 
 /// Returns first line of `info`.
@@ -594,4 +621,49 @@ fn shorten_info(info: &String) -> String {
     let lines = info.split("\n").collect::<Vec<&str>>();
     let first_line = lines.get(0).unwrap();
     first_line.to_string()
+}
+
+fn get_icon_pixbuf(kind: &str, color: &Color) -> gdk_pixbuf::Pixbuf {
+    let contents = get_icon_name_for_kind(kind, &color);
+    let stream = gio::MemoryInputStream::new_from_bytes(
+        &glib::Bytes::from(contents.as_bytes()),
+    );
+    let buf = gdk_pixbuf::Pixbuf::new_from_stream(
+        &stream,
+        None,
+    ).unwrap();
+
+    buf
+}
+
+fn get_icon_name_for_kind(kind: &str, color: &Color) -> String {
+
+    let color = color.to_hex();
+
+    match kind {
+        "method" | "function" | "constructor" => icon!("../../assets/icons/box.svg", color),
+        "field" => icon!("../../assets/icons/chevrons-right.svg", color),
+        "event" => icon!("../../assets/icons/zap.svg", color),
+        "operator" => icon!("../../assets/icons/sliders.svg", color),
+        "variable" => icon!("../../assets/icons/disc.svg", color),
+        "class" => icon!("../../assets/icons/share-2.svg", color),
+        "interface" => icon!("../../assets/icons/book-open.svg", color),
+        "struct" => icon!("../../assets/icons/align-left.svg", color),
+        "type parameter" => icon!("../../assets/icons/type.svg", color),
+        "module" => icon!("../../assets/icons/code.svg", color),
+        "property" => icon!("../../assets/icons/key.svg", color),
+        "unit" => icon!("../../assets/icons/compass.svg", color),
+        "constant" => icon!("../../assets/icons/shield.svg", color),
+        "value" | "enum" => icon!("../../assets/icons/database.svg", color),
+        "enum member" => icon!("../../assets/icons/tag.svg", color),
+        "keyword" => icon!("../../assets/icons/link-2.svg", color),
+        "text" => icon!("../../assets/icons/at-sign.svg", color),
+        "color" => icon!("../../assets/icons/aperture.svg", color),
+        "file" => icon!("../../assets/icons/file.svg", color),
+        "reference" => icon!("../../assets/icons/link.svg", color),
+        "snippet" => icon!("../../assets/icons/file-text.svg", color),
+        "folder" => icon!("../../assets/icons/folder.svg", color),
+
+        _ => icon!("../../assets/icons/help-circle.svg", color),
+    }
 }

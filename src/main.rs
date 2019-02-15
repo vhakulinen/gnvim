@@ -9,6 +9,7 @@ extern crate syntect;
 
 extern crate cairo;
 extern crate gdk;
+extern crate gdk_pixbuf;
 extern crate gio;
 extern crate glib;
 extern crate gtk;

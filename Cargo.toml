@@ -19,6 +19,7 @@ pango = "0.5"
 pangocairo = "0.6"
 glib = "0.6"
 gdk = "0.9"
+gdk-pixbuf = "0.5"
 
 pulldown-cmark = { version = "0.2", default-features = false }
 ammonia = "2"

@@ -649,7 +649,7 @@ fn handle_redraw_event(
                 }
             }
             RedrawEvent::PopupmenuShow(popupmenu) => {
-                state.popupmenu.set_items(popupmenu.items.clone());
+                state.popupmenu.set_items(popupmenu.items.clone(), &state.hl_defs);
 
                 let grid = state.grids.get(&state.current_grid).unwrap();
                 let mut rect =
@@ -660,13 +660,13 @@ fn handle_redraw_event(
 
                 state.popupmenu.set_anchor(rect);
                 state.popupmenu.show();
-                state.popupmenu.select(popupmenu.selected as i32);
+                state.popupmenu.select(popupmenu.selected as i32, &state.hl_defs);
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();
             }
             RedrawEvent::PopupmenuSelect(selected) => {
-                state.popupmenu.select(*selected as i32);
+                state.popupmenu.select(*selected as i32, &state.hl_defs);
             }
             RedrawEvent::TablineUpdate(cur, tabs) => {
                 state.tabline.update(cur.clone(), tabs.clone());
