@@ -29,16 +29,19 @@ macro_rules! icon {
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
 /// Fixed width of completion menu.
-const FIXED_WIDTH: i32 = 430;
+const WIDTH_NO_DETAILS: i32 = 430;
+const WIDTH_WITH_DETAILS: i32 = 660;
 
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.
 struct CompletionItemWidgetWrap {
     /// Actual completion item.
     item: CompletionItem,
-    /// Widget displaying the (shortened) info from `item`. This is only
-    /// shown when this completion item is selected.
+    /// Label displaying `info` for this item in the list.
     info: gtk::Label,
+    /// Label displaying `menu` for this item in the list.
+    menu: gtk::Label,
+    /// Image of the item in the row.
     kind: gtk::Image,
     /// Root container.
     row: gtk::ListBoxRow,
@@ -101,6 +104,8 @@ pub struct Popupmenu {
 
     /// Line spacing.
     line_space: i64,
+
+    width: i32,
 }
 
 impl Popupmenu {
@@ -116,6 +121,7 @@ impl Popupmenu {
         let info_label = gtk::Label::new("");
         info_label.set_halign(gtk::Align::Start);
         info_label.set_valign(gtk::Align::Start);
+        info_label.set_xalign(0.0);
         info_label.set_line_wrap(true);
         gtk::WidgetExt::set_name(&info_label, "info-label");
 
@@ -131,6 +137,7 @@ impl Popupmenu {
             .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
 
         let list = gtk::ListBox::new();
+        list.set_valign(gtk::Align::Start);
         list.set_selection_mode(gtk::SelectionMode::Single);
 
         let scrolled_list = gtk::ScrolledWindow::new(None, None);
@@ -138,9 +145,10 @@ impl Popupmenu {
         scrolled_list
             .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
 
-        let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let box_ = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
+        box_.set_size_request(-1, MAX_HEIGHT);
 
         add_css_provider!(
             &css_provider,
@@ -202,8 +210,8 @@ impl Popupmenu {
         });
 
         let state_ref = state.clone();
-        let box_ref = box_.clone();
         let layout_ref = layout.clone();
+        let box_ref = box_.clone();
         // Adjust our size and position when the list box's content changes.
         list.connect_size_allocate(move |list, alloc| {
             let state = state_ref.borrow();
@@ -222,6 +230,7 @@ impl Popupmenu {
             };
             // If some of the displayed rows is selected, we need to add
             // that extra height for the `info` row.
+            // TODO(ville): Dont count the extra if we are showing details in side menu.
             let extra = if state.selected == -1 { 0 } else { 1 };
 
             let mut h = (row_height * (count + extra)).min(MAX_HEIGHT);
@@ -257,29 +266,16 @@ impl Popupmenu {
                 }
             }
 
-            // We'll have to wait for the next UI loop before setting the
-            // desired height of the container.
-            gtk::idle_add(move || {
-                box_.set_size_request(FIXED_WIDTH, h);
-
-                // NOTE(ville): Seems like there is no other way to a widget
-                //              to resize it self.
-                box_.hide();
-                box_.show();
-                Continue(false)
-            });
+            list.set_size_request(-1, h);
         });
 
         let state_ref = state.clone();
-        let list_ref = list.clone();
-        let box_ref = box_.clone();
-        info_box.connect_size_allocate(move |_, alloc| {
+        info_box.connect_size_allocate(move |info_box, alloc| {
             let state = state_ref.borrow();
-            let a = list_ref.get_allocation();
 
             // When `info_box` is shown, make sure that we can show as much
             // of its content - to the point its height reaches MAX_HEIGHT.
-            let mut h = alloc.height.max(a.height).min(MAX_HEIGHT);
+            let mut h = alloc.height.min(MAX_HEIGHT);
 
             if let Some(available_size) = state.available_size {
                 // Check if we need to adjust our height.
@@ -293,14 +289,7 @@ impl Popupmenu {
                 }
             }
 
-            let box_ref = box_ref.clone();
-            gtk::idle_add(move || {
-                box_ref.set_size_request(FIXED_WIDTH, h);
-
-                box_ref.hide();
-                box_ref.show();
-                Continue(false)
-            });
+            info_box.set_size_request(-1, h);
         });
 
         parent.add_overlay(&layout);
@@ -308,7 +297,7 @@ impl Popupmenu {
         // should go to the girds.
         layout.hide();
 
-        Popupmenu {
+        let pmenu = Popupmenu {
             box_,
             layout,
             css_provider,
@@ -321,6 +310,22 @@ impl Popupmenu {
             colors: PmenuColors::default(),
             font: Font::default(),
             line_space: 0,
+
+            width: WIDTH_NO_DETAILS,
+        };
+
+        pmenu.ensure_size();
+
+        pmenu
+    }
+
+    fn ensure_size(&self) {
+        self.scrolled_info.set_size_request(330, -1);
+
+        if self.info_shown {
+            self.scrolled_list.set_size_request(330, -1);
+        } else {
+            self.scrolled_list.set_size_request(430, -1);
         }
     }
 
@@ -334,32 +339,39 @@ impl Popupmenu {
         self.info_shown = !self.info_shown;
 
         if let Some(item) = state.items.get(state.selected as usize) {
-            if !self.info_shown {
-                let adj = self.scrolled_info.get_vadjustment().unwrap();
-                adj.set_value(0.0);
-                // TODO(ville): There is a bug in GTK+ and some adjustment animations,
-                //              where the adjustment's value is set back to upper - page-size
-                //              if the user has "overshot" the scrolling. Work around this.
-            }
-
-            self.info_label.set_text(&item.item.info);
-            self.scrolled_list.set_visible(!self.info_shown);
-            self.scrolled_info.set_visible(self.info_shown);
+            item.info.set_visible(!self.info_shown);
+            item.menu.set_visible(!self.info_shown);
         }
+
+        if !self.info_shown {
+            let adj = self.scrolled_info.get_vadjustment().unwrap();
+            adj.set_value(0.0);
+            // TODO(ville): There is a bug in GTK+ and some adjustment animations,
+            //              where the adjustment's value is set back to upper - page-size
+            //              if the user has "overshot" the scrolling. Work around this.
+        }
+
+        self.scrolled_info.set_visible(self.info_shown);
+
+        self.width = if self.info_shown {
+            WIDTH_WITH_DETAILS
+        } else {
+            WIDTH_NO_DETAILS
+        };
+
+        self.box_.set_size_request(self.width, MAX_HEIGHT);
+        self.ensure_size();
     }
 
     /// Hides the popupmenu.
     pub fn hide(&mut self) {
-        if self.info_shown {
-            self.toggle_show_info();
-        }
-
         self.layout.hide();
     }
 
     /// Shows the popupmenu.
     pub fn show(&self) {
         self.layout.show();
+        self.box_.check_resize();
     }
 
     /// Sets the anchor point for popupmenu.
@@ -370,9 +382,6 @@ impl Popupmenu {
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
-        if self.info_shown {
-            self.toggle_show_info();
-        }
 
         let mut state = self.state.borrow_mut();
         state.selected = -1;
@@ -381,19 +390,11 @@ impl Popupmenu {
             item.row.destroy();
         }
 
-        let word_width = items
-            .iter()
-            .map(|i| i.word.chars().count())
-            .max()
-            .unwrap_or(25)
-            .min(25) as i32;
-
         for item in items.into_iter() {
             let wrap = create_completionitem_widget(
                 item,
                 &self.css_provider,
                 &self.colors.fg.unwrap_or(hl_defs.default_fg),
-                word_width,
             );
 
             self.list.add(&wrap.row);
@@ -403,14 +404,12 @@ impl Popupmenu {
     }
 
     pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
-        if self.info_shown {
-            self.toggle_show_info();
-        }
         let mut state = self.state.borrow_mut();
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
                 item.info.set_visible(false);
+                item.menu.set_visible(false);
 
                 // Update the `kind` icon with defualt fg color.
                 let buf = get_icon_pixbuf(
@@ -425,9 +424,14 @@ impl Popupmenu {
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
-                if item.item.info.len() > 0 {
-                    item.info.set_visible(true);
+
+                item.info.set_visible(!self.info_shown);
+                item.menu.set_visible(!self.info_shown);
+
+                if item.item.info.len() == 0 {
+                    item.info.set_visible(false);
                 }
+
                 self.list.select_row(&item.row);
                 item.row.grab_focus();
 
@@ -445,9 +449,12 @@ impl Popupmenu {
                 if prev == -1 && state.selected == max {
                     adj.set_value(adj.get_upper());
                 }
+
+                self.info_label.set_text(&format!("{}\n{}", item.item.menu, item.item.info));
             }
         } else {
             self.list.unselect_all();
+            self.info_label.set_text("");
 
             // If selecteion is removed, move the srolled window to the top.
             let adj = self.scrolled_list.get_vadjustment().unwrap();
@@ -490,14 +497,14 @@ impl Popupmenu {
         let css = format!(
             "{font_wild}
 
-            box, grid, list, row, label {{
+            grid, list, row, label {{
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
             }}
 
-            #info-label {{
-                padding: 10px;
+            #info-label, list {{
+                border: 1px solid #{normal_fg};
             }}
 
             row {{
@@ -511,7 +518,6 @@ impl Popupmenu {
             }}
 
             box {{
-                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
@@ -584,7 +590,6 @@ fn create_completionitem_widget(
     item: CompletionItem,
     css_provider: &gtk::CssProvider,
     fg: &Color,
-    word_width: i32,
 ) -> CompletionItemWidgetWrap {
     let grid = gtk::Grid::new();
     grid.set_column_spacing(10);
@@ -607,19 +612,17 @@ fn create_completionitem_widget(
 
     let word = gtk::Label::new(item.word.as_str());
     word.set_ellipsize(pango::EllipsizeMode::End);
-    word.set_width_chars(word_width);
-    // Need to use xalign instead of halign becaue of set_width_chars.
-    word.set_xalign(0.0);
     grid.attach(&word, 1, 0, 1, 1);
 
     let info = gtk::Label::new(shorten_info(&item.info).as_str());
     info.set_halign(gtk::Align::Start);
     info.set_ellipsize(pango::EllipsizeMode::End);
 
-    // On initially shown, set the info label hidden. We'll show it when
-    // the row it belongs to is selected (otherwise its always hidden).
     info.connect_realize(|info| {
         info.hide();
+    });
+    menu.connect_realize(|menu| {
+        menu.hide();
     });
 
     grid.attach(&info, 1, 1, 2, 1);
@@ -629,9 +632,9 @@ fn create_completionitem_widget(
     let row = gtk::ListBoxRow::new();
     row.add(&grid);
 
-    add_css_provider!(css_provider, grid, kind, word, info, row);
+    add_css_provider!(css_provider, grid, kind, word, info, row, menu);
 
-    CompletionItemWidgetWrap { item, info, row, kind }
+    CompletionItemWidgetWrap { item, info, row, kind, menu }
 }
 
 /// Returns first line of `info`.
