@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use glib;
 use gio;
-use gdk_pixbuf::prelude::*;
 use gdk;
 use gtk;
 use gtk::prelude::*;
@@ -16,6 +15,7 @@ use ui::common::calc_line_space;
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
 use ui::color::Color;
+use ui::common::{get_preferred_vertical_position, get_preferred_horizontal_position};
 
 macro_rules! icon {
     ($file:expr, $color:expr) => {
@@ -56,6 +56,8 @@ struct State {
     available_size: Option<gdk::Rectangle>,
     /// Our anchor position where the popupmenu should be "pointing" to.
     anchor: gdk::Rectangle,
+
+    width: i32,
 }
 
 impl Default for State {
@@ -70,6 +72,8 @@ impl Default for State {
                 width: 0,
                 height: 0,
             },
+
+            width: WIDTH_NO_DETAILS,
         }
     }
 }
@@ -104,8 +108,6 @@ pub struct Popupmenu {
 
     /// Line spacing.
     line_space: i64,
-
-    width: i32,
 }
 
 impl Popupmenu {
@@ -212,85 +214,46 @@ impl Popupmenu {
 
         let state_ref = state.clone();
         let layout_ref = layout.clone();
-        let box_ref = box_.clone();
-        // Adjust our size and position when the list box's content changes.
-        list.connect_size_allocate(move |list, alloc| {
+        let scrolled_list_ref = scrolled_list.clone();
+        let scrolled_info_ref = scrolled_info.clone();
+        box_.connect_size_allocate(move |box_, alloc| {
             let state = state_ref.borrow();
-            let box_ = box_ref.clone();
             let layout = layout_ref.clone();
 
-            // Calculate height based on shown rows.
-            let count = list.get_children().len() as i32;
-            // Get the first non-selected row. Non-selected so that we don't
-            // take into account the height of `info` for each row.
-            let index = if state.selected == 0 { 1 } else { 0 };
-            let row_height = if let Some(item) = state.items.get(index) {
-                item.row.get_preferred_height().0
-            } else {
-                16
-            };
-            // If some of the displayed rows is selected, we need to add
-            // that extra height for the `info` row.
-            // TODO(ville): Dont count the extra if we are showing details in side menu.
-            let extra = if state.selected == -1 { 0 } else { 1 };
+            if let Some(area) = state.available_size {
+                let pos = state.anchor;
 
-            let mut h = (row_height * (count + extra)).min(MAX_HEIGHT);
+                let (x, width) = get_preferred_horizontal_position(
+                    &area,
+                    &pos,
+                    state.width,
+                );
+                let (y, height) =
+                    get_preferred_vertical_position(
+                        &area,
+                        &pos,
+                        alloc.height.min(MAX_HEIGHT),
+                );
 
-            if let Some(available_size) = state.available_size {
-                // Check if we need to adjust our position, x-axis wise.
-                let x2 = state.anchor.x + alloc.width;
-                if x2 > available_size.width {
-                    // Magic number 5 here is making sure there is a small cap
-                    // between the popupmenu and the window border.
-                    let x_offset = x2 - available_size.width + 5;
-                    let new_x = (state.anchor.x - x_offset).max(0);
+                layout.move_(box_, x, y);
 
-                    // TODO(ville): Do we want to truncate the width of the popupmenu
-                    //              in case when new_x == 0 && w > state.available_size.width?
+                box_.set_size_request(width, height);
 
-                    layout.move_(
-                        &box_,
-                        new_x,
-                        state.anchor.y + state.anchor.height,
-                    );
-                }
-
-                // Check if we need to adjust our height.
-                // TODO(ville): Move the popupmenu upwards from the anchor position
-                //              of there is no room downwards.
-                let y2 = state.anchor.y + h;
-                if y2 > available_size.height {
-                    h = available_size.height
-                        - state.anchor.y
-                        - state.anchor.height
-                        - 10;
+                // If we moved the popupmenu above the achor position, make
+                // sure our contents are aligned to the bottom so there is not
+                // cap between the achor and the content it self.
+                if y < pos.y {
+                    // Use get_child to get the viewport which is between
+                    // the scrolled window and the actual widget that is
+                    // inside it.
+                    scrolled_list_ref.get_child().unwrap().set_valign(gtk::Align::End);
+                    scrolled_info_ref.get_child().unwrap().set_valign(gtk::Align::End);
+                } else {
+                    scrolled_list_ref.get_child().unwrap().set_valign(gtk::Align::Start);
+                    scrolled_info_ref.get_child().unwrap().set_valign(gtk::Align::Start);
                 }
             }
 
-            list.set_size_request(-1, h);
-        });
-
-        let state_ref = state.clone();
-        info_box.connect_size_allocate(move |info_box, alloc| {
-            let state = state_ref.borrow();
-
-            // When `info_box` is shown, make sure that we can show as much
-            // of its content - to the point its height reaches MAX_HEIGHT.
-            let mut h = alloc.height.min(MAX_HEIGHT);
-
-            if let Some(available_size) = state.available_size {
-                // Check if we need to adjust our height.
-                // TODO(ville): See comment from list's connect_size:allocate
-                let y2 = state.anchor.y + h;
-                if y2 > available_size.height {
-                    h = available_size.height
-                        - state.anchor.y
-                        - state.anchor.height
-                        - 10;
-                }
-            }
-
-            info_box.set_size_request(-1, h);
         });
 
         parent.add_overlay(&layout);
@@ -311,13 +274,11 @@ impl Popupmenu {
             colors: PmenuColors::default(),
             font: Font::default(),
             line_space: 0,
-
-            width: WIDTH_NO_DETAILS,
         }
     }
 
     pub fn toggle_show_info(&mut self) {
-        let state = self.state.borrow_mut();
+        let mut state = self.state.borrow_mut();
 
         if state.selected == -1 {
             return;
@@ -328,6 +289,10 @@ impl Popupmenu {
         if let Some(item) = state.items.get(state.selected as usize) {
             item.info.set_visible(!self.info_shown);
             item.menu.set_visible(!self.info_shown);
+
+            if item.item.info.len() == 0 {
+                item.info.set_visible(false);
+            }
         }
 
         if !self.info_shown {
@@ -340,13 +305,13 @@ impl Popupmenu {
 
         self.scrolled_info.set_visible(self.info_shown);
 
-        self.width = if self.info_shown {
+        state.width = if self.info_shown {
             WIDTH_WITH_DETAILS
         } else {
             WIDTH_NO_DETAILS
         };
 
-        self.box_.set_size_request(self.width, MAX_HEIGHT);
+        self.box_.set_size_request(state.width, MAX_HEIGHT);
     }
 
     /// Hides the popupmenu.
