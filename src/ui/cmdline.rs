@@ -226,8 +226,7 @@ impl CmdlineInput {
         textview.connect_button_press_event(|_, _| Inhibit(true));
 
         let scroll = gtk::ScrolledWindow::new(None, None);
-        scroll
-            .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
+        scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
         scroll.add(&textview);
 
         // Wrap the textview into a frame, mainly to add some padding (with css).

@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use glib;
-use gio;
 use gdk;
+use gio;
+use glib;
 use gtk;
 use gtk::prelude::*;
 use neovim_lib::neovim::Neovim;
@@ -11,18 +11,17 @@ use pango;
 
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
+use ui::color::Color;
 use ui::common::calc_line_space;
+use ui::common::{
+    get_preferred_horizontal_position, get_preferred_vertical_position,
+};
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
-use ui::color::Color;
-use ui::common::{get_preferred_vertical_position, get_preferred_horizontal_position};
 
 macro_rules! icon {
     ($file:expr, $color:expr) => {
-        format!(
-            include_str!($file),
-            $color,
-        )
+        format!(include_str!($file), $color,)
     };
 }
 
@@ -223,16 +222,12 @@ impl Popupmenu {
             if let Some(area) = state.available_size {
                 let pos = state.anchor;
 
-                let (x, width) = get_preferred_horizontal_position(
+                let (x, width) =
+                    get_preferred_horizontal_position(&area, &pos, state.width);
+                let (y, height) = get_preferred_vertical_position(
                     &area,
                     &pos,
-                    state.width,
-                );
-                let (y, height) =
-                    get_preferred_vertical_position(
-                        &area,
-                        &pos,
-                        alloc.height.min(MAX_HEIGHT),
+                    alloc.height.min(MAX_HEIGHT),
                 );
 
                 layout.move_(box_, x, y);
@@ -246,14 +241,25 @@ impl Popupmenu {
                     // Use get_child to get the viewport which is between
                     // the scrolled window and the actual widget that is
                     // inside it.
-                    scrolled_list_ref.get_child().unwrap().set_valign(gtk::Align::End);
-                    scrolled_info_ref.get_child().unwrap().set_valign(gtk::Align::End);
+                    scrolled_list_ref
+                        .get_child()
+                        .unwrap()
+                        .set_valign(gtk::Align::End);
+                    scrolled_info_ref
+                        .get_child()
+                        .unwrap()
+                        .set_valign(gtk::Align::End);
                 } else {
-                    scrolled_list_ref.get_child().unwrap().set_valign(gtk::Align::Start);
-                    scrolled_info_ref.get_child().unwrap().set_valign(gtk::Align::Start);
+                    scrolled_list_ref
+                        .get_child()
+                        .unwrap()
+                        .set_valign(gtk::Align::Start);
+                    scrolled_info_ref
+                        .get_child()
+                        .unwrap()
+                        .set_valign(gtk::Align::Start);
                 }
             }
-
         });
 
         parent.add_overlay(&layout);
@@ -333,7 +339,6 @@ impl Popupmenu {
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
-
         let mut state = self.state.borrow_mut();
         state.selected = -1;
 
@@ -365,7 +370,8 @@ impl Popupmenu {
                 // Update the `kind` icon with defualt fg color.
                 let buf = get_icon_pixbuf(
                     &item.item.kind,
-                    &self.colors.fg.unwrap_or(hl_defs.default_fg));
+                    &self.colors.fg.unwrap_or(hl_defs.default_fg),
+                );
                 item.kind.set_from_pixbuf(&buf);
             }
         }
@@ -375,7 +381,6 @@ impl Popupmenu {
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
-
                 item.info.set_visible(!self.info_shown);
                 item.menu.set_visible(!self.info_shown);
 
@@ -389,7 +394,8 @@ impl Popupmenu {
                 // Update the `kind` icon with "selected" fg color.
                 let buf = get_icon_pixbuf(
                     &item.item.kind,
-                    &self.colors.sel_fg.unwrap_or(hl_defs.default_fg));
+                    &self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
+                );
                 item.kind.set_from_pixbuf(&buf);
 
                 // If we went from no selection to state where the last item
@@ -401,7 +407,10 @@ impl Popupmenu {
                     adj.set_value(adj.get_upper());
                 }
 
-                self.info_label.set_text(&format!("{}\n{}", item.item.menu, item.item.info));
+                self.info_label.set_text(&format!(
+                    "{}\n{}",
+                    item.item.menu, item.item.info
+                ));
             }
         } else {
             self.list.unselect_all();
@@ -585,7 +594,13 @@ fn create_completionitem_widget(
 
     add_css_provider!(css_provider, grid, kind, word, info, row, menu);
 
-    CompletionItemWidgetWrap { item, info, row, kind, menu }
+    CompletionItemWidgetWrap {
+        item,
+        info,
+        row,
+        kind,
+        menu,
+    }
 }
 
 /// Returns first line of `info`.
@@ -597,23 +612,21 @@ fn shorten_info(info: &String) -> String {
 
 fn get_icon_pixbuf(kind: &str, color: &Color) -> gdk_pixbuf::Pixbuf {
     let contents = get_icon_name_for_kind(kind, &color);
-    let stream = gio::MemoryInputStream::new_from_bytes(
-        &glib::Bytes::from(contents.as_bytes()),
-    );
-    let buf = gdk_pixbuf::Pixbuf::new_from_stream(
-        &stream,
-        None,
-    ).unwrap();
+    let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
+        contents.as_bytes(),
+    ));
+    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
 
     buf
 }
 
 fn get_icon_name_for_kind(kind: &str, color: &Color) -> String {
-
     let color = color.to_hex();
 
     match kind {
-        "method" | "function" | "constructor" => icon!("../../assets/icons/box.svg", color),
+        "method" | "function" | "constructor" => {
+            icon!("../../assets/icons/box.svg", color)
+        }
         "field" => icon!("../../assets/icons/chevrons-right.svg", color),
         "event" => icon!("../../assets/icons/zap.svg", color),
         "operator" => icon!("../../assets/icons/sliders.svg", color),

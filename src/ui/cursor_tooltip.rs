@@ -20,8 +20,10 @@ use syntect::parsing::SyntaxSet;
 
 use thread_guard::ThreadGuard;
 use ui::color::Color;
+use ui::common::{
+    get_preferred_horizontal_position, get_preferred_vertical_position,
+};
 use ui::font::{Font, FontUnit};
-use ui::common::{get_preferred_vertical_position, get_preferred_horizontal_position};
 
 lazy_static! {
     /// Our custom ammonia builder to clean untrusted HTML.

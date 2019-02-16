@@ -33,7 +33,7 @@ impl Font {
         let name = parts.next().ok_or(())?;
 
         if name.len() == 0 {
-            return Err(())
+            return Err(());
         }
 
         let mut font = Font {
