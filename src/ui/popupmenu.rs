@@ -29,7 +29,7 @@ macro_rules! icon {
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
 /// Fixed width of completion menu.
-const FIXED_WIDTH: i32 = 800;
+const FIXED_WIDTH: i32 = 430;
 
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.
@@ -381,11 +381,19 @@ impl Popupmenu {
             item.row.destroy();
         }
 
+        let word_width = items
+            .iter()
+            .map(|i| i.word.chars().count())
+            .max()
+            .unwrap_or(25)
+            .min(25) as i32;
+
         for item in items.into_iter() {
             let wrap = create_completionitem_widget(
                 item,
                 &self.css_provider,
                 &self.colors.fg.unwrap_or(hl_defs.default_fg),
+                word_width,
             );
 
             self.list.add(&wrap.row);
@@ -417,7 +425,7 @@ impl Popupmenu {
 
         if state.selected >= 0 {
             if let Some(item) = state.items.get(state.selected as usize) {
-                if item.item.menu.len() > 0 {
+                if item.item.info.len() > 0 {
                     item.info.set_visible(true);
                 }
                 self.list.select_row(&item.row);
@@ -576,6 +584,7 @@ fn create_completionitem_widget(
     item: CompletionItem,
     css_provider: &gtk::CssProvider,
     fg: &Color,
+    word_width: i32,
 ) -> CompletionItemWidgetWrap {
     let grid = gtk::Grid::new();
     grid.set_column_spacing(10);
@@ -588,15 +597,24 @@ fn create_completionitem_widget(
     kind.set_margin_end(5);
     grid.attach(&kind, 0, 0, 1, 1);
 
+    let menu = gtk::Label::new(item.menu.as_str());
+    menu.set_halign(gtk::Align::End);
+    menu.set_hexpand(true);
+    menu.set_margin_start(5);
+    menu.set_margin_end(5);
+    menu.set_ellipsize(pango::EllipsizeMode::End);
+    grid.attach(&menu, 2, 0, 1, 1);
+
     let word = gtk::Label::new(item.word.as_str());
-    word.set_halign(gtk::Align::Start);
     word.set_ellipsize(pango::EllipsizeMode::End);
+    word.set_width_chars(word_width);
+    // Need to use xalign instead of halign becaue of set_width_chars.
+    word.set_xalign(0.0);
     grid.attach(&word, 1, 0, 1, 1);
 
-    let info = gtk::Label::new(item.menu.as_str());
+    let info = gtk::Label::new(shorten_info(&item.info).as_str());
     info.set_halign(gtk::Align::Start);
     info.set_ellipsize(pango::EllipsizeMode::End);
-    <gtk::Widget as WidgetExt>::set_name(&info.clone().upcast(), "gnvim-info");
 
     // On initially shown, set the info label hidden. We'll show it when
     // the row it belongs to is selected (otherwise its always hidden).
