@@ -148,7 +148,8 @@ impl Popupmenu {
         let box_ = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
-        box_.set_size_request(-1, MAX_HEIGHT);
+        box_.set_size_request(WIDTH_NO_DETAILS, MAX_HEIGHT);
+        box_.set_homogeneous(true);
 
         add_css_provider!(
             &css_provider,
@@ -297,7 +298,7 @@ impl Popupmenu {
         // should go to the girds.
         layout.hide();
 
-        let pmenu = Popupmenu {
+        Popupmenu {
             box_,
             layout,
             css_provider,
@@ -312,20 +313,6 @@ impl Popupmenu {
             line_space: 0,
 
             width: WIDTH_NO_DETAILS,
-        };
-
-        pmenu.ensure_size();
-
-        pmenu
-    }
-
-    fn ensure_size(&self) {
-        self.scrolled_info.set_size_request(330, -1);
-
-        if self.info_shown {
-            self.scrolled_list.set_size_request(330, -1);
-        } else {
-            self.scrolled_list.set_size_request(430, -1);
         }
     }
 
@@ -360,7 +347,6 @@ impl Popupmenu {
         };
 
         self.box_.set_size_request(self.width, MAX_HEIGHT);
-        self.ensure_size();
     }
 
     /// Hides the popupmenu.
