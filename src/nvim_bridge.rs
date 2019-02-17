@@ -330,6 +330,10 @@ pub enum GnvimEvent {
     CursorTooltipShow(String, u64, u64),
     CursorTooltipHide,
     CursorTooltipSetStyle(String),
+
+    PopupmenuWidth(u64),
+    PopupmenuWidthDetails(u64),
+
     Unknown(String),
 }
 
@@ -861,7 +865,17 @@ fn parse_gnvim_event(args: Vec<Value>) -> Result<GnvimEvent, String> {
             );
             GnvimEvent::CursorTooltipSetStyle(style.to_string())
         }
-        _ => GnvimEvent::Unknown(String::from("Unknown event")),
+        "PopupmenuSetWidth" => {
+            let w =
+                try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");
+            GnvimEvent::PopupmenuWidth(w)
+        }
+        "PopupmenuSetWidthDetails" => {
+            let w =
+                try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");
+            GnvimEvent::PopupmenuWidthDetails(w)
+        }
+        _ => GnvimEvent::Unknown(String::from(cmd)),
     };
 
     Ok(res)

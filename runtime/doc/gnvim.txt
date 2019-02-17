@@ -27,15 +27,19 @@ open an issue to the gnvim's github repo. Color themes can be loaded with
 For integration with lsp, see: https://github.com/vhakulinen/gnvim-lsp/
 
 ================================================================================
-Popup menu                                               *gnvim-popupmenu*
-                                                        *gnvim-complete*
+Popupmenu                                                *gnvim-popupmenu*
+                                                         *gnvim-complete*
 
 Gnvim utilizes neovim's ext_popupmenu to render the omni completion menu.
-The popupmenu that gnvim has can display `preview` contents (`into` entry
-in the completion item) in its entirety in the popupmenu itself. This is
-commonly found in other editors too. To open this view, while the completion
-is done, call |gnvim#completion_menu_toggle_info|. By default, this is bind
-to <C-s>.
+
+The popupmenu that gnvim has is inspired by vscode and thus has similar
+`details` view. Basically, when this `details` view is enabled, gnvim will
+split the completion menu in half, and display documentation on the right side.
+To enabled this split, call |gnvim#popupmenu#toggle_details|. By default,
+this is bind to <C-s>.
+
+Popupmenu's width can be adjusted with |gnvim#popupmenu#set_width| and with
+|gnvim#popupmenu#set_width_details
 
 ================================================================================
 Commands                                                       *gnvim-commands*
@@ -71,8 +75,20 @@ gnvim#cursor_tooltip#hide                           *gnvim#cursor_tooltip#hide*
 
     Hides the cursor tooltip.
 
-gnvim#completion_menu_toggle_info           *gnvim#completion_menu_toggle_info*
+gnvim#popupmenu#toggle_details                 *gnvim#popupmenu#toggle_details*
 
-    While in completion mode, opens the preview.
+    While in completion mode, opens the details view.
+
+gnvim#popupmenu#set_width                           *gnvim#popupmenu#set_width*
+
+    Set the width of the popupmenu, when the details view is not open. Takes
+    one parameter `width`, which is width in pixels.
+
+gnvim#popupmenu#set_width_details           *gnvim#popupmenu#set_width_details*
+
+    Set the width of the popupmenu, when the details view is open. Takes one
+    parameter `width`, which is width in pixels.
+
+
 
  vim:tw=78:ts=8:ft=help:norl:

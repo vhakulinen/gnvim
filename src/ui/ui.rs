@@ -471,6 +471,12 @@ fn handle_gnvim_event(
         GnvimEvent::CursorTooltipSetStyle(style) => {
             state.cursor_tooltip.set_style(style)
         }
+        GnvimEvent::PopupmenuWidth(width) => {
+            state.popupmenu.set_width(*width as i32);
+        }
+        GnvimEvent::PopupmenuWidthDetails(width) => {
+            state.popupmenu.set_width_details(*width as i32);
+        }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }

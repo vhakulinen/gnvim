@@ -28,8 +28,8 @@ macro_rules! icon {
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
 /// Fixed width of completion menu.
-const WIDTH_NO_DETAILS: i32 = 430;
-const WIDTH_WITH_DETAILS: i32 = 660;
+const DEFAULT_WIDTH_NO_DETAILS: i32 = 430;
+const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
 
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.
@@ -56,7 +56,10 @@ struct State {
     /// Our anchor position where the popupmenu should be "pointing" to.
     anchor: gdk::Rectangle,
 
-    width: i32,
+    current_width: i32,
+
+    width_no_details: i32,
+    width_with_details: i32,
 }
 
 impl Default for State {
@@ -72,7 +75,9 @@ impl Default for State {
                 height: 0,
             },
 
-            width: WIDTH_NO_DETAILS,
+            current_width: DEFAULT_WIDTH_NO_DETAILS,
+            width_no_details: DEFAULT_WIDTH_NO_DETAILS,
+            width_with_details: DEFAULT_WIDTH_WITH_DETAILS,
         }
     }
 }
@@ -150,7 +155,7 @@ impl Popupmenu {
         let box_ = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         box_.pack_start(&scrolled_list, true, true, 0);
         box_.pack_start(&scrolled_info, true, true, 0);
-        box_.set_size_request(WIDTH_NO_DETAILS, MAX_HEIGHT);
+        box_.set_size_request(DEFAULT_WIDTH_NO_DETAILS, MAX_HEIGHT);
         box_.set_homogeneous(true);
 
         add_css_provider!(
@@ -228,8 +233,11 @@ impl Popupmenu {
             if let Some(area) = state.available_size {
                 let pos = state.anchor;
 
-                let (x, width) =
-                    get_preferred_horizontal_position(&area, &pos, state.width);
+                let (x, width) = get_preferred_horizontal_position(
+                    &area,
+                    &pos,
+                    state.current_width,
+                );
                 let (y, height) = get_preferred_vertical_position(
                     &area,
                     &pos,
@@ -290,45 +298,69 @@ impl Popupmenu {
     }
 
     pub fn toggle_show_info(&mut self) {
-        let mut state = self.state.borrow_mut();
+        {
+            let state = self.state.borrow();
 
-        if state.selected == -1 {
-            return;
-        }
-
-        self.info_shown = !self.info_shown;
-
-        if let Some(item) = state.items.get(state.selected as usize) {
-            item.info.set_visible(!self.info_shown);
-            item.menu.set_visible(!self.info_shown);
-
-            if item.item.info.len() == 0 {
-                item.info.set_visible(false);
+            if state.selected == -1 {
+                return;
             }
 
-            self.info_label.set_visible(
-                self.info_shown
-                    && item.item.menu.len() + item.item.info.len() > 0,
-            );
+            self.info_shown = !self.info_shown;
+
+            if let Some(item) = state.items.get(state.selected as usize) {
+                item.info.set_visible(!self.info_shown);
+                item.menu.set_visible(!self.info_shown);
+
+                if item.item.info.len() == 0 {
+                    item.info.set_visible(false);
+                }
+
+                self.info_label.set_visible(
+                    self.info_shown
+                        && item.item.menu.len() + item.item.info.len() > 0,
+                );
+            }
+
+            if !self.info_shown {
+                let adj = self.scrolled_info.get_vadjustment().unwrap();
+                adj.set_value(0.0);
+                // TODO(ville): There is a bug in GTK+ and some adjustment animations,
+                //              where the adjustment's value is set back to upper - page-size
+                //              if the user has "overshot" the scrolling. Work around this.
+            }
+
+            self.scrolled_info.set_visible(self.info_shown);
         }
 
-        if !self.info_shown {
-            let adj = self.scrolled_info.get_vadjustment().unwrap();
-            adj.set_value(0.0);
-            // TODO(ville): There is a bug in GTK+ and some adjustment animations,
-            //              where the adjustment's value is set back to upper - page-size
-            //              if the user has "overshot" the scrolling. Work around this.
-        }
+        self.ensure_container_width();
+    }
 
-        self.scrolled_info.set_visible(self.info_shown);
+    fn ensure_container_width(&mut self) {
+        let mut state = self.state.borrow_mut();
 
-        state.width = if self.info_shown {
-            WIDTH_WITH_DETAILS
+        state.current_width = if self.info_shown {
+            state.width_with_details
         } else {
-            WIDTH_NO_DETAILS
+            state.width_no_details
         };
 
-        self.box_.set_size_request(state.width, MAX_HEIGHT);
+        self.box_.set_size_request(state.current_width, MAX_HEIGHT);
+    }
+
+    pub fn set_width(&mut self, w: i32) {
+        {
+            let mut state = self.state.borrow_mut();
+            state.width_no_details = w;
+        }
+        self.ensure_container_width();
+    }
+
+    pub fn set_width_details(&mut self, w: i32) {
+        {
+            let mut state = self.state.borrow_mut();
+            state.width_with_details = w;
+        }
+        self.ensure_container_width();
     }
 
     /// Hides the popupmenu.

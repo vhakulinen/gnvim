@@ -39,15 +39,10 @@ function! gnvim#set_gui_colors()
     call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'SetGuiColors', colors)
 endfunction
 
-function! gnvim#completion_menu_toggle_info()
-    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CompletionMenuToggleInfo')
-    return ''
-endfunction
-
 augroup GnvimColors
     autocmd!
     autocmd ColorScheme * call gnvim#set_gui_colors()
     autocmd VimEnter * call gnvim#set_gui_colors()
 augroup END
 
-inoremap <expr> <C-s> gnvim#completion_menu_toggle_info()
+inoremap <expr> <C-s> gnvim#popupmenu#toggle_details()
