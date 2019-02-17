@@ -413,9 +413,15 @@ impl Popupmenu {
                     adj.set_value(adj.get_upper());
                 }
 
+                let newline = if item.item.menu.len() > 0 && item.item.info.len() > 0 {
+                    "\n"
+                } else {
+                    ""
+                };
+
                 self.info_label.set_text(&format!(
-                    "{}\n{}",
-                    item.item.menu, item.item.info
+                    "{}{}{}",
+                    item.item.menu, newline, item.item.info
                 ));
             }
         } else {
