@@ -158,7 +158,13 @@ impl Popupmenu {
             scrolled_info,
             list,
             scrolled_list,
-            box_
+            box_,
+
+            // In gtk 3.18, the list box it self can't have borders,
+            // so we'll have to add the border to its parent (which is the
+            // viewport that scorlled window adds). This aint perfect,
+            // but I didn't any find better solutions.
+            scrolled_list.get_child().unwrap()
         );
 
         let state = Arc::new(ThreadGuard::new(State::default()));
@@ -500,14 +506,14 @@ impl Popupmenu {
         let css = format!(
             "{font_wild}
 
-            GtkBox, GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
+            GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
                 color: #{normal_fg};
                 background-color: #{normal_bg};
                 outline: none;
             }}
 
-            #info-label {{
-                padding: 10px;
+            #info-label, GtkViewport {{
+                border: 1px solid #{normal_fg};
             }}
 
             GtkListBoxRow {{
@@ -520,10 +526,6 @@ impl Popupmenu {
             GtkListBoxRow:selected > GtkGrid > GtkLabel {{
                 color: #{selected_fg};
                 background-color: #{selected_bg};
-            }}
-
-            GtkBox {{
-                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
