@@ -512,6 +512,10 @@ impl Popupmenu {
                 outline: none;
             }}
 
+            GtkViewport {{
+                border-radius: 0px;
+            }}
+
             #info-label, GtkViewport {{
                 border: 1px solid #{normal_fg};
             }}
