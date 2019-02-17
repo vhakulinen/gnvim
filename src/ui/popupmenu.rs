@@ -124,6 +124,7 @@ impl Popupmenu {
         info_label.set_valign(gtk::Align::Start);
         info_label.set_xalign(0.0);
         info_label.set_line_wrap(true);
+        info_label.set_line_wrap_mode(pango::WrapMode::WordChar);
         gtk::WidgetExt::set_name(&info_label, "info-label");
 
         // Because we're setting valign and halign to the info label, we'll
