@@ -35,8 +35,9 @@ Gnvim utilizes neovim's ext_popupmenu to render the omni completion menu.
 The popupmenu that gnvim has is inspired by vscode and thus has similar
 `details` view. Basically, when this `details` view is enabled, gnvim will
 split the completion menu in half, and display documentation on the right side.
-To enabled this split, call |gnvim#popupmenu#toggle_details|. By default,
-this is bind to <C-s>.
+Some of this documentation is displayed when the `details` view is not
+enabled (all that there is room for).  To enabled this split, call
+|gnvim#popupmenu#toggle_details|. By default, this is bind to <C-s>.
 
 Popupmenu's width can be adjusted with |gnvim#popupmenu#set_width| and with
 |gnvim#popupmenu#set_width_details
