@@ -160,7 +160,6 @@ impl Popupmenu {
             list,
             scrolled_list,
             box_,
-
             // In gtk 3.18, the list box it self can't have borders,
             // so we'll have to add the border to its parent (which is the
             // viewport that scorlled window adds). This aint perfect,
@@ -306,6 +305,11 @@ impl Popupmenu {
             if item.item.info.len() == 0 {
                 item.info.set_visible(false);
             }
+
+            self.info_label.set_visible(
+                self.info_shown
+                    && item.item.menu.len() + item.item.info.len() > 0,
+            );
         }
 
         if !self.info_shown {
@@ -414,20 +418,27 @@ impl Popupmenu {
                     adj.set_value(adj.get_upper());
                 }
 
-                let newline = if item.item.menu.len() > 0 && item.item.info.len() > 0 {
-                    "\n"
-                } else {
-                    ""
-                };
+                let newline =
+                    if item.item.menu.len() > 0 && item.item.info.len() > 0 {
+                        "\n"
+                    } else {
+                        ""
+                    };
 
                 self.info_label.set_text(&format!(
                     "{}{}{}",
                     item.item.menu, newline, item.item.info
                 ));
+
+                let has_info_content =
+                    item.item.menu.len() + item.item.info.len() > 0;
+                self.info_label
+                    .set_visible(self.info_shown && has_info_content);
             }
         } else {
             self.list.unselect_all();
             self.info_label.set_text("");
+            self.info_label.hide();
 
             // If selecteion is removed, move the srolled window to the top.
             let adj = self.scrolled_list.get_vadjustment().unwrap();
