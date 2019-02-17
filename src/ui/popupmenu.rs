@@ -612,6 +612,7 @@ fn create_completionitem_widget(
 
     let buf = get_icon_pixbuf(&item.kind.as_str(), &fg);
     let kind = gtk::Image::new_from_pixbuf(&buf);
+    kind.set_tooltip_text(format!("kind: '{}'", item.kind).as_str());
 
     kind.set_halign(gtk::Align::Start);
     kind.set_margin_start(5);
