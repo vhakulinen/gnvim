@@ -1,9 +1,25 @@
 # GNvim - Rich Neovim GUI without any web bloat
 
-Gnvim is still in active development! That said, I've used it daily for the
-past 6 months, both at work and for developing gnvim.
+GNvim, neovim GUI aiming for rich code editing experience without any
+unnecessary web bloat.
+
+GNvim has been quite stable for the past 6+ months and it has been my daily
+driver since last August, but ymmv). I try to add new features as I find time
+and any help is welcome.
 
 [Find some screenshots here](https://github.com/vhakulinen/gnvim/wiki)
+
+TL;DR to get started on Ubuntu 18.04 after cloning this repo and assuming
+you have [rust tool chain](https://rustup.rs/) installed:
+
+```
+$ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
+$ # Run (unoptimized version) without installing
+$ GNVIM_RUNTIME_PATH=./runtime cargo run
+$ # Install
+$ make
+$ sudo make install
+```
 
 ## Features
 
@@ -29,6 +45,16 @@ GNvim requires
 * Latest nvim master (gnvim 0.1.0 works with nvim 0.3.4)
 * Gtk version 3.18 or higher
 
+On some systems, Gtk packages doesn't include development files. On Ubuntu
+18.04, you'll need the following ones:
+
+```
+$ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
+```
+
+For other systems, see requirements listed by gtk-rs project [here](https://gtk-rs.org/docs-src/requirements.html).
+Note that you'll need the `libwebkit2gtk-4.0-dev` package too.
+
 There are some benchmarks for internal data structures, but to run those you'll
 need nightly rust. To run those benchmarks, use `cargo bench --features=unstable`
 command.
@@ -39,6 +65,12 @@ You're required to have rust tool chain available. Once you have that, clone
 this repo and run `make build` followed by `sudo make install`.
 
 # Running
+
+TL;DR: Without installing:
+
+```
+GNVIM_RUNTIME_PATH=./runtime cargo run
+```
 
 GNvim requires some runtime files to be present and loaded by nvim to work
 properly. By default, gnvim will look this files from `/usr/local/share/gnvim/runtime`,
