@@ -1,8 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use gdk;
-use gio;
-use glib;
 use gtk;
 use gtk::prelude::*;
 use neovim_lib::neovim::Neovim;
@@ -11,19 +9,15 @@ use pango;
 
 use nvim_bridge::{CompletionItem, PmenuColors};
 use thread_guard::ThreadGuard;
-use ui::color::Color;
 use ui::common::calc_line_space;
 use ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
-
-macro_rules! icon {
-    ($file:expr, $color:expr) => {
-        format!(include_str!($file), $color,)
-    };
-}
+use ui::popupmenu::CompletionItemWidgetWrap;
+use ui::popupmenu::get_icon_pixbuf;
+use ui::popupmenu::LazyLoader;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -31,26 +25,10 @@ const MAX_HEIGHT: i32 = 500;
 const DEFAULT_WIDTH_NO_DETAILS: i32 = 430;
 const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
 
-/// Wraps completion item into a structure which contains the item and some
-/// of the widgets to display it.
-struct CompletionItemWidgetWrap {
-    /// Actual completion item.
-    item: CompletionItem,
-    /// Label displaying `info` for this item in the list.
-    info: gtk::Label,
-    /// Label displaying `menu` for this item in the list.
-    menu: gtk::Label,
-    /// Image of the item in the row.
-    kind: gtk::Image,
-    /// Root container.
-    row: gtk::ListBoxRow,
-}
-
 struct State {
-    /// Currently selected item.
-    selected: i32,
-    /// All items in current popupmenu.
-    items: Vec<CompletionItemWidgetWrap>,
+
+    items: LazyLoader,
+
     /// Size available for the popupmenu to use (width and height).
     available_size: Option<gdk::Rectangle>,
     /// Our anchor position where the popupmenu should be "pointing" to.
@@ -62,11 +40,10 @@ struct State {
     width_with_details: i32,
 }
 
-impl Default for State {
-    fn default() -> Self {
+impl State {
+    fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
         State {
-            selected: -1,
-            items: vec![],
+            items: LazyLoader::new(list, css_provider),
             available_size: None,
             anchor: gdk::Rectangle {
                 x: 0,
@@ -172,7 +149,7 @@ impl Popupmenu {
             scrolled_list.get_child().unwrap()
         );
 
-        let state = Arc::new(ThreadGuard::new(State::default()));
+        let state = Arc::new(ThreadGuard::new(State::new(list.clone(), css_provider.clone())));
 
         let state_ref = state.clone();
         let nvim_ref = nvim.clone();
@@ -182,14 +159,16 @@ impl Popupmenu {
             let state = state_ref.borrow_mut();
             let new = row.get_index();
 
-            let op = if new > state.selected {
+            let selected = state.items.get_selected();
+
+            let op = if new > selected {
                 "<C-n>"
             } else {
                 "<C-p>"
             };
 
             let mut payload = String::new();
-            for _ in 0..(new - state.selected).abs() {
+            for _ in 0..(new - selected).abs() {
                 payload.push_str(op)
             }
 
@@ -301,25 +280,23 @@ impl Popupmenu {
         {
             let state = self.state.borrow();
 
-            if state.selected == -1 {
-                return;
-            }
-
             self.info_shown = !self.info_shown;
 
-            if let Some(item) = state.items.get(state.selected as usize) {
-                item.info.set_visible(!self.info_shown);
-                item.menu.set_visible(!self.info_shown);
+            let info_shown = self.info_shown;
+            let info_label = self.info_label.clone();
+            state.items.with_selected_item(|item| if let Some(item) = item {
+
+                item.info.set_visible(!info_shown);
+                item.menu.set_visible(!info_shown);
 
                 if item.item.info.len() == 0 {
                     item.info.set_visible(false);
                 }
 
-                self.info_label.set_visible(
-                    self.info_shown
-                        && item.item.menu.len() + item.item.info.len() > 0,
+                info_label.set_visible(
+                    info_shown && item.item.menu.len() + item.item.info.len() > 0,
                 );
-            }
+            });
 
             if !self.info_shown {
                 let adj = self.scrolled_info.get_vadjustment().unwrap();
@@ -383,91 +360,34 @@ impl Popupmenu {
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
         let mut state = self.state.borrow_mut();
-        state.selected = -1;
+        state.items.set_items(
+            items,
+            self.colors.fg.unwrap_or(hl_defs.default_fg),
+        );
 
-        while let Some(item) = state.items.pop() {
-            item.row.destroy();
-        }
-
-        for item in items.into_iter() {
-            let wrap = create_completionitem_widget(
-                item,
-                &self.css_provider,
-                &self.colors.fg.unwrap_or(hl_defs.default_fg),
-            );
-
-            self.list.add(&wrap.row);
-            state.items.push(wrap);
-        }
         self.list.show_all();
     }
 
     pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
         let mut state = self.state.borrow_mut();
 
-        if state.selected >= 0 {
-            if let Some(item) = state.items.get(state.selected as usize) {
-                item.info.set_visible(false);
-                item.menu.set_visible(false);
+        state.items.with_selected_item(|item| if let Some(item) = item {
+            item.info.set_visible(false);
+            item.menu.set_visible(false);
 
-                // Update the `kind` icon with defualt fg color.
-                let buf = get_icon_pixbuf(
-                    &item.item.kind,
-                    &self.colors.fg.unwrap_or(hl_defs.default_fg),
-                );
-                item.kind.set_from_pixbuf(&buf);
-            }
-        }
+            // Update the `kind` icon with defualt fg color.
+            let buf = get_icon_pixbuf(
+                &item.item.kind,
+                &self.colors.fg.unwrap_or(hl_defs.default_fg),
+            );
+            item.kind.set_from_pixbuf(&buf);
+        });
 
-        let prev = state.selected;
-        state.selected = item_num;
+        let prev = state.items.get_selected();
+        state.items.select(item_num);
+        let selected = state.items.get_selected();
 
-        if state.selected >= 0 {
-            if let Some(item) = state.items.get(state.selected as usize) {
-                item.info.set_visible(!self.info_shown);
-                item.menu.set_visible(!self.info_shown);
-
-                if item.item.info.len() == 0 {
-                    item.info.set_visible(false);
-                }
-
-                self.list.select_row(&item.row);
-                item.row.grab_focus();
-
-                // Update the `kind` icon with "selected" fg color.
-                let buf = get_icon_pixbuf(
-                    &item.item.kind,
-                    &self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
-                );
-                item.kind.set_from_pixbuf(&buf);
-
-                // If we went from no selection to state where the last item
-                // is selected, we'll have to do some extra work to make sure
-                // that the whole item is visible.
-                let max = state.items.len() as i32 - 1;
-                let adj = self.scrolled_list.get_vadjustment().unwrap();
-                if prev == -1 && state.selected == max {
-                    adj.set_value(adj.get_upper());
-                }
-
-                let newline =
-                    if item.item.menu.len() > 0 && item.item.info.len() > 0 {
-                        "\n"
-                    } else {
-                        ""
-                    };
-
-                self.info_label.set_text(&format!(
-                    "{}{}{}",
-                    item.item.menu, newline, item.item.info
-                ));
-
-                let has_info_content =
-                    item.item.menu.len() + item.item.info.len() > 0;
-                self.info_label
-                    .set_visible(self.info_shown && has_info_content);
-            }
-        } else {
+        if selected < 0 {
             self.list.unselect_all();
             self.info_label.set_text("");
             self.info_label.hide();
@@ -478,12 +398,62 @@ impl Popupmenu {
                 adj.set_value(0.0);
                 Continue(false)
             });
+
+            return;
         }
+
+        state.items.with_selected_item(|item| if let Some(item) = item {
+            item.info.set_visible(!self.info_shown);
+            item.menu.set_visible(!self.info_shown);
+
+            if item.item.info.len() == 0 {
+                item.info.set_visible(false);
+            }
+
+            // Update the `kind` icon with "selected" fg color.
+            let buf = get_icon_pixbuf(
+                &item.item.kind,
+                &self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
+            );
+            item.kind.set_from_pixbuf(&buf);
+
+            // If we went from no selection to state where the last item
+            // is selected, we'll have to do some extra work to make sure
+            // that the whole item is visible.
+            let max = state.items.len() as i32 - 1;
+            let adj = self.scrolled_list.get_vadjustment().unwrap();
+            if prev == -1 && selected == max {
+                adj.set_value(adj.get_upper());
+            }
+
+            let newline =
+                if item.item.menu.len() > 0 && item.item.info.len() > 0 {
+                    "\n"
+                } else {
+                    ""
+                };
+
+            self.info_label.set_text(&format!(
+                "{}{}{}",
+                item.item.menu, newline, item.item.info
+            ));
+
+            let has_info_content =
+                item.item.menu.len() + item.item.info.len() > 0;
+            self.info_label
+                .set_visible(self.info_shown && has_info_content);
+        });
     }
 
     pub fn set_colors(&mut self, colors: PmenuColors, hl_defs: &HlDefs) {
         self.colors = colors;
         self.set_styles(hl_defs);
+
+        //let mut state = self.state.borrow_mut();
+        //state.items.set_icon_colors(
+            //self.colors.fg.unwrap_or(hl_defs.default_fg),
+            //self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
+        //);
     }
 
     pub fn set_line_space(&mut self, space: i64, hl_defs: &HlDefs) {
@@ -599,113 +569,5 @@ impl Popupmenu {
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
         self.set_styles(hl_defs);
-    }
-}
-
-fn create_completionitem_widget(
-    item: CompletionItem,
-    css_provider: &gtk::CssProvider,
-    fg: &Color,
-) -> CompletionItemWidgetWrap {
-    let grid = gtk::Grid::new();
-    grid.set_column_spacing(10);
-
-    let buf = get_icon_pixbuf(&item.kind.as_str(), &fg);
-    let kind = gtk::Image::new_from_pixbuf(&buf);
-    kind.set_tooltip_text(format!("kind: '{}'", item.kind).as_str());
-
-    kind.set_halign(gtk::Align::Start);
-    kind.set_margin_start(5);
-    kind.set_margin_end(5);
-    grid.attach(&kind, 0, 0, 1, 1);
-
-    let menu = gtk::Label::new(item.menu.as_str());
-    menu.set_halign(gtk::Align::End);
-    menu.set_hexpand(true);
-    menu.set_margin_start(5);
-    menu.set_margin_end(5);
-    menu.set_ellipsize(pango::EllipsizeMode::End);
-    grid.attach(&menu, 2, 0, 1, 1);
-
-    let word = gtk::Label::new(item.word.as_str());
-    word.set_ellipsize(pango::EllipsizeMode::End);
-    grid.attach(&word, 1, 0, 1, 1);
-
-    let info = gtk::Label::new(shorten_info(&item.info).as_str());
-    info.set_halign(gtk::Align::Start);
-    info.set_ellipsize(pango::EllipsizeMode::End);
-
-    info.connect_realize(|info| {
-        info.hide();
-    });
-    menu.connect_realize(|menu| {
-        menu.hide();
-    });
-
-    grid.attach(&info, 1, 1, 2, 1);
-
-    // NOTE(ville): We only need to explicitly create this row widget
-    //              so we can set css provider to it.
-    let row = gtk::ListBoxRow::new();
-    row.add(&grid);
-
-    add_css_provider!(css_provider, grid, kind, word, info, row, menu);
-
-    CompletionItemWidgetWrap {
-        item,
-        info,
-        row,
-        kind,
-        menu,
-    }
-}
-
-/// Returns first line of `info`.
-fn shorten_info(info: &String) -> String {
-    let lines = info.split("\n").collect::<Vec<&str>>();
-    let first_line = lines.get(0).unwrap();
-    first_line.to_string()
-}
-
-fn get_icon_pixbuf(kind: &str, color: &Color) -> gdk_pixbuf::Pixbuf {
-    let contents = get_icon_name_for_kind(kind, &color);
-    let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
-        contents.as_bytes(),
-    ));
-    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
-
-    buf
-}
-
-fn get_icon_name_for_kind(kind: &str, color: &Color) -> String {
-    let color = color.to_hex();
-
-    match kind {
-        "method" | "function" | "constructor" => {
-            icon!("../../assets/icons/box.svg", color)
-        }
-        "field" => icon!("../../assets/icons/chevrons-right.svg", color),
-        "event" => icon!("../../assets/icons/zap.svg", color),
-        "operator" => icon!("../../assets/icons/sliders.svg", color),
-        "variable" => icon!("../../assets/icons/disc.svg", color),
-        "class" => icon!("../../assets/icons/share-2.svg", color),
-        "interface" => icon!("../../assets/icons/book-open.svg", color),
-        "struct" => icon!("../../assets/icons/align-left.svg", color),
-        "type parameter" => icon!("../../assets/icons/type.svg", color),
-        "module" => icon!("../../assets/icons/code.svg", color),
-        "property" => icon!("../../assets/icons/key.svg", color),
-        "unit" => icon!("../../assets/icons/compass.svg", color),
-        "constant" => icon!("../../assets/icons/shield.svg", color),
-        "value" | "enum" => icon!("../../assets/icons/database.svg", color),
-        "enum member" => icon!("../../assets/icons/tag.svg", color),
-        "keyword" => icon!("../../assets/icons/link-2.svg", color),
-        "text" => icon!("../../assets/icons/at-sign.svg", color),
-        "color" => icon!("../../assets/icons/aperture.svg", color),
-        "file" => icon!("../../assets/icons/file.svg", color),
-        "reference" => icon!("../../assets/icons/link.svg", color),
-        "snippet" => icon!("../../assets/icons/file-text.svg", color),
-        "folder" => icon!("../../assets/icons/folder.svg", color),
-
-        _ => icon!("../../assets/icons/help-circle.svg", color),
     }
 }
