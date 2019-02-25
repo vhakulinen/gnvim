@@ -286,7 +286,7 @@ impl Popupmenu {
             let selected = state.selected as usize;
             let info_shown = self.info_shown;
             let info_label = self.info_label.clone();
-            self.items.once_loaded(move |items| if let Some(item) = items.get(selected) {
+            self.items.once_loaded(Some(state.selected), move |items| if let Some(item) = items.get(selected) {
 
                 item.info.set_visible(!info_shown);
                 item.menu.set_visible(!info_shown);
@@ -378,14 +378,14 @@ impl Popupmenu {
         let info_label = self.info_label.clone();
         let info_shown = self.info_shown;
 
-        self.items.once_loaded(move |items| {
+        self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
 
             if let Some(prev) = items.get(state.selected as usize) {
                 prev.info.set_visible(false);
                 prev.menu.set_visible(false);
 
-                // Update the `kind` icon with defualt fg color.
+                // Update the `kind` icon with default fg color.
                 let buf = get_icon_pixbuf(
                     &prev.item.kind,
                     &fg,
@@ -393,7 +393,6 @@ impl Popupmenu {
                 prev.kind.set_from_pixbuf(&buf);
             }
 
-            let prev = state.selected;
             state.selected = item_num;
 
             if item_num < 0 {
@@ -401,7 +400,7 @@ impl Popupmenu {
                 info_label.set_text("");
                 info_label.hide();
 
-                // If selecteion is removed, move the srolled window to the top.
+                // If selection is removed, move the scrolled window to the top.
                 let adj = scrolled_list.get_vadjustment().unwrap();
                 gtk::idle_add(move || {
                     adj.set_value(0.0);
@@ -411,6 +410,7 @@ impl Popupmenu {
                 return;
             }
 
+
             if let Some(item) = items.get(state.selected as usize) {
                 item.info.set_visible(!info_shown);
                 item.menu.set_visible(!info_shown);
@@ -419,8 +419,26 @@ impl Popupmenu {
                     item.info.set_visible(false);
                 }
 
-                list.select_row(&item.row);
                 item.row.grab_focus();
+                list.select_row(&item.row);
+
+                {
+                    let mut id = Arc::new(ThreadGuard::new(None));
+                    let id_ref = id.clone();
+                    let list = list.clone();
+                    // Ensure that the row is in the view, but make sure first
+                    // that the row it self has allocated itself. It is possible
+                    // that when we selected the row and grabbed focus for it
+                    // the row it self isn't "ready" to grab focus yet. Hence
+                    // this signal handler here to ensure the row is in view.
+                    let sig_id = item.row.connect_size_allocate(move |row, _| {
+                        ensure_row_visible(&list, &row);
+
+                        let id = id_ref.borrow_mut().take().unwrap();
+                        row.disconnect(id);
+                    });
+                    *id.borrow_mut() = Some(sig_id);
+                }
 
                 // Update the `kind` icon with "selected" fg color.
                 let buf = get_icon_pixbuf(
@@ -428,27 +446,6 @@ impl Popupmenu {
                     &fg_sel,
                     );
                 item.kind.set_from_pixbuf(&buf);
-
-                // If we went from no selection to state where the last item
-                // is selected, we'll have to do some extra work to make sure
-                // that the whole item is visible. We'll also have to postpone
-                // the adjustment value change a bit because it might not have
-                // updated it's upper yet.
-                let max = items.len() as i32 - 1;
-                let adj = scrolled_list.get_vadjustment().unwrap();
-                if prev == -1 && state.selected == max {
-                    let mut id = Arc::new(ThreadGuard::new(None));
-
-                    let id_ref = id.clone();
-                    let t = adj.connect_changed(move |adj| {
-                        adj.set_value(adj.get_upper() - adj.get_page_size());
-                        let id = id_ref.borrow_mut().take().unwrap();
-                        adj.disconnect(id);
-                    });
-
-                    *id.borrow_mut() = Some(t);
-                }
-
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {
                         "\n"
@@ -472,12 +469,6 @@ impl Popupmenu {
     pub fn set_colors(&mut self, colors: PmenuColors, hl_defs: &HlDefs) {
         self.colors = colors;
         self.set_styles(hl_defs);
-
-        //let mut state = self.state.borrow_mut();
-        //state.items.set_icon_colors(
-            //self.colors.fg.unwrap_or(hl_defs.default_fg),
-            //self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
-        //);
     }
 
     pub fn set_line_space(&mut self, space: i64, hl_defs: &HlDefs) {
@@ -593,5 +584,15 @@ impl Popupmenu {
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
         self.set_styles(hl_defs);
+    }
+}
+
+fn ensure_row_visible(list: &gtk::ListBox, row: &gtk::ListBoxRow) {
+    if let Some(adj) = list.get_adjustment() {
+        let alloc = row.get_allocation();
+        let y = alloc.y;
+        let height = alloc.height;
+
+        adj.clamp_page(y.into(), (y + height).into());
     }
 }
