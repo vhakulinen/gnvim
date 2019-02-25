@@ -14,9 +14,9 @@ use ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
 use ui::font::{Font, FontUnit};
-use ui::ui::HlDefs;
 use ui::popupmenu::get_icon_pixbuf;
 use ui::popupmenu::LazyLoader;
+use ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -25,7 +25,6 @@ const DEFAULT_WIDTH_NO_DETAILS: i32 = 430;
 const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
 
 struct State {
-
     selected: i32,
 
     /// Size available for the popupmenu to use (width and height).
@@ -161,11 +160,7 @@ impl Popupmenu {
 
             let selected = state.selected;
 
-            let op = if new > selected {
-                "<C-n>"
-            } else {
-                "<C-p>"
-            };
+            let op = if new > selected { "<C-n>" } else { "<C-p>" };
 
             let mut payload = String::new();
             for _ in 0..(new - selected).abs() {
@@ -286,18 +281,20 @@ impl Popupmenu {
             let selected = state.selected as usize;
             let info_shown = self.info_shown;
             let info_label = self.info_label.clone();
-            self.items.once_loaded(Some(state.selected), move |items| if let Some(item) = items.get(selected) {
+            self.items.once_loaded(Some(state.selected), move |items| {
+                if let Some(item) = items.get(selected) {
+                    item.info.set_visible(!info_shown);
+                    item.menu.set_visible(!info_shown);
 
-                item.info.set_visible(!info_shown);
-                item.menu.set_visible(!info_shown);
+                    if item.item.info.len() == 0 {
+                        item.info.set_visible(false);
+                    }
 
-                if item.item.info.len() == 0 {
-                    item.info.set_visible(false);
+                    info_label.set_visible(
+                        info_shown
+                            && item.item.menu.len() + item.item.info.len() > 0,
+                    );
                 }
-
-                info_label.set_visible(
-                    info_shown && item.item.menu.len() + item.item.info.len() > 0,
-                );
             });
 
             if !self.info_shown {
@@ -361,10 +358,8 @@ impl Popupmenu {
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
-        self.items.set_items(
-            items,
-            self.colors.fg.unwrap_or(hl_defs.default_fg),
-        );
+        self.items
+            .set_items(items, self.colors.fg.unwrap_or(hl_defs.default_fg));
 
         self.list.show_all();
     }
@@ -386,10 +381,7 @@ impl Popupmenu {
                 prev.menu.set_visible(false);
 
                 // Update the `kind` icon with default fg color.
-                let buf = get_icon_pixbuf(
-                    &prev.item.kind,
-                    &fg,
-                    );
+                let buf = get_icon_pixbuf(&prev.item.kind, &fg);
                 prev.kind.set_from_pixbuf(&buf);
             }
 
@@ -409,7 +401,6 @@ impl Popupmenu {
 
                 return;
             }
-
 
             if let Some(item) = items.get(state.selected as usize) {
                 item.info.set_visible(!info_shown);
@@ -431,20 +422,20 @@ impl Popupmenu {
                     // that when we selected the row and grabbed focus for it
                     // the row it self isn't "ready" to grab focus yet. Hence
                     // this signal handler here to ensure the row is in view.
-                    let sig_id = item.row.connect_size_allocate(move |row, _| {
-                        ensure_row_visible(&list, &row);
+                    // NOTE(ville): According to some IRC discussions, this
+                    // hack wont work on GTK4. Prepare yourself!
+                    let sig_id =
+                        item.row.connect_size_allocate(move |row, _| {
+                            ensure_row_visible(&list, &row);
 
-                        let id = id_ref.borrow_mut().take().unwrap();
-                        row.disconnect(id);
-                    });
+                            let id = id_ref.borrow_mut().take().unwrap();
+                            row.disconnect(id);
+                        });
                     *id.borrow_mut() = Some(sig_id);
                 }
 
                 // Update the `kind` icon with "selected" fg color.
-                let buf = get_icon_pixbuf(
-                    &item.item.kind,
-                    &fg_sel,
-                    );
+                let buf = get_icon_pixbuf(&item.item.kind, &fg_sel);
                 item.kind.set_from_pixbuf(&buf);
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {
@@ -454,14 +445,13 @@ impl Popupmenu {
                     };
 
                 info_label.set_text(&format!(
-                        "{}{}{}",
-                        item.item.menu, newline, item.item.info
+                    "{}{}{}",
+                    item.item.menu, newline, item.item.info
                 ));
 
                 let has_info_content =
                     item.item.menu.len() + item.item.info.len() > 0;
-                info_label
-                    .set_visible(info_shown && has_info_content);
+                info_label.set_visible(info_shown && has_info_content);
             }
         });
     }

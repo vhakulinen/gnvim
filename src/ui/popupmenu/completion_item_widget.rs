@@ -1,4 +1,3 @@
-
 use gtk;
 use gtk::prelude::*;
 
@@ -10,7 +9,6 @@ macro_rules! icon {
         format!(include_str!($file), $color,)
     };
 }
-
 
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.

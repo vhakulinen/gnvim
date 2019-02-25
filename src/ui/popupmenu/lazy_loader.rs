@@ -4,10 +4,10 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 
-use thread_guard::ThreadGuard;
 use nvim_bridge::CompletionItem;
-use ui::popupmenu::CompletionItemWidgetWrap;
+use thread_guard::ThreadGuard;
 use ui::color::Color;
+use ui::popupmenu::CompletionItemWidgetWrap;
 
 struct State {
     items: Vec<CompletionItemWidgetWrap>,
@@ -37,12 +37,12 @@ impl State {
 
     fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
         State {
-            items: vec!(),
-            items_to_load: vec!(),
+            items: vec![],
+            items_to_load: vec![],
             once_loaded: None,
             source_id: None,
             list,
-            css_provider
+            css_provider,
         }
     }
 }
@@ -66,13 +66,11 @@ impl LazyLoader {
 
         let state_ref = self.state.clone();
         let source_id = glib::idle_add(move || {
-
             let mut state = state_ref.borrow_mut();
 
             // Load the rows in patches so we avoid renders of "half height"
             // completion menus.
             for _ in 0..40 {
-
                 if state.items_to_load.len() == 0 {
                     state.source_id = None;
 
@@ -80,12 +78,15 @@ impl LazyLoader {
                         cb(&state.items);
                     }
 
-                    return Continue(false)
+                    return Continue(false);
                 }
 
-
                 let item = state.items_to_load.remove(0);
-                let widget = CompletionItemWidgetWrap::create(item, &state.css_provider, &icon_fg);
+                let widget = CompletionItemWidgetWrap::create(
+                    item,
+                    &state.css_provider,
+                    &icon_fg,
+                );
                 state.list.add(&widget.row);
                 widget.row.show_all();
                 state.items.push(widget);
@@ -118,8 +119,9 @@ impl LazyLoader {
     /// Only one callback can exists at a time (e.g. when we are loading
     /// items). If all items are already loaded, `f` is called immediately.
     pub fn once_loaded<F>(&mut self, i: Option<i32>, f: F)
-        where F: Fn(&Vec<CompletionItemWidgetWrap>) + 'static {
-
+    where
+        F: Fn(&Vec<CompletionItemWidgetWrap>) + 'static,
+    {
         let mut state = self.state.borrow_mut();
         if state.source_id.is_some() {
             state.once_loaded = Some((i, Box::new(f)));
