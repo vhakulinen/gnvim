@@ -15,7 +15,6 @@ use ui::common::{
 };
 use ui::font::{Font, FontUnit};
 use ui::ui::HlDefs;
-use ui::popupmenu::CompletionItemWidgetWrap;
 use ui::popupmenu::get_icon_pixbuf;
 use ui::popupmenu::LazyLoader;
 
@@ -27,7 +26,7 @@ const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
 
 struct State {
 
-    items: LazyLoader,
+    selected: i32,
 
     /// Size available for the popupmenu to use (width and height).
     available_size: Option<gdk::Rectangle>,
@@ -41,9 +40,9 @@ struct State {
 }
 
 impl State {
-    fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
+    fn new() -> Self {
         State {
-            items: LazyLoader::new(list, css_provider),
+            selected: -1,
             available_size: None,
             anchor: gdk::Rectangle {
                 x: 0,
@@ -81,6 +80,7 @@ pub struct Popupmenu {
 
     /// State that is in Arc because its passed into widget signal handlers.
     state: Arc<ThreadGuard<State>>,
+    items: LazyLoader,
 
     /// Our colors.
     colors: PmenuColors,
@@ -149,7 +149,7 @@ impl Popupmenu {
             scrolled_list.get_child().unwrap()
         );
 
-        let state = Arc::new(ThreadGuard::new(State::new(list.clone(), css_provider.clone())));
+        let state = Arc::new(ThreadGuard::new(State::new()));
 
         let state_ref = state.clone();
         let nvim_ref = nvim.clone();
@@ -159,7 +159,7 @@ impl Popupmenu {
             let state = state_ref.borrow_mut();
             let new = row.get_index();
 
-            let selected = state.items.get_selected();
+            let selected = state.selected;
 
             let op = if new > selected {
                 "<C-n>"
@@ -261,6 +261,7 @@ impl Popupmenu {
         layout.hide();
 
         Popupmenu {
+            items: LazyLoader::new(list.clone(), css_provider.clone()),
             box_,
             layout,
             css_provider,
@@ -282,9 +283,10 @@ impl Popupmenu {
 
             self.info_shown = !self.info_shown;
 
+            let selected = state.selected as usize;
             let info_shown = self.info_shown;
             let info_label = self.info_label.clone();
-            state.items.with_selected_item(|item| if let Some(item) = item {
+            self.items.once_loaded(move |items| if let Some(item) = items.get(selected) {
 
                 item.info.set_visible(!info_shown);
                 item.menu.set_visible(!info_shown);
@@ -359,8 +361,7 @@ impl Popupmenu {
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
-        let mut state = self.state.borrow_mut();
-        state.items.set_items(
+        self.items.set_items(
             items,
             self.colors.fg.unwrap_or(hl_defs.default_fg),
         );
@@ -369,79 +370,102 @@ impl Popupmenu {
     }
 
     pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
-        let mut state = self.state.borrow_mut();
+        let state = self.state.clone();
+        let scrolled_list = self.scrolled_list.clone();
+        let fg = self.colors.fg.unwrap_or(hl_defs.default_fg).clone();
+        let fg_sel = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).clone();
+        let list = self.list.clone();
+        let info_label = self.info_label.clone();
+        let info_shown = self.info_shown;
 
-        state.items.with_selected_item(|item| if let Some(item) = item {
-            item.info.set_visible(false);
-            item.menu.set_visible(false);
+        self.items.once_loaded(move |items| {
+            let mut state = state.borrow_mut();
 
-            // Update the `kind` icon with defualt fg color.
-            let buf = get_icon_pixbuf(
-                &item.item.kind,
-                &self.colors.fg.unwrap_or(hl_defs.default_fg),
-            );
-            item.kind.set_from_pixbuf(&buf);
-        });
+            if let Some(prev) = items.get(state.selected as usize) {
+                prev.info.set_visible(false);
+                prev.menu.set_visible(false);
 
-        let prev = state.items.get_selected();
-        state.items.select(item_num);
-        let selected = state.items.get_selected();
-
-        if selected < 0 {
-            self.list.unselect_all();
-            self.info_label.set_text("");
-            self.info_label.hide();
-
-            // If selecteion is removed, move the srolled window to the top.
-            let adj = self.scrolled_list.get_vadjustment().unwrap();
-            gtk::idle_add(move || {
-                adj.set_value(0.0);
-                Continue(false)
-            });
-
-            return;
-        }
-
-        state.items.with_selected_item(|item| if let Some(item) = item {
-            item.info.set_visible(!self.info_shown);
-            item.menu.set_visible(!self.info_shown);
-
-            if item.item.info.len() == 0 {
-                item.info.set_visible(false);
+                // Update the `kind` icon with defualt fg color.
+                let buf = get_icon_pixbuf(
+                    &prev.item.kind,
+                    &fg,
+                    );
+                prev.kind.set_from_pixbuf(&buf);
             }
 
-            // Update the `kind` icon with "selected" fg color.
-            let buf = get_icon_pixbuf(
-                &item.item.kind,
-                &self.colors.sel_fg.unwrap_or(hl_defs.default_fg),
-            );
-            item.kind.set_from_pixbuf(&buf);
+            let prev = state.selected;
+            state.selected = item_num;
 
-            // If we went from no selection to state where the last item
-            // is selected, we'll have to do some extra work to make sure
-            // that the whole item is visible.
-            let max = state.items.len() as i32 - 1;
-            let adj = self.scrolled_list.get_vadjustment().unwrap();
-            if prev == -1 && selected == max {
-                adj.set_value(adj.get_upper());
+            if item_num < 0 {
+                list.unselect_all();
+                info_label.set_text("");
+                info_label.hide();
+
+                // If selecteion is removed, move the srolled window to the top.
+                let adj = scrolled_list.get_vadjustment().unwrap();
+                gtk::idle_add(move || {
+                    adj.set_value(0.0);
+                    Continue(false)
+                });
+
+                return;
             }
 
-            let newline =
-                if item.item.menu.len() > 0 && item.item.info.len() > 0 {
-                    "\n"
-                } else {
-                    ""
-                };
+            if let Some(item) = items.get(state.selected as usize) {
+                item.info.set_visible(!info_shown);
+                item.menu.set_visible(!info_shown);
 
-            self.info_label.set_text(&format!(
-                "{}{}{}",
-                item.item.menu, newline, item.item.info
-            ));
+                if item.item.info.len() == 0 {
+                    item.info.set_visible(false);
+                }
 
-            let has_info_content =
-                item.item.menu.len() + item.item.info.len() > 0;
-            self.info_label
-                .set_visible(self.info_shown && has_info_content);
+                list.select_row(&item.row);
+                item.row.grab_focus();
+
+                // Update the `kind` icon with "selected" fg color.
+                let buf = get_icon_pixbuf(
+                    &item.item.kind,
+                    &fg_sel,
+                    );
+                item.kind.set_from_pixbuf(&buf);
+
+                // If we went from no selection to state where the last item
+                // is selected, we'll have to do some extra work to make sure
+                // that the whole item is visible. We'll also have to postpone
+                // the adjustment value change a bit because it might not have
+                // updated it's upper yet.
+                let max = items.len() as i32 - 1;
+                let adj = scrolled_list.get_vadjustment().unwrap();
+                if prev == -1 && state.selected == max {
+                    let mut id = Arc::new(ThreadGuard::new(None));
+
+                    let id_ref = id.clone();
+                    let t = adj.connect_changed(move |adj| {
+                        adj.set_value(adj.get_upper() - adj.get_page_size());
+                        let id = id_ref.borrow_mut().take().unwrap();
+                        adj.disconnect(id);
+                    });
+
+                    *id.borrow_mut() = Some(t);
+                }
+
+                let newline =
+                    if item.item.menu.len() > 0 && item.item.info.len() > 0 {
+                        "\n"
+                    } else {
+                        ""
+                    };
+
+                info_label.set_text(&format!(
+                        "{}{}{}",
+                        item.item.menu, newline, item.item.info
+                ));
+
+                let has_info_content =
+                    item.item.menu.len() + item.item.info.len() > 0;
+                info_label
+                    .set_visible(info_shown && has_info_content);
+            }
         });
     }
 

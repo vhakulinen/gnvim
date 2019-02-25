@@ -7,15 +7,15 @@ use gtk::prelude::*;
 use thread_guard::ThreadGuard;
 use nvim_bridge::CompletionItem;
 use ui::popupmenu::CompletionItemWidgetWrap;
-use ui::popupmenu::get_icon_pixbuf;
 use ui::color::Color;
 
 struct State {
-    selected: i32,
     items: Vec<CompletionItemWidgetWrap>,
     items_to_load: Vec<CompletionItem>,
 
     source_id: Option<glib::SourceId>,
+
+    once_loaded: Option<Box<Fn(&Vec<CompletionItemWidgetWrap>)>>,
 
     list: gtk::ListBox,
     css_provider: gtk::CssProvider,
@@ -34,24 +34,12 @@ impl State {
 
     fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
         State {
-            selected: -1,
             items: vec!(),
             items_to_load: vec!(),
+            once_loaded: None,
             source_id: None,
             list,
             css_provider
-        }
-    }
-
-    fn ensure_selected(&self) {
-        if self.selected < 0 {
-            self.list.unselect_all();
-            return
-        }
-
-        if let Some(item) = self.items.get(self.selected as usize) {
-            self.list.select_row(&item.row);
-            item.row.grab_focus();
         }
     }
 }
@@ -67,34 +55,11 @@ impl LazyLoader {
         }
     }
 
-    pub fn get_selected(&self) -> i32 {
-        self.state.borrow().selected
-    }
-
-    pub fn with_selected_item<F>(&self, f: F)
-        where F: FnOnce(Option<&CompletionItemWidgetWrap>) {
-
-        let state = self.state.borrow();
-        let widget = if state.selected >= 0 {
-            state.items.get(state.selected as usize)
-        } else {
-            None
-        };
-
-        f(widget);
-    }
-
-    pub fn len(&self) -> usize {
-        let state = self.state.borrow();
-        state.items.len()
-    }
-
     pub fn set_items(&mut self, items: Vec<CompletionItem>, icon_fg: Color) {
         let mut state = self.state.borrow_mut();
         state.clear();
 
         state.items_to_load = items;
-        state.selected = -1;
 
         let state_ref = self.state.clone();
         let source_id = glib::idle_add(move || {
@@ -106,7 +71,11 @@ impl LazyLoader {
             for _ in 0..40 {
                 if state.items_to_load.len() == 0 {
                     state.source_id = None;
-                    state.ensure_selected();
+
+                    if let Some(mut cb) = state.once_loaded.take() {
+                        cb(&state.items);
+                    }
+
                     return Continue(false)
                 }
 
@@ -125,9 +94,14 @@ impl LazyLoader {
         state.list.show_all();
     }
 
-    pub fn select(&mut self, item_num: i32) {
+    pub fn once_loaded<F>(&mut self, f: F)
+        where F: Fn(&Vec<CompletionItemWidgetWrap>) + 'static {
+
         let mut state = self.state.borrow_mut();
-        state.selected = item_num;
-        state.ensure_selected();
+        if state.source_id.is_some() {
+            state.once_loaded = Some(Box::new(f));
+        } else {
+            f(&state.items);
+        }
     }
 }

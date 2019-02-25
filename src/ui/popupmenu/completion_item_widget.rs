@@ -2,7 +2,7 @@
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::{CompletionItem, PmenuColors};
+use nvim_bridge::CompletionItem;
 use ui::color::Color;
 
 macro_rules! icon {
