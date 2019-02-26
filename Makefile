@@ -17,6 +17,14 @@ install:
 	install -v -t "$(DESTDIR)$(PREFIX)/bin" ./target/release/gnvim
 	install -v -d "$(DESTDIR)$(PREFIX)/share/gnvim"
 	cp -r ./runtime "$(DESTDIR)$(PREFIX)/share/gnvim"
+	install -v -d "$(DESTDIR)$(PREFIX)/share/applications"
+	sed -e "s|Exec=gnvim|Exec=$(DESTDIR)$(PREFIX)/bin/gnvim|" \
+	    "./desktop/gnvim.desktop" \
+	    >"$(DESTDIR)$(PREFIX)/share/applications/gnvim.desktop"
+	install -v -d "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps"
+	install -v -d "$(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps"
+	cp ./desktop/gnvim_128.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/gnvim.png"
+	cp ./desktop/gnvim_48.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/gnvim.png"
 
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"

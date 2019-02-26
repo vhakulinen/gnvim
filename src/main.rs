@@ -136,6 +136,9 @@ fn main() {
     let app =
         gtk::Application::new("com.github.vhakulinen.gnvim", flags).unwrap();
 
+    glib::set_application_name("GNvim");
+    gtk::Window::set_default_icon_name("gnvim");
+
     app.connect_activate(move |app| {
         build(app, &opts);
     });

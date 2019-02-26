@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=GNvim
+Exec=gnvim -- %F
+Icon=gnvim.png
+Terminal=false
