@@ -18,7 +18,7 @@ install:
 	install -d "$(DESTDIR)$(PREFIX)/share/gnvim"
 	cp -r ./runtime "$(DESTDIR)$(PREFIX)/share/gnvim"
 	install -d "$(DESTDIR)$(PREFIX)/share/applications"
-	sed -e "s|Exec=gnvim|Exec=$(DESTDIR)$(PREFIX)/bin/gnvim|" \
+	sed -e "s|Exec=gnvim|Exec=$(PREFIX)/bin/gnvim|" \
 	    "./desktop/gnvim.desktop" \
 	    >"$(DESTDIR)$(PREFIX)/share/applications/gnvim.desktop"
 	install -d "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps"
