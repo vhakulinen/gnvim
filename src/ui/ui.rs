@@ -597,7 +597,8 @@ fn handle_redraw_event(
                             // Channing the font affects the grid size, so we'll
                             // need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) = grid.calc_size();
+                            let (rows, cols) =
+                                grid.calc_size_for_new_metrics().unwrap();
                             let mut nvim = nvim.lock().unwrap();
                             nvim.ui_try_resize_async(cols as i64, rows as i64)
                                 .cb(|res| {
@@ -626,7 +627,8 @@ fn handle_redraw_event(
                             // Channing the linespace affects the grid size,
                             // so we'll need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) = grid.calc_size();
+                            let (rows, cols) =
+                                grid.calc_size_for_new_metrics().unwrap();
                             let mut nvim = nvim.lock().unwrap();
                             nvim.ui_try_resize_async(cols as i64, rows as i64)
                                 .cb(|res| {
