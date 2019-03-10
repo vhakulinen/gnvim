@@ -60,7 +60,7 @@ struct Options {
     )]
     gnvim_rtp: String,
 
-    /// Files to open. Files after the first one are opened in new tabs.
+    /// Files to open.
     #[structopt(value_name = "FILES")]
     open_files: Vec<String>,
 
@@ -88,6 +88,11 @@ fn build(app: &gtk::Application, opts: &Options) {
         cmd.arg(arg);
     }
 
+    // Open files "normally" through nvim.
+    for file in opts.open_files.iter() {
+        cmd.arg(file);
+    }
+
     // Print the nvim cmd which is executed if asked.
     if opts.print_nvim_cmd {
         println!("nvim cmd: {:?}", cmd);
@@ -113,15 +118,6 @@ fn build(app: &gtk::Application, opts: &Options) {
     ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
-
-    // Open the first file using :e.
-    if let Some(first) = opts.open_files.get(0) {
-        nvim.command(format!("e {}", first).as_str()).unwrap();
-    }
-    // Open rest of the files into new tabs.
-    for file in opts.open_files.iter().skip(1) {
-        nvim.command(format!("tabe {}", file).as_str()).unwrap();
-    }
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();

@@ -357,6 +357,8 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
+        ctx.finish_metrics_update();
+
         // Clear internal grid (rows).
         ctx.rows = vec![];
         for _ in 0..height {
@@ -423,16 +425,20 @@ impl Grid {
             .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
+    /// Sets line space. Actual change is postponed till the next call
+    /// to `resize`.
     pub fn set_line_space(&self, space: i64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        ctx.set_line_space(space);
+        ctx.update_metrics(None, Some(space));
     }
 
+    /// Sets font. Actual change is postponed till the next call
+    /// to `resize`.
     pub fn set_font(&self, font: FontDescription) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        ctx.update_font(font);
+        ctx.update_metrics(Some(font), None);
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {
@@ -450,16 +456,20 @@ impl Grid {
     }
 
     /// Calculates the current gird size. Returns (rows, cols).
-    pub fn calc_size(&self) -> (usize, usize) {
+    pub fn calc_size_for_new_metrics(&self) -> Option<(usize, usize)> {
         let ctx = self.context.borrow();
         let ctx = ctx.as_ref().unwrap();
 
-        let w = self.da.get_allocated_width();
-        let h = self.da.get_allocated_height();
-        let cols = (w / ctx.cell_metrics.width as i32) as usize;
-        let rows = (h / ctx.cell_metrics.height as i32) as usize;
+        if let Some(ref cm) = ctx.cell_metrics_update {
+            let w = self.da.get_allocated_width();
+            let h = self.da.get_allocated_height();
+            let cols = (w / cm.width as i32) as usize;
+            let rows = (h / cm.height as i32) as usize;
 
-        (rows, cols)
+            Some((rows, cols))
+        } else {
+            None
+        }
     }
 }
 

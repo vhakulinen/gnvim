@@ -144,7 +144,13 @@ impl UI {
             // Set timeout to notify nvim about the new size.
             let new = glib::timeout_add(30, move || {
                 let mut nvim = nvim_ref.lock().unwrap();
-                nvim.ui_try_resize(cols as i64, rows as i64).unwrap();
+                nvim.ui_try_resize_async(cols as i64, rows as i64)
+                    .cb(|res| {
+                        if let Err(err) = res {
+                            eprintln!("Error: failed to resize nvim when grid size changed ({:?})", err);
+                        }
+                    })
+                .call();
 
                 // Set the source_id to none, so we don't accidentally remove
                 // it since it used at this point.
@@ -591,10 +597,16 @@ fn handle_redraw_event(
                             // Channing the font affects the grid size, so we'll
                             // need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) = grid.calc_size();
+                            let (rows, cols) =
+                                grid.calc_size_for_new_metrics().unwrap();
                             let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize(cols as i64, rows as i64)
-                                .unwrap();
+                            nvim.ui_try_resize_async(cols as i64, rows as i64)
+                                .cb(|res| {
+                                    if let Err(err) = res {
+                                        eprintln!("Error: failed to resize nvim on font change ({:?})", err);
+                                    }
+                                })
+                                .call();
 
                             state
                                 .popupmenu
@@ -615,10 +627,16 @@ fn handle_redraw_event(
                             // Channing the linespace affects the grid size,
                             // so we'll need to tell nvim our new size.
                             let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) = grid.calc_size();
+                            let (rows, cols) =
+                                grid.calc_size_for_new_metrics().unwrap();
                             let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize(cols as i64, rows as i64)
-                                .unwrap();
+                            nvim.ui_try_resize_async(cols as i64, rows as i64)
+                                .cb(|res| {
+                                    if let Err(err) = res {
+                                        eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
+                                    }
+                                })
+                                .call();
 
                             state.cmdline.set_line_space(*val);
                             state
