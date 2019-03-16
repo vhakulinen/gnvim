@@ -358,8 +358,11 @@ impl Popupmenu {
     }
 
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
-        self.items
-            .set_items(items, self.colors.fg.unwrap_or(hl_defs.default_fg));
+        self.items.set_items(
+            items,
+            self.colors.fg.unwrap_or(hl_defs.default_fg),
+            self.font.height as f64,
+        );
 
         self.list.show_all();
     }
@@ -369,6 +372,7 @@ impl Popupmenu {
         let scrolled_list = self.scrolled_list.clone();
         let fg = self.colors.fg.unwrap_or(hl_defs.default_fg).clone();
         let fg_sel = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).clone();
+        let font_height = self.font.height as f64;
         let list = self.list.clone();
         let info_label = self.info_label.clone();
         let info_shown = self.info_shown;
@@ -381,7 +385,7 @@ impl Popupmenu {
                 prev.menu.set_visible(false);
 
                 // Update the `kind` icon with default fg color.
-                let buf = get_icon_pixbuf(&prev.item.kind, &fg);
+                let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height);
                 prev.kind.set_from_pixbuf(&buf);
             }
 
@@ -435,7 +439,8 @@ impl Popupmenu {
                 }
 
                 // Update the `kind` icon with "selected" fg color.
-                let buf = get_icon_pixbuf(&item.item.kind, &fg_sel);
+                let buf =
+                    get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
                 item.kind.set_from_pixbuf(&buf);
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {

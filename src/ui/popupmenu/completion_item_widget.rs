@@ -5,8 +5,8 @@ use nvim_bridge::CompletionItem;
 use ui::color::Color;
 
 macro_rules! icon {
-    ($file:expr, $color:expr) => {
-        format!(include_str!($file), $color,)
+    ($file:expr, $color:expr, $size:expr) => {
+        format!(include_str!($file), $size, $size, $color,)
     };
 }
 
@@ -30,24 +30,23 @@ impl CompletionItemWidgetWrap {
         item: CompletionItem,
         css_provider: &gtk::CssProvider,
         icon_fg: &Color,
+        size: f64,
     ) -> Self {
+        let margin = (size / 3.0) as i32;
+
         let grid = gtk::Grid::new();
         grid.set_column_spacing(10);
 
-        let buf = get_icon_pixbuf(&item.kind.as_str(), icon_fg);
+        let buf = get_icon_pixbuf(&item.kind.as_str(), icon_fg, size);
         let kind = gtk::Image::new_from_pixbuf(&buf);
         kind.set_tooltip_text(format!("kind: '{}'", item.kind).as_str());
-
-        kind.set_halign(gtk::Align::Start);
-        kind.set_margin_start(5);
-        kind.set_margin_end(5);
+        kind.set_margin_start(margin);
         grid.attach(&kind, 0, 0, 1, 1);
 
         let menu = gtk::Label::new(item.menu.as_str());
         menu.set_halign(gtk::Align::End);
         menu.set_hexpand(true);
-        menu.set_margin_start(5);
-        menu.set_margin_end(5);
+        menu.set_margin_end(margin);
         menu.set_ellipsize(pango::EllipsizeMode::End);
         grid.attach(&menu, 2, 0, 1, 1);
 
@@ -92,8 +91,12 @@ fn shorten_info(info: &String) -> String {
     first_line.to_string()
 }
 
-pub fn get_icon_pixbuf(kind: &str, color: &Color) -> gdk_pixbuf::Pixbuf {
-    let contents = get_icon_name_for_kind(kind, &color);
+pub fn get_icon_pixbuf(
+    kind: &str,
+    color: &Color,
+    size: f64,
+) -> gdk_pixbuf::Pixbuf {
+    let contents = get_icon_name_for_kind(kind, &color, size);
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
@@ -102,35 +105,45 @@ pub fn get_icon_pixbuf(kind: &str, color: &Color) -> gdk_pixbuf::Pixbuf {
     buf
 }
 
-fn get_icon_name_for_kind(kind: &str, color: &Color) -> String {
+fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
     let color = color.to_hex();
+
+    let size = size * 1.1;
 
     match kind {
         "method" | "function" | "constructor" => {
-            icon!("../../../assets/icons/box.svg", color)
+            icon!("../../../assets/icons/box.svg", color, size)
         }
-        "field" => icon!("../../../assets/icons/chevrons-right.svg", color),
-        "event" => icon!("../../../assets/icons/zap.svg", color),
-        "operator" => icon!("../../../assets/icons/sliders.svg", color),
-        "variable" => icon!("../../../assets/icons/disc.svg", color),
-        "class" => icon!("../../../assets/icons/share-2.svg", color),
-        "interface" => icon!("../../../assets/icons/book-open.svg", color),
-        "struct" => icon!("../../../assets/icons/align-left.svg", color),
-        "type parameter" => icon!("../../../assets/icons/type.svg", color),
-        "module" => icon!("../../../assets/icons/code.svg", color),
-        "property" => icon!("../../../assets/icons/key.svg", color),
-        "unit" => icon!("../../../assets/icons/compass.svg", color),
-        "constant" => icon!("../../../assets/icons/shield.svg", color),
-        "value" | "enum" => icon!("../../../assets/icons/database.svg", color),
-        "enum member" => icon!("../../../assets/icons/tag.svg", color),
-        "keyword" => icon!("../../../assets/icons/link-2.svg", color),
-        "text" => icon!("../../../assets/icons/at-sign.svg", color),
-        "color" => icon!("../../../assets/icons/aperture.svg", color),
-        "file" => icon!("../../../assets/icons/file.svg", color),
-        "reference" => icon!("../../../assets/icons/link.svg", color),
-        "snippet" => icon!("../../../assets/icons/file-text.svg", color),
-        "folder" => icon!("../../../assets/icons/folder.svg", color),
+        "field" => {
+            icon!("../../../assets/icons/chevrons-right.svg", color, size)
+        }
+        "event" => icon!("../../../assets/icons/zap.svg", color, size),
+        "operator" => icon!("../../../assets/icons/sliders.svg", color, size),
+        "variable" => icon!("../../../assets/icons/disc.svg", color, size),
+        "class" => icon!("../../../assets/icons/share-2.svg", color, size),
+        "interface" => {
+            icon!("../../../assets/icons/book-open.svg", color, size)
+        }
+        "struct" => icon!("../../../assets/icons/align-left.svg", color, size),
+        "type parameter" => {
+            icon!("../../../assets/icons/type.svg", color, size)
+        }
+        "module" => icon!("../../../assets/icons/code.svg", color, size),
+        "property" => icon!("../../../assets/icons/key.svg", color, size),
+        "unit" => icon!("../../../assets/icons/compass.svg", color, size),
+        "constant" => icon!("../../../assets/icons/shield.svg", color, size),
+        "value" | "enum" => {
+            icon!("../../../assets/icons/database.svg", color, size)
+        }
+        "enum member" => icon!("../../../assets/icons/tag.svg", color, size),
+        "keyword" => icon!("../../../assets/icons/link-2.svg", color, size),
+        "text" => icon!("../../../assets/icons/at-sign.svg", color, size),
+        "color" => icon!("../../../assets/icons/aperture.svg", color, size),
+        "file" => icon!("../../../assets/icons/file.svg", color, size),
+        "reference" => icon!("../../../assets/icons/link.svg", color, size),
+        "snippet" => icon!("../../../assets/icons/file-text.svg", color, size),
+        "folder" => icon!("../../../assets/icons/folder.svg", color, size),
 
-        _ => icon!("../../../assets/icons/help-circle.svg", color),
+        _ => icon!("../../../assets/icons/help-circle.svg", color, size),
     }
 }

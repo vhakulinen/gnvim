@@ -20,7 +20,7 @@ impl Display for FontUnit {
 #[derive(Clone)]
 pub struct Font {
     name: String,
-    height: usize,
+    pub height: usize,
 }
 
 impl Font {

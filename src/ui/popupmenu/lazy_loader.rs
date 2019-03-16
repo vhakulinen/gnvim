@@ -58,7 +58,12 @@ impl LazyLoader {
         }
     }
 
-    pub fn set_items(&mut self, items: Vec<CompletionItem>, icon_fg: Color) {
+    pub fn set_items(
+        &mut self,
+        items: Vec<CompletionItem>,
+        icon_fg: Color,
+        size: f64,
+    ) {
         let mut state = self.state.borrow_mut();
         state.clear();
 
@@ -86,6 +91,7 @@ impl LazyLoader {
                     item,
                     &state.css_provider,
                     &icon_fg,
+                    size,
                 );
                 state.list.add(&widget.row);
                 widget.row.show_all();
