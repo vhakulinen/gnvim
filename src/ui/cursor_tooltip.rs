@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -25,6 +26,11 @@ use ui::common::{
 };
 use ui::font::{Font, FontUnit};
 
+pub enum Gravity {
+    Up,
+    Down,
+}
+
 lazy_static! {
     /// Our custom ammonia builder to clean untrusted HTML.
     static ref AMMONIA: ammonia::Builder<'static> = {
@@ -44,13 +50,30 @@ lazy_static! {
 const MAX_WIDTH: i32 = 700;
 const MAX_HEIGHT: i32 = 300;
 
+struct State {
+    anchor: gdk::Rectangle,
+    available_area: gdk::Rectangle,
+    force_gravity: Option<Gravity>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            anchor: gdk::Rectangle{x: 0, y: 0, width: 0, height: 0},
+            available_area: gdk::Rectangle{x: 0, y: 0, width: 0, height: 0},
+            force_gravity: None,
+        }
+    }
+}
+
 /// Cursor tooltip to display markdown documents on given grid position.
 /// Internally uses `syntect` to do code highlighting.
 pub struct CursorTooltip {
     css_provider: gtk::CssProvider,
     frame: gtk::Frame,
+    fixed: gtk::Fixed,
     webview: webkit::WebView,
-    position: Rc<RefCell<gdk::Rectangle>>,
+    state: Arc<ThreadGuard<State>>,
 
     fg: Color,
     bg: Color,
@@ -80,31 +103,18 @@ impl CursorTooltip {
         let fixed = gtk::Fixed::new();
         fixed.put(&frame, 0, 0);
 
-        let position = Rc::new(RefCell::new(gdk::Rectangle {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        }));
-        let available_area = Rc::new(RefCell::new(gdk::Rectangle {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        }));
+        let state = Arc::new(ThreadGuard::new(State::default()));
 
         let frame_ref = frame.clone();
         let fixed_ref = fixed.clone();
-        let position_ref = position.clone();
-        let available_area_ref = available_area.clone();
+        let state_ref = state.clone();
         webview.connect_load_changed(move |webview, e| match e {
             webkit::LoadEvent::Finished => {
                 webview_load_finished(
                     webview,
                     frame_ref.clone(),
                     fixed_ref.clone(),
-                    position_ref.clone(),
-                    available_area_ref.clone(),
+                    state_ref.clone(),
                 );
             }
             _ => {}
@@ -118,10 +128,10 @@ impl CursorTooltip {
 
         fixed.show_all();
 
-        let available_area_ref = available_area.clone();
+        let state_ref = state.clone();
         fixed.connect_size_allocate(move |_, alloc| {
-            let mut a = available_area_ref.borrow_mut();
-            *a = alloc.clone();
+            let mut state = state_ref.borrow_mut();
+            state.available_area = alloc.clone();
         });
 
         let syntax_set: SyntaxSet =
@@ -133,8 +143,9 @@ impl CursorTooltip {
         CursorTooltip {
             css_provider,
             frame,
+            fixed,
             webview,
-            position,
+            state,
 
             fg: Color::default(),
             bg: Color::default(),
@@ -179,6 +190,10 @@ impl CursorTooltip {
 
     pub fn hide(&self) {
         self.frame.hide();
+    }
+
+    pub fn is_visible(&self) -> bool {
+        self.frame.is_visible()
     }
 
     pub fn load_style(&mut self, path: String) -> Result<(), &str> {
@@ -332,9 +347,67 @@ impl CursorTooltip {
     }
 
     pub fn move_to(&mut self, rect: &gdk::Rectangle) {
-        let mut pos = self.position.borrow_mut();
-        *pos = rect.clone();
+        let mut state = self.state.borrow_mut();
+        state.anchor = rect.clone();
     }
+
+    /// Forces the gravity of the tooltip to be above or below of current
+    /// anchor position.
+    pub fn force_gravity(&mut self, gravity: Option<Gravity>) {
+        let mut state = self.state.borrow_mut();
+        state.force_gravity = gravity;
+    }
+
+    /// Refreshes the position of the tooltip element.
+    pub fn refresh_position(&self) {
+        let alloc = self.frame.get_allocation();
+        let state = self.state.borrow_mut();
+
+        set_position(
+            &self.frame,
+            &self.fixed,
+            &state,
+            alloc.width,
+            alloc.height,
+        );
+    }
+}
+
+/// Ensures the correct `frame` position and size inside `fixed`.
+fn set_position(
+    frame: &gtk::Frame,
+    fixed: &gtk::Fixed,
+    state: &State,
+    width: i32,
+    height: i32,
+) {
+
+    let mut available_area = state.available_area.clone();
+
+    match state.force_gravity {
+        Some(Gravity::Up) => {
+            available_area.height = state.anchor.y;
+        }
+        Some(Gravity::Down) => {
+            available_area.y = state.anchor.y + state.anchor.height;
+        }
+        _ => {}
+    }
+
+
+    let (x, width) = get_preferred_horizontal_position(
+        &available_area,
+        &state.anchor,
+        width,
+        );
+    let (y, height) = get_preferred_vertical_position(
+        &available_area,
+        &state.anchor,
+        height);
+
+    fixed.move_(frame, x, y);
+
+    frame.set_size_request(width, height);
 }
 
 /// Once the webview has loaded its content, we need to check how much
@@ -344,15 +417,12 @@ fn webview_load_finished(
     webview: &webkit::WebView,
     frame: gtk::Frame,
     fixed: gtk::Fixed,
-    position: Rc<RefCell<gdk::Rectangle>>,
-    available_area: Rc<RefCell<gdk::Rectangle>>,
+    state: Arc<ThreadGuard<State>>,
 ) {
     let widgets = ThreadGuard::new((
         frame.clone(),
         fixed.clone(),
-        position.clone(),
-        available_area.clone(),
-        webview.clone(),
+        state.clone(),
     ));
 
     let cb =
@@ -371,22 +441,19 @@ fn webview_load_finished(
             let height = height
                 .map_or(MAX_HEIGHT, |v| v as i32 + extra_height)
                 .min(MAX_HEIGHT);
+            let width = width.map_or(MAX_WIDTH, |v| v as i32).min(MAX_WIDTH);
 
-            let pos = widgets.2.borrow();
-            let area = widgets.3.borrow();
-
-            let (x, width) = get_preferred_horizontal_position(
-                &area,
-                &pos,
-                width.map_or(MAX_WIDTH, |v| v as i32).min(MAX_WIDTH),
-            );
-            let (y, height) =
-                get_preferred_vertical_position(&area, &pos, height);
-
-            widgets.1.move_(&widgets.0, x, y);
+            let state = state.borrow();
 
             widgets.0.show();
-            widgets.0.set_size_request(width, height);
+
+            set_position(
+                &widgets.0,
+                &widgets.1,
+                &state,
+                width,
+                height,
+            );
         };
 
     let webview_ref = ThreadGuard::new(webview.clone());

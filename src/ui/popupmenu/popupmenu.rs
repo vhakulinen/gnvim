@@ -272,6 +272,10 @@ impl Popupmenu {
         }
     }
 
+    pub fn is_above_anchor(&self) -> bool {
+        self.scrolled_list.get_child().unwrap().get_valign() == gtk::Align::End
+    }
+
     pub fn toggle_show_info(&mut self) {
         {
             let state = self.state.borrow();

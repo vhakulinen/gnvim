@@ -20,7 +20,7 @@ use nvim_bridge::{
 use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
-use ui::cursor_tooltip::CursorTooltip;
+use ui::cursor_tooltip::{CursorTooltip, Gravity};
 use ui::font::Font;
 use ui::grid::Grid;
 use ui::popupmenu::Popupmenu;
@@ -689,9 +689,26 @@ fn handle_redraw_event(
                 state
                     .popupmenu
                     .select(popupmenu.selected as i32, &state.hl_defs);
+
+                // If the cursor tooltip is visible at the same time, move
+                // it out of our way.
+                if state.cursor_tooltip.is_visible() {
+                    if state.popupmenu.is_above_anchor() {
+                        state.cursor_tooltip.force_gravity(Some(Gravity::Down));
+                    } else {
+                        state.cursor_tooltip.force_gravity(Some(Gravity::Up));
+                    }
+
+                    state.cursor_tooltip.refresh_position();
+                }
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();
+
+                // Undo any force positioning of cursor tool tip that might
+                // have occured on popupmenu show.
+                state.cursor_tooltip.force_gravity(None);
+                state.cursor_tooltip.refresh_position();
             }
             RedrawEvent::PopupmenuSelect(selected) => {
                 state.popupmenu.select(*selected as i32, &state.hl_defs);
