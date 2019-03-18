@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use gtk;
 use gtk::prelude::*;
@@ -59,8 +59,18 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         State {
-            anchor: gdk::Rectangle{x: 0, y: 0, width: 0, height: 0},
-            available_area: gdk::Rectangle{x: 0, y: 0, width: 0, height: 0},
+            anchor: gdk::Rectangle {
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+            },
+            available_area: gdk::Rectangle {
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+            },
             force_gravity: None,
         }
     }
@@ -381,7 +391,6 @@ fn set_position(
     width: i32,
     height: i32,
 ) {
-
     let mut available_area = state.available_area.clone();
 
     match state.force_gravity {
@@ -394,16 +403,13 @@ fn set_position(
         _ => {}
     }
 
-
     let (x, width) = get_preferred_horizontal_position(
         &available_area,
         &state.anchor,
         width,
-        );
-    let (y, height) = get_preferred_vertical_position(
-        &available_area,
-        &state.anchor,
-        height);
+    );
+    let (y, height) =
+        get_preferred_vertical_position(&available_area, &state.anchor, height);
 
     fixed.move_(frame, x, y);
 
@@ -419,11 +425,8 @@ fn webview_load_finished(
     fixed: gtk::Fixed,
     state: Arc<ThreadGuard<State>>,
 ) {
-    let widgets = ThreadGuard::new((
-        frame.clone(),
-        fixed.clone(),
-        state.clone(),
-    ));
+    let widgets =
+        ThreadGuard::new((frame.clone(), fixed.clone(), state.clone()));
 
     let cb =
         move |width: Option<f64>,
@@ -447,13 +450,7 @@ fn webview_load_finished(
 
             widgets.0.show();
 
-            set_position(
-                &widgets.0,
-                &widgets.1,
-                &state,
-                width,
-                height,
-            );
+            set_position(&widgets.0, &widgets.1, &state, width, height);
         };
 
     let webview_ref = ThreadGuard::new(webview.clone());
