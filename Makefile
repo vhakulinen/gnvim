@@ -28,4 +28,4 @@ install:
 
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"
-	rm "$(DESTDIR)$(PREFIX)/share/gnvim"
+	rm -rf "$(DESTDIR)$(PREFIX)/share/gnvim"
