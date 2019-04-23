@@ -67,6 +67,18 @@ struct Options {
     /// Arguments that are passed to nvim.
     #[structopt(value_name = "ARGS", last = true)]
     nvim_args: Vec<String>,
+
+    /// Disables externalized popup menu
+    #[structopt(long = "disable-ext-popupmenu")]
+    disable_ext_popupmenu: bool,
+
+    /// Disables externalized command line
+    #[structopt(long = "disable-ext-cmdline")]
+    disable_ext_cmdline: bool,
+
+    /// Disables externalized tab line
+    #[structopt(long = "disable-ext-tabline")]
+    disable_ext_tabline: bool,
 }
 
 fn build(app: &gtk::Application, opts: &Options) {
@@ -112,9 +124,10 @@ fn build(app: &gtk::Application, opts: &Options) {
     let mut ui_opts = UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_linegrid_external(true);
-    ui_opts.set_popupmenu_external(true);
-    ui_opts.set_tabline_external(true);
-    ui_opts.set_cmdline_external(true);
+    ui_opts.set_popupmenu_external(!opts.disable_ext_popupmenu);
+    ui_opts.set_tabline_external(!opts.disable_ext_tabline);
+    ui_opts.set_cmdline_external(!opts.disable_ext_cmdline);
+
     ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
