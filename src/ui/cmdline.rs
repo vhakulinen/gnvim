@@ -286,13 +286,11 @@ impl CmdlineInput {
             buffer.insert_markup(&mut iter, &markup);
         }
 
-        self.current_level = content.level;
         self.content = content.content.iter().map(|c| c.1.clone()).collect();
 
         self.textview.grab_focus();
 
-        self.cursor_pos = content.pos as usize;
-        self.ensure_cursor_pos();
+        self.set_cursor(content.pos as usize, content.level);
     }
 
     fn show_special_char(&mut self, ch: String, _shift: bool, _level: u64) {
