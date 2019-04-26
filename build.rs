@@ -10,7 +10,7 @@ fn main() {
     let mut f = File::create(&dest_path).unwrap();
 
     let mut cmd = Command::new("git");
-    cmd.arg("describe").arg("--tags");
+    cmd.arg("describe").arg("--always").arg("--tags");
 
     let version = cmd.output().unwrap();
 
