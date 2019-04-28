@@ -286,6 +286,7 @@ impl CmdlineInput {
             buffer.insert_markup(&mut iter, &markup);
         }
 
+        self.current_level = content.level;
         self.content = content.content.iter().map(|c| c.1.clone()).collect();
 
         self.textview.grab_focus();
