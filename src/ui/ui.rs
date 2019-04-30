@@ -746,6 +746,7 @@ fn handle_redraw_event(
             RedrawEvent::WildmenuSelect(item) => {
                 state.cmdline.wildmenu_select(*item);
             }
+            RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);
             }
