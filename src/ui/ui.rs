@@ -796,6 +796,18 @@ fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "Right" => Some("Right"),
         "Home" => Some("Home"),
         "End" => Some("End"),
+        "F1" => Some("F1"),
+        "F2" => Some("F2"),
+        "F3" => Some("F3"),
+        "F4" => Some("F4"),
+        "F5" => Some("F5"),
+        "F6" => Some("F6"),
+        "F7" => Some("F7"),
+        "F8" => Some("F8"),
+        "F9" => Some("F9"),
+        "F10" => Some("F10"),
+        "F11" => Some("F11"),
+        "F12" => Some("F12"),
         _ => None,
     }
 }
