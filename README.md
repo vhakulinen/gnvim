@@ -16,7 +16,7 @@ you have [rust tool chain](https://rustup.rs/) installed:
 ```
 $ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
 $ # Run (unoptimized version) without installing
-$ GNVIM_RUNTIME_PATH=./runtime cargo run
+$ GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 $ # Install
 $ make
 $ sudo make install
@@ -70,7 +70,7 @@ this repo and run `make build` followed by `sudo make install`.
 TL;DR: Without installing:
 
 ```
-GNVIM_RUNTIME_PATH=./runtime cargo run
+GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 ```
 
 GNvim requires some runtime files to be present and loaded by nvim to work
