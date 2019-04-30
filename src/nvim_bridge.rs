@@ -274,6 +274,7 @@ pub enum RedrawEvent {
     WildmenuHide(),
     WildmenuSelect(i64),
 
+    Ignored(String),
     Unknown(String),
 }
 
@@ -317,6 +318,7 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
             RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
             RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
+            RedrawEvent::Ignored(..) => write!(fmt, "Ignored"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
     }
@@ -786,6 +788,9 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let args = unwrap_array!(args[1]);
                     let item = unwrap_i64!(args[0]);
                     RedrawEvent::WildmenuSelect(item)
+                }
+                "mouse_on" | "mouse_off" => {
+                    RedrawEvent::Ignored(cmd.to_string())
                 }
                 _ => RedrawEvent::Unknown(cmd.to_string()),
             }
