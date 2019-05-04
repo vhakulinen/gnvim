@@ -521,10 +521,12 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     if !ctx.busy {
         let (x, y, w, h) = {
 
-            let double_width = {
-                let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-                row.leaf_at(ctx.cursor.1 as usize + 1).double_width()
-            };
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
 
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
