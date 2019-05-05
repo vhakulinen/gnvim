@@ -187,6 +187,7 @@ pub struct Cell {
     pub text: String,
     pub hl_id: u64,
     pub repeat: u64,
+    pub double_width: bool,
 }
 
 pub struct GridLineSegment {
@@ -524,10 +525,17 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                                 cells.last().unwrap().hl_id
                             };
 
+                            if text == "" {
+                                if let Some(prev) = cells.last_mut() {
+                                    prev.double_width = true;
+                                }
+                            }
+
                             cells.push(Cell {
                                 hl_id,
                                 repeat,
                                 text: String::from(text),
+                                double_width: false,
                             });
                         }
 

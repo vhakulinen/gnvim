@@ -18,16 +18,30 @@ pub struct Leaf {
     hl_id: u64,
     /// Length of this leaf in utf8 characters.
     len: usize,
+    /// If the leaf is double width. If this is true, we should only have
+    /// once character in `text`.
+    double_width: bool,
 }
 
 /// Leaf of `Rope` (tree) structure.
 impl Leaf {
-    fn new(text: String, hl_id: u64) -> Self {
+    fn new(text: String, hl_id: u64, double_width: bool) -> Self {
+        let mut len = text.chars().count();
+        if double_width {
+            len += 1;
+        }
+
         Leaf {
-            len: text.chars().count(),
+            len,
             text,
             hl_id,
+            double_width,
         }
+    }
+
+    /// Tells if this leaf is double width or not.
+    pub fn double_width(&self) -> bool {
+        self.double_width
     }
 
     /// Length of this leaf (in utf8 characters).
@@ -66,8 +80,8 @@ impl Leaf {
         }
 
         (
-            Rope::Leaf(Leaf::new(left, self.hl_id)),
-            Rope::Leaf(Leaf::new(right, self.hl_id)),
+            Rope::Leaf(Leaf::new(left, self.hl_id, self.double_width)),
+            Rope::Leaf(Leaf::new(right, self.hl_id, false)),
         )
     }
 }
@@ -83,7 +97,7 @@ pub enum Rope {
 
 impl Rope {
     fn new(base: String, hl_id: u64) -> Self {
-        Rope::Leaf(Leaf::new(base, hl_id))
+        Rope::Leaf(Leaf::new(base, hl_id, false))
     }
 
     /// Constructs a rope from NvimCells (that are supposedly coming from nvim's
@@ -91,8 +105,11 @@ impl Rope {
     fn from_nvim_cells(cells: &Vec<NvimCell>) -> Self {
         let mut rope = Rope::new(String::new(), 0);
         for cell in cells {
-            let leaf =
-                Leaf::new(cell.text.repeat(cell.repeat as usize), cell.hl_id);
+            let leaf = Leaf::new(
+                cell.text.repeat(cell.repeat as usize),
+                cell.hl_id,
+                cell.double_width,
+            );
             rope = rope.concat(Rope::Leaf(leaf));
         }
 
@@ -133,10 +150,14 @@ impl Rope {
             Rope::Leaf(mut leaf) => {
                 // If the other is just a leaf, check if it's hl_id is the same
                 // as ours - if it is, we can just append the text of the other
-                // to us.
+                // to us. How ever, don't do this if either of the leafs are
+                // double width.
                 match other {
                     Rope::Leaf(other) => {
-                        if other.hl_id() == leaf.hl_id() {
+                        if other.hl_id() == leaf.hl_id()
+                            && !other.double_width
+                            && !leaf.double_width
+                        {
                             leaf.append(&other.text);
                             //leaf.text.push_str(&other.text);
                             //leaf.text += &other.text;
@@ -403,11 +424,13 @@ mod benches {
                         text: String::from("1"),
                         hl_id: 1,
                         repeat: 3,
+                        double_width: false
                     },
                     nvim_bridge::Cell {
                         text: String::from("1"),
                         hl_id: 1,
                         repeat: 3,
+                        double_width: false
                     },
                 ],
             });
@@ -429,11 +452,13 @@ mod benches {
                         text: String::from("1"),
                         hl_id: 1,
                         repeat: 3,
+                        double_width: false,
                     },
                     nvim_bridge::Cell {
                         text: String::from("1"),
                         hl_id: 2,
                         repeat: 3,
+                        double_width: false,
                     },
                 ],
             });
@@ -464,8 +489,6 @@ mod benches {
         let rope = rope.concat(Rope::new(String::from("third"), 2));
         let rope = rope.concat(Rope::new(String::from("fourth"), 3));
 
-        //let rope = rope.combine_leafs();
-
         b.iter(move || rope.clone().split(3));
     }
 
@@ -481,7 +504,7 @@ mod benches {
     #[bench]
     fn bench_leaf_split(b: &mut Bencher) {
         b.iter(move || {
-            let mut leaf = Leaf::new(String::from("123123123"), 0);
+            let leaf = Leaf::new(String::from("123123123"), 0, false);
             leaf.split(4)
         });
     }
@@ -499,11 +522,13 @@ mod tests {
                 text: String::from("1"),
                 hl_id: 1,
                 repeat: 3,
+                double_width: false
             },
             nvim_bridge::Cell {
                 text: String::from("2"),
                 hl_id: 2,
                 repeat: 3,
+                double_width: false
             },
         ];
 
@@ -524,7 +549,7 @@ mod tests {
 
     #[test]
     fn test_leaf_split() {
-        let leaf = Leaf::new(String::from("1234"), 0);
+        let leaf = Leaf::new(String::from("1234"), 0, false);
         let (left, right) = leaf.split(2);
         assert_eq!("12", left.text());
         assert_eq!("34", right.text());
@@ -532,16 +557,16 @@ mod tests {
 
     #[test]
     fn test_leaf_len() {
-        let leaf = Leaf::new(String::from("123"), 0);
+        let leaf = Leaf::new(String::from("123"), 0, false);
         assert_eq!(leaf.len, 3);
-        let leaf = Leaf::new(String::from("✗ä"), 0);
+        let leaf = Leaf::new(String::from("✗ä"), 0, false);
         assert_eq!(leaf.len, 2);
     }
 
     #[test]
     fn test_rope_len() {
-        let left = Rope::Leaf(Leaf::new(String::from("123"), 0));
-        let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0));
+        let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
+        let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0, false));
         let rope = Rope::Node(Box::new(left), Box::new(right));
 
         assert_eq!(rope.len(), 5);
@@ -549,8 +574,8 @@ mod tests {
 
     #[test]
     fn test_rope_weight() {
-        let left = Rope::Leaf(Leaf::new(String::from("123"), 0));
-        let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0));
+        let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
+        let right = Rope::Leaf(Leaf::new(String::from("✗ä"), 0, false));
         let rope = Rope::Node(Box::new(left), Box::new(right));
 
         assert_eq!(rope.weight(), 5);
@@ -671,10 +696,10 @@ mod tests {
     fn test_rope_combine_leafs() {
         let rope = Rope::new(String::from("first"), 0);
         let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0)));
+            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
         let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("fourth"), 1)));
+            rope.concat(Rope::Leaf(Leaf::new(String::from("fourth"), 1, false)));
 
         assert_eq!(rope.leafs().len(), 4);
 
@@ -695,11 +720,11 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs2() {
         let rope = Rope::new(String::from(""), 3);
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
         let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from(""), 1)));
+            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from(""), 1, false)));
 
         assert_eq!(rope.leafs().len(), 5);
 
@@ -714,6 +739,24 @@ mod tests {
         let leafs = rope.leafs();
         assert_eq!(leafs.len(), 1);
         assert_eq!(leafs[0].text, "firstthird");
+    }
+
+    /// Test that double width leafs dont get concatenated.
+    #[test]
+    fn test_rope_combine_leafs3() {
+        let rope = Rope::new(String::from(""), 3);
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("可"), 0, true)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 0, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
+
+        let rope = rope.combine_leafs();
+        let leafs = rope.leafs();
+
+        assert_eq!(leafs.len(), 3);
+        assert_eq!(leafs[0].text, "first");
+        assert_eq!(leafs[1].text, "可");
+        assert_eq!(leafs[2].text, "secondthird");
     }
 
     #[test]

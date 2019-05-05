@@ -313,6 +313,14 @@ impl Grid {
 
         // Clear old cursor position.
         let (x, y, w, h) = {
+
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
+
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
                 cm.height,
@@ -320,7 +328,12 @@ impl Grid {
                 ctx.cursor.0 as f64,
                 ctx.cursor.1 as f64,
             );
-            (x, y, cm.width, cm.height)
+            (x, y, if double_width {
+                cm.width * 2.0
+            } else {
+                cm.width
+            },
+            cm.height)
         };
         ctx.queue_draw_area
             .push((x as i32, y as i32, w as i32, h as i32));
@@ -330,6 +343,14 @@ impl Grid {
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
+
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
+
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
                 cm.height,
@@ -337,7 +358,12 @@ impl Grid {
                 ctx.cursor.0 as f64,
                 ctx.cursor.1 as f64,
             );
-            (x, y, cm.width, cm.height)
+            (x, y, if double_width {
+                cm.width * 2.0
+            } else {
+                cm.width
+            },
+            cm.height)
         };
         ctx.queue_draw_area
             .push((x as i32, y as i32, w as i32, h as i32));
@@ -408,6 +434,14 @@ impl Grid {
         }
 
         let (x, y, w, h) = {
+
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
+
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
                 cm.height,
@@ -415,7 +449,12 @@ impl Grid {
                 ctx.cursor.0 as f64,
                 ctx.cursor.1 as f64,
             );
-            (x, y, cm.width, cm.height)
+            (x, y, if double_width {
+                cm.width * 2.0
+            } else {
+                cm.width
+            },
+            cm.height)
         };
 
         // Don't use the ctx.queue_draw_area, because those draws will only
@@ -487,6 +526,14 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     // If we're not "busy", draw the cursor.
     if !ctx.busy {
         let (x, y, w, h) = {
+
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
+
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
                 cm.height,
@@ -494,7 +541,12 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
                 ctx.cursor.0 as f64,
                 ctx.cursor.1 as f64,
             );
-            (x, y, cm.width, cm.height)
+            (x, y, if double_width {
+                cm.width * 2.0
+            } else {
+                cm.width
+            },
+            cm.height)
         };
 
         let mut alpha = ctx.cursor_alpha;

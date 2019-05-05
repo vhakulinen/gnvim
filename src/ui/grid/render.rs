@@ -64,6 +64,7 @@ fn put_segments(
         cr.set_source_rgb(fg.r, fg.g, fg.b);
 
         let text = seg.leaf.text();
+
         let items = pango::itemize(
             pango_context,
             text,
