@@ -314,10 +314,12 @@ impl Grid {
         // Clear old cursor position.
         let (x, y, w, h) = {
 
-            let double_width = {
-                let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-                row.leaf_at(ctx.cursor.1 as usize + 1).double_width()
-            };
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
 
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
@@ -342,10 +344,12 @@ impl Grid {
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = {
 
-            let double_width = {
-                let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-                row.leaf_at(ctx.cursor.1 as usize + 1).double_width()
-            };
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
 
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
@@ -431,10 +435,12 @@ impl Grid {
 
         let (x, y, w, h) = {
 
-            let double_width = {
-                let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-                row.leaf_at(ctx.cursor.1 as usize + 1).double_width()
-            };
+            let double_width =
+                ctx.rows.get(ctx.cursor.0 as usize)
+                .and_then(|row| {
+                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
+                })
+                .unwrap_or(false);
 
             let cm = &ctx.cell_metrics;
             let (x, y) = render::get_coords(
