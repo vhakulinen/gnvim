@@ -23,10 +23,6 @@ fn put_segments(
     let cw = cm.width;
     let ch = cm.height;
 
-    if segments.len() == 0 {
-        return;
-    }
-
     for seg in segments {
         let hl = hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
