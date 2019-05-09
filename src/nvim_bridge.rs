@@ -157,6 +157,8 @@ impl Default for CursorShape {
 
 #[derive(Default, Clone)]
 pub struct ModeInfo {
+    /// The cursor blinking period (in ms)
+    pub blink_on: u64,
     pub cursor_shape: CursorShape,
     /// The cursor's width (in percentages, from 0..1).
     pub cell_percentage: f64,
@@ -166,6 +168,9 @@ pub struct ModeInfo {
 impl ModeInfo {
     fn set(&mut self, prop: &str, val: Value) {
         match prop {
+            "blinkon" => {
+                self.blink_on = unwrap_u64!(val);
+            }
             "cursor_shape" => {
                 self.cursor_shape = CursorShape::from_string(unwrap_str!(val))
             }

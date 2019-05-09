@@ -28,7 +28,9 @@ pub struct Context {
     pub cursor: (u64, u64),
     /// Cursor alpha color. Used to make the cursor blink.
     pub cursor_alpha: f64,
-    /// Width of the curosr.
+    /// The duration of the cursor blink
+    pub cursor_blink_on: u64,
+    /// Width of the cursor.
     pub cursor_cell_percentage: f64,
     /// Color of the cursor.
     pub cursor_color: Color,
@@ -75,6 +77,7 @@ impl Context {
 
             cursor: (0, 0),
             cursor_alpha: 1.0,
+            cursor_blink_on: 0,
             cursor_cell_percentage: 1.0,
             cursor_color: Color::from_u64(0),
             busy: false,
