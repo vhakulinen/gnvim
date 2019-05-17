@@ -428,9 +428,15 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        ctx.cursor_alpha += 0.05;
-        if ctx.cursor_alpha > 2.0 {
-            ctx.cursor_alpha = 0.0;
+        if ctx.cursor_blink_on > 0 {
+            // Assuming a 60hz framerate
+            ctx.cursor_alpha += 100.0 / (6.0 * ctx.cursor_blink_on as f64);
+
+            if ctx.cursor_alpha > 2.0 {
+                ctx.cursor_alpha = 0.0;
+            }
+        } else {
+            ctx.cursor_alpha = 0.5;
         }
 
         let (x, y, w, h) = {
@@ -484,6 +490,7 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
+        ctx.cursor_blink_on = mode.blink_on;
         ctx.cursor_cell_percentage = mode.cell_percentage;
     }
 
