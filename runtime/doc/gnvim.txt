@@ -12,6 +12,7 @@ CONTENTS                                                       *gnvim-contents*
 
             1. Cursor Tooltip.......................|gnvim-cursor-tooltip|
             2. Popupmenu............................|gnvim-popupmenu|
+            2. Cursor...............................|gnvim-cursor|
 
 ================================================================================
 Cursor Tooltip                                           *gnvim-cursor-tooltip*
@@ -40,7 +41,16 @@ enabled (all that there is room for).  To enabled this split, call
 |gnvim#popupmenu#toggle_details|. By default, this is bind to <C-s>.
 
 Popupmenu's width can be adjusted with |gnvim#popupmenu#set_width| and with
-|gnvim#popupmenu#set_width_details
+|gnvim#popupmenu#set_width_details|
+
+================================================================================
+Cursor                                                           *gnvim-cursor*
+                                                       *gnvim-cursor-blinking*
+
+Gnvim's cursor can be set to blink with `guicursor`.
+
+Make cursor blink: `set guicursor+=a:blinkon333`
+Make cursor not to blink: `set guicursor+=a:blinkon0`
 
 ================================================================================
 Commands                                                       *gnvim-commands*

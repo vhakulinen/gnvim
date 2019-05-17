@@ -10,6 +10,8 @@ gnvim#popupmenu#toggle_details	gnvim.txt	/*gnvim#popupmenu#toggle_details*
 gnvim-commands	gnvim.txt	/*gnvim-commands*
 gnvim-complete	gnvim.txt	/*gnvim-complete*
 gnvim-contents	gnvim.txt	/*gnvim-contents*
+gnvim-cursor	gnvim.txt	/*gnvim-cursor*
+gnvim-cursor-blinking	gnvim.txt	/*gnvim-cursor-blinking*
 gnvim-cursor-tooltip	gnvim.txt	/*gnvim-cursor-tooltip*
 gnvim-functions	gnvim.txt	/*gnvim-functions*
 gnvim-popupmenu	gnvim.txt	/*gnvim-popupmenu*
