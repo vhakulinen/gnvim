@@ -8,6 +8,7 @@ use gtk::prelude::*;
 use pango::prelude::*;
 
 use ui::color::{Color, Highlight};
+use ui::grid::render;
 use ui::grid::row::Row;
 
 /// Context is manipulated by Grid.
@@ -37,6 +38,8 @@ pub struct Context {
     /// If the current status is busy or not. When busy, the cursor is not
     /// drawn (like when in terminal mode in inserting text).
     pub busy: bool,
+    /// Cairo context for cursor.
+    pub cursor_context: cairo::Context,
 
     /// Current highlight.
     pub current_hl: Highlight,
@@ -68,6 +71,17 @@ impl Context {
         cell_metrics.line_space = 0;
         cell_metrics.update(&pango_context);
 
+        let cursor_context = {
+            let surface = win
+                .create_similar_surface(
+                    cairo::Content::ColorAlpha,
+                    (cell_metrics.width * 2.0) as i32, // times two for double width chars.
+                    cell_metrics.height as i32 + cell_metrics.ascent as i32,
+                )
+                .unwrap();
+            cairo::Context::new(&surface)
+        };
+
         Context {
             cairo_context,
             pango_context,
@@ -81,6 +95,7 @@ impl Context {
             cursor_cell_percentage: 1.0,
             cursor_color: Color::from_u64(0),
             busy: false,
+            cursor_context,
 
             current_hl: Highlight::default(),
             active: false,
@@ -140,11 +155,53 @@ impl Context {
     }
 
     /// Finishes cell metrics update if one is on going.
-    pub fn finish_metrics_update(&mut self) {
+    pub fn finish_metrics_update(&mut self, da: &DrawingArea) {
         if let Some(cm) = self.cell_metrics_update.take() {
             self.pango_context.set_font_description(&cm.font_desc);
             self.cell_metrics = cm;
+
+            self.cursor_context = {
+                let win = da.get_window().unwrap();
+                let surface = win
+                    .create_similar_surface(
+                        cairo::Content::ColorAlpha,
+                        (self.cell_metrics.width * 2.0) as i32, // times two for double width chars.
+                        self.cell_metrics.height as i32
+                            + self.cell_metrics.ascent as i32,
+                    )
+                    .unwrap();
+                cairo::Context::new(&surface)
+            };
         }
+    }
+
+    /// Returns x, y, width and height for current cursor location.
+    pub fn get_cursor_rect(&self) -> (f64, f64, f64, f64) {
+        let double_width = self
+            .rows
+            .get(self.cursor.0 as usize)
+            .and_then(|row| {
+                Some(row.leaf_at(self.cursor.1 as usize + 1).double_width())
+            })
+            .unwrap_or(false);
+
+        let cm = &self.cell_metrics;
+        let (x, y) = render::get_coords(
+            cm.height,
+            cm.width,
+            self.cursor.0 as f64,
+            self.cursor.1 as f64,
+        );
+        (
+            x,
+            y,
+            if double_width {
+                cm.width * 2.0
+            } else {
+                cm.width
+            },
+            cm.height,
+        )
     }
 }
 

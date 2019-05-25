@@ -3,6 +3,12 @@ use nvim_bridge::{Cell as NvimCell, GridLineSegment};
 #[cfg(test)]
 use nvim_bridge;
 
+pub struct Cell {
+    pub text: String,
+    pub hl_id: u64,
+    pub double_width: bool,
+}
+
 /// Wrapper for a leaf, that tells the leaf's position.
 pub struct Segment<'a> {
     pub leaf: &'a Leaf,
@@ -218,6 +224,29 @@ impl Rope {
         }
     }
 
+    /// Retruns single cell at `at`. Note that index starts at 1 and not 0.
+    pub fn cell_at(&self, at: usize) -> Cell {
+        match self {
+            Rope::Leaf(leaf) => {
+                let c = leaf.text.chars().nth(at - 1).unwrap();
+                Cell {
+                    text: c.to_string(),
+                    hl_id: leaf.hl_id,
+                    double_width: leaf.double_width,
+                }
+            }
+            Rope::Node(left, right) => {
+                let weight = left.weight();
+                if at <= weight {
+                    left.cell_at(at)
+                } else {
+                    let at = at - weight;
+                    right.cell_at(at)
+                }
+            }
+        }
+    }
+
     /// Returns leaf at `at`.
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         match self {
@@ -292,6 +321,10 @@ impl Row {
     #[inline]
     pub fn leaf_at(&self, at: usize) -> &Leaf {
         self.rope.as_ref().unwrap().leaf_at(at)
+    }
+
+    pub fn cell_at(&self, at: usize) -> Cell {
+        self.rope.as_ref().unwrap().cell_at(at)
     }
 
     #[allow(unused)] // Not used currently, but tested.
@@ -424,13 +457,13 @@ mod benches {
                         text: String::from("1"),
                         hl_id: 1,
                         repeat: 3,
-                        double_width: false
+                        double_width: false,
                     },
                     nvim_bridge::Cell {
                         text: String::from("1"),
                         hl_id: 1,
                         repeat: 3,
-                        double_width: false
+                        double_width: false,
                     },
                 ],
             });
@@ -522,13 +555,13 @@ mod tests {
                 text: String::from("1"),
                 hl_id: 1,
                 repeat: 3,
-                double_width: false
+                double_width: false,
             },
             nvim_bridge::Cell {
                 text: String::from("2"),
                 hl_id: 2,
                 repeat: 3,
-                double_width: false
+                double_width: false,
             },
         ];
 
@@ -545,6 +578,21 @@ mod tests {
         assert_eq!(leafs.len(), 2);
         assert_eq!(leafs[0].hl_id, 1);
         assert_eq!(leafs[1].hl_id, 2);
+    }
+
+    #[test]
+    fn test_rope_cell_at() {
+        let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
+        let right = Rope::Leaf(Leaf::new(String::from("456"), 1, false));
+        let rope = Rope::Node(Box::new(left), Box::new(right));
+
+        let cell = rope.cell_at(5);
+        assert_eq!(cell.text, "5");
+        assert_eq!(cell.hl_id, 1);
+
+        let cell = rope.cell_at(1);
+        assert_eq!(cell.text, "1");
+        assert_eq!(cell.hl_id, 0);
     }
 
     #[test]
@@ -695,11 +743,18 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs() {
         let rope = Rope::new(String::from("first"), 0);
+        let rope = rope.concat(Rope::Leaf(Leaf::new(
+            String::from("second"),
+            1,
+            false,
+        )));
         let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1, false)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
-        let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("fourth"), 1, false)));
+            rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(
+            String::from("fourth"),
+            1,
+            false,
+        )));
 
         assert_eq!(rope.leafs().len(), 4);
 
@@ -720,11 +775,17 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs2() {
         let rope = Rope::new(String::from(""), 3);
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
         let rope =
-            rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 1, false)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from(""), 1, false)));
+            rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(
+            String::from("second"),
+            1,
+            false,
+        )));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from(""), 1, false)));
 
         assert_eq!(rope.leafs().len(), 5);
 
@@ -745,10 +806,17 @@ mod tests {
     #[test]
     fn test_rope_combine_leafs3() {
         let rope = Rope::new(String::from(""), 3);
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("可"), 0, true)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("second"), 0, false)));
-        let rope = rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("first"), 0, false)));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("可"), 0, true)));
+        let rope = rope.concat(Rope::Leaf(Leaf::new(
+            String::from("second"),
+            0,
+            false,
+        )));
+        let rope =
+            rope.concat(Rope::Leaf(Leaf::new(String::from("third"), 0, false)));
 
         let rope = rope.combine_leafs();
         let leafs = rope.leafs();

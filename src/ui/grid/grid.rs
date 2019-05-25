@@ -118,6 +118,21 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
+        // If cursor isn't blinking, drawn the inverted cell into the cursor's
+        // cairo context.
+        if ctx.cursor_blink_on == 0 {
+            if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
+                let cell = row.cell_at(ctx.cursor.1 as usize + 1);
+                render::cursor_cell(
+                    &ctx.cursor_context,
+                    &ctx.pango_context,
+                    &cell,
+                    &ctx.cell_metrics,
+                    hl_defs,
+                );
+            }
+        }
+
         // Update cursor color.
         let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
         let leaf = row.leaf_at(ctx.cursor.1 as usize + 1);
@@ -312,59 +327,14 @@ impl Grid {
         let ctx = ctx.as_mut().unwrap();
 
         // Clear old cursor position.
-        let (x, y, w, h) = {
-
-            let double_width =
-                ctx.rows.get(ctx.cursor.0 as usize)
-                .and_then(|row| {
-                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
-                })
-                .unwrap_or(false);
-
-            let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(
-                cm.height,
-                cm.width,
-                ctx.cursor.0 as f64,
-                ctx.cursor.1 as f64,
-            );
-            (x, y, if double_width {
-                cm.width * 2.0
-            } else {
-                cm.width
-            },
-            cm.height)
-        };
+        let (x, y, w, h) = ctx.get_cursor_rect();
         ctx.queue_draw_area
             .push((x as i32, y as i32, w as i32, h as i32));
-
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
 
         // Mark the new cursor position to be drawn.
-        let (x, y, w, h) = {
-
-            let double_width =
-                ctx.rows.get(ctx.cursor.0 as usize)
-                .and_then(|row| {
-                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
-                })
-                .unwrap_or(false);
-
-            let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(
-                cm.height,
-                cm.width,
-                ctx.cursor.0 as f64,
-                ctx.cursor.1 as f64,
-            );
-            (x, y, if double_width {
-                cm.width * 2.0
-            } else {
-                cm.width
-            },
-            cm.height)
-        };
+        let (x, y, w, h) = ctx.get_cursor_rect();
         ctx.queue_draw_area
             .push((x as i32, y as i32, w as i32, h as i32));
 
@@ -383,7 +353,7 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        ctx.finish_metrics_update();
+        ctx.finish_metrics_update(&self.da);
 
         // Clear internal grid (rows).
         ctx.rows = vec![];
@@ -428,40 +398,38 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        if ctx.cursor_blink_on > 0 {
-            // Assuming a 60hz framerate
-            ctx.cursor_alpha += 100.0 / (6.0 * ctx.cursor_blink_on as f64);
-
-            if ctx.cursor_alpha > 2.0 {
-                ctx.cursor_alpha = 0.0;
-            }
-        } else {
-            ctx.cursor_alpha = 0.5;
+        // If we dont need to blink, return. Otherwise, handle the cursor
+        // blining.
+        if ctx.cursor_blink_on == 0 {
+            return;
         }
 
-        let (x, y, w, h) = {
+        // Assuming a 60hz framerate
+        ctx.cursor_alpha += 100.0 / (6.0 * ctx.cursor_blink_on as f64);
 
-            let double_width =
-                ctx.rows.get(ctx.cursor.0 as usize)
-                .and_then(|row| {
-                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
-                })
-                .unwrap_or(false);
+        if ctx.cursor_alpha > 2.0 {
+            ctx.cursor_alpha = 0.0;
+        }
 
-            let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(
-                cm.height,
-                cm.width,
-                ctx.cursor.0 as f64,
-                ctx.cursor.1 as f64,
-            );
-            (x, y, if double_width {
-                cm.width * 2.0
-            } else {
-                cm.width
-            },
-            cm.height)
-        };
+        let (x, y, w, h) = ctx.get_cursor_rect();
+
+        let mut alpha = ctx.cursor_alpha;
+        if alpha > 1.0 {
+            alpha = 2.0 - alpha;
+        }
+
+        let cr = &ctx.cursor_context;
+        cr.save();
+        cr.rectangle(0.0, 0.0, 100.0, 100.0);
+        cr.set_operator(cairo::Operator::Source);
+        cr.set_source_rgba(
+            ctx.cursor_color.r,
+            ctx.cursor_color.g,
+            ctx.cursor_color.b,
+            alpha,
+        );
+        cr.fill();
+        cr.restore();
 
         // Don't use the ctx.queue_draw_area, because those draws will only
         // happen once nvim sends 'flush' event. This draw needs to happen
@@ -532,43 +500,13 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
 
     // If we're not "busy", draw the cursor.
     if !ctx.busy {
-        let (x, y, w, h) = {
-
-            let double_width =
-                ctx.rows.get(ctx.cursor.0 as usize)
-                .and_then(|row| {
-                    Some(row.leaf_at(ctx.cursor.1 as usize + 1).double_width())
-                })
-                .unwrap_or(false);
-
-            let cm = &ctx.cell_metrics;
-            let (x, y) = render::get_coords(
-                cm.height,
-                cm.width,
-                ctx.cursor.0 as f64,
-                ctx.cursor.1 as f64,
-            );
-            (x, y, if double_width {
-                cm.width * 2.0
-            } else {
-                cm.width
-            },
-            cm.height)
-        };
-
-        let mut alpha = ctx.cursor_alpha;
-        if alpha > 1.0 {
-            alpha = 2.0 - alpha;
-        }
+        let (x, y, w, h) = ctx.get_cursor_rect();
 
         cr.save();
         cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
-        cr.set_source_rgba(
-            ctx.cursor_color.r,
-            ctx.cursor_color.g,
-            ctx.cursor_color.b,
-            alpha,
-        );
+        let surface = ctx.cursor_context.get_target();
+        surface.flush();
+        cr.set_source_surface(&surface, x, y);
         cr.fill();
         cr.restore();
     }

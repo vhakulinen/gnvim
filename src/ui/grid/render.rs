@@ -7,8 +7,105 @@ use pangocairo;
 
 use nvim_bridge::GridLineSegment;
 use ui::grid::context::{CellMetrics, Context};
-use ui::grid::row::Segment;
+use ui::grid::row::{Cell, Segment};
 use ui::ui::HlDefs;
+
+/// Draws (inverted) cell to `cr`.
+pub fn cursor_cell(
+    cr: &cairo::Context,
+    pango_context: &pango::Context,
+    cell: &Cell,
+    cm: &CellMetrics,
+    hl_defs: &HlDefs,
+) {
+    let hl = hl_defs.get(&cell.hl_id).unwrap();
+
+    let (fg, bg) = if !hl.reverse {
+        (
+            hl.background.unwrap_or(hl_defs.default_bg),
+            hl.foreground.unwrap_or(hl_defs.default_fg),
+        )
+    } else {
+        (
+            hl.foreground.unwrap_or(hl_defs.default_fg),
+            hl.background.unwrap_or(hl_defs.default_bg),
+        )
+    };
+
+    let x = 0.0;
+    let y = 0.0;
+    let w = if cell.double_width {
+        cm.width * 2.0
+    } else {
+        cm.width
+    };
+    let h = cm.height;
+
+    cr.save();
+    cr.set_source_rgb(bg.r, bg.g, bg.b);
+    cr.rectangle(x, y, w, h);
+    cr.fill();
+    cr.restore();
+
+    let attrs = pango::AttrList::new();
+
+    if hl.bold {
+        let attr = Attribute::new_weight(pango::Weight::Bold).unwrap();
+        attrs.insert(attr);
+    }
+    if hl.italic {
+        let attr = Attribute::new_style(pango::Style::Italic).unwrap();
+        attrs.insert(attr);
+    }
+
+    cr.save();
+    cr.set_source_rgb(fg.r, fg.g, fg.b);
+
+    let text = &cell.text;
+
+    let items =
+        pango::itemize(pango_context, text, 0, text.len() as i32, &attrs, None);
+
+    let mut x_offset = 0.0;
+    for item in items {
+        let a = item.analysis();
+        let item_offset = item.offset() as usize;
+        let mut glyphs = pango::GlyphString::new();
+
+        pango::shape(
+            &text[item_offset..item_offset + item.length() as usize],
+            &a,
+            &mut glyphs,
+        );
+
+        cr.move_to(x + x_offset, y + cm.ascent);
+        pangocairo::functions::show_glyph_string(&cr, &a.font(), &mut glyphs);
+
+        x_offset += item.num_chars() as f64 * cm.width;
+        //x_offset += glyphs.glyphs.get_width() as f64;
+    }
+
+    // Since we can't (for some reason) use pango attributes to draw
+    // underline and undercurl, we'll have to do that manually.
+    let sp = hl.special.unwrap_or(hl_defs.default_sp);
+    cr.set_source_rgb(sp.r, sp.g, sp.b);
+    if hl.undercurl {
+        pangocairo::functions::show_error_underline(
+            cr,
+            x,
+            y + h + cm.underline_position - cm.underline_thickness,
+            w,
+            cm.underline_thickness * 2.0,
+        );
+    }
+    if hl.underline {
+        let y = y + h + cm.underline_position;
+        cr.rectangle(x, y, w, cm.underline_thickness);
+        cr.fill();
+    }
+
+    cr.restore();
+}
 
 /// Renders `segments` to `cr`.
 fn put_segments(
