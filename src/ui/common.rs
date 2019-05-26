@@ -1,3 +1,12 @@
+#![macro_use]
+
+#[macro_export]
+macro_rules! icon {
+    ($file:expr, $color:expr, $size:expr) => {
+        format!(include_str!($file), $size, $size, $color,)
+    };
+}
+
 pub fn calc_line_space(space: i64) -> (i32, i32) {
     let half = space as f64 / 2.0;
     if half as f64 % 2.0 != 0.0 {

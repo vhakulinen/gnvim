@@ -27,6 +27,7 @@ use ui::font::Font;
 use ui::grid::Grid;
 use ui::popupmenu::Popupmenu;
 use ui::tabline::Tabline;
+use ui::messages::MessagesHandler;
 
 type Grids = HashMap<u64, Grid>;
 
@@ -74,6 +75,7 @@ struct UIState {
     cmdline: Cmdline,
     tabline: Tabline,
     cursor_tooltip: CursorTooltip,
+    messages: MessagesHandler,
 
     /// Overlay contains our grid(s) and popupmenu.
     #[allow(unused)]
@@ -286,6 +288,7 @@ impl UI {
                 mode_infos: vec![],
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
+                messages: MessagesHandler::new(&overlay),
                 cmdline,
                 overlay,
                 tabline,
@@ -441,6 +444,7 @@ fn handle_gnvim_event(
             state
                 .cmdline
                 .wildmenu_set_colors(&colors.wildmenu, &state.hl_defs);
+            state.messages.set_colors(&state.hl_defs);
         }
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
@@ -808,6 +812,14 @@ fn handle_redraw_event(
                 evt.iter().for_each(|item| {
                     state.cmdline.wildmenu_select(*item);
                 });
+            }
+            RedrawEvent::MsgShow(msgs) => {
+                for msg in msgs.iter() {
+                    state.messages.show(msg, &state.hl_defs);
+                }
+            }
+            RedrawEvent::MsgClear() => {
+                state.messages.clear();
             }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {

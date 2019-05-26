@@ -729,6 +729,44 @@ impl From<Value> for WildmenuShow {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct MsgShow {
+    pub kind: MsgShowKind,
+    pub content: Vec<(u64, String)>,
+    pub replace_last: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum MsgShowKind {
+    Unknown,
+    Confirm,
+    ConfirmSub,
+    Emsg,
+    Echo,
+    EchoMsg,
+    EchoErr,
+    ReturnPrompt,
+    QuickFix,
+    Wmsg,
+}
+
+impl From<&str> for MsgShowKind {
+    fn from(from: &str) -> Self {
+        match from {
+            "confirm" => MsgShowKind::Confirm,
+            "confirm_sub" => MsgShowKind::ConfirmSub,
+            "emsg" => MsgShowKind::Emsg,
+            "echo" => MsgShowKind::Echo,
+            "echomsg" => MsgShowKind::EchoMsg,
+            "echoerr" => MsgShowKind::EchoErr,
+            "return_prompt" => MsgShowKind::ReturnPrompt,
+            "quickfix" => MsgShowKind::QuickFix,
+            "wmsg" => MsgShowKind::Wmsg,
+            _ => MsgShowKind::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(Vec<String>),
 
@@ -764,6 +802,9 @@ pub enum RedrawEvent {
     WildmenuShow(Vec<WildmenuShow>),
     WildmenuHide(),
     WildmenuSelect(Vec<i64>),
+
+    MsgShow(Vec<MsgShow>),
+    MsgClear(),
 
     Ignored(String),
     Unknown(String),
@@ -809,6 +850,8 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
             RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
             RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
+            RedrawEvent::MsgShow(..) => write!(fmt, "MsgShow"),
+            RedrawEvent::MsgClear(..) => write!(fmt, "MsgClear"),
             RedrawEvent::Ignored(..) => write!(fmt, "Ignored"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
@@ -1050,6 +1093,30 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         "wildmenu_select" => RedrawEvent::WildmenuSelect(
             args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
         ),
+        "msg_show" => {
+            let msgs = args
+                .iter()
+                .map(|args| {
+                    let kind = MsgShowKind::from(unwrap_str!(args[0]));
+                    let replace_last = unwrap_bool!(args[2]);
+                    let content: Vec<(u64, String)> = unwrap_array!(args[1])
+                        .iter()
+                        .map(|v| {
+                            let attr_id = unwrap_u64!(v[0]);
+                            let text = unwrap_str!(v[1]);
+                            (attr_id, text.to_string())
+                        }).collect();
+
+                    MsgShow {
+                        kind, content, replace_last,
+                    }
+                }).collect();
+
+            RedrawEvent::MsgShow(msgs)
+        }
+        "msg_clear" => {
+            RedrawEvent::MsgClear()
+        }
         "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
 
         _ => RedrawEvent::Unknown(cmd.to_string()),
@@ -1063,7 +1130,7 @@ pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
             let cmd = unwrap_str!(args[0]);
             parse_single_redraw_event(cmd, args[1..].to_vec())
         })
-        .collect()
+    .collect()
 }
 
 pub(crate) fn parse_gnvim_event(
@@ -1079,10 +1146,10 @@ pub(crate) fn parse_gnvim_event(
                 "colors"
             ) {
                 let color = Color::from_hex_string(String::from(try_str!(
-                    e.1,
-                    "color hex value"
+                            e.1,
+                            "color hex value"
                 )))
-                .ok();
+                    .ok();
                 match try_str!(e.0, "color name") {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,

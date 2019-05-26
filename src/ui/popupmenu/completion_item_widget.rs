@@ -4,12 +4,6 @@ use gtk::prelude::*;
 use nvim_bridge::{CompletionItem, CompletionItemKind};
 use ui::color::Color;
 
-macro_rules! icon {
-    ($file:expr, $color:expr, $size:expr) => {
-        format!(include_str!($file), $size, $size, $color,)
-    };
-}
-
 /// Wraps completion item into a structure which contains the item and some
 /// of the widgets to display it.
 pub struct CompletionItemWidgetWrap {
