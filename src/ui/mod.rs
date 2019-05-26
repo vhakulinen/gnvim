@@ -20,6 +20,7 @@ mod font;
 mod grid;
 mod popupmenu;
 mod tabline;
+mod messages;
 mod ui;
 mod wildmenu;
 pub use self::ui::UI;
