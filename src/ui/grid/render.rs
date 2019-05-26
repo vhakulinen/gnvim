@@ -151,12 +151,10 @@ fn put_segments(
     for seg in segments {
         let hl = hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
-
         let x = seg.start as f64 * cw;
         let y = row as f64 * ch;
         let w = seg.len as f64 * cw;
         let h = ch;
-
 
         let text = seg.leaf.text();
         render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h);

@@ -545,7 +545,7 @@ fn handle_redraw_event(
                 let mut nvim = nvim.lock().unwrap();
                 // Since nvim doesn't have its own 'scroll' autocmd, we'll
                 // have to do it on our own. This use useful for the cursor tooltip.
-                nvim.command_async("doautocmd User GnvimScroll")
+                nvim.command_async("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif")
                     .cb(|res| match res {
                         Ok(_) => {}
                         Err(err) => println!("GnvimScroll error: {:?}", err),
