@@ -37,12 +37,6 @@ impl CompletionItemWidgetWrap {
         let grid = gtk::Grid::new();
         grid.set_column_spacing(10);
 
-        let buf = get_icon_pixbuf(&item.kind.as_str(), icon_fg, size);
-        let kind = gtk::Image::new_from_pixbuf(&buf);
-        kind.set_tooltip_text(format!("kind: '{}'", item.kind).as_str());
-        kind.set_margin_start(margin);
-        grid.attach(&kind, 0, 0, 1, 1);
-
         let menu = gtk::Label::new(item.menu.as_str());
         menu.set_halign(gtk::Align::End);
         menu.set_hexpand(true);
@@ -72,15 +66,33 @@ impl CompletionItemWidgetWrap {
         let row = gtk::ListBoxRow::new();
         row.add(&grid);
 
-        add_css_provider!(css_provider, grid, kind, word, info, row, menu);
-
-        CompletionItemWidgetWrap {
-            item,
-            info,
-            row,
-            kind,
-            menu,
-        }
+        let buf = get_icon_pixbuf(&item.kind.as_str(), icon_fg, size);
+        match buf {
+            Ok(buff) => {
+                let kind = gtk::Image::new_from_pixbuf(&buff);
+                kind.set_tooltip_text(format!("kind: '{}'", item.kind).as_str());
+                kind.set_margin_start(margin);
+                grid.attach(&kind, 0, 0, 1, 1);
+                add_css_provider!(css_provider, grid, word, kind, info, row, menu);
+                return CompletionItemWidgetWrap {
+                    item,
+                    info,
+                    row,
+                    kind,
+                    menu,
+                };
+            },
+            Err(_) => {
+                add_css_provider!(css_provider, grid, word, info, row, menu);
+                return CompletionItemWidgetWrap {
+                    item,
+                    info,
+                    row,
+                    kind: gtk::Image::new(),
+                    menu,
+                }
+            },
+        };
     }
 }
 
@@ -95,15 +107,29 @@ pub fn get_icon_pixbuf(
     kind: &str,
     color: &Color,
     size: f64,
-) -> gdk_pixbuf::Pixbuf {
+) -> Result<gdk_pixbuf::Pixbuf, gdk_pixbuf::Error> {
     let contents = get_icon_name_for_kind(kind, &color, size);
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
-    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
+    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None);
 
     buf
 }
+
+// pub fn get_icon_pixbuf(
+//     kind: &str,
+//     color: &Color,
+//     size: f64,
+// ) -> gdk_pixbuf::Pixbuf {
+//     let contents = get_icon_name_for_kind(kind, &color, size);
+//     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
+//         contents.as_bytes(),
+//     ));
+//     let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
+// 
+//     buf
+// }
 
 fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
     let color = color.to_hex();
@@ -144,6 +170,7 @@ fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
         "snippet" => icon!("../../../assets/icons/file-text.svg", color, size),
         "folder" => icon!("../../../assets/icons/folder.svg", color, size),
 
-        _ => icon!("../../../assets/icons/help-circle.svg", color, size),
+       // _ => icon!("../../../assets/icons/help-circle.svg", color, size),
+        _ => String::from("None"),
     }
 }
