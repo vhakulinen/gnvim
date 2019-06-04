@@ -117,20 +117,6 @@ pub fn get_icon_pixbuf(
     buf
 }
 
-// pub fn get_icon_pixbuf(
-//     kind: &str,
-//     color: &Color,
-//     size: f64,
-// ) -> gdk_pixbuf::Pixbuf {
-//     let contents = get_icon_name_for_kind(kind, &color, size);
-//     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
-//         contents.as_bytes(),
-//     ));
-//     let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
-// 
-//     buf
-// }
-
 fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
     let color = color.to_hex();
 
