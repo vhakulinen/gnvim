@@ -156,7 +156,6 @@ fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
         "snippet" => icon!("../../../assets/icons/file-text.svg", color, size),
         "folder" => icon!("../../../assets/icons/folder.svg", color, size),
 
-       // _ => icon!("../../../assets/icons/help-circle.svg", color, size),
         _ => String::from("None"),
     }
 }
