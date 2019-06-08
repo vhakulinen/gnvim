@@ -31,6 +31,7 @@ impl CompletionItemWidgetWrap {
         css_provider: &gtk::CssProvider,
         icon_fg: &Color,
         size: f64,
+        know_items_kinds: bool,
     ) -> Self {
         let margin = (size / 3.0) as i32;
 
@@ -66,7 +67,10 @@ impl CompletionItemWidgetWrap {
         let row = gtk::ListBoxRow::new();
         row.add(&grid);
 
-        let buf = get_icon_pixbuf(&item.kind.as_str(), icon_fg, size);
+        let buf = get_icon_pixbuf(&item.kind.as_str(),
+                                    icon_fg, 
+                                    size,
+                                    know_items_kinds);
         match buf {
             Ok(buff) => {
                 let kind = gtk::Image::new_from_pixbuf(&buff);
@@ -107,8 +111,12 @@ pub fn get_icon_pixbuf(
     kind: &str,
     color: &Color,
     size: f64,
+    know_items_kinds: bool,
 ) -> Result<gdk_pixbuf::Pixbuf, gdk_pixbuf::Error> {
-    let contents = get_icon_name_for_kind(kind, &color, size);
+    let contents = get_icon_name_for_kind(kind,
+                                          &color,
+                                          size,
+                                          know_items_kinds);
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
@@ -117,7 +125,8 @@ pub fn get_icon_pixbuf(
     buf
 }
 
-fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
+fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64,
+                          know_items_kinds: bool) -> String {
     let color = color.to_hex();
 
     let size = size * 1.1;
@@ -156,6 +165,12 @@ fn get_icon_name_for_kind(kind: &str, color: &Color, size: f64) -> String {
         "snippet" => icon!("../../../assets/icons/file-text.svg", color, size),
         "folder" => icon!("../../../assets/icons/folder.svg", color, size),
 
-        _ => String::from("None"),
+        _ => {
+            if know_items_kinds {
+                icon!("../../../assets/icons/help-circle.svg", color, size)
+            } else {
+                String::from("")
+            }
+        },
     }
 }
