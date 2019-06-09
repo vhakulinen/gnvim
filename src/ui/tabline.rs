@@ -68,7 +68,7 @@ impl Tabline {
         self.notebook.clone().upcast()
     }
 
-    pub fn update(&self, current: Tabpage, tabs: Vec<(Tabpage, String)>) {
+    pub fn update(&self, nvim: Arc<Mutex<Neovim>>, current: Tabpage, tabs: Vec<(Tabpage, String)>) {
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
         for child in self.notebook.get_children() {
             self.notebook.remove(&child);
@@ -82,9 +82,29 @@ impl Tabline {
 
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
 
+        let mut nvim = nvim.lock().unwrap();
+
         let mut page = 0;
         for (i, tab) in tabs.iter().enumerate() {
-            let tab_label = gtk::Label::new(tab.1.as_str());
+            // Check if tab's buffer is modified, if so provide visual indicator
+            let mut tab_label;
+            let modified: bool = tab.0
+                .get_win(&mut nvim)
+                .unwrap()
+                .get_buf(&mut nvim)
+                .unwrap()
+                .get_option(&mut nvim, "mod")
+                .unwrap()
+                .as_bool()
+                .unwrap();
+            if modified {
+                let mut tab_string = String::from(tab.1.as_str());
+                tab_string.push_str(" +");
+                tab_label = gtk::Label::new(tab_string.as_str());
+            } else {
+                tab_label = gtk::Label::new(tab.1.as_str());
+            }
+
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
             add_css_provider!(&self.css_provider, tab_label);
