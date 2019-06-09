@@ -86,17 +86,23 @@ impl Tabline {
 
         let mut page = 0;
         for (i, tab) in tabs.iter().enumerate() {
-            // Check if tab's buffer is modified, if so provide visual indicator
             let mut tab_label;
-            let modified: bool = tab.0
-                .get_win(&mut nvim)
-                .unwrap()
-                .get_buf(&mut nvim)
-                .unwrap()
-                .get_option(&mut nvim, "mod")
-                .unwrap()
-                .as_bool()
-                .unwrap();
+            let modified;
+            match tab.0.get_win(&mut nvim) {
+                Ok(win) => {
+                    modified = win.get_buf(&mut nvim)
+                                      .unwrap()
+                                      .get_option(&mut nvim, "mod")
+                                      .unwrap()
+                                      .as_bool()
+                                      .unwrap();
+                },
+                Err(_) => {
+                    modified = false;
+                },
+            }
+
+            // Provide visual indicator if tab buffer is modified
             if modified {
                 let mut tab_string = String::from(tab.1.as_str());
                 tab_string.push_str(" +");
