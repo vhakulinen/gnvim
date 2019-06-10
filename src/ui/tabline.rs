@@ -6,8 +6,8 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 use neovim_lib::{
-    neovim_api::{NeovimApi, Tabpage},
-    Neovim,
+    neovim_api::{Buffer, NeovimApi, Tabpage},
+    Neovim, Value,
 };
 use pango;
 
@@ -68,37 +68,46 @@ impl Tabline {
         self.notebook.clone().upcast()
     }
 
-    fn get_tab_label(nvim: Arc<Mutex<Neovim>>, tab: &Tabpage, tab_name: String) -> gtk::Label {
-        let mut nvim = nvim.lock().unwrap();
-        let tab_label;
-        let mut modified = false;
+    fn get_tab_label(
+        nvim: &mut Neovim,
+        tab: &Tabpage,
+        tab_name: &str,
+    ) -> gtk::Label {
+        let modified = tab
+            .list_wins(nvim)
+            .and_then(|wins| {
+                wins.iter().map(|win| win.get_buf(nvim)).collect()
+            })
+            .and_then(|bufs: Vec<Buffer>| {
+                bufs.iter()
+                    .map(|buf| buf.get_option(nvim, "mod"))
+                    .collect()
+            })
+            .and_then(|vals: Vec<Value>| {
+                Ok(vals
+                   .iter()
+                   // If parsing to bool fails, default to false.
+                   .map(|val| val.as_bool().unwrap_or(false))
+                   .collect())
+            })
+            .and_then(|mods: Vec<bool>| {
+                // If any of the buffers is modified, mark the tab with modified
+                // indicator.
+                Ok(mods.iter().find(|m| **m == true).is_some())
+            })
+            // If something went wrong, default to false.
+            .unwrap_or(false);
 
-        // Handle possible errors 
-        if let Ok(win) = tab.get_win(&mut nvim) {
-            if let Ok(buf) = win.get_buf(&mut nvim) {
-                if let Ok(option) = buf.get_option(&mut nvim, "mod") {
-                    if let Some(changed) = option.as_bool() {
-                        modified = changed;
-                    }
-                }
-            }
-        } else {
-            modified = false;
-        }
-
-        // Provide visual indicator if tab buffer is modified
-        if modified {
-            let mut tab_string = tab_name.clone();
-            tab_string.push_str(" +");
-            tab_label = gtk::Label::new(tab_string.as_str());
-        } else {
-            tab_label = gtk::Label::new(tab_name.as_str());
-        }
-
-        tab_label
+        let title = format!("{}{}", tab_name, if modified { " +" } else { "" });
+        gtk::Label::new(title.as_str())
     }
 
-    pub fn update(&self, nvim: Arc<Mutex<Neovim>>, current: Tabpage, tabs: Vec<(Tabpage, String)>) {
+    pub fn update(
+        &self,
+        nvim: &mut Neovim,
+        current: Tabpage,
+        tabs: Vec<(Tabpage, String)>,
+    ) {
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
         for child in self.notebook.get_children() {
             self.notebook.remove(&child);
@@ -114,7 +123,7 @@ impl Tabline {
 
         let mut page = 0;
         for (i, tab) in tabs.iter().enumerate() {
-            let tab_label = Tabline::get_tab_label(nvim.clone(), &tab.0, tab.1.clone());
+            let tab_label = Tabline::get_tab_label(nvim, &tab.0, &tab.1);
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
             add_css_provider!(&self.css_provider, tab_label);

@@ -714,7 +714,8 @@ fn handle_redraw_event(
                 state.popupmenu.select(*selected as i32, &state.hl_defs);
             }
             RedrawEvent::TablineUpdate(cur, tabs) => {
-                state.tabline.update(nvim.clone(), cur.clone(), tabs.clone());
+                let mut nvim = nvim.lock().unwrap();
+                state.tabline.update(&mut nvim, cur.clone(), tabs.clone());
             }
             RedrawEvent::CmdlineShow(cmdline_show) => {
                 state.cmdline.show(cmdline_show, &state.hl_defs);
