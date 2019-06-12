@@ -67,18 +67,7 @@ impl LazyLoader {
         let mut state = self.state.borrow_mut();
         state.clear();
 
-        state.items_to_load = items;
-
-        // Check if CompletionItems have known kinds
-        let mut know_items_kinds = false;
-        for item in state.items_to_load.iter() {
-            use ui::popupmenu::get_icon_pixbuf;
-            match get_icon_pixbuf(&item.kind, &icon_fg, size, know_items_kinds) {
-                Ok(_) => know_items_kinds = true,
-                Err(_) => continue,
-            }
-        }
-
+        state.items_to_load = items.clone();
 
         let state_ref = self.state.clone();
         let source_id = glib::idle_add(move || {
@@ -100,10 +89,10 @@ impl LazyLoader {
                 let item = state.items_to_load.remove(0);
                 let widget = CompletionItemWidgetWrap::create(
                     item,
+                    &items,
                     &state.css_provider,
                     &icon_fg,
                     size,
-                    know_items_kinds,
                 );
                 state.list.add(&widget.row);
                 widget.row.show_all();

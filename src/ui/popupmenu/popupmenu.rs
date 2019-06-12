@@ -384,25 +384,15 @@ impl Popupmenu {
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
 
-            // Check if other CompletionItems have kinds with pixbufs
-            let mut know_items_kinds = false;
-            for item in items.iter() {
-                match item.kind.get_pixbuf() {
-                    Some(_) => know_items_kinds = true,
-                    None => continue,
-                }
-            }
-
-
             if let Some(prev) = items.get(state.selected as usize) {
                 prev.info.set_visible(false);
                 prev.menu.set_visible(false);
 
                 // Update the `kind` icon with default fg color if it is an icon.
-                let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height, know_items_kinds);
-                if let Err(_) = buf {} else {
-                    prev.kind.set_from_pixbuf(&buf.unwrap());
-                };
+                let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height);
+                if items.iter().any(|item| !item.kind.is_unknown())  {
+                    prev.image.set_from_pixbuf(&buf);
+                }
             }
 
             state.selected = item_num;
@@ -454,20 +444,11 @@ impl Popupmenu {
                     *id.borrow_mut() = Some(sig_id);
                 }
 
-                // Check if other CompletionItems have kinds with pixbufs
-                let mut know_items_kinds = false;
-                for item in items.iter() {
-                    match item.kind.get_pixbuf() {
-                        Some(_) => know_items_kinds = true,
-                        None => continue,
-                    }
-                }
-
                 // Update the `kind` icon with "selected" fg color if it is an icon.
-                let buf = get_icon_pixbuf(&item.item.kind, &fg_sel, font_height, know_items_kinds);
-                if let Err(_) = buf {} else {
-                    item.kind.set_from_pixbuf(&buf.unwrap());
-                };
+                let buf = get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
+                if items.iter().any(|item| !item.kind.is_unknown()) {
+                    item.image.set_from_pixbuf(&buf);
+                }
                 
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {
