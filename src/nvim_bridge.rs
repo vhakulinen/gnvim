@@ -219,6 +219,12 @@ pub struct CompletionItem {
     pub info: String,
 }
 
+#[derive(Debug)]
+pub struct MessageEntry {
+    pub kind: String,
+    pub content: Vec<(u64, String)>,
+}
+
 pub struct PopupmenuShow {
     pub items: Vec<CompletionItem>,
     pub selected: i64,
@@ -280,6 +286,13 @@ pub enum RedrawEvent {
     WildmenuHide(),
     WildmenuSelect(i64),
 
+    MessageShow(MessageEntry, bool),
+    MessageShowMode(Vec<(u64, String)>),
+    MessageShowCmd(Vec<(u64, String)>),
+    MessageRuler(Vec<(u64, String)>),
+    MessageHistoryShow(Vec<MessageEntry>),
+    MessageClear(),
+
     Ignored(String),
     Unknown(String),
 }
@@ -324,6 +337,14 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
             RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
             RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
+            RedrawEvent::MessageShow(..) => write!(fmt, "MessageShow"),
+            RedrawEvent::MessageShowMode(..) => write!(fmt, "MessageShowMode"),
+            RedrawEvent::MessageShowCmd(..) => write!(fmt, "MessageShowCmd"),
+            RedrawEvent::MessageClear(..) => write!(fmt, "MessageClear"),
+            RedrawEvent::MessageRuler(..) => write!(fmt, "MessageRuler"),
+            RedrawEvent::MessageHistoryShow(..) => {
+                write!(fmt, "MessageHistoryShow")
+            }
             RedrawEvent::Ignored(..) => write!(fmt, "Ignored"),
             RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
         }
@@ -489,6 +510,18 @@ GLOBALS:
     ["bell"]
     ["visual_bell"]
  */
+
+fn parse_hl_content(content: &Vec<Value>) -> Vec<(u64, String)> {
+    content
+        .into_iter()
+        .map(|args| {
+            let hl_id = unwrap_u64!(args[0]);
+            let text = unwrap_str!(args[1]).to_owned();
+
+            (hl_id, text)
+        })
+        .collect()
+}
 
 fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
     args.into_iter()
@@ -666,6 +699,50 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let idx = unwrap_u64!(args[1]);
                     RedrawEvent::ModeChange(String::from(name), idx)
                 }
+                "msg_show" => {
+                    let args = unwrap_array!(args[1]);
+                    let kind = unwrap_str!(args[0]).to_owned();
+                    let content = parse_hl_content(unwrap_array!(args[1]));
+                    let replace_last = unwrap_bool!(args[2]);
+
+                    let message_entry = MessageEntry { kind, content };
+
+                    RedrawEvent::MessageShow(message_entry, replace_last)
+                }
+                "msg_showmode" => {
+                    let args = unwrap_array!(args[1]);
+                    let content = parse_hl_content(unwrap_array!(args[0]));
+
+                    RedrawEvent::MessageShowMode(content)
+                }
+                "msg_showcmd" => {
+                    let args = unwrap_array!(args[1]);
+                    let content = parse_hl_content(unwrap_array!(args[0]));
+
+                    RedrawEvent::MessageShowCmd(content)
+                }
+                "msg_ruler" => {
+                    let args = unwrap_array!(args[1]);
+                    let content = parse_hl_content(unwrap_array!(args[0]));
+
+                    RedrawEvent::MessageRuler(content)
+                }
+                "msg_history_show" => {
+                    let args = unwrap_array!(args[1]);
+
+                    let entries = unwrap_array!(args[0])
+                        .into_iter()
+                        .map(|v| {
+                            let kind = unwrap_str!(v[0]).to_owned();
+                            let content = parse_hl_content(unwrap_array!(v[1]));
+
+                            MessageEntry { kind, content }
+                        })
+                        .collect();
+
+                    RedrawEvent::MessageHistoryShow(entries)
+                }
+                "msg_clear" => RedrawEvent::MessageClear(),
                 "busy_start" => RedrawEvent::SetBusy(true),
                 "busy_stop" => RedrawEvent::SetBusy(false),
                 "flush" => RedrawEvent::Flush(),
@@ -722,15 +799,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                 }
                 "cmdline_show" => {
                     let args = unwrap_array!(args[1]);
-                    let content: Vec<(u64, String)> = unwrap_array!(args[0])
-                        .into_iter()
-                        .map(|v| {
-                            let hl_id = unwrap_u64!(v[0]);
-                            let text = unwrap_str!(v[1]);
-
-                            (hl_id, String::from(text))
-                        })
-                        .collect();
+                    let content = parse_hl_content(unwrap_array!(args[0]));
                     let pos = unwrap_u64!(args[1]);
                     let firstc = String::from(unwrap_str!(args[2]));
                     let prompt = String::from(unwrap_str!(args[3]));
@@ -764,15 +833,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     let args = unwrap_array!(args[1]);
                     let args = unwrap_array!(args[0]);
 
-                    let lines: Vec<(u64, String)> = unwrap_array!(args[0])
-                        .iter()
-                        .map(|v| {
-                            let hl_id = unwrap_u64!(v[0]);
-                            let text = unwrap_str!(v[1]);
-
-                            (hl_id, text.to_string())
-                        })
-                        .collect();
+                    let lines = parse_hl_content(unwrap_array!(args[0]));
 
                     RedrawEvent::CmdlineBlockShow(lines)
                 }

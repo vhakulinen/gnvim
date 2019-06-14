@@ -746,6 +746,30 @@ fn handle_redraw_event(
             RedrawEvent::WildmenuSelect(item) => {
                 state.cmdline.wildmenu_select(*item);
             }
+            RedrawEvent::MessageShow(message_entry, replace_last) => {
+                dbg!("MessageShow");
+                dbg!(message_entry);
+                dbg!(replace_last);
+            }
+            RedrawEvent::MessageShowMode(content) => {
+                dbg!("MessageShowMode");
+                dbg!(content);
+            }
+            RedrawEvent::MessageShowCmd(content) => {
+                dbg!("MessageShowCmd");
+                dbg!(content);
+            }
+            RedrawEvent::MessageRuler(content) => {
+                dbg!("MessageRuler");
+                dbg!(content);
+            }
+            RedrawEvent::MessageClear() => {
+                dbg!("MessageClear");
+            }
+            RedrawEvent::MessageHistoryShow(entries) => {
+                dbg!("MessageHistoryShow");
+                dbg!(entries);
+            }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
                 println!("Received unknown redraw event: {}", e);

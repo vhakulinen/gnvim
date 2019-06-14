@@ -10,7 +10,7 @@ debug = true
 unstable = []
 
 [dependencies]
-neovim-lib = "0.6"
+neovim-lib = { git = "https://github.com/badosu/neovim-lib", branch = "badosu/add-ext-messages" }
 structopt = "0.2"
 
 gio = "0.5"
