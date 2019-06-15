@@ -1,5 +1,8 @@
 # GNvim - Rich Neovim GUI without any web bloat
 
+
+[![Build Status](https://travis-ci.org/vhakulinen/gnvim.svg?branch=master)](https://travis-ci.org/vhakulinen/gnvim)
+
 GNvim, neovim GUI aiming for rich code editing experience without any
 unnecessary web bloat.
 
