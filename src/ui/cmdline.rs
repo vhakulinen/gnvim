@@ -624,7 +624,7 @@ impl Cmdline {
         self.block.append(line, &hl_defs);
     }
 
-    pub fn wildmenu_show(&mut self, items: &Vec<String>) {
+    pub fn wildmenu_show(&mut self, items: &Vec<nvim_bridge::CompletionItem>) {
         self.show_wildmenu = true;
         self.wildmenu.set_items(items);
         self.wildmenu.show();
@@ -640,8 +640,8 @@ impl Cmdline {
         self.fixed.check_resize();
     }
 
-    pub fn wildmenu_select(&mut self, item_num: i64) {
-        self.wildmenu.select(item_num as i32);
+    pub fn wildmenu_select(&mut self, item_num: i32) {
+        self.wildmenu.select(item_num);
     }
 
     pub fn wildmenu_set_colors(&self, hl_defs: &HlDefs) {

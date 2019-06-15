@@ -741,20 +741,6 @@ impl From<Value> for CmdlineBlockShow {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct WildmenuShow(pub Vec<String>);
-
-impl From<Value> for WildmenuShow {
-    fn from(args: Value) -> Self {
-        Self(
-            unwrap_array!(args[0])
-                .iter()
-                .map(|v| unwrap_str!(v).to_string())
-                .collect(),
-        )
-    }
-}
-
-#[derive(Debug, PartialEq)]
 pub struct WindowPos {
     pub grid: i64,
     pub win: Value,
@@ -911,10 +897,6 @@ pub enum RedrawEvent {
     CmdlineBlockAppend(Vec<CmdlineBlockAppend>),
     CmdlineBlockHide(),
 
-    WildmenuShow(Vec<WildmenuShow>),
-    WildmenuHide(),
-    WildmenuSelect(Vec<i64>),
-
     WindowPos(Vec<WindowPos>),
     WindowFloatPos(Vec<WindowFloatPos>),
     WindowExternalPos(Vec<WindowExternalPos>),
@@ -965,9 +947,6 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::CmdlineBlockHide(..) => {
                 write!(fmt, "CmdlineBlockHide")
             }
-            RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
-            RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
-            RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
 
             RedrawEvent::WindowPos(..) => write!(fmt, "WindowPos"),
             RedrawEvent::WindowFloatPos(..) => write!(fmt, "WindowFloatPos"),
@@ -1190,13 +1169,6 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
             args.into_iter().map(CmdlineBlockAppend::from).collect(),
         ),
         "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
-        "wildmenu_show" => RedrawEvent::WildmenuShow(
-            args.into_iter().map(WildmenuShow::from).collect(),
-        ),
-        "wildmenu_hide" => RedrawEvent::WildmenuHide(),
-        "wildmenu_select" => RedrawEvent::WildmenuSelect(
-            args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
-        ),
         "win_pos" => RedrawEvent::WindowPos(
             args.into_iter().map(WindowPos::from).collect(),
         ),

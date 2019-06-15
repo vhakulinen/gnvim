@@ -228,6 +228,7 @@ impl UI {
                 grids,
                 mode_infos: vec![],
                 current_grid: 1,
+                wildmenu_shown: false,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
                 cmdline,
                 overlay,

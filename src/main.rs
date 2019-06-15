@@ -178,7 +178,6 @@ async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
     ui_opts.set_tabline_external(!opts.disable_ext_tabline);
     ui_opts.set_cmdline_external(!opts.disable_ext_cmdline);
 
-    ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts)
         .await
         .map_err(Error::from)?;

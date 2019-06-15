@@ -14,7 +14,7 @@ use crate::nvim_bridge::{
     CmdlineSpecialChar, DefaultColorsSet, GnvimEvent, GridCursorGoto,
     GridLineSegment, GridResize, GridScroll, HlAttrDefine, HlGroupSet,
     ModeChange, ModeInfo, ModeInfoSet, MsgSetPos, Notify, OptionSet,
-    PopupmenuShow, RedrawEvent, TablineUpdate, WildmenuShow, WindowExternalPos,
+    PopupmenuShow, RedrawEvent, TablineUpdate, WindowExternalPos,
     WindowFloatPos, WindowPos,
 };
 use crate::nvim_gio::GioNeovim;
@@ -66,6 +66,8 @@ pub(crate) struct UIState {
     pub tabline: Tabline,
     #[cfg(feature = "libwebkit2gtk")]
     pub cursor_tooltip: CursorTooltip,
+
+    pub wildmenu_shown: bool,
 
     /// Overlay contains our grid(s) and popupmenu.
     #[allow(unused)]
@@ -421,51 +423,64 @@ impl UIState {
     }
 
     fn popupmenu_show(&mut self, popupmenu: PopupmenuShow) {
-        self.popupmenu.set_items(popupmenu.items, &self.hl_defs);
+        if popupmenu.grid == -1 {
+            self.wildmenu_shown = true;
+            self.cmdline.wildmenu_show(&popupmenu.items)
+        } else {
+            self.popupmenu.set_items(popupmenu.items, &self.hl_defs);
 
-        let grid = self.grids.get(&self.current_grid).unwrap();
-        let mut rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+            let grid = self.grids.get(&self.current_grid).unwrap();
+            let mut rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
-        let window = self.windows.get(&popupmenu.grid).unwrap();
-        rect.x += window.x as i32;
-        rect.y += window.y as i32;
+            let window = self.windows.get(&popupmenu.grid).unwrap();
+            rect.x += window.x as i32;
+            rect.y += window.y as i32;
 
-        self.popupmenu.set_anchor(rect);
-        self.popupmenu
-            .select(popupmenu.selected as i32, &self.hl_defs);
+            self.popupmenu.set_anchor(rect);
+            self.popupmenu
+                .select(popupmenu.selected as i32, &self.hl_defs);
 
-        self.popupmenu.show();
+            self.popupmenu.show();
 
-        // If the cursor tooltip is visible at the same time, move
-        // it out of our way.
-        #[cfg(feature = "libwebkit2gtk")]
-        {
-            if self.cursor_tooltip.is_visible() {
-                if self.popupmenu.is_above_anchor() {
-                    self.cursor_tooltip.force_gravity(Some(Gravity::Down));
-                } else {
-                    self.cursor_tooltip.force_gravity(Some(Gravity::Up));
+            // If the cursor tooltip is visible at the same time, move
+            // it out of our way.
+            #[cfg(feature = "libwebkit2gtk")]
+            {
+                if self.cursor_tooltip.is_visible() {
+                    if self.popupmenu.is_above_anchor() {
+                        self.cursor_tooltip.force_gravity(Some(Gravity::Down));
+                    } else {
+                        self.cursor_tooltip.force_gravity(Some(Gravity::Up));
+                    }
+
+                    self.cursor_tooltip.refresh_position();
                 }
-
-                self.cursor_tooltip.refresh_position();
             }
         }
     }
 
     fn popupmenu_hide(&mut self) {
-        self.popupmenu.hide();
+        if self.wildmenu_shown {
+            self.cmdline.wildmenu_hide();
+        } else {
+            self.popupmenu.hide();
 
-        // Undo any force positioning of cursor tool tip that might
-        // have occured on popupmenu show.
-        #[cfg(feature = "libwebkit2gtk")]
-        {
-            self.cursor_tooltip.force_gravity(None);
-            self.cursor_tooltip.refresh_position();
+            // Undo any force positioning of cursor tool tip that might
+            // have occured on popupmenu show.
+            #[cfg(feature = "libwebkit2gtk")]
+            {
+                self.cursor_tooltip.force_gravity(None);
+                self.cursor_tooltip.refresh_position();
+            }
         }
     }
 
     fn popupmenu_select(&mut self, selected: i64) {
-        self.popupmenu.select(selected as i32, &self.hl_defs);
+        if self.wildmenu_shown {
+            self.cmdline.wildmenu_select(selected as i32);
+        } else {
+            self.popupmenu.select(selected as i32, &self.hl_defs);
+        }
     }
 
     fn tabline_update(
@@ -508,18 +523,6 @@ impl UIState {
 
     fn cmdline_block_hide(&mut self) {
         self.cmdline.hide_block();
-    }
-
-    fn wildmenu_show(&mut self, items: WildmenuShow) {
-        self.cmdline.wildmenu_show(&items.0);
-    }
-
-    fn wildmenu_hide(&mut self) {
-        self.cmdline.wildmenu_hide();
-    }
-
-    fn wildmenu_select(&mut self, item: i64) {
-        self.cmdline.wildmenu_select(item);
     }
 
     fn window_pos(
@@ -767,13 +770,6 @@ impl UIState {
                 evt.into_iter().for_each(|e| self.cmdline_block_append(e));
             }
             RedrawEvent::CmdlineBlockHide() => self.cmdline_block_hide(),
-            RedrawEvent::WildmenuShow(evt) => {
-                evt.into_iter().for_each(|e| self.wildmenu_show(e));
-            }
-            RedrawEvent::WildmenuHide() => self.wildmenu_hide(),
-            RedrawEvent::WildmenuSelect(evt) => {
-                evt.into_iter().for_each(|e| self.wildmenu_select(e));
-            }
             RedrawEvent::WindowPos(evt) => {
                 evt.into_iter()
                     .for_each(|e| self.window_pos(e, window, nvim));

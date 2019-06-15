@@ -3,6 +3,7 @@ use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::nvim_bridge;
 use crate::nvim_gio::GioNeovim;
 use crate::ui::color::{Color, HlDefs, HlGroup};
 use crate::ui::common::spawn_local;
@@ -111,11 +112,11 @@ impl Wildmenu {
         }
     }
 
-    pub fn set_items(&mut self, items: &Vec<String>) {
+    pub fn set_items(&mut self, items: &Vec<nvim_bridge::CompletionItem>) {
         self.clear();
 
         for item in items {
-            let label = gtk::Label::new(Some(item.as_str()));
+            let label = gtk::Label::new(Some(item.word.as_str()));
             label.set_halign(gtk::Align::Start);
 
             let row = gtk::ListBoxRow::new();
