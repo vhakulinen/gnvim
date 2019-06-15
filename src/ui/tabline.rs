@@ -6,8 +6,8 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 use neovim_lib::{
-    neovim_api::{NeovimApi, Tabpage},
-    Neovim,
+    neovim_api::{Buffer, NeovimApi, Tabpage},
+    Neovim, Value,
 };
 use pango;
 
@@ -68,7 +68,46 @@ impl Tabline {
         self.notebook.clone().upcast()
     }
 
-    pub fn update(&self, current: Tabpage, tabs: Vec<(Tabpage, String)>) {
+    fn get_tab_label(
+        nvim: &mut Neovim,
+        tab: &Tabpage,
+        tab_name: &str,
+    ) -> gtk::Label {
+        let modified = tab
+            .list_wins(nvim)
+            .and_then(|wins| {
+                wins.iter().map(|win| win.get_buf(nvim)).collect()
+            })
+            .and_then(|bufs: Vec<Buffer>| {
+                bufs.iter()
+                    .map(|buf| buf.get_option(nvim, "mod"))
+                    .collect()
+            })
+            .and_then(|vals: Vec<Value>| {
+                Ok(vals
+                   .iter()
+                   // If parsing to bool fails, default to false.
+                   .map(|val| val.as_bool().unwrap_or(false))
+                   .collect())
+            })
+            .and_then(|mods: Vec<bool>| {
+                // If any of the buffers is modified, mark the tab with modified
+                // indicator.
+                Ok(mods.iter().find(|m| **m == true).is_some())
+            })
+            // If something went wrong, default to false.
+            .unwrap_or(false);
+
+        let title = format!("{}{}", tab_name, if modified { " +" } else { "" });
+        gtk::Label::new(title.as_str())
+    }
+
+    pub fn update(
+        &self,
+        nvim: &mut Neovim,
+        current: Tabpage,
+        tabs: Vec<(Tabpage, String)>,
+    ) {
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
         for child in self.notebook.get_children() {
             self.notebook.remove(&child);
@@ -84,7 +123,7 @@ impl Tabline {
 
         let mut page = 0;
         for (i, tab) in tabs.iter().enumerate() {
-            let tab_label = gtk::Label::new(tab.1.as_str());
+            let tab_label = Tabline::get_tab_label(nvim, &tab.0, &tab.1);
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
             add_css_provider!(&self.css_provider, tab_label);
