@@ -75,20 +75,16 @@ impl Tabline {
     ) -> gtk::Label {
         let modified = tab
             .list_wins(nvim)
-            .and_then(|wins| {
-                wins.iter().map(|win| win.get_buf(nvim)).collect()
-            })
+            .and_then(|wins| wins.iter().map(|win| win.get_buf(nvim)).collect())
             .and_then(|bufs: Vec<Buffer>| {
-                bufs.iter()
-                    .map(|buf| buf.get_option(nvim, "mod"))
-                    .collect()
+                bufs.iter().map(|buf| buf.get_option(nvim, "mod")).collect()
             })
             .and_then(|vals: Vec<Value>| {
                 Ok(vals
-                   .iter()
-                   // If parsing to bool fails, default to false.
-                   .map(|val| val.as_bool().unwrap_or(false))
-                   .collect())
+                    .iter()
+                    // If parsing to bool fails, default to false.
+                    .map(|val| val.as_bool().unwrap_or(false))
+                    .collect())
             })
             .and_then(|mods: Vec<bool>| {
                 // If any of the buffers is modified, mark the tab with modified
