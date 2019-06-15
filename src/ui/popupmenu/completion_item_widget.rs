@@ -1,7 +1,7 @@
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::{ CompletionItem, CompletionItemKind };
+use nvim_bridge::{CompletionItem, CompletionItemKind};
 use ui::color::Color;
 
 macro_rules! icon {
@@ -30,7 +30,7 @@ pub struct CompletionItemWidgetWrap {
 impl CompletionItemWidgetWrap {
     pub fn create(
         item: CompletionItem,
-        items: &Vec<CompletionItem>,
+        show_kind: bool,
         css_provider: &gtk::CssProvider,
         icon_fg: &Color,
         size: f64,
@@ -45,14 +45,16 @@ impl CompletionItemWidgetWrap {
             CompletionItemKind::Unknown => {
                 // If another item in the popupmenu has a known kind,
                 // give kind_image an icon.
-                if items.iter().any(|item| !item.kind.is_unknown()) {
-                    gtk::Image::new_from_pixbuf(&buf) 
-                } else { gtk::Image::new() }
+                if show_kind {
+                    gtk::Image::new_from_pixbuf(&buf)
+                } else {
+                    gtk::Image::new()
+                }
             }
             _ => gtk::Image::new_from_pixbuf(&buf),
         };
 
-        // kind_image.set_tooltip_text(format!("kind: '{}'", &item.kind.get_kind()).as_str());
+        image.set_tooltip_text(format!("kind: '{}'", item.kind_raw).as_str());
         image.set_margin_start(margin);
         grid.attach(&image, 0, 0, 1, 1);
 
@@ -134,28 +136,20 @@ fn get_icon_name_for_kind(
         Constructor => icon!("../../../assets/icons/box.svg", color, size),
         Method => icon!("../../../assets/icons/box.svg", color, size),
         Function => icon!("../../../assets/icons/box.svg", color, size),
-        Field => {
-            icon!("../../../assets/icons/chevrons-right.svg", color, size)
-        }
+        Field => icon!("../../../assets/icons/chevrons-right.svg", color, size),
         Event => icon!("../../../assets/icons/zap.svg", color, size),
         Operator => icon!("../../../assets/icons/sliders.svg", color, size),
         Variable => icon!("../../../assets/icons/disc.svg", color, size),
         Class => icon!("../../../assets/icons/share-2.svg", color, size),
-        Interface => {
-            icon!("../../../assets/icons/book-open.svg", color, size)
-        }
+        Interface => icon!("../../../assets/icons/book-open.svg", color, size),
         Struct => icon!("../../../assets/icons/align-left.svg", color, size),
-        TypeParameter => {
-            icon!("../../../assets/icons/type.svg", color, size)
-        }
+        TypeParameter => icon!("../../../assets/icons/type.svg", color, size),
         Module => icon!("../../../assets/icons/code.svg", color, size),
         Property => icon!("../../../assets/icons/key.svg", color, size),
         Unit => icon!("../../../assets/icons/compass.svg", color, size),
         Constant => icon!("../../../assets/icons/shield.svg", color, size),
         Value => icon!("../../../assets/icons/database.svg", color, size),
-        Enum => {
-            icon!("../../../assets/icons/database.svg", color, size)
-        }
+        Enum => icon!("../../../assets/icons/database.svg", color, size),
         EnumMember => icon!("../../../assets/icons/tag.svg", color, size),
         Keyword => icon!("../../../assets/icons/link-2.svg", color, size),
         Text => icon!("../../../assets/icons/at-sign.svg", color, size),

@@ -380,6 +380,7 @@ impl Popupmenu {
         let list = self.list.clone();
         let info_label = self.info_label.clone();
         let info_shown = self.info_shown;
+        let show_kind = self.items.get_show_kind();
 
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
@@ -390,7 +391,7 @@ impl Popupmenu {
 
                 // Update the `kind` icon with default fg color if it is an icon.
                 let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height);
-                if items.iter().any(|item| !item.kind.is_unknown())  {
+                if show_kind {
                     prev.image.set_from_pixbuf(&buf);
                 }
             }
@@ -445,11 +446,12 @@ impl Popupmenu {
                 }
 
                 // Update the `kind` icon with "selected" fg color if it is an icon.
-                let buf = get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
-                if items.iter().any(|item| !item.kind.is_unknown()) {
+                let buf =
+                    get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
+                if show_kind {
                     item.image.set_from_pixbuf(&buf);
                 }
-                
+
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {
                         "\n"
