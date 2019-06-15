@@ -241,9 +241,9 @@ pub enum CompletionItemKind {
     Variable,
 }
 
-impl CompletionItemKind {
-    pub fn new_from_str(kind: &str) -> Self {
-        match kind {
+impl From<&String> for CompletionItemKind {
+    fn from(from: &String) -> Self {
+        match from.as_str() {
             "class" => CompletionItemKind::Class,
             "color" => CompletionItemKind::Color,
             "constant" => CompletionItemKind::Constant,
@@ -272,7 +272,10 @@ impl CompletionItemKind {
             _ => CompletionItemKind::Unknown,
         }
     }
-   pub fn is_unknown(&self) -> bool {
+}
+
+impl CompletionItemKind {
+    pub fn is_unknown(&self) -> bool {
         match self {
             CompletionItemKind::Unknown => true,
             _ => false,
@@ -284,6 +287,7 @@ impl CompletionItemKind {
 pub struct CompletionItem {
     pub word: String,
     pub kind: CompletionItemKind,
+    pub kind_raw: String,
     pub menu: String,
     pub info: String,
 }
@@ -748,7 +752,10 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     for item in unwrap_array!(args[0]) {
                         let item = unwrap_array!(item);
                         let word = unwrap_str!(item[0]).to_owned();
-                        let kind = CompletionItemKind::new_from_str(&unwrap_str!(item[1]).to_owned());
+                        let kind = CompletionItemKind::from(
+                            &unwrap_str!(item[1]).to_owned(),
+                        );
+                        let kind_raw = unwrap_str!(item[1]).to_owned();
                         let menu = unwrap_str!(item[2]).to_owned();
                         let info = unwrap_str!(item[3]).to_owned();
 
@@ -757,6 +764,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                             kind,
                             menu,
                             info,
+                            kind_raw,
                         });
                     }
 
