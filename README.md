@@ -2,6 +2,7 @@
 
 
 [![Build Status](https://travis-ci.org/vhakulinen/gnvim.svg?branch=master)](https://travis-ci.org/vhakulinen/gnvim)
+[![Gitter](https://badges.gitter.im/gnvim/community.svg)](https://gitter.im/gnvim/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 GNvim, neovim GUI aiming for rich code editing experience without any
 unnecessary web bloat.
