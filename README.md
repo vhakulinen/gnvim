@@ -1,6 +1,5 @@
 # GNvim - Rich Neovim GUI without any web bloat
 
-
 [![Build Status](https://travis-ci.org/vhakulinen/gnvim.svg?branch=master)](https://travis-ci.org/vhakulinen/gnvim)
 [![Gitter](https://badges.gitter.im/gnvim/community.svg)](https://gitter.im/gnvim/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
