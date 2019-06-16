@@ -241,9 +241,9 @@ pub enum CompletionItemKind {
     Variable,
 }
 
-impl From<&String> for CompletionItemKind {
-    fn from(from: &String) -> Self {
-        match from.as_str() {
+impl From<&str> for CompletionItemKind {
+    fn from(from: &str) -> Self {
+        match from {
             "class" => CompletionItemKind::Class,
             "color" => CompletionItemKind::Color,
             "constant" => CompletionItemKind::Constant,
@@ -752,9 +752,8 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     for item in unwrap_array!(args[0]) {
                         let item = unwrap_array!(item);
                         let word = unwrap_str!(item[0]).to_owned();
-                        let kind = CompletionItemKind::from(
-                            &unwrap_str!(item[1]).to_owned(),
-                        );
+                        let kind =
+                            CompletionItemKind::from(unwrap_str!(item[1]));
                         let kind_raw = unwrap_str!(item[1]).to_owned();
                         let menu = unwrap_str!(item[2]).to_owned();
                         let info = unwrap_str!(item[3]).to_owned();

@@ -40,19 +40,11 @@ impl CompletionItemWidgetWrap {
         let grid = gtk::Grid::new();
         grid.set_column_spacing(10);
 
-        let buf = get_icon_pixbuf(&item.kind, icon_fg, size);
-        let image = match &item.kind {
-            CompletionItemKind::Unknown => {
-                // If another item in the popupmenu has a known kind,
-                // give kind_image an icon.
-                if show_kind {
-                    gtk::Image::new_from_pixbuf(&buf)
-                } else {
-                    gtk::Image::new()
-                }
-            }
-            _ => gtk::Image::new_from_pixbuf(&buf),
-        };
+        let image = gtk::Image::new();
+        if show_kind {
+            let buf = get_icon_pixbuf(&item.kind, icon_fg, size);
+            image.set_from_pixbuf(&buf);
+        }
 
         image.set_tooltip_text(format!("kind: '{}'", item.kind_raw).as_str());
         image.set_margin_start(margin);

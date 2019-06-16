@@ -389,9 +389,10 @@ impl Popupmenu {
                 prev.info.set_visible(false);
                 prev.menu.set_visible(false);
 
-                // Update the `kind` icon with default fg color if it is an icon.
-                let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height);
                 if show_kind {
+                    // Update the `kind` icon with default fg color.
+                    let buf =
+                        get_icon_pixbuf(&prev.item.kind, &fg, font_height);
                     prev.image.set_from_pixbuf(&buf);
                 }
             }
@@ -445,10 +446,10 @@ impl Popupmenu {
                     *id.borrow_mut() = Some(sig_id);
                 }
 
-                // Update the `kind` icon with "selected" fg color if it is an icon.
-                let buf =
-                    get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
                 if show_kind {
+                    // Update the `kind` icon with "selected" fg color.
+                    let buf =
+                        get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
                     item.image.set_from_pixbuf(&buf);
                 }
 
