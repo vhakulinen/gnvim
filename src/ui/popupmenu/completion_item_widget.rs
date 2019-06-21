@@ -44,11 +44,12 @@ impl CompletionItemWidgetWrap {
         if show_kind {
             let buf = get_icon_pixbuf(&item.kind, icon_fg, size);
             image.set_from_pixbuf(&buf);
+            image.set_tooltip_text(
+                format!("kind: '{}'", item.kind_raw).as_str(),
+            );
+            image.set_margin_start(margin);
+            grid.attach(&image, 0, 0, 1, 1);
         }
-
-        image.set_tooltip_text(format!("kind: '{}'", item.kind_raw).as_str());
-        image.set_margin_start(margin);
-        grid.attach(&image, 0, 0, 1, 1);
 
         let menu = gtk::Label::new(item.menu.as_str());
         menu.set_halign(gtk::Align::End);
@@ -59,6 +60,9 @@ impl CompletionItemWidgetWrap {
 
         let word = gtk::Label::new(item.word.as_str());
         word.set_ellipsize(pango::EllipsizeMode::End);
+        if !show_kind {
+            word.set_margin_start(5);
+        }
         grid.attach(&word, 1, 0, 1, 1);
 
         let info = gtk::Label::new(shorten_info(&item.info).as_str());
