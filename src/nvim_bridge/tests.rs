@@ -1,0 +1,655 @@
+macro_rules! args {
+    ( $( $x:expr ),* ) => {
+        {
+            vec!(
+                Value::Array(vec!(
+                    $(
+                        $x,
+                    )*
+                ))
+            )
+        }
+    }
+}
+
+mod parse_redraw_event_tests {
+
+    use neovim_lib::neovim_api::Tabpage;
+    use neovim_lib::Value;
+    use nvim_bridge;
+    use nvim_bridge::{
+        Cell, CmdlineShow, CompletionItem, CompletionItemKind, CursorShape,
+        GridLineSegment, ModeInfo, OptionSet, PopupmenuShow, RedrawEvent,
+    };
+    use ui::color::{Color, Highlight};
+
+    #[test]
+    fn set_title() {
+        let expected = vec![RedrawEvent::SetTitle("my title".into())];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            String::from("set_title").into(),
+            Value::Array(vec!(String::from("my title").into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn grid_line() {
+        let expected = vec![RedrawEvent::GridLine(vec![
+            GridLineSegment {
+                grid: 1,
+                row: 1,
+                col_start: 4,
+                cells: vec![
+                    Cell {
+                        hl_id: 1,
+                        repeat: 4,
+                        text: " ".to_owned(),
+                        double_width: false,
+                    },
+                    Cell {
+                        hl_id: 4,
+                        repeat: 1,
+                        text: "3".to_owned(),
+                        double_width: false,
+                    },
+                    Cell {
+                        hl_id: 4,
+                        repeat: 1,
+                        text: "3".to_owned(),
+                        double_width: true,
+                    },
+                    Cell {
+                        hl_id: 1,
+                        repeat: 1,
+                        text: "".to_owned(),
+                        double_width: false,
+                    },
+                ],
+            },
+            GridLineSegment {
+                grid: 2,
+                row: 4,
+                col_start: 1,
+                cells: vec![
+                    Cell {
+                        hl_id: 3,
+                        repeat: 2,
+                        text: "i".to_owned(),
+                        double_width: false,
+                    },
+                    Cell {
+                        hl_id: 1,
+                        repeat: 1,
+                        text: "2".to_owned(),
+                        double_width: false,
+                    },
+                ],
+            },
+        ])];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "grid_line".into(),
+            Value::Array(vec!(
+                1.into(),
+                1.into(),
+                4.into(),
+                Value::Array(vec!(
+                    Value::Array(vec!(" ".into(), 1.into(), 4.into())),
+                    Value::Array(vec!("3".into(), 4.into())),
+                    Value::Array(vec!("3".into())),
+                    Value::Array(vec!("".into(), 1.into())),
+                )),
+            )),
+            Value::Array(vec!(
+                2.into(),
+                4.into(),
+                1.into(),
+                Value::Array(vec!(
+                    Value::Array(vec!("i".into(), 3.into(), 2.into())),
+                    Value::Array(vec!("2".into(), 1.into())),
+                )),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn grid_cursor_goto() {
+        let expected = vec![RedrawEvent::GridCursorGoto(123, 321, 2)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            String::from("grid_cursor_goto").into(),
+            Value::Array(vec!(123.into(), 321.into(), 2.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn grid_resize() {
+        let expected = vec![RedrawEvent::GridResize(2, 32, 12)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "grid_resize".into(),
+            Value::Array(vec!(2.into(), 32.into(), 12.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn grid_clear() {
+        let expected = vec![RedrawEvent::GridClear(32)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "grid_clear".into(),
+            Value::Array(vec!(32.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn grid_scroll() {
+        let expected =
+            vec![RedrawEvent::GridScroll(1, [132, 321, 2, 51], 12, 32)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "grid_scroll".into(),
+            Value::Array(vec!(
+                1.into(),
+                132.into(),
+                321.into(),
+                2.into(),
+                51.into(),
+                12.into(),
+                32.into(),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn default_colors_set() {
+        let expected = vec![RedrawEvent::DefaultColorsSet(
+            Color::from_u64(321921),
+            Color::from_u64(94921),
+            Color::from_u64(983821232),
+        )];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "default_colors_set".into(),
+            Value::Array(vec!(321921.into(), 94921.into(), 983821232.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    /// Test default values.
+    #[test]
+    fn default_colors_set2() {
+        let expected = vec![RedrawEvent::DefaultColorsSet(
+            Color::from_u64(0),
+            Color::from_u64(std::u64::MAX),
+            Color::from_u64(16711680),
+        )];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "default_colors_set".into(),
+            Value::Array(vec!(
+                (-1 as i64).into(),
+                (-1 as i64).into(),
+                (-1 as i64).into(),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn hl_attr_define() {
+        let expected = vec![RedrawEvent::HlAttrDefine(vec![
+            (
+                1,
+                Highlight {
+                    foreground: Some(Color::from_u64(3215)),
+                    background: Some(Color::from_u64(214)),
+                    special: Some(Color::from_u64(2019092)),
+                    reverse: false,
+                    italic: true,
+                    bold: true,
+                    underline: true,
+                    undercurl: false,
+                },
+            ),
+            (
+                42,
+                Highlight {
+                    foreground: Some(Color::from_u64(3215)),
+                    background: None,
+                    special: Some(Color::from_u64(2019092)),
+                    reverse: true,
+                    italic: false,
+                    bold: true,
+                    underline: false,
+                    undercurl: true,
+                },
+            ),
+            (
+                32,
+                Highlight {
+                    foreground: Some(Color::from_u64(215)),
+                    background: Some(Color::from_u64(315)),
+                    special: Some(Color::from_u64(19092)),
+                    reverse: true,
+                    italic: true,
+                    bold: true,
+                    underline: false,
+                    undercurl: true,
+                },
+            ),
+            (
+                3,
+                Highlight {
+                    foreground: None,
+                    background: None,
+                    special: None,
+                    reverse: false,
+                    italic: false,
+                    bold: false,
+                    underline: false,
+                    undercurl: false,
+                },
+            ),
+        ])];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "hl_attr_define".into(),
+            Value::Array(vec!(
+                1.into(),
+                Value::Map(vec!(
+                    ("foreground".into(), 3215.into()),
+                    ("background".into(), 214.into()),
+                    ("special".into(), 2019092.into()),
+                    ("reverse".into(), false.into()),
+                    ("italic".into(), true.into()),
+                    ("bold".into(), true.into()),
+                    ("underline".into(), true.into()),
+                )),
+            )),
+            Value::Array(vec!(
+                42.into(),
+                Value::Map(vec!(
+                    ("foreground".into(), 3215.into()),
+                    ("special".into(), 2019092.into()),
+                    ("reverse".into(), true.into()),
+                    ("bold".into(), true.into()),
+                    ("undercurl".into(), true.into()),
+                )),
+            )),
+            Value::Array(vec!(
+                32.into(),
+                Value::Map(vec!(
+                    ("foreground".into(), 215.into()),
+                    ("background".into(), 315.into()),
+                    ("special".into(), 19092.into()),
+                    ("reverse".into(), true.into()),
+                    ("italic".into(), true.into()),
+                    ("bold".into(), true.into()),
+                    ("undercurl".into(), true.into()),
+                )),
+            )),
+            Value::Array(vec!(3.into(), Value::Map(vec!()),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn option_set() {
+        let expected = vec![RedrawEvent::OptionSet(vec![
+            OptionSet::GuiFont("my awesome font:h32".into()),
+            OptionSet::LineSpace(32),
+        ])];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "option_set".into(),
+            Value::Array(vec!("guifont".into(), "my awesome font:h32".into(),)),
+            Value::Array(vec!("linespace".into(), 32.into()))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn mode_info_set() {
+        let expected = vec![RedrawEvent::ModeInfoSet(
+            true,
+            vec![
+                ModeInfo {
+                    blink_on: 32,
+                    cursor_shape: CursorShape::Horizontal,
+                    cell_percentage: 0.32,
+                },
+                ModeInfo {
+                    blink_on: 1,
+                    cursor_shape: CursorShape::Block,
+                    cell_percentage: 1.0,
+                },
+            ],
+        )];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "mode_info_set".into(),
+            Value::Array(vec!(
+                true.into(),
+                Value::Array(vec!(
+                    Value::Map(vec!(
+                        ("blinkon".into(), 32.into()),
+                        ("cursor_shape".into(), "horizontal".into()),
+                        ("cell_percentage".into(), 32.into()),
+                    )),
+                    Value::Map(vec!(
+                        ("blinkon".into(), 1.into()),
+                        ("cursor_shape".into(), "block".into()),
+                        ("cell_percentage".into(), 100.into()),
+                    )),
+                )),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn mode_change() {
+        let expected = vec![RedrawEvent::ModeChange("foo".into(), 32)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "mode_change".into(),
+            Value::Array(vec!("foo".into(), 32.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn busy_start() {
+        let expected = vec![RedrawEvent::SetBusy(true)];
+
+        let res = nvim_bridge::parse_redraw_event(args!("busy_start".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn busy_stop() {
+        let expected = vec![RedrawEvent::SetBusy(false)];
+
+        let res = nvim_bridge::parse_redraw_event(args!("busy_stop".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn flush() {
+        let expected = vec![RedrawEvent::Flush()];
+
+        let res = nvim_bridge::parse_redraw_event(args!("flush".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_show() {
+        let expected = vec![RedrawEvent::PopupmenuShow(PopupmenuShow {
+            selected: 4,
+            row: 3,
+            col: 6,
+            items: vec![
+                CompletionItem {
+                    word: "foo".to_owned(),
+                    kind: CompletionItemKind::Class,
+                    kind_raw: "class".to_owned(),
+                    menu: "bar".to_owned(),
+                    info: "foobar321".to_owned(),
+                },
+                CompletionItem {
+                    word: "drow".to_owned(),
+                    kind: CompletionItemKind::Unknown,
+                    kind_raw: "".to_owned(),
+                    menu: "unem".to_owned(),
+                    info: "ofni".to_owned(),
+                },
+            ],
+        })];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "popupmenu_show".into(),
+            Value::Array(vec!(
+                Value::Array(vec!(
+                    Value::Array(vec!(
+                        "foo".into(),
+                        "class".into(),
+                        "bar".into(),
+                        "foobar321".into(),
+                    )),
+                    Value::Array(vec!(
+                        "drow".into(),
+                        "".into(),
+                        "unem".into(),
+                        "ofni".into(),
+                    )),
+                )),
+                4.into(),
+                3.into(),
+                6.into(),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_hide() {
+        let expected = vec![RedrawEvent::PopupmenuHide()];
+
+        let res =
+            nvim_bridge::parse_redraw_event(args!("popupmenu_hide".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_select() {
+        let expected = vec![RedrawEvent::PopupmenuSelect(32)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "popupmenu_select".into(),
+            Value::Array(vec!(32.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn tabline_update() {
+        let expected = vec![RedrawEvent::TablineUpdate(
+            Tabpage::new("foo".into()),
+            vec![
+                (Tabpage::new("bar".into()), "bar_name".into()),
+                (Tabpage::new("ugh".into()), "ugh_name".into()),
+            ],
+        )];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "tabline_update".into(),
+            Value::Array(vec!(
+                "foo".into(),
+                Value::Array(vec!(
+                    Value::Map(vec!(
+                        ("tab".into(), "bar".into()),
+                        ("name".into(), "bar_name".into()),
+                    )),
+                    Value::Map(vec!(
+                        ("tab".into(), "ugh".into()),
+                        ("name".into(), "ugh_name".into()),
+                    )),
+                )),
+            ))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_show() {
+        let expected = vec![RedrawEvent::CmdlineShow(CmdlineShow {
+            content: vec![(91, "foo".to_owned()), (33, "bar".to_owned())],
+            pos: 32,
+            firstc: "f".to_owned(),
+            prompt: "p".to_owned(),
+            indent: 2,
+            level: 4,
+        })];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "cmdline_show".into(),
+            Value::Array(vec![
+                Value::Array(vec![
+                    Value::Array(vec![91.into(), "foo".into()]),
+                    Value::Array(vec![33.into(), "bar".into()]),
+                ]),
+                32.into(),
+                "f".into(),
+                "p".into(),
+                2.into(),
+                4.into(),
+            ])
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_hide() {
+        let expected = vec![RedrawEvent::CmdlineHide()];
+
+        let res = nvim_bridge::parse_redraw_event(args!("cmdline_hide".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_pos() {
+        let expected = vec![RedrawEvent::CmdlinePos(3, 9)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "cmdline_pos".into(),
+            Value::Array(vec!(3.into(), 9.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_special_char() {
+        let expected =
+            vec![RedrawEvent::CmdlineSpecialChar("^V".to_string(), false, 1)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "cmdline_special_char".into(),
+            Value::Array(vec!("^V".into(), false.into(), 1.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_block_append() {
+        let expected =
+            vec![RedrawEvent::CmdlineBlockAppend((2, "foobar".to_string()))];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "cmdline_block_append".into(),
+            Value::Array(vec!(Value::Array(vec!(Value::Array(vec!(
+                2.into(),
+                "foobar".into(),
+            )),)),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cmdline_block_hide() {
+        let expected = vec![RedrawEvent::CmdlineBlockHide()];
+
+        let res =
+            nvim_bridge::parse_redraw_event(args!("cmdline_block_hide".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn wildmenu_show() {
+        let expected = vec![RedrawEvent::WildmenuShow(vec![
+            "foo".to_owned(),
+            "bar".to_owned(),
+        ])];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "wildmenu_show".into(),
+            Value::Array(
+                vec!(Value::Array(vec!("foo".into(), "bar".into(),)),)
+            )
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn wildmenu_hide() {
+        let expected = vec![RedrawEvent::WildmenuHide()];
+
+        let res =
+            nvim_bridge::parse_redraw_event(args!("wildmenu_hide".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn wildmenu_select() {
+        let expected = vec![RedrawEvent::WildmenuSelect(32)];
+
+        let res = nvim_bridge::parse_redraw_event(args!(
+            "wildmenu_select".into(),
+            Value::Array(vec!(32.into(),))
+        ));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn mouse_on() {
+        let expected = vec![RedrawEvent::Ignored("mouse_on".to_owned())];
+
+        let res = nvim_bridge::parse_redraw_event(args!("mouse_on".into()));
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn mouse_off() {
+        let expected = vec![RedrawEvent::Ignored("mouse_off".to_owned())];
+
+        let res = nvim_bridge::parse_redraw_event(args!("mouse_off".into()));
+
+        assert_eq!(expected, res);
+    }
+}

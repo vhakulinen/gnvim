@@ -1,6 +1,6 @@
 use glib;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Highlight {
     pub foreground: Option<Color>,
     pub background: Option<Color>,
@@ -55,7 +55,7 @@ impl Highlight {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Color {
     pub r: f64,
     pub g: f64,

@@ -6,6 +6,9 @@ use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
 
 use ui::color::{Color, Highlight};
 
+#[cfg(test)]
+mod tests;
+
 macro_rules! unwrap_str {
     ($val:expr) => {
         $val.as_str().unwrap();
@@ -129,7 +132,7 @@ pub enum Notify {
     GnvimEvent(Result<GnvimEvent, String>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CursorShape {
     Block,
     Horizontal,
@@ -155,7 +158,7 @@ impl Default for CursorShape {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct ModeInfo {
     /// The cursor blinking period (in ms)
     pub blink_on: u64,
@@ -188,6 +191,7 @@ impl ModeInfo {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Cell {
     pub text: String,
     pub hl_id: u64,
@@ -195,6 +199,7 @@ pub struct Cell {
     pub double_width: bool,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct GridLineSegment {
     pub grid: u64,
     pub row: u64,
@@ -202,6 +207,7 @@ pub struct GridLineSegment {
     pub cells: Vec<Cell>,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum OptionSet {
     /// Font name.
     GuiFont(String),
@@ -211,7 +217,7 @@ pub enum OptionSet {
     NotSupported(String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CompletionItemKind {
     Class,
     Color,
@@ -293,7 +299,7 @@ impl CompletionItemKind {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CompletionItem {
     pub word: String,
     pub kind: CompletionItemKind,
@@ -302,6 +308,7 @@ pub struct CompletionItem {
     pub info: String,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct PopupmenuShow {
     pub items: Vec<CompletionItem>,
     pub selected: i64,
@@ -309,7 +316,7 @@ pub struct PopupmenuShow {
     pub col: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CmdlineShow {
     pub content: Vec<(u64, String)>,
     pub pos: u64,
@@ -319,6 +326,7 @@ pub struct CmdlineShow {
     pub level: u64,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(String),
 
@@ -573,7 +581,7 @@ GLOBALS:
     ["visual_bell"]
  */
 
-fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
+pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
     args.into_iter()
         .map(|args| {
             let cmd = unwrap_str!(args[0]);
