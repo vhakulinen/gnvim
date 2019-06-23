@@ -212,9 +212,82 @@ pub enum OptionSet {
 }
 
 #[derive(Clone)]
+pub enum CompletionItemKind {
+    Class,
+    Color,
+    Constant,
+    Constructor,
+    Enum,
+    EnumMember,
+    Event,
+    Function,
+    File,
+    Folder,
+    Field,
+    Interface,
+    Keyword,
+    Method,
+    Module,
+    Operator,
+    Property,
+    Reference,
+    Snippet,
+    Struct,
+    Text,
+    TypeParameter,
+    Unit,
+    Unknown,
+    Value,
+    Variable,
+}
+
+impl From<&str> for CompletionItemKind {
+    fn from(from: &str) -> Self {
+        match from {
+            "class" => CompletionItemKind::Class,
+            "color" => CompletionItemKind::Color,
+            "constant" => CompletionItemKind::Constant,
+            "constructor" => CompletionItemKind::Constructor,
+            "enum" => CompletionItemKind::Enum,
+            "enum member" => CompletionItemKind::EnumMember,
+            "event" => CompletionItemKind::Event,
+            "function" => CompletionItemKind::Function,
+            "file" => CompletionItemKind::File,
+            "folder" => CompletionItemKind::Folder,
+            "field" => CompletionItemKind::Field,
+            "interface" => CompletionItemKind::Interface,
+            "keyword" => CompletionItemKind::Keyword,
+            "method" => CompletionItemKind::Method,
+            "module" => CompletionItemKind::Module,
+            "operator" => CompletionItemKind::Operator,
+            "property" => CompletionItemKind::Property,
+            "reference" => CompletionItemKind::Reference,
+            "snippet" => CompletionItemKind::Snippet,
+            "struct" => CompletionItemKind::Struct,
+            "text" => CompletionItemKind::Text,
+            "type parameter" => CompletionItemKind::TypeParameter,
+            "unit" => CompletionItemKind::Unit,
+            "value" => CompletionItemKind::Value,
+            "variable" => CompletionItemKind::Variable,
+            _ => CompletionItemKind::Unknown,
+        }
+    }
+}
+
+impl CompletionItemKind {
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            CompletionItemKind::Unknown => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct CompletionItem {
     pub word: String,
-    pub kind: String,
+    pub kind: CompletionItemKind,
+    pub kind_raw: String,
     pub menu: String,
     pub info: String,
 }
@@ -679,7 +752,9 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     for item in unwrap_array!(args[0]) {
                         let item = unwrap_array!(item);
                         let word = unwrap_str!(item[0]).to_owned();
-                        let kind = unwrap_str!(item[1]).to_owned();
+                        let kind =
+                            CompletionItemKind::from(unwrap_str!(item[1]));
+                        let kind_raw = unwrap_str!(item[1]).to_owned();
                         let menu = unwrap_str!(item[2]).to_owned();
                         let info = unwrap_str!(item[3]).to_owned();
 
@@ -688,6 +763,7 @@ fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                             kind,
                             menu,
                             info,
+                            kind_raw,
                         });
                     }
 

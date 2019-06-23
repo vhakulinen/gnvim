@@ -380,6 +380,7 @@ impl Popupmenu {
         let list = self.list.clone();
         let info_label = self.info_label.clone();
         let info_shown = self.info_shown;
+        let show_kind = self.items.get_show_kind();
 
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
@@ -388,9 +389,12 @@ impl Popupmenu {
                 prev.info.set_visible(false);
                 prev.menu.set_visible(false);
 
-                // Update the `kind` icon with default fg color.
-                let buf = get_icon_pixbuf(&prev.item.kind, &fg, font_height);
-                prev.kind.set_from_pixbuf(&buf);
+                if show_kind {
+                    // Update the `kind` icon with default fg color.
+                    let buf =
+                        get_icon_pixbuf(&prev.item.kind, &fg, font_height);
+                    prev.image.set_from_pixbuf(&buf);
+                }
             }
 
             state.selected = item_num;
@@ -442,10 +446,13 @@ impl Popupmenu {
                     *id.borrow_mut() = Some(sig_id);
                 }
 
-                // Update the `kind` icon with "selected" fg color.
-                let buf =
-                    get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
-                item.kind.set_from_pixbuf(&buf);
+                if show_kind {
+                    // Update the `kind` icon with "selected" fg color.
+                    let buf =
+                        get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
+                    item.image.set_from_pixbuf(&buf);
+                }
+
                 let newline =
                     if item.item.menu.len() > 0 && item.item.info.len() > 0 {
                         "\n"

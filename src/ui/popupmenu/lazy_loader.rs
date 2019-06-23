@@ -12,6 +12,7 @@ use ui::popupmenu::CompletionItemWidgetWrap;
 struct State {
     items: Vec<CompletionItemWidgetWrap>,
     items_to_load: Vec<CompletionItem>,
+    show_kind: bool,
 
     source_id: Option<glib::SourceId>,
 
@@ -43,6 +44,7 @@ impl State {
             source_id: None,
             list,
             css_provider,
+            show_kind: false,
         }
     }
 }
@@ -58,6 +60,10 @@ impl LazyLoader {
         }
     }
 
+    pub fn get_show_kind(&self) -> bool {
+        self.state.borrow().show_kind
+    }
+
     pub fn set_items(
         &mut self,
         items: Vec<CompletionItem>,
@@ -67,6 +73,7 @@ impl LazyLoader {
         let mut state = self.state.borrow_mut();
         state.clear();
 
+        state.show_kind = items.iter().any(|item| !item.kind.is_unknown());
         state.items_to_load = items;
 
         let state_ref = self.state.clone();
@@ -89,6 +96,7 @@ impl LazyLoader {
                 let item = state.items_to_load.remove(0);
                 let widget = CompletionItemWidgetWrap::create(
                     item,
+                    state.show_kind,
                     &state.css_provider,
                     &icon_fg,
                     size,
