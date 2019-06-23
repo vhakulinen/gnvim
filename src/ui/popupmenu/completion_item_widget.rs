@@ -60,14 +60,16 @@ impl CompletionItemWidgetWrap {
 
         let word = gtk::Label::new(item.word.as_str());
         word.set_ellipsize(pango::EllipsizeMode::End);
-        if !show_kind {
-            word.set_margin_start(5);
-        }
         grid.attach(&word, 1, 0, 1, 1);
 
         let info = gtk::Label::new(shorten_info(&item.info).as_str());
         info.set_halign(gtk::Align::Start);
         info.set_ellipsize(pango::EllipsizeMode::End);
+
+        if !show_kind {
+            word.set_margin_start(5);
+            info.set_margin_start(5);
+        }
 
         info.connect_realize(|info| {
             info.hide();
