@@ -6,10 +6,8 @@
 GNvim, neovim GUI aiming for rich code editing experience without any
 unnecessary web bloat.
 
-GNvim has been quite stable for the past 6+ months and it has been my daily
-driver since last August, but ymmv. I try to add new features as I find time
-for it (any help is welcome!). You can usually find me on the
-[neovim gitter](https://gitter.im/neovim/neovim).
+GNvim has been my daily driver since August 2018. I try to add new features as
+I find time for it, and any help is welcome!
 
 [Find some screenshots here](https://github.com/vhakulinen/gnvim/wiki)
 
