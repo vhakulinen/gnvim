@@ -73,8 +73,8 @@ impl LazyLoader {
         let mut state = self.state.borrow_mut();
         state.clear();
 
-        state.items_to_load = items.clone();
         state.show_kind = items.iter().any(|item| !item.kind.is_unknown());
+        state.items_to_load = items;
 
         let state_ref = self.state.clone();
         let source_id = glib::idle_add(move || {
