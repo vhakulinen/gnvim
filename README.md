@@ -1,15 +1,22 @@
-# GNvim - Rich Neovim GUI without any web bloat
+<p align="center">
+	<img src="./desktop/gnvim_128.png" alt="GNvim Logo">
+    <h3 align="center">GNvim - Rich Neovim GUI without any web bloat</h3>
+</p>
 
 [![Build Status](https://travis-ci.org/vhakulinen/gnvim.svg?branch=master)](https://travis-ci.org/vhakulinen/gnvim)
 [![Gitter](https://badges.gitter.im/gnvim/community.svg)](https://gitter.im/gnvim/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-GNvim, neovim GUI aiming for rich code editing experience without any
+GNvim, Neovim GUI aiming for rich code editing experience without any
 unnecessary web bloat.
 
 GNvim has been my daily driver since August 2018. I try to add new features as
 I find time for it, and any help is welcome!
 
-[Find some screenshots here](https://github.com/vhakulinen/gnvim/wiki)
+<p align="center">
+	<img src="https://github.com/vhakulinen/gnvim/wiki/completionmenu.png" alt="Logo">
+</p>
+
+For more screenshots, see [the wiki](https://github.com/vhakulinen/gnvim/wiki).
 
 TL;DR to get started on Ubuntu 18.04 after cloning this repo and assuming
 you have [rust tool chain](https://rustup.rs/) installed:
@@ -74,14 +81,14 @@ TL;DR: Without installing:
 GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 ```
 
-GNvim requires some runtime files to be present and loaded by nvim to work
-properly. By default, gnvim will look this files from `/usr/local/share/gnvim/runtime`,
-but this can be changed by `GNVIM_RUNTIME_PATH` environment variable.
+GNvim requires some runtime files to be present and loaded by Neovim to work
+properly. By default, GNvim will look for these files in `/usr/local/share/gnvim/runtime`,
+but this can be changed by the `GNVIM_RUNTIME_PATH` environment variable.
 
-By default, gnvim will use `nvim` to run neovim. If you want to change that,
+By default, GNvim will use `nvim` to run neovim. If you want to change that,
 you can use `--nvim` flag (e.g. `gnvim --nvim=/path/to/nvim`).
 
-For debugging purposes, there is `--print-nvim-cmd` flag to tell gnvim to print
+For debugging purposes, there is `--print-nvim-cmd` flag to tell GNvim to print
 the executed nvim command.
 
 See `gnvim --help` for all the cli arguments.
