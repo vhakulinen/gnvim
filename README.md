@@ -83,9 +83,9 @@ GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 
 GNvim requires some runtime files to be present and loaded by Neovim to work
 properly. By default, GNvim will look for these files in `/usr/local/share/gnvim/runtime`,
-but this can be changed by the `GNVIM_RUNTIME_PATH` environment variable.
+but this can be changed by specifying the `GNVIM_RUNTIME_PATH` environment variable.
 
-By default, GNvim will use `nvim` to run neovim. If you want to change that,
+GNvim will use `nvim` to run Neovim by default. If you want to change that,
 you can use `--nvim` flag (e.g. `gnvim --nvim=/path/to/nvim`).
 
 For debugging purposes, there is `--print-nvim-cmd` flag to tell GNvim to print
