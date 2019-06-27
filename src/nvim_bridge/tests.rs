@@ -653,3 +653,182 @@ mod parse_redraw_event_tests {
         assert_eq!(expected, res);
     }
 }
+
+mod parse_gnvim_event_tests {
+
+    use neovim_lib::Value;
+    use nvim_bridge;
+    use nvim_bridge::{
+        CmdlineColors, GnvimEvent, PmenuColors, SetGuiColors, TablineColors,
+        WildmenuColors,
+    };
+    use ui::color::Color;
+
+    #[test]
+    fn set_gui_colors() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::SetGuiColors(SetGuiColors {
+                pmenu: PmenuColors {
+                    bg: Some(
+                        Color::from_hex_string("#00ff00".to_owned()).unwrap(),
+                    ),
+                    fg: Some(
+                        Color::from_hex_string("#0000ff".to_owned()).unwrap(),
+                    ),
+                    sel_bg: Some(
+                        Color::from_hex_string("#00ff00".to_owned()).unwrap(),
+                    ),
+                    sel_fg: Some(
+                        Color::from_hex_string("#0000ff".to_owned()).unwrap(),
+                    ),
+                },
+                tabline: TablineColors {
+                    bg: Some(
+                        Color::from_hex_string("#00ff00".to_owned()).unwrap(),
+                    ),
+                    fg: Some(
+                        Color::from_hex_string("#0000ff".to_owned()).unwrap(),
+                    ),
+                    sel_bg: Some(
+                        Color::from_hex_string("#00ff00".to_owned()).unwrap(),
+                    ),
+                    sel_fg: Some(
+                        Color::from_hex_string("#0000ff".to_owned()).unwrap(),
+                    ),
+                    fill_bg: Some(
+                        Color::from_hex_string("#f0ff00".to_owned()).unwrap(),
+                    ),
+                    fill_fg: Some(
+                        Color::from_hex_string("#f000ff".to_owned()).unwrap(),
+                    ),
+                },
+                cmdline: CmdlineColors {
+                    bg: Some(
+                        Color::from_hex_string("#0Aff00".to_owned()).unwrap(),
+                    ),
+                    fg: Some(
+                        Color::from_hex_string("#0A00ff".to_owned()).unwrap(),
+                    ),
+                    border: Some(
+                        Color::from_hex_string("#A0ff00".to_owned()).unwrap(),
+                    ),
+                },
+                wildmenu: WildmenuColors {
+                    bg: Some(
+                        Color::from_hex_string("#00ffe0".to_owned()).unwrap(),
+                    ),
+                    fg: Some(
+                        Color::from_hex_string("#0000ef".to_owned()).unwrap(),
+                    ),
+                    sel_bg: Some(
+                        Color::from_hex_string("#e0ff00".to_owned()).unwrap(),
+                    ),
+                    sel_fg: Some(
+                        Color::from_hex_string("#0e00ff".to_owned()).unwrap(),
+                    ),
+                },
+            }));
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "SetGuiColors".into(),
+            Value::Map(vec![
+                ("pmenu_bg".into(), "#00ff00".into()),
+                ("pmenu_fg".into(), "#0000ff".into()),
+                ("pmenusel_bg".into(), "#00ff00".into()),
+                ("pmenusel_fg".into(), "#0000ff".into()),
+                ("tabline_bg".into(), "#00ff00".into()),
+                ("tabline_fg".into(), "#0000ff".into()),
+                ("tablinesel_bg".into(), "#00ff00".into()),
+                ("tablinesel_fg".into(), "#0000ff".into()),
+                ("tablinefill_bg".into(), "#f0ff00".into()),
+                ("tablinefill_fg".into(), "#f000ff".into()),
+                ("cmdline_bg".into(), "#0Aff00".into()),
+                ("cmdline_fg".into(), "#0A00ff".into()),
+                ("cmdline_border".into(), "#A0ff00".into()),
+                ("wildmenu_bg".into(), "#00ffe0".into()),
+                ("wildmenu_fg".into(), "#0000ef".into()),
+                ("wildmenusel_bg".into(), "#e0ff00".into()),
+                ("wildmenusel_fg".into(), "#0e00ff".into()),
+            ]),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn completion_menu_toggle_info() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::CompletionMenuToggleInfo);
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "CompletionMenuToggleInfo".into(),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cursor_tooltip_load_style() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::CursorTooltipLoadStyle("foobar".to_owned()));
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "CursorTooltipLoadStyle".into(),
+            "foobar".into(),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cursor_tooltip_show() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::CursorTooltipShow("foobar".to_owned(), 3, 6));
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "CursorTooltipShow".into(),
+            "foobar".into(),
+            3.into(),
+            6.into(),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn cursor_tooltip_hide() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::CursorTooltipHide);
+
+        let res =
+            nvim_bridge::parse_gnvim_event(vec!["CursorTooltipHide".into()]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_set_width() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::PopupmenuWidth(432));
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "PopupmenuSetWidth".into(),
+            432.into(),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_set_width_details() {
+        let expected: Result<GnvimEvent, String> =
+            Ok(GnvimEvent::PopupmenuWidthDetails(929));
+
+        let res = nvim_bridge::parse_gnvim_event(vec![
+            "PopupmenuSetWidthDetails".into(),
+            929.into(),
+        ]);
+
+        assert_eq!(expected, res);
+    }
+}

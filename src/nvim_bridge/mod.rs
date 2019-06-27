@@ -421,6 +421,7 @@ impl fmt::Display for RedrawEvent {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
@@ -436,7 +437,7 @@ pub enum GnvimEvent {
     Unknown(String),
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct WildmenuColors {
     pub bg: Option<Color>,
     pub fg: Option<Color>,
@@ -444,7 +445,7 @@ pub struct WildmenuColors {
     pub sel_fg: Option<Color>,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct PmenuColors {
     pub bg: Option<Color>,
     pub fg: Option<Color>,
@@ -452,7 +453,7 @@ pub struct PmenuColors {
     pub sel_fg: Option<Color>,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct TablineColors {
     pub fg: Option<Color>,
     pub bg: Option<Color>,
@@ -462,14 +463,14 @@ pub struct TablineColors {
     pub sel_fg: Option<Color>,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct CmdlineColors {
     pub fg: Option<Color>,
     pub bg: Option<Color>,
     pub border: Option<Color>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct SetGuiColors {
     pub pmenu: PmenuColors,
     pub tabline: TablineColors,
@@ -905,7 +906,9 @@ pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
         .collect()
 }
 
-fn parse_gnvim_event(args: Vec<Value>) -> Result<GnvimEvent, String> {
+pub(crate) fn parse_gnvim_event(
+    args: Vec<Value>,
+) -> Result<GnvimEvent, String> {
     let cmd = try_str!(args.get(0).ok_or("No command given")?, "cmd");
     let res = match cmd {
         "SetGuiColors" => {
