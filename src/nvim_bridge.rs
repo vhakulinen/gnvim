@@ -242,33 +242,43 @@ pub enum CompletionItemKind {
 }
 
 impl From<&str> for CompletionItemKind {
+    // Returns CompletionItemKind from a string
+    //
+    // Lower case kinds are vim-lsp
+    //   https://github.com/prabirshrestha/vim-lsp/blob/2b583fefa20b7b1a5e7481a93fb6f1fee67e0846/autoload/lsp/omni.vim#L4-L28
+    // Single characters are coc.nvim
+    //   https://github.com/neoclide/coc.nvim/blob/909710fddb04d383e5546b0f869c44f395a80d02/src/languages.ts#L143-L167
+    // Pascal cased kinds are LanguageClient-neovim
+    //   https://github.com/autozimu/LanguageClient-neovim/blob/0ac444affdff8db699684aa4cf04c2cb0daf0286/rplugin/python3/denite/lsp/protocol.py#L48-L55
     fn from(from: &str) -> Self {
         match from {
-            "class" => CompletionItemKind::Class,
+            "class" | "C" | "Class" => CompletionItemKind::Class,
             "color" => CompletionItemKind::Color,
-            "constant" => CompletionItemKind::Constant,
-            "constructor" => CompletionItemKind::Constructor,
-            "enum" => CompletionItemKind::Enum,
-            "enum member" => CompletionItemKind::EnumMember,
-            "event" => CompletionItemKind::Event,
-            "function" => CompletionItemKind::Function,
-            "file" => CompletionItemKind::File,
-            "folder" => CompletionItemKind::Folder,
-            "field" => CompletionItemKind::Field,
-            "interface" => CompletionItemKind::Interface,
-            "keyword" => CompletionItemKind::Keyword,
-            "method" => CompletionItemKind::Method,
-            "module" => CompletionItemKind::Module,
-            "operator" => CompletionItemKind::Operator,
-            "property" => CompletionItemKind::Property,
-            "reference" => CompletionItemKind::Reference,
+            "constant" | "Constant" => CompletionItemKind::Constant,
+            "constructor" | "Constructor" => CompletionItemKind::Constructor,
+            "enum" | "Enum" => CompletionItemKind::Enum,
+            "enum member" | "Enum Member" => CompletionItemKind::EnumMember,
+            "event" | "E" | "Event" => CompletionItemKind::Event,
+            "file" | "F" | "File" => CompletionItemKind::File,
+            "field" | "m" | "Field" => CompletionItemKind::Field,
+            "folder" | "Folder" => CompletionItemKind::Folder,
+            "function" | "Function" => CompletionItemKind::Function,
+            "interface" | "I" | "Interface" => CompletionItemKind::Interface,
+            "keyword" | "k" | "Key" => CompletionItemKind::Keyword,
+            "method" | "f" | "Method" => CompletionItemKind::Method,
+            "module" | "M" | "Module" => CompletionItemKind::Module,
+            "operator" | "O" | "Operator" => CompletionItemKind::Operator,
+            "property" | "Property" => CompletionItemKind::Property,
+            "reference" | "r" => CompletionItemKind::Reference,
             "snippet" => CompletionItemKind::Snippet,
-            "struct" => CompletionItemKind::Struct,
+            "struct" | "S" | "Struct" => CompletionItemKind::Struct,
             "text" => CompletionItemKind::Text,
-            "type parameter" => CompletionItemKind::TypeParameter,
-            "unit" => CompletionItemKind::Unit,
+            "type parameter" | "T" | "Type Parameter" => {
+                CompletionItemKind::TypeParameter
+            }
+            "unit" | "U" => CompletionItemKind::Unit,
             "value" => CompletionItemKind::Value,
-            "variable" => CompletionItemKind::Variable,
+            "variable" | "v" | "Variable" => CompletionItemKind::Variable,
             _ => CompletionItemKind::Unknown,
         }
     }
