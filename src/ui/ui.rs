@@ -7,7 +7,7 @@ use std::time;
 use gdk;
 use glib;
 use gtk;
-use neovim_lib::neovim::Neovim;
+use neovim_lib::neovim::{Neovim, UiOption};
 use neovim_lib::neovim_api::NeovimApi;
 use neovim_lib::NeovimApiAsync;
 use neovim_lib::Value;
@@ -437,6 +437,37 @@ fn handle_gnvim_event(
     nvim: Arc<Mutex<Neovim>>,
 ) {
     match event {
+        GnvimEvent::EnableExtTabline(option) => {
+            let mut nvim = nvim.lock().unwrap();
+            nvim.set_option(UiOption::ExtTabline(*option))
+                .unwrap_or_else(|err| {
+                    nvim.command_async(&format!(
+                        "echo \"Failed to enable ext_tabline: '{}'\"",
+                        err
+                    ));
+                });
+        }
+        GnvimEvent::EnableExtPmenu(option) => {
+            let mut nvim = nvim.lock().unwrap();
+            nvim.set_option(UiOption::ExtPopupmenu(*option))
+                .unwrap_or_else(|err| {
+                    nvim.command_async(&format!(
+                        "echo \"Failed to enable ext_popupmenu: '{}'\"",
+                        err
+                    ));
+                });
+        }
+        GnvimEvent::EnableExtCmdline(option) => {
+            let mut nvim = nvim.lock().unwrap();
+            nvim.set_option(UiOption::ExtCmdline(*option))
+                .unwrap_or_else(|err| {
+                    nvim.command_async(&format!(
+                        "echo \"Failed to enable ext_cmdline: '{}'\"",
+                        err
+                    ));
+                });
+        }
+
         GnvimEvent::SetGuiColors(colors) => {
             state.popupmenu.set_colors(colors.pmenu, &state.hl_defs);
             state.tabline.set_colors(colors.tabline, &state.hl_defs);

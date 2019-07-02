@@ -818,6 +818,10 @@ impl fmt::Display for RedrawEvent {
 #[derive(Debug, PartialEq)]
 pub enum GnvimEvent {
     SetGuiColors(SetGuiColors),
+    EnableExtTabline(bool),
+    EnableExtCmdline(bool),
+    EnableExtPmenu(bool),
+
     CompletionMenuToggleInfo,
 
     CursorTooltipLoadStyle(String),
@@ -1071,6 +1075,42 @@ pub(crate) fn parse_gnvim_event(
 ) -> Result<GnvimEvent, String> {
     let cmd = try_str!(args.get(0).ok_or("No command given")?, "cmd");
     let res = match cmd {
+        "EnableExtCmdline" => {
+            let option = try_str!(
+                args.get(1).ok_or("No input for EnableExtCmdline")?,
+                "enable ext cmdline"
+            )
+            .parse();
+            if let Err(error) = option {
+                return Err(format!("Didn't receive a boolean: {}", error));
+            }
+
+            GnvimEvent::EnableExtCmdline(option.unwrap())
+        }
+        "EnableExtTabline" => {
+            let option = try_str!(
+                args.get(1).ok_or("No input for EnableExtTabline")?,
+                "enable ext tabline"
+            )
+            .parse();
+            if let Err(error) = option {
+                return Err(format!("Didn't receive a boolean: {}", error));
+            }
+
+            GnvimEvent::EnableExtTabline(option.unwrap())
+        }
+        "EnableExtPmenu" => {
+            let option = try_str!(
+                args.get(1).ok_or("No input for EnableExtPmenu")?,
+                "enable ext pmenu"
+            )
+            .parse();
+            if let Err(error) = option {
+                return Err(format!("Didn't receive a boolean: {}", error));
+            }
+
+            GnvimEvent::EnableExtPmenu(option.unwrap())
+        }
         "SetGuiColors" => {
             let mut colors = SetGuiColors::default();
 

@@ -10,3 +10,8 @@ function! gnvim#popupmenu#toggle_details()
     call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CompletionMenuToggleInfo')
     return ''
 endfunction
+
+function! gnvim#popupmenu#enable(bool)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'EnableExtPmenu', a:bool)
+    return ''
+endfunction
