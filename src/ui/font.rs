@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::Display;
 
-const DEFAULT_HEIGHT: usize = 14;
+const DEFAULT_HEIGHT: f32 = 14.0;
 
 pub enum FontUnit {
     Pixel,
@@ -20,7 +20,7 @@ impl Display for FontUnit {
 #[derive(Clone)]
 pub struct Font {
     name: String,
-    pub height: usize,
+    pub height: f32,
 }
 
 impl Font {
@@ -47,8 +47,8 @@ impl Font {
                 match ch {
                     'h' => {
                         let rest = chars.collect::<String>();
-                        let h = rest.parse::<usize>().or(Err(()))?;
-                        if h == 0 {
+                        let h = rest.parse::<f32>().or(Err(()))?;
+                        if h <= 0.0 {
                             // Ignore zero sized font.
                             continue;
                         }
@@ -114,7 +114,7 @@ mod tests {
     fn test_as_wild_css() {
         let font = Font {
             name: "foo".to_string(),
-            height: 10,
+            height: 10.0,
         };
 
         assert_eq!(
@@ -139,14 +139,12 @@ mod tests {
         // Font with proper height.
         let f = Font::from_guifont("monospace:h11").unwrap();
         assert_eq!(f.name, "monospace");
-        assert_eq!(f.height, 11);
+        assert_eq!(f.height, 11.0);
 
         // Font with invalid height.
         let f = Font::from_guifont("font:h");
         assert_eq!(f.is_err(), true);
         let f = Font::from_guifont("font:hn");
-        assert_eq!(f.is_err(), true);
-        let f = Font::from_guifont("font:h-1");
         assert_eq!(f.is_err(), true);
 
         // Font with height zero.
@@ -154,7 +152,12 @@ mod tests {
         assert_eq!(f.name, "foo");
         assert_eq!(f.height, DEFAULT_HEIGHT);
 
-        // Font with no hegith.
+        // Font with negative height.
+        let f = Font::from_guifont("font:h-1").unwrap();
+        assert_eq!(f.name, "font");
+        assert_eq!(f.height, DEFAULT_HEIGHT);
+
+        // Font with no height.
         let f = Font::from_guifont("bar").unwrap();
         assert_eq!(f.name, "bar");
         assert_eq!(f.height, DEFAULT_HEIGHT);
