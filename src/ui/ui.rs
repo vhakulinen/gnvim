@@ -421,7 +421,8 @@ fn handle_notify(
                 ))
                 .cb(|res| match res {
                     Ok(_) => {}
-                    Err(err) => {
+                    Err(err) =>
+                    {
                         #[cfg(debug_assertions)]
                         println!("Failed to execute nvim command: {}", err)
                     }
@@ -458,7 +459,8 @@ fn handle_gnvim_event(
                 ))
                 .cb(|res| match res {
                     Ok(_) => {}
-                    Err(err) => {
+                    Err(err) =>
+                    {
                         #[cfg(debug_assertions)]
                         println!("Failed to execute nvim command: {}", err)
                     }
