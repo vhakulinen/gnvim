@@ -147,6 +147,7 @@ impl UI {
                 nvim.ui_try_resize_async(cols as i64, rows as i64)
                     .cb(|res| {
                         if let Err(err) = res {
+                            #[cfg(debug_assertions)]
                             eprintln!("Error: failed to resize nvim when grid size changed ({:?})", err);
                         }
                     })
@@ -239,6 +240,7 @@ impl UI {
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
                 } else {
+                    #[cfg(debug_assertions)]
                     println!(
                         "Failed to turn input event into nvim key (keyval: {})",
                         e.get_keyval()
@@ -420,6 +422,7 @@ fn handle_notify(
                 .cb(|res| match res {
                     Ok(_) => {}
                     Err(err) => {
+                        #[cfg(debug_assertions)]
                         println!("Failed to execute nvim command: {}", err)
                     }
                 })
@@ -456,6 +459,7 @@ fn handle_gnvim_event(
                 .cb(|res| match res {
                     Ok(_) => {}
                     Err(err) => {
+                        #[cfg(debug_assertions)]
                         println!("Failed to execute nvim command: {}", err)
                     }
                 })
@@ -484,6 +488,7 @@ fn handle_gnvim_event(
             state.popupmenu.set_width_details(*width as i32);
         }
         GnvimEvent::Unknown(msg) => {
+            #[cfg(debug_assertions)]
             println!("Received unknown GnvimEvent: {}", msg);
         }
     }
@@ -548,7 +553,10 @@ fn handle_redraw_event(
                 nvim.command_async("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif")
                     .cb(|res| match res {
                         Ok(_) => {}
-                        Err(err) => println!("GnvimScroll error: {:?}", err),
+                        Err(err) => {
+                            #[cfg(debug_assertions)]
+                            println!("GnvimScroll error: {:?}", err);
+                        }
                     })
                     .call();
             }
@@ -603,6 +611,7 @@ fn handle_redraw_event(
                             nvim.ui_try_resize_async(cols as i64, rows as i64)
                                 .cb(|res| {
                                     if let Err(err) = res {
+                                        #[cfg(debug_assertions)]
                                         eprintln!("Error: failed to resize nvim on font change ({:?})", err);
                                     }
                                 })
@@ -633,6 +642,7 @@ fn handle_redraw_event(
                             nvim.ui_try_resize_async(cols as i64, rows as i64)
                                 .cb(|res| {
                                     if let Err(err) = res {
+                                        #[cfg(debug_assertions)]
                                         eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
                                     }
                                 })
@@ -645,6 +655,7 @@ fn handle_redraw_event(
                             state.tabline.set_line_space(*val, &state.hl_defs);
                         }
                         OptionSet::NotSupported(name) => {
+                            #[cfg(debug_assertions)]
                             println!("Not supported option set: {}", name);
                         }
                     }
@@ -749,6 +760,7 @@ fn handle_redraw_event(
             }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
+                #[cfg(debug_assertions)]
                 println!("Received unknown redraw event: {}", e);
             }
         }
