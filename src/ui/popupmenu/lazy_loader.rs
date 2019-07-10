@@ -19,7 +19,8 @@ struct State {
     /// Once we're loaded some (or all) data, this closure gets called if
     /// one exists. The first value in the tuple can is indication on the
     /// number of items needed before calling the closure.
-    once_loaded: Option<(Option<i32>, Box<Fn(&Vec<CompletionItemWidgetWrap>)>)>,
+    once_loaded:
+        Option<(Option<i32>, Box<dyn Fn(&Vec<CompletionItemWidgetWrap>)>)>,
 
     list: gtk::ListBox,
     css_provider: gtk::CssProvider,

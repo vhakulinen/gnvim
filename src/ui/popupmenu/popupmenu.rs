@@ -426,7 +426,7 @@ impl Popupmenu {
                 list.select_row(&item.row);
 
                 {
-                    let mut id = Arc::new(ThreadGuard::new(None));
+                    let id = Arc::new(ThreadGuard::new(None));
                     let id_ref = id.clone();
                     let list = list.clone();
                     // Ensure that the row is in the view, but make sure first
