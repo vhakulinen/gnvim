@@ -95,7 +95,7 @@ impl Tabline {
             .unwrap_or(false);
 
         let title = format!("{}{}", tab_name, if modified { " +" } else { "" });
-        gtk::Label::new(title.as_str())
+        gtk::Label::new(Some(title.as_str()))
     }
 
     pub fn update(

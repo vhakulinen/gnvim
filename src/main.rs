@@ -142,8 +142,8 @@ fn main() {
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
     flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
-    let app =
-        gtk::Application::new("com.github.vhakulinen.gnvim", flags).unwrap();
+    let app = gtk::Application::new(Some("com.github.vhakulinen.gnvim"), flags)
+        .unwrap();
 
     gdk::set_program_class("GNvim");
     glib::set_application_name("GNvim");

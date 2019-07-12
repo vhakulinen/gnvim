@@ -9,7 +9,6 @@ use gtk;
 use gtk::{DrawingArea, EventBox};
 use pango::FontDescription;
 
-use cairo::prelude::*;
 use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
@@ -98,7 +97,7 @@ impl Grid {
         });
 
         let eb = EventBox::new();
-        eb.add_events(EventMask::SCROLL_MASK.bits() as i32);
+        eb.add_events(EventMask::SCROLL_MASK);
         eb.add(&da);
 
         Grid {
@@ -145,7 +144,7 @@ impl Grid {
     }
 
     pub fn set_im_context(&mut self, im_context: &gtk::IMMulticontext) {
-        im_context.set_client_window(&self.da.get_window());
+        im_context.set_client_window(self.da.get_window().as_ref());
         self.im_context = Some(im_context.clone());
     }
 

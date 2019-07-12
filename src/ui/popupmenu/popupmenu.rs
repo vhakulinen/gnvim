@@ -100,7 +100,7 @@ impl Popupmenu {
     pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
-        let info_label = gtk::Label::new("");
+        let info_label = gtk::Label::new(Some(""));
         info_label.set_halign(gtk::Align::Start);
         info_label.set_valign(gtk::Align::Start);
         info_label.set_xalign(0.0);
@@ -114,7 +114,10 @@ impl Popupmenu {
         let info_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         info_box.add(&info_label);
 
-        let scrolled_info = gtk::ScrolledWindow::new(None, None);
+        let scrolled_info = gtk::ScrolledWindow::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         scrolled_info.add(&info_box);
         scrolled_info
             .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
@@ -123,7 +126,10 @@ impl Popupmenu {
         list.set_valign(gtk::Align::Start);
         list.set_selection_mode(gtk::SelectionMode::Single);
 
-        let scrolled_list = gtk::ScrolledWindow::new(None, None);
+        let scrolled_list = gtk::ScrolledWindow::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         scrolled_list.add(&list);
         scrolled_list
             .set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
@@ -185,7 +191,10 @@ impl Popupmenu {
         });
 
         // TODO(ville): Should use gtk::Fixed here.
-        let layout = gtk::Layout::new(None, None);
+        let layout = gtk::Layout::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         layout.put(&box_, 0, 0);
         layout.show_all();
         scrolled_info.hide();
@@ -393,7 +402,7 @@ impl Popupmenu {
                     // Update the `kind` icon with default fg color.
                     let buf =
                         get_icon_pixbuf(&prev.item.kind, &fg, font_height);
-                    prev.image.set_from_pixbuf(&buf);
+                    prev.image.set_from_pixbuf(Some(&buf));
                 }
             }
 
@@ -423,7 +432,7 @@ impl Popupmenu {
                 }
 
                 item.row.grab_focus();
-                list.select_row(&item.row);
+                list.select_row(Some(&item.row));
 
                 {
                     let mut id = Arc::new(ThreadGuard::new(None));
@@ -450,7 +459,7 @@ impl Popupmenu {
                     // Update the `kind` icon with "selected" fg color.
                     let buf =
                         get_icon_pixbuf(&item.item.kind, &fg_sel, font_height);
-                    item.image.set_from_pixbuf(&buf);
+                    item.image.set_from_pixbuf(Some(&buf));
                 }
 
                 let newline =
@@ -487,7 +496,7 @@ impl Popupmenu {
             pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE)
                 .unwrap();
         attrs.insert(attr);
-        self.info_label.set_attributes(&attrs);
+        self.info_label.set_attributes(Some(&attrs));
     }
 
     fn set_styles(&self, hl_defs: &HlDefs) {
