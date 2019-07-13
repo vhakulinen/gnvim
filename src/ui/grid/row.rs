@@ -75,7 +75,6 @@ impl Leaf {
     /// Splits this leaf into two (ropes).
     #[inline]
     fn split(mut self, at: usize) -> (Rope, Rope) {
-
         if self.double_width {
             // We can't really split a double width character, so replace
             // the contents of self with two spaces.
