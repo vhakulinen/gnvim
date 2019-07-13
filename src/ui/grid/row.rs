@@ -74,7 +74,15 @@ impl Leaf {
 
     /// Splits this leaf into two (ropes).
     #[inline]
-    fn split(self, at: usize) -> (Rope, Rope) {
+    fn split(mut self, at: usize) -> (Rope, Rope) {
+
+        if self.double_width {
+            // We can't really split a double width character, so replace
+            // the contents of self with two spaces.
+            self.text = "  ".to_string();
+            self.double_width = false;
+        }
+
         let mut left = String::with_capacity(at);
         let mut right = String::with_capacity(self.len - at);
         for (i, c) in self.text.chars().enumerate() {
@@ -825,6 +833,18 @@ mod tests {
         assert_eq!(leafs[0].text, "first");
         assert_eq!(leafs[1].text, "可");
         assert_eq!(leafs[2].text, "secondthird");
+    }
+
+    #[test]
+    fn test_leaf_doublewidth_remove() {
+        let leaf = Leaf::new(String::from("可"), 0, true);
+
+        let (l, r) = leaf.split(0);
+
+        assert_eq!(l.len(), 0);
+        assert_eq!(l.text(), "");
+        assert_eq!(r.len(), 2);
+        assert_eq!(r.text(), "  ");
     }
 
     #[test]
