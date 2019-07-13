@@ -302,7 +302,7 @@ impl CursorTooltip {
 
         let all = format!(
             "<!DOCTYPE html>
-            <html> 
+            <html>
             <head>
                 <meta charset=\"utf8\">
                 <style>
@@ -458,7 +458,7 @@ fn webview_load_finished(
         document.body.style.width = '';
         // Add some extra (16) to adjust for padding.
         width + 16",
-        None,
+        None::<&gio::Cancellable>,
         move |res: Result<webkit::JavascriptResult, webkit::Error>| {
 
             let res = res.unwrap();
@@ -469,7 +469,7 @@ fn webview_load_finished(
 
             webview_ref.borrow().run_javascript(
                 "document.getElementById('wrapper').getBoundingClientRect().height",
-                None,
+                None::<&gio::Cancellable>,
                 move |res| {
                     cb(width, res);
                 },

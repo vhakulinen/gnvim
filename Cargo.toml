@@ -13,23 +13,23 @@ unstable = []
 neovim-lib = "0.6"
 structopt = "0.2"
 
-gio = "0.5"
-cairo-rs = "0.5"
-pango = "0.5"
-pangocairo = "0.6"
-glib = "0.6"
-gdk = "0.9"
-gdk-pixbuf = "0.5"
+gio = "0.7"
+pango = "0.7"
+pangocairo = "0.8"
+cairo-rs = "0.7"
+glib = "0.8"
+gdk = "0.11"
+gdk-pixbuf = "0.7"
 
 pulldown-cmark = { version = "0.2", default-features = false }
 ammonia = "2"
 syntect = "3"
-lazy_static = "1.2.0"
+lazy_static = "1.3.0"
 
 [dependencies.gtk]
-version = "0.5"
+version = "0.7"
 features = ["v3_18"]
 
 [dependencies.webkit2gtk]
-version = "0.5"
+version = "0.8"
 features = ["v2_14"]

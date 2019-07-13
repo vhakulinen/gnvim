@@ -43,26 +43,26 @@ impl CompletionItemWidgetWrap {
         let image = gtk::Image::new();
         if show_kind {
             let buf = get_icon_pixbuf(&item.kind, icon_fg, size);
-            image.set_from_pixbuf(&buf);
-            image.set_tooltip_text(
+            image.set_from_pixbuf(Some(&buf));
+            image.set_tooltip_text(Some(
                 format!("kind: '{}'", item.kind_raw).as_str(),
-            );
+            ));
             image.set_margin_start(margin);
             grid.attach(&image, 0, 0, 1, 1);
         }
 
-        let menu = gtk::Label::new(item.menu.as_str());
+        let menu = gtk::Label::new(Some(item.menu.as_str()));
         menu.set_halign(gtk::Align::End);
         menu.set_hexpand(true);
         menu.set_margin_end(margin);
         menu.set_ellipsize(pango::EllipsizeMode::End);
         grid.attach(&menu, 2, 0, 1, 1);
 
-        let word = gtk::Label::new(item.word.as_str());
+        let word = gtk::Label::new(Some(item.word.as_str()));
         word.set_ellipsize(pango::EllipsizeMode::End);
         grid.attach(&word, 1, 0, 1, 1);
 
-        let info = gtk::Label::new(shorten_info(&item.info).as_str());
+        let info = gtk::Label::new(Some(shorten_info(&item.info).as_str()));
         info.set_halign(gtk::Align::Start);
         info.set_ellipsize(pango::EllipsizeMode::End);
 
@@ -115,7 +115,9 @@ pub fn get_icon_pixbuf(
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
-    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None).unwrap();
+    let buf =
+        gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>)
+            .unwrap();
 
     buf
 }

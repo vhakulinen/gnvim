@@ -35,7 +35,10 @@ impl Wildmenu {
         let list = gtk::ListBox::new();
         list.set_selection_mode(gtk::SelectionMode::Single);
 
-        let scrolledwindow = gtk::ScrolledWindow::new(None, None);
+        let scrolledwindow = gtk::ScrolledWindow::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         scrolledwindow
             .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scrolledwindow.add(&list);
@@ -111,7 +114,7 @@ impl Wildmenu {
         self.clear();
 
         for item in items {
-            let label = gtk::Label::new(item.as_str());
+            let label = gtk::Label::new(Some(item.as_str()));
             label.set_halign(gtk::Align::Start);
 
             let row = gtk::ListBoxRow::new();
@@ -132,7 +135,7 @@ impl Wildmenu {
             self.list.unselect_all();
         } else {
             if let Some(row) = self.list.get_row_at_index(item_num) {
-                self.list.select_row(&row);
+                self.list.select_row(Some(&row));
                 row.grab_focus();
             }
         }

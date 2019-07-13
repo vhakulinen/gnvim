@@ -28,7 +28,10 @@ impl CmdlineBlock {
 
         let textview = gtk::TextView::new();
 
-        let scrolledwindow = gtk::ScrolledWindow::new(None, None);
+        let scrolledwindow = gtk::ScrolledWindow::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         scrolledwindow
             .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
 
@@ -225,7 +228,10 @@ impl CmdlineInput {
         // Catch all button events to prevent selection of text etc.
         textview.connect_button_press_event(|_, _| Inhibit(true));
 
-        let scroll = gtk::ScrolledWindow::new(None, None);
+        let scroll = gtk::ScrolledWindow::new(
+            None::<&gtk::Adjustment>,
+            None::<&gtk::Adjustment>,
+        );
         scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
         scroll.add(&textview);
 

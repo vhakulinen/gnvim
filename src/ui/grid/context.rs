@@ -5,7 +5,6 @@ use pango::FontDescription;
 use pangocairo;
 
 use gtk::prelude::*;
-use pango::prelude::*;
 
 use ui::color::{Color, Highlight};
 use ui::grid::render;
