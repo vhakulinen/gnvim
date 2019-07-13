@@ -19,7 +19,8 @@ mod parse_redraw_event_tests {
     use nvim_bridge;
     use nvim_bridge::{
         Cell, CmdlineShow, CompletionItem, CompletionItemKind, CursorShape,
-        GridLineSegment, ModeInfo, OptionSet, PopupmenuShow, RedrawEvent,
+        GridLineSegment, GridScrollInfo, ModeInfo, OptionSet, PopupmenuShow,
+        RedrawEvent,
     };
     use ui::color::{Color, Highlight};
 
@@ -155,8 +156,12 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_scroll() {
-        let expected =
-            vec![RedrawEvent::GridScroll(1, [132, 321, 2, 51], 12, 32)];
+        let expected = vec![RedrawEvent::GridScroll(vec![GridScrollInfo(
+            1,
+            [132, 321, 2, 51],
+            12,
+            32,
+        )])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "grid_scroll".into(),
