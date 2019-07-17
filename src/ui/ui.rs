@@ -538,10 +538,10 @@ fn handle_redraw_event(
                 let grid = state.grids.get(grid).unwrap();
                 grid.clear(&state.hl_defs);
             }
-            RedrawEvent::GridScroll(scroll_vec) => {
-                for info in scroll_vec {
-                    let grid = state.grids.get(&info.0).unwrap();
-                    grid.scroll(info.1, info.2, info.3, &state.hl_defs);
+            RedrawEvent::GridScroll(scroll) => {
+                for info in scroll {
+                    let grid = state.grids.get(&info.grid).unwrap();
+                    grid.scroll(info.reg, info.rows, info.cols, &state.hl_defs);
 
                     let mut nvim = nvim.lock().unwrap();
                     // Since nvim doesn't have its own 'scroll' autocmd, we'll

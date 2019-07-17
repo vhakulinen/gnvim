@@ -327,8 +327,12 @@ pub struct CmdlineShow {
 }
 
 #[derive(Debug, PartialEq)]
-/// grid, [top, bot, left, right], rows, cols
-pub struct GridScrollInfo(pub u64, pub [u64; 4], pub i64, pub i64);
+pub struct GridScroll {
+    pub grid: u64,
+    pub reg: [u64; 4],
+    pub rows: i64,
+    pub cols: i64,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
@@ -341,7 +345,7 @@ pub enum RedrawEvent {
     GridCursorGoto(u64, u64, u64),
     /// grid
     GridClear(u64),
-    GridScroll(Vec<GridScrollInfo>),
+    GridScroll(Vec<GridScroll>),
 
     /// fg, bg, sp
     DefaultColorsSet(Color, Color, Color),
@@ -684,12 +688,12 @@ pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                         let rows = unwrap_i64!(args[5]);
                         let cols = unwrap_i64!(args[6]);
 
-                        scroll_vec.push(GridScrollInfo(
-                            id,
-                            [top, bot, left, right],
+                        scroll_vec.push(GridScroll {
+                            grid: id,
+                            reg: [top, bot, left, right],
                             rows,
                             cols,
-                        ));
+                        });
                     }
 
                     RedrawEvent::GridScroll(scroll_vec)
