@@ -327,6 +327,14 @@ pub struct CmdlineShow {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct GridScroll {
+    pub grid: u64,
+    pub reg: [u64; 4],
+    pub rows: i64,
+    pub cols: i64,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(String),
 
@@ -337,8 +345,7 @@ pub enum RedrawEvent {
     GridCursorGoto(u64, u64, u64),
     /// grid
     GridClear(u64),
-    /// grid, [top, bot, left, right], rows, cols
-    GridScroll(u64, [u64; 4], i64, i64),
+    GridScroll(Vec<GridScroll>),
 
     /// fg, bg, sp
     DefaultColorsSet(Color, Color, Color),
@@ -668,22 +675,28 @@ pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
                     RedrawEvent::GridClear(id)
                 }
                 "grid_scroll" => {
-                    let args = unwrap_array!(args[1]);
+                    let mut scroll_vec = vec![];
 
-                    let id = unwrap_u64!(args[0]);
-                    let top = unwrap_u64!(args[1]);
-                    let bot = unwrap_u64!(args[2]);
-                    let left = unwrap_u64!(args[3]);
-                    let right = unwrap_u64!(args[4]);
-                    let rows = unwrap_i64!(args[5]);
-                    let cols = unwrap_i64!(args[6]);
+                    for args in unwrap_array!(args)[1..].into_iter() {
+                        let args = unwrap_array!(args);
 
-                    RedrawEvent::GridScroll(
-                        id,
-                        [top, bot, left, right],
-                        rows,
-                        cols,
-                    )
+                        let id = unwrap_u64!(args[0]);
+                        let top = unwrap_u64!(args[1]);
+                        let bot = unwrap_u64!(args[2]);
+                        let left = unwrap_u64!(args[3]);
+                        let right = unwrap_u64!(args[4]);
+                        let rows = unwrap_i64!(args[5]);
+                        let cols = unwrap_i64!(args[6]);
+
+                        scroll_vec.push(GridScroll {
+                            grid: id,
+                            reg: [top, bot, left, right],
+                            rows,
+                            cols,
+                        });
+                    }
+
+                    RedrawEvent::GridScroll(scroll_vec)
                 }
                 "default_colors_set" => {
                     let args = unwrap_array!(args[1]);
