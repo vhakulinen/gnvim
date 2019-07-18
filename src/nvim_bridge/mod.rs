@@ -209,6 +209,24 @@ pub enum OptionSet {
     NotSupported(String),
 }
 
+impl From<Value> for OptionSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let name = unwrap_str!(args[0]);
+        match name {
+            "guifont" => {
+                let val = unwrap_str!(args[1]);
+                OptionSet::GuiFont(String::from(val))
+            }
+            "linespace" => {
+                let val = unwrap_i64!(args[1]);
+                OptionSet::LineSpace(val)
+            }
+            _ => OptionSet::NotSupported(String::from(name)),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum CompletionItemKind {
     Class,
@@ -440,6 +458,89 @@ impl From<Value> for GridScroll {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct DefaultColorsSet {
+    pub fg: Color,
+    pub bg: Color,
+    pub sp: Color,
+}
+
+impl From<Value> for DefaultColorsSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+
+        let fg = Color::from_u64(args[0].as_u64().unwrap_or(0));
+        let bg = Color::from_u64(args[1].as_u64().unwrap_or(std::u64::MAX));
+        // Default to red.
+        let sp = Color::from_u64(args[2].as_u64().unwrap_or(16711680));
+
+        DefaultColorsSet { fg, bg, sp }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HlAttrDefine {
+    pub id: u64,
+    pub hl: Highlight,
+}
+
+impl From<Value> for HlAttrDefine {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let id = unwrap_u64!(args[0]);
+        let map = unwrap_map!(args[1]);
+
+        let hl = Highlight::from_map_val(map);
+
+        HlAttrDefine { id, hl }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ModeInfoSet {
+    pub cursor_shape_enabled: bool,
+    pub mode_info: Vec<ModeInfo>,
+}
+
+impl From<Value> for ModeInfoSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let cursor_shape_enabled = unwrap_bool!(args[0]);
+
+        let mut mode_info = vec![];
+        for info in unwrap_array!(args[1]).into_iter() {
+            let map = unwrap_map!(info);
+
+            let mut mode = ModeInfo::default();
+            for (prop, val) in map {
+                mode.set(unwrap_str!(prop), val.clone());
+            }
+            mode_info.push(mode);
+        }
+
+        ModeInfoSet {
+            cursor_shape_enabled,
+            mode_info,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ModeChange {
+    pub name: String,
+    pub index: u64,
+}
+
+impl From<Value> for ModeChange {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let name = unwrap_str!(args[0]).to_string();
+        let index = unwrap_u64!(args[1]);
+
+        ModeChange { name, index }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(Vec<String>),
 
@@ -449,15 +550,11 @@ pub enum RedrawEvent {
     GridClear(Vec<u64>),
     GridScroll(Vec<GridScroll>),
 
-    /// fg, bg, sp
-    DefaultColorsSet(Color, Color, Color),
-    /// id, hl
-    HlAttrDefine(Vec<(u64, Highlight)>),
+    DefaultColorsSet(Vec<DefaultColorsSet>),
+    HlAttrDefine(Vec<HlAttrDefine>),
     OptionSet(Vec<OptionSet>),
-    /// cusror shape enabled, mode info
-    ModeInfoSet(bool, Vec<ModeInfo>),
-    /// name, index
-    ModeChange(String, u64),
+    ModeInfoSet(Vec<ModeInfoSet>),
+    ModeChange(Vec<ModeChange>),
     SetBusy(bool),
 
     Flush(),
@@ -718,6 +815,21 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         ),
         "grid_line" => RedrawEvent::GridLine(
             args.into_iter().map(GridLineSegment::from).collect(),
+        ),
+        "default_colors_set" => RedrawEvent::DefaultColorsSet(
+            args.into_iter().map(DefaultColorsSet::from).collect(),
+        ),
+        "hl_attr_define" => RedrawEvent::HlAttrDefine(
+            args.into_iter().map(HlAttrDefine::from).collect(),
+        ),
+        "option_set" => RedrawEvent::OptionSet(
+            args.into_iter().map(OptionSet::from).collect(),
+        ),
+        "mode_info_set" => RedrawEvent::ModeInfoSet(
+            args.into_iter().map(ModeInfoSet::from).collect(),
+        ),
+        "mode_change" => RedrawEvent::ModeChange(
+            args.into_iter().map(ModeChange::from).collect(),
         ),
         _ => RedrawEvent::Unknown(cmd.to_string()),
     }
