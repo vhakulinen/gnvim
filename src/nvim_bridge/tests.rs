@@ -20,13 +20,14 @@ mod parse_redraw_event_tests {
     use nvim_bridge::{
         Cell, CmdlineShow, CompletionItem, CompletionItemKind, CursorShape,
         GridLineSegment, GridScroll, ModeInfo, OptionSet, PopupmenuShow,
-        RedrawEvent,
+        RedrawEvent, GridCursorGoto, GridResize, DefaultColorsSet,
+        HlAttrDefine, ModeChange, ModeInfoSet,
     };
     use ui::color::{Color, Highlight};
 
     #[test]
     fn set_title() {
-        let expected = vec![RedrawEvent::SetTitle("my title".into())];
+        let expected = vec![RedrawEvent::SetTitle(vec!["my title".to_string()])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             String::from("set_title").into(),
@@ -120,7 +121,11 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_cursor_goto() {
-        let expected = vec![RedrawEvent::GridCursorGoto(123, 321, 2)];
+        let expected = vec![RedrawEvent::GridCursorGoto(vec![GridCursorGoto {
+            grid: 123,
+            row: 321,
+            col: 2,
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             String::from("grid_cursor_goto").into(),
@@ -132,7 +137,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_resize() {
-        let expected = vec![RedrawEvent::GridResize(2, 32, 12)];
+        let expected = vec![RedrawEvent::GridResize(vec![GridResize { grid: 2, width: 32, height: 12}])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "grid_resize".into(),
@@ -144,7 +149,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_clear() {
-        let expected = vec![RedrawEvent::GridClear(32)];
+        let expected = vec![RedrawEvent::GridClear(vec![32])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "grid_clear".into(),
@@ -181,11 +186,11 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn default_colors_set() {
-        let expected = vec![RedrawEvent::DefaultColorsSet(
-            Color::from_u64(321921),
-            Color::from_u64(94921),
-            Color::from_u64(983821232),
-        )];
+        let expected = vec![RedrawEvent::DefaultColorsSet(vec![DefaultColorsSet {
+            fg: Color::from_u64(321921),
+            bg: Color::from_u64(94921),
+            sp: Color::from_u64(983821232),
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "default_colors_set".into(),
@@ -198,11 +203,11 @@ mod parse_redraw_event_tests {
     /// Test default values.
     #[test]
     fn default_colors_set2() {
-        let expected = vec![RedrawEvent::DefaultColorsSet(
-            Color::from_u64(0),
-            Color::from_u64(std::u64::MAX),
-            Color::from_u64(16711680),
-        )];
+        let expected = vec![RedrawEvent::DefaultColorsSet(vec![DefaultColorsSet {
+            fg: Color::from_u64(0),
+            bg: Color::from_u64(std::u64::MAX),
+            sp: Color::from_u64(16711680),
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "default_colors_set".into(),
@@ -218,10 +223,9 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn hl_attr_define() {
-        let expected = vec![RedrawEvent::HlAttrDefine(vec![
-            (
-                1,
-                Highlight {
+        let expected = vec![RedrawEvent::HlAttrDefine(vec![HlAttrDefine {
+            id: 1,
+            hl: Highlight {
                     foreground: Some(Color::from_u64(3215)),
                     background: Some(Color::from_u64(214)),
                     special: Some(Color::from_u64(2019092)),
@@ -230,11 +234,11 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: true,
                     undercurl: false,
-                },
-            ),
-            (
-                42,
-                Highlight {
+            }
+        },
+        HlAttrDefine {
+            id: 42,
+            hl: Highlight {
                     foreground: Some(Color::from_u64(3215)),
                     background: None,
                     special: Some(Color::from_u64(2019092)),
@@ -243,11 +247,11 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: false,
                     undercurl: true,
-                },
-            ),
-            (
-                32,
-                Highlight {
+            },
+        },
+        HlAttrDefine {
+            id: 32,
+            hl: Highlight {
                     foreground: Some(Color::from_u64(215)),
                     background: Some(Color::from_u64(315)),
                     special: Some(Color::from_u64(19092)),
@@ -256,11 +260,11 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: false,
                     undercurl: true,
-                },
-            ),
-            (
-                3,
-                Highlight {
+            },
+        },
+        HlAttrDefine {
+            id: 3,
+            hl: Highlight {
                     foreground: None,
                     background: None,
                     special: None,
@@ -269,9 +273,9 @@ mod parse_redraw_event_tests {
                     bold: false,
                     underline: false,
                     undercurl: false,
-                },
-            ),
-        ])];
+            },
+        },
+    ])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "hl_attr_define".into(),
@@ -333,9 +337,9 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn mode_info_set() {
-        let expected = vec![RedrawEvent::ModeInfoSet(
-            true,
-            vec![
+        let expected = vec![RedrawEvent::ModeInfoSet(vec![ModeInfoSet {
+            cursor_shape_enabled: true,
+            mode_info: vec![
                 ModeInfo {
                     blink_on: 32,
                     cursor_shape: CursorShape::Horizontal,
@@ -347,7 +351,7 @@ mod parse_redraw_event_tests {
                     cell_percentage: 1.0,
                 },
             ],
-        )];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "mode_info_set".into(),
@@ -373,7 +377,10 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn mode_change() {
-        let expected = vec![RedrawEvent::ModeChange("foo".into(), 32)];
+        let expected = vec![RedrawEvent::ModeChange(vec![ModeChange {
+            name: "foo".into(),
+            index: 32,
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "mode_change".into(),
