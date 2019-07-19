@@ -326,6 +326,43 @@ pub struct PopupmenuShow {
     pub col: u64,
 }
 
+impl From<Value> for PopupmenuShow {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+
+        let selected = unwrap_i64!(args[1]);
+        let row = unwrap_u64!(args[2]);
+        let col = unwrap_u64!(args[3]);
+
+        let mut items = vec![];
+        for item in unwrap_array!(args[0]) {
+            let item = unwrap_array!(item);
+            let word = unwrap_str!(item[0]).to_owned();
+            let kind =
+                CompletionItemKind::from(unwrap_str!(item[1]));
+
+            let kind_raw = unwrap_str!(item[1]).to_owned();
+            let menu = unwrap_str!(item[2]).to_owned();
+            let info = unwrap_str!(item[3]).to_owned();
+
+            items.push(CompletionItem {
+                word,
+                kind,
+                menu,
+                info,
+                kind_raw,
+            });
+        }
+
+        PopupmenuShow {
+            items,
+            selected,
+            row,
+            col,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct CmdlineShow {
     pub content: Vec<(u64, String)>,
@@ -559,9 +596,9 @@ pub enum RedrawEvent {
 
     Flush(),
 
-    PopupmenuShow(PopupmenuShow),
+    PopupmenuShow(Vec<PopupmenuShow>),
     PopupmenuHide(),
-    PopupmenuSelect(i64),
+    PopupmenuSelect(Vec<i64>),
 
     TablineUpdate(Tabpage, Vec<(Tabpage, String)>),
 
@@ -831,6 +868,22 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         "mode_change" => RedrawEvent::ModeChange(
             args.into_iter().map(ModeChange::from).collect(),
         ),
+        "busy_start" => RedrawEvent::SetBusy(true),
+        "busy_stop" => RedrawEvent::SetBusy(false),
+        "flush" => RedrawEvent::Flush(),
+        "popupmenu_show" => RedrawEvent::PopupmenuShow(
+            args.into_iter().map(PopupmenuShow::from).collect(),
+        ),
+        "popupmenu_hide" => RedrawEvent::PopupmenuHide(),
+        "popupmenu_select" => {
+            let args = unwrap_array!(args[0]);
+            RedrawEvent::PopupmenuSelect(
+                args.into_iter()
+                    .map(|s| unwrap_i64!(s))
+                    .collect(),
+            )
+        }
+
         _ => RedrawEvent::Unknown(cmd.to_string()),
     }
 }
