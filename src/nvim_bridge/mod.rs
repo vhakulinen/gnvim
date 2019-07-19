@@ -338,8 +338,7 @@ impl From<Value> for PopupmenuShow {
         for item in unwrap_array!(args[0]) {
             let item = unwrap_array!(item);
             let word = unwrap_str!(item[0]).to_owned();
-            let kind =
-                CompletionItemKind::from(unwrap_str!(item[1]));
+            let kind = CompletionItemKind::from(unwrap_str!(item[1]));
 
             let kind_raw = unwrap_str!(item[1]).to_owned();
             let menu = unwrap_str!(item[2]).to_owned();
@@ -618,10 +617,7 @@ impl From<Value> for CmdlinePos {
         let pos = unwrap_u64!(args[0]);
         let level = unwrap_u64!(args[1]);
 
-        CmdlinePos {
-            pos,
-            level,
-        }
+        CmdlinePos { pos, level }
     }
 }
 
@@ -665,7 +661,6 @@ impl From<Value> for CmdlineBlockAppend {
         }
     }
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
@@ -968,9 +963,7 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         "popupmenu_select" => {
             let args = unwrap_array!(args[0]);
             RedrawEvent::PopupmenuSelect(
-                args.into_iter()
-                    .map(|s| unwrap_i64!(s))
-                    .collect(),
+                args.into_iter().map(|s| unwrap_i64!(s)).collect(),
             )
         }
         "tabline_update" => {
@@ -1019,6 +1012,22 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
             args.into_iter().map(CmdlineBlockAppend::from).collect(),
         ),
         "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
+        "wildmenu_show" => {
+            let args = unwrap_array!(args[0]);
+            let items: Vec<String> = unwrap_array!(args[0])
+                .iter()
+                .map(|v| unwrap_str!(v).to_string())
+                .collect();
+
+            RedrawEvent::WildmenuShow(items)
+        }
+        "wildmenu_hide" => RedrawEvent::WildmenuHide(),
+        "wildmenu_select" => {
+            let args = unwrap_array!(args[0]);
+            let item = unwrap_i64!(args[0]);
+            RedrawEvent::WildmenuSelect(item)
+        }
+        "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
 
         _ => RedrawEvent::Unknown(cmd.to_string()),
     }
