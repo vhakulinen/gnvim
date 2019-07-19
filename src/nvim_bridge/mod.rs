@@ -373,6 +373,35 @@ pub struct CmdlineShow {
     pub level: u64,
 }
 
+impl From<Value> for CmdlineShow {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let content: Vec<(u64, String)> = unwrap_array!(args[0])
+            .into_iter()
+            .map(|v| {
+                let hl_id = unwrap_u64!(v[0]);
+                let text = unwrap_str!(v[1]);
+
+                (hl_id, String::from(text))
+            })
+            .collect();
+        let pos = unwrap_u64!(args[1]);
+        let firstc = String::from(unwrap_str!(args[2]));
+        let prompt = String::from(unwrap_str!(args[3]));
+        let indent = unwrap_u64!(args[4]);
+        let level = unwrap_u64!(args[5]);
+
+        CmdlineShow {
+            content,
+            pos,
+            firstc,
+            prompt,
+            indent,
+            level,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct GridLineSegment {
     pub grid: u64,
@@ -578,6 +607,67 @@ impl From<Value> for ModeChange {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct CmdlinePos {
+    pub pos: u64,
+    pub level: u64,
+}
+
+impl From<Value> for CmdlinePos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let pos = unwrap_u64!(args[0]);
+        let level = unwrap_u64!(args[1]);
+
+        CmdlinePos {
+            pos,
+            level,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlineSpecialChar {
+    pub character: String,
+    pub shift: bool,
+    pub level: u64,
+}
+
+impl From<Value> for CmdlineSpecialChar {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let c = unwrap_str!(args[0]);
+        let shift = unwrap_bool!(args[1]);
+        let level = unwrap_u64!(args[2]);
+
+        CmdlineSpecialChar {
+            character: c.to_string(),
+            shift,
+            level,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlineBlockAppend {
+    pub hl_id: u64,
+    pub text: String,
+}
+
+impl From<Value> for CmdlineBlockAppend {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let args = unwrap_array!(args[0]);
+        let line_raw = unwrap_array!(args[0]);
+
+        CmdlineBlockAppend {
+            hl_id: unwrap_u64!(line_raw[0]),
+            text: unwrap_str!(line_raw[1]).to_string(),
+        }
+    }
+}
+
+
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(Vec<String>),
 
@@ -602,12 +692,12 @@ pub enum RedrawEvent {
 
     TablineUpdate(Tabpage, Vec<(Tabpage, String)>),
 
-    CmdlineShow(CmdlineShow),
+    CmdlineShow(Vec<CmdlineShow>),
     CmdlineHide(),
-    CmdlinePos(u64, u64),
-    CmdlineSpecialChar(String, bool, u64),
+    CmdlinePos(Vec<CmdlinePos>),
+    CmdlineSpecialChar(Vec<CmdlineSpecialChar>),
     CmdlineBlockShow(Vec<(u64, String)>),
-    CmdlineBlockAppend((u64, String)),
+    CmdlineBlockAppend(Vec<CmdlineBlockAppend>),
     CmdlineBlockHide(),
 
     WildmenuShow(Vec<String>),
@@ -883,6 +973,52 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
                     .collect(),
             )
         }
+        "tabline_update" => {
+            let args = unwrap_array!(args[0]);
+            let cur_tab = Tabpage::new(args[0].clone());
+            let tabs = unwrap_array!(args[1])
+                .iter()
+                .map(|item| {
+                    let m = map_to_hash(&item);
+                    (
+                        Tabpage::new((*m.get("tab").unwrap()).clone()),
+                        unwrap_str!(m.get("name").unwrap()).to_string(),
+                    )
+                })
+                .collect();
+
+            RedrawEvent::TablineUpdate(cur_tab, tabs)
+        }
+        "cmdline_show" => RedrawEvent::CmdlineShow(
+            args.into_iter().map(CmdlineShow::from).collect(),
+        ),
+        "cmdline_hide" => RedrawEvent::CmdlineHide(),
+        "cmdline_pos" => RedrawEvent::CmdlinePos(
+            args.into_iter().map(CmdlinePos::from).collect(),
+        ),
+        "cmdline_special_char" => RedrawEvent::CmdlineSpecialChar(
+            args.into_iter().map(CmdlineSpecialChar::from).collect(),
+        ),
+        "cmdline_block_show" => {
+            let args = unwrap_array!(args[0]);
+            let args = unwrap_array!(args[0]);
+
+            let lines: Vec<(u64, String)> = unwrap_array!(args[0])
+                .iter()
+                .map(|v| {
+                    let hl_id = unwrap_u64!(v[0]);
+                    let text = unwrap_str!(v[1]);
+
+                    (hl_id, text.to_string())
+                })
+                .collect();
+
+            RedrawEvent::CmdlineBlockShow(lines)
+        }
+        "cmdline_block_append" => RedrawEvent::CmdlineBlockAppend(
+            args.into_iter().map(CmdlineBlockAppend::from).collect(),
+        ),
+        "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
 
         _ => RedrawEvent::Unknown(cmd.to_string()),
     }
