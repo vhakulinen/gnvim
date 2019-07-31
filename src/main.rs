@@ -20,7 +20,7 @@ extern crate webkit2gtk;
 
 use gio::prelude::*;
 
-use neovim_lib::neovim::{Neovim, UiAttachOptions};
+use neovim_lib::neovim::Neovim;
 use neovim_lib::session::Session as NeovimSession;
 use neovim_lib::NeovimApi;
 
@@ -120,17 +120,6 @@ fn build(app: &gtk::Application, opts: &Options) {
     let api_info = nvim.get_api_info().expect("Failed to get API info");
     nvim.set_var("gnvim_channel_id", api_info[0].clone())
         .expect("Failed to set g:gnvim_channel_id");
-
-    let mut ui_opts = UiAttachOptions::new();
-    ui_opts.set_rgb(true);
-    ui_opts.set_linegrid_external(true);
-    ui_opts.set_popupmenu_external(!opts.disable_ext_popupmenu);
-    ui_opts.set_tabline_external(!opts.disable_ext_tabline);
-    ui_opts.set_cmdline_external(!opts.disable_ext_cmdline);
-
-    ui_opts.set_wildmenu_external(true);
-    nvim.ui_attach(80, 30, &ui_opts)
-        .expect("Failed to attach UI");
 
     let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
     ui.start();

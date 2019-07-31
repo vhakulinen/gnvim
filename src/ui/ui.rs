@@ -7,7 +7,7 @@ use std::time;
 use gdk;
 use glib;
 use gtk;
-use neovim_lib::neovim::Neovim;
+use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::neovim_api::NeovimApi;
 use neovim_lib::NeovimApiAsync;
 use neovim_lib::Value;
@@ -74,6 +74,8 @@ struct UIState {
 
     /// Source id for delayed call to ui_try_resize.
     resize_source_id: Arc<Mutex<Option<glib::SourceId>>>,
+
+    pub attached: bool,
 }
 
 /// Main UI structure.
@@ -129,52 +131,6 @@ impl UI {
         // Create default grid.
         let mut grid = Grid::new(1);
         box_.pack_start(&grid.widget(), true, true, 0);
-
-        // When resizing our window (main grid), we'll have to tell neovim to
-        // resize it self also. The notify to nvim is send with a small delay,
-        // so we don't spam it multiple times a second. source_id is used to
-        // track the function timeout.
-        let source_id = Arc::new(Mutex::new(None));
-        let source_id_ref = source_id.clone();
-        let nvim_ref = nvim.clone();
-        grid.connect_da_resize(move |rows, cols| {
-            let nvim_ref = nvim_ref.clone();
-
-            let source_id_moved = source_id_ref.clone();
-            // Set timeout to notify nvim about the new size.
-            let new = glib::timeout_add(30, move || {
-                let mut nvim = nvim_ref.lock().unwrap();
-                nvim.ui_try_resize_async(cols as i64, rows as i64)
-                    .cb(|res| {
-                        if let Err(err) = res {
-                            eprintln!("Error: failed to resize nvim when grid size changed ({:?})", err);
-                        }
-                    })
-                .call();
-
-                // Set the source_id to none, so we don't accidentally remove
-                // it since it used at this point.
-                let source_id = source_id_moved.clone();
-                let mut source_id = source_id.lock().unwrap();
-                *source_id = None;
-
-                Continue(false)
-            });
-
-            let source_id = source_id_ref.clone();
-            let mut source_id = source_id.lock().unwrap();
-            {
-                // If we have earlier timeout, remove it.
-                let old = source_id.take();
-                if let Some(old) = old {
-                    glib::source::source_remove(old);
-                }
-            }
-
-            *source_id = Some(new);
-
-            false
-        });
 
         // Mouse button press event.
         let nvim_ref = nvim.clone();
@@ -280,7 +236,8 @@ impl UI {
         let mut grids = HashMap::new();
         grids.insert(1, grid);
 
-        UI {
+        let source_id = Arc::new(Mutex::new(None));
+        let ui = UI {
             win: Arc::new(ThreadGuard::new(window)),
             rx,
             state: Arc::new(ThreadGuard::new(UIState {
@@ -294,9 +251,79 @@ impl UI {
                 cursor_tooltip,
                 resize_source_id: source_id,
                 hl_defs,
+                attached: false,
             })),
             nvim,
-        }
+        };
+
+        // When resizing our window (main grid), we'll have to tell neovim to
+        // resize it self also. The notify to nvim is send with a small delay,
+        // so we don't spam it multiple times a second. source_id is used to
+        // track the function timeout.
+        let source_id_ref = ui.state.borrow().resize_source_id.clone();
+        let nvim_ref = ui.nvim.clone();
+        let state_ref = ui.state.clone();
+        ui.state.borrow().grids.get(&1).unwrap().connect_da_resize(move |rows, cols| {
+            let nvim_ref = nvim_ref.clone();
+
+            let source_id_moved = source_id_ref.clone();
+            let mut state_ref = state_ref.borrow_mut();
+
+            if !state_ref.attached {
+                // Attach the UI if it isn't attached.
+                nvim_ref.lock()
+                        .unwrap()
+                        .ui_attach(rows as i64,
+                                   cols as i64,
+                                   &UiAttachOptions::new()
+                                    .set_rgb(true)
+                                    .set_linegrid_external(true)
+                                    .set_popupmenu_external(true)
+                                    .set_tabline_external(true)
+                                    .set_cmdline_external(true)
+                                    .set_wildmenu_external(true))
+                        .expect("Failed to attach UI");
+
+                state_ref.attached = true;
+                return false;
+            }
+
+            // Set timeout to notify nvim about the new size.
+            let new = glib::timeout_add(30, move || {
+                let mut nvim = nvim_ref.lock().unwrap();
+                nvim.ui_try_resize_async(cols as i64, rows as i64)
+                    .cb(|res| {
+                        if let Err(err) = res {
+                            eprintln!("Error: failed to resize nvim when grid size changed ({:?})", err);
+                        }
+                    })
+                .call();
+
+                // Set the source_id to none, so we don't accidentally remove
+                // it since it used at this point.
+                let source_id = source_id_moved.clone();
+                let mut source_id = source_id.lock().unwrap();
+                *source_id = None;
+
+                Continue(false)
+            });
+
+            let source_id = source_id_ref.clone();
+            let mut source_id = source_id.lock().unwrap();
+            {
+                // If we have earlier timeout, remove it.
+                let old = source_id.take();
+                if let Some(old) = old {
+                    glib::source::source_remove(old);
+                }
+            }
+
+            *source_id = Some(new);
+
+            false
+        });
+
+        ui
     }
 
     /// Starts to listen events from `rx` (e.g. from nvim) and processing those.
