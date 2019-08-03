@@ -200,14 +200,6 @@ pub struct Cell {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct GridLineSegment {
-    pub grid: u64,
-    pub row: u64,
-    pub col_start: u64,
-    pub cells: Vec<Cell>,
-}
-
-#[derive(Debug, PartialEq)]
 pub enum OptionSet {
     /// Font name.
     GuiFont(String),
@@ -215,6 +207,24 @@ pub enum OptionSet {
     LineSpace(i64),
     /// Event name.
     NotSupported(String),
+}
+
+impl From<Value> for OptionSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let name = unwrap_str!(args[0]);
+        match name {
+            "guifont" => {
+                let val = unwrap_str!(args[1]);
+                OptionSet::GuiFont(String::from(val))
+            }
+            "linespace" => {
+                let val = unwrap_i64!(args[1]);
+                OptionSet::LineSpace(val)
+            }
+            _ => OptionSet::NotSupported(String::from(name)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -316,6 +326,42 @@ pub struct PopupmenuShow {
     pub col: u64,
 }
 
+impl From<Value> for PopupmenuShow {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+
+        let selected = unwrap_i64!(args[1]);
+        let row = unwrap_u64!(args[2]);
+        let col = unwrap_u64!(args[3]);
+
+        let mut items = vec![];
+        for item in unwrap_array!(args[0]) {
+            let item = unwrap_array!(item);
+            let word = unwrap_str!(item[0]).to_owned();
+            let kind = CompletionItemKind::from(unwrap_str!(item[1]));
+
+            let kind_raw = unwrap_str!(item[1]).to_owned();
+            let menu = unwrap_str!(item[2]).to_owned();
+            let info = unwrap_str!(item[3]).to_owned();
+
+            items.push(CompletionItem {
+                word,
+                kind,
+                menu,
+                info,
+                kind_raw,
+            });
+        }
+
+        PopupmenuShow {
+            items,
+            selected,
+            row,
+            col,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct CmdlineShow {
     pub content: Vec<(u64, String)>,
@@ -326,6 +372,133 @@ pub struct CmdlineShow {
     pub level: u64,
 }
 
+impl From<Value> for CmdlineShow {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let content: Vec<(u64, String)> = unwrap_array!(args[0])
+            .into_iter()
+            .map(|v| {
+                let hl_id = unwrap_u64!(v[0]);
+                let text = unwrap_str!(v[1]);
+
+                (hl_id, String::from(text))
+            })
+            .collect();
+        let pos = unwrap_u64!(args[1]);
+        let firstc = String::from(unwrap_str!(args[2]));
+        let prompt = String::from(unwrap_str!(args[3]));
+        let indent = unwrap_u64!(args[4]);
+        let level = unwrap_u64!(args[5]);
+
+        CmdlineShow {
+            content,
+            pos,
+            firstc,
+            prompt,
+            indent,
+            level,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GridLineSegment {
+    pub grid: u64,
+    pub row: u64,
+    pub col_start: u64,
+    pub cells: Vec<Cell>,
+}
+
+impl From<Value> for GridLineSegment {
+    fn from(args: Value) -> Self {
+        let entry = unwrap_array!(args);
+
+        let grid = unwrap_u64!(entry[0]);
+        let row = unwrap_u64!(entry[1]);
+        let col_start = unwrap_u64!(entry[2]);
+
+        let mut cells: Vec<Cell> = vec![];
+
+        for entry in unwrap_array!(entry[3]) {
+            let entry = unwrap_array!(entry);
+            let text = unwrap_str!(entry[0]);
+            let hl_id = if entry.len() >= 2 {
+                entry[1].as_u64()
+            } else {
+                None
+            };
+
+            let repeat = if entry.len() >= 3 {
+                unwrap_u64!(entry[2])
+            } else {
+                1
+            };
+
+            let hl_id = if let Some(hl_id) = hl_id {
+                hl_id
+            } else {
+                cells.last().unwrap().hl_id
+            };
+
+            if text == "" {
+                if let Some(prev) = cells.last_mut() {
+                    prev.double_width = true;
+                }
+            }
+
+            cells.push(Cell {
+                hl_id,
+                repeat,
+                text: String::from(text),
+                double_width: false,
+            });
+        }
+
+        GridLineSegment {
+            grid,
+            row,
+            col_start,
+            cells,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GridResize {
+    pub grid: u64,
+    pub width: u64,
+    pub height: u64,
+}
+
+impl From<Value> for GridResize {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        GridResize {
+            grid: unwrap_u64!(args[0]),
+            width: unwrap_u64!(args[1]),
+            height: unwrap_u64!(args[2]),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GridCursorGoto {
+    pub grid: u64,
+    pub row: u64,
+    pub col: u64,
+}
+
+impl From<Value> for GridCursorGoto {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        GridCursorGoto {
+            grid: unwrap_u64!(args[0]),
+            row: unwrap_u64!(args[1]),
+            col: unwrap_u64!(args[2]),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct GridScroll {
     pub grid: u64,
@@ -334,49 +507,263 @@ pub struct GridScroll {
     pub cols: i64,
 }
 
+impl From<Value> for GridScroll {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let reg: Vec<u64> =
+            args[1..5].into_iter().map(|v| unwrap_u64!(v)).collect();
+        let reg = [reg[0], reg[1], reg[2], reg[3]];
+        GridScroll {
+            grid: unwrap_u64!(args[0]),
+            reg,
+            rows: unwrap_i64!(args[5]),
+            cols: unwrap_i64!(args[6]),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DefaultColorsSet {
+    pub fg: Color,
+    pub bg: Color,
+    pub sp: Color,
+}
+
+impl From<Value> for DefaultColorsSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+
+        let fg = Color::from_u64(args[0].as_u64().unwrap_or(0));
+        let bg = Color::from_u64(args[1].as_u64().unwrap_or(std::u64::MAX));
+        // Default to red.
+        let sp = Color::from_u64(args[2].as_u64().unwrap_or(16711680));
+
+        DefaultColorsSet { fg, bg, sp }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HlAttrDefine {
+    pub id: u64,
+    pub hl: Highlight,
+}
+
+impl From<Value> for HlAttrDefine {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let id = unwrap_u64!(args[0]);
+        let map = unwrap_map!(args[1]);
+
+        let hl = Highlight::from_map_val(map);
+
+        HlAttrDefine { id, hl }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ModeInfoSet {
+    pub cursor_shape_enabled: bool,
+    pub mode_info: Vec<ModeInfo>,
+}
+
+impl From<Value> for ModeInfoSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let cursor_shape_enabled = unwrap_bool!(args[0]);
+
+        let mut mode_info = vec![];
+        for info in unwrap_array!(args[1]).into_iter() {
+            let map = unwrap_map!(info);
+
+            let mut mode = ModeInfo::default();
+            for (prop, val) in map {
+                mode.set(unwrap_str!(prop), val.clone());
+            }
+            mode_info.push(mode);
+        }
+
+        ModeInfoSet {
+            cursor_shape_enabled,
+            mode_info,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ModeChange {
+    pub name: String,
+    pub index: u64,
+}
+
+impl From<Value> for ModeChange {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let name = unwrap_str!(args[0]).to_string();
+        let index = unwrap_u64!(args[1]);
+
+        ModeChange { name, index }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlinePos {
+    pub pos: u64,
+    pub level: u64,
+}
+
+impl From<Value> for CmdlinePos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let pos = unwrap_u64!(args[0]);
+        let level = unwrap_u64!(args[1]);
+
+        CmdlinePos { pos, level }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlineSpecialChar {
+    pub character: String,
+    pub shift: bool,
+    pub level: u64,
+}
+
+impl From<Value> for CmdlineSpecialChar {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let c = unwrap_str!(args[0]);
+        let shift = unwrap_bool!(args[1]);
+        let level = unwrap_u64!(args[2]);
+
+        CmdlineSpecialChar {
+            character: c.to_string(),
+            shift,
+            level,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlineBlockAppend {
+    pub line: Vec<(u64, String)>,
+}
+
+impl From<Value> for CmdlineBlockAppend {
+    fn from(args: Value) -> Self {
+        let line = unwrap_array!(args[0])
+            .iter()
+            .map(|v| {
+                let hl_id = unwrap_u64!(v[0]);
+                let text = unwrap_str!(v[1]);
+
+                (hl_id, String::from(text))
+            })
+            .collect();
+
+        Self { line }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TablineUpdate {
+    pub current: Tabpage,
+    pub tabs: Vec<(Tabpage, String)>,
+}
+
+impl From<Value> for TablineUpdate {
+    fn from(args: Value) -> Self {
+        let current = Tabpage::new(args[0].clone());
+        let tabs = unwrap_array!(args[1])
+            .iter()
+            .map(|item| {
+                let m = map_to_hash(&item);
+                (
+                    Tabpage::new((*m.get("tab").unwrap()).clone()),
+                    unwrap_str!(m.get("name").unwrap()).to_string(),
+                )
+            })
+            .collect();
+
+        Self { current, tabs }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CmdlineBlockShow {
+    pub lines: Vec<Vec<(u64, String)>>,
+}
+
+impl From<Value> for CmdlineBlockShow {
+    fn from(args: Value) -> Self {
+        let lines = unwrap_array!(args)
+            .into_iter()
+            .map(|line| {
+                unwrap_array!(line[0])
+                    .into_iter()
+                    .map(|v| {
+                        let hl_id = unwrap_u64!(v[0]);
+                        let text = unwrap_str!(v[1]);
+
+                        (hl_id, String::from(text))
+                    })
+                    .collect()
+            })
+            .collect();
+
+        Self { lines }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct WildmenuShow(pub Vec<String>);
+
+impl From<Value> for WildmenuShow {
+    fn from(args: Value) -> Self {
+        Self(
+            unwrap_array!(args[0])
+                .iter()
+                .map(|v| unwrap_str!(v).to_string())
+                .collect(),
+        )
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
-    SetTitle(String),
+    SetTitle(Vec<String>),
 
     GridLine(Vec<GridLineSegment>),
-    /// grid, width, height
-    GridResize(u64, u64, u64),
-    /// grid, row, col
-    GridCursorGoto(u64, u64, u64),
-    /// grid
-    GridClear(u64),
+    GridResize(Vec<GridResize>),
+    GridCursorGoto(Vec<GridCursorGoto>),
+    GridClear(Vec<u64>),
     GridScroll(Vec<GridScroll>),
 
-    /// fg, bg, sp
-    DefaultColorsSet(Color, Color, Color),
-    /// id, hl
-    HlAttrDefine(Vec<(u64, Highlight)>),
+    DefaultColorsSet(Vec<DefaultColorsSet>),
+    HlAttrDefine(Vec<HlAttrDefine>),
     OptionSet(Vec<OptionSet>),
-    /// cusror shape enabled, mode info
-    ModeInfoSet(bool, Vec<ModeInfo>),
-    /// name, index
-    ModeChange(String, u64),
+    ModeInfoSet(Vec<ModeInfoSet>),
+    ModeChange(Vec<ModeChange>),
     SetBusy(bool),
 
     Flush(),
 
-    PopupmenuShow(PopupmenuShow),
+    PopupmenuShow(Vec<PopupmenuShow>),
     PopupmenuHide(),
-    PopupmenuSelect(i64),
+    PopupmenuSelect(Vec<i64>),
 
-    TablineUpdate(Tabpage, Vec<(Tabpage, String)>),
+    TablineUpdate(Vec<TablineUpdate>),
 
-    CmdlineShow(CmdlineShow),
+    CmdlineShow(Vec<CmdlineShow>),
     CmdlineHide(),
-    CmdlinePos(u64, u64),
-    CmdlineSpecialChar(String, bool, u64),
-    CmdlineBlockShow(Vec<(u64, String)>),
-    CmdlineBlockAppend((u64, String)),
+    CmdlinePos(Vec<CmdlinePos>),
+    CmdlineSpecialChar(Vec<CmdlineSpecialChar>),
+    CmdlineBlockShow(Vec<CmdlineBlockShow>),
+    CmdlineBlockAppend(Vec<CmdlineBlockAppend>),
     CmdlineBlockHide(),
 
-    WildmenuShow(Vec<String>),
+    WildmenuShow(Vec<WildmenuShow>),
     WildmenuHide(),
-    WildmenuSelect(i64),
+    WildmenuSelect(Vec<i64>),
 
     Ignored(String),
     Unknown(String),
@@ -589,332 +976,92 @@ GLOBALS:
     ["visual_bell"]
  */
 
+fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
+    match cmd {
+        "set_title" => RedrawEvent::SetTitle(
+            args.into_iter()
+                .map(|v| unwrap_str!(v[0]).to_string())
+                .collect(),
+        ),
+        "grid_resize" => RedrawEvent::GridResize(
+            args.into_iter().map(GridResize::from).collect(),
+        ),
+        "grid_cursor_goto" => RedrawEvent::GridCursorGoto(
+            args.into_iter().map(GridCursorGoto::from).collect(),
+        ),
+        "grid_clear" => RedrawEvent::GridClear(
+            args.into_iter().map(|v| unwrap_u64!(v[0])).collect(),
+        ),
+        "grid_scroll" => RedrawEvent::GridScroll(
+            args.into_iter().map(GridScroll::from).collect(),
+        ),
+        "grid_line" => RedrawEvent::GridLine(
+            args.into_iter().map(GridLineSegment::from).collect(),
+        ),
+        "default_colors_set" => RedrawEvent::DefaultColorsSet(
+            args.into_iter().map(DefaultColorsSet::from).collect(),
+        ),
+        "hl_attr_define" => RedrawEvent::HlAttrDefine(
+            args.into_iter().map(HlAttrDefine::from).collect(),
+        ),
+        "option_set" => RedrawEvent::OptionSet(
+            args.into_iter().map(OptionSet::from).collect(),
+        ),
+        "mode_info_set" => RedrawEvent::ModeInfoSet(
+            args.into_iter().map(ModeInfoSet::from).collect(),
+        ),
+        "mode_change" => RedrawEvent::ModeChange(
+            args.into_iter().map(ModeChange::from).collect(),
+        ),
+        "busy_start" => RedrawEvent::SetBusy(true),
+        "busy_stop" => RedrawEvent::SetBusy(false),
+        "flush" => RedrawEvent::Flush(),
+        "popupmenu_show" => RedrawEvent::PopupmenuShow(
+            args.into_iter().map(PopupmenuShow::from).collect(),
+        ),
+        "popupmenu_hide" => RedrawEvent::PopupmenuHide(),
+        "popupmenu_select" => RedrawEvent::PopupmenuSelect(
+            args.into_iter().map(|s| unwrap_i64!(s[0])).collect(),
+        ),
+        "tabline_update" => RedrawEvent::TablineUpdate(
+            args.into_iter().map(TablineUpdate::from).collect(),
+        ),
+        "cmdline_show" => RedrawEvent::CmdlineShow(
+            args.into_iter().map(CmdlineShow::from).collect(),
+        ),
+        "cmdline_hide" => RedrawEvent::CmdlineHide(),
+        "cmdline_pos" => RedrawEvent::CmdlinePos(
+            args.into_iter().map(CmdlinePos::from).collect(),
+        ),
+        "cmdline_special_char" => RedrawEvent::CmdlineSpecialChar(
+            args.into_iter().map(CmdlineSpecialChar::from).collect(),
+        ),
+        "cmdline_block_show" => RedrawEvent::CmdlineBlockShow(
+            args.into_iter().map(CmdlineBlockShow::from).collect(),
+        ),
+        "cmdline_block_append" => RedrawEvent::CmdlineBlockAppend(
+            args.into_iter().map(CmdlineBlockAppend::from).collect(),
+        ),
+        "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
+        "wildmenu_show" => RedrawEvent::WildmenuShow(
+            args.into_iter().map(WildmenuShow::from).collect(),
+        ),
+        "wildmenu_hide" => RedrawEvent::WildmenuHide(),
+        "wildmenu_select" => RedrawEvent::WildmenuSelect(
+            args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
+        ),
+        "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
+
+        _ => RedrawEvent::Unknown(cmd.to_string()),
+    }
+}
+
 pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
     args.into_iter()
         .map(|args| {
+            let args = unwrap_array!(args);
             let cmd = unwrap_str!(args[0]);
-            match cmd {
-                "set_title" => {
-                    let args = unwrap_array!(args[1]);
-                    let title = unwrap_str!(args[0]);
-                    RedrawEvent::SetTitle(title.to_string())
-                }
-                "grid_line" => {
-                    let mut lines = vec![];
-
-                    for entry in unwrap_array!(args)[1..].into_iter() {
-                        let entry = unwrap_array!(entry);
-                        let grid = unwrap_u64!(entry[0]);
-                        let row = unwrap_u64!(entry[1]);
-                        let col_start = unwrap_u64!(entry[2]);
-                        let mut cells: Vec<Cell> = vec![];
-
-                        for entry in unwrap_array!(entry[3]) {
-                            let entry = unwrap_array!(entry);
-                            let text = unwrap_str!(entry[0]);
-                            let hl_id = if entry.len() >= 2 {
-                                entry[1].as_u64()
-                            } else {
-                                None
-                            };
-                            let repeat = if entry.len() >= 3 {
-                                unwrap_u64!(entry[2])
-                            } else {
-                                1
-                            };
-
-                            let hl_id = if let Some(hl_id) = hl_id {
-                                hl_id
-                            } else {
-                                cells.last().unwrap().hl_id
-                            };
-
-                            if text == "" {
-                                if let Some(prev) = cells.last_mut() {
-                                    prev.double_width = true;
-                                }
-                            }
-
-                            cells.push(Cell {
-                                hl_id,
-                                repeat,
-                                text: String::from(text),
-                                double_width: false,
-                            });
-                        }
-
-                        lines.push(GridLineSegment {
-                            grid,
-                            row,
-                            col_start,
-                            cells,
-                        });
-                    }
-
-                    RedrawEvent::GridLine(lines)
-                }
-                "grid_cursor_goto" => {
-                    let args = unwrap_array!(args[1]);
-                    RedrawEvent::GridCursorGoto(
-                        unwrap_u64!(args[0]),
-                        unwrap_u64!(args[1]),
-                        unwrap_u64!(args[2]),
-                    )
-                }
-                "grid_resize" => {
-                    let args = unwrap_array!(args[1]);
-                    let grid = unwrap_u64!(args[0]);
-                    let width = unwrap_u64!(args[1]);
-                    let height = unwrap_u64!(args[2]);
-
-                    RedrawEvent::GridResize(grid, width, height)
-                }
-                "grid_clear" => {
-                    let args = unwrap_array!(args[1]);
-                    let id = unwrap_u64!(args[0]);
-                    RedrawEvent::GridClear(id)
-                }
-                "grid_scroll" => {
-                    let mut scroll_vec = vec![];
-
-                    for args in unwrap_array!(args)[1..].into_iter() {
-                        let args = unwrap_array!(args);
-
-                        let id = unwrap_u64!(args[0]);
-                        let top = unwrap_u64!(args[1]);
-                        let bot = unwrap_u64!(args[2]);
-                        let left = unwrap_u64!(args[3]);
-                        let right = unwrap_u64!(args[4]);
-                        let rows = unwrap_i64!(args[5]);
-                        let cols = unwrap_i64!(args[6]);
-
-                        scroll_vec.push(GridScroll {
-                            grid: id,
-                            reg: [top, bot, left, right],
-                            rows,
-                            cols,
-                        });
-                    }
-
-                    RedrawEvent::GridScroll(scroll_vec)
-                }
-                "default_colors_set" => {
-                    let args = unwrap_array!(args[1]);
-
-                    let fg = Color::from_u64(args[0].as_u64().unwrap_or(0));
-                    let bg = Color::from_u64(
-                        args[1].as_u64().unwrap_or(std::u64::MAX),
-                    );
-                    // Default to red.
-                    let sp =
-                        Color::from_u64(args[2].as_u64().unwrap_or(16711680));
-
-                    RedrawEvent::DefaultColorsSet(fg, bg, sp)
-                }
-                "hl_attr_define" => {
-                    let mut hls = vec![];
-
-                    for args in unwrap_array!(args)[1..].into_iter() {
-                        let args = unwrap_array!(args);
-                        let id = unwrap_u64!(args[0]);
-                        let map = unwrap_map!(args[1]);
-
-                        let hl = Highlight::from_map_val(map);
-
-                        hls.push((id, hl));
-                    }
-
-                    RedrawEvent::HlAttrDefine(hls)
-                }
-                "option_set" => {
-                    let mut opts = vec![];
-                    for arg in unwrap_array!(args)[1..].into_iter() {
-                        let name = unwrap_str!(arg[0]);
-                        let opt = match name {
-                            "guifont" => {
-                                let val = unwrap_str!(arg[1]);
-                                OptionSet::GuiFont(String::from(val))
-                            }
-                            "linespace" => {
-                                let val = unwrap_i64!(arg[1]);
-                                OptionSet::LineSpace(val)
-                            }
-                            _ => OptionSet::NotSupported(String::from(name)),
-                        };
-
-                        opts.push(opt);
-                    }
-
-                    RedrawEvent::OptionSet(opts)
-                }
-                "mode_info_set" => {
-                    let args = unwrap_array!(args[1]);
-                    let cursor_style_enabled = unwrap_bool!(args[0]);
-
-                    let mut infos = vec![];
-                    for info in unwrap_array!(args[1]).into_iter() {
-                        let map = unwrap_map!(info);
-
-                        let mut mode = ModeInfo::default();
-                        for (prop, val) in map {
-                            mode.set(unwrap_str!(prop), val.clone());
-                        }
-
-                        infos.push(mode);
-                    }
-
-                    RedrawEvent::ModeInfoSet(cursor_style_enabled, infos)
-                }
-                "mode_change" => {
-                    let args = unwrap_array!(args[1]);
-                    let name = unwrap_str!(args[0]);
-                    let idx = unwrap_u64!(args[1]);
-                    RedrawEvent::ModeChange(String::from(name), idx)
-                }
-                "busy_start" => RedrawEvent::SetBusy(true),
-                "busy_stop" => RedrawEvent::SetBusy(false),
-                "flush" => RedrawEvent::Flush(),
-                "popupmenu_show" => {
-                    let args = unwrap_array!(args[1]);
-                    let selected = unwrap_i64!(args[1]);
-                    let row = unwrap_u64!(args[2]);
-                    let col = unwrap_u64!(args[3]);
-
-                    let mut items = vec![];
-                    for item in unwrap_array!(args[0]) {
-                        let item = unwrap_array!(item);
-                        let word = unwrap_str!(item[0]).to_owned();
-                        let kind =
-                            CompletionItemKind::from(unwrap_str!(item[1]));
-                        let kind_raw = unwrap_str!(item[1]).to_owned();
-                        let menu = unwrap_str!(item[2]).to_owned();
-                        let info = unwrap_str!(item[3]).to_owned();
-
-                        items.push(CompletionItem {
-                            word,
-                            kind,
-                            menu,
-                            info,
-                            kind_raw,
-                        });
-                    }
-
-                    RedrawEvent::PopupmenuShow(PopupmenuShow {
-                        items,
-                        selected,
-                        row,
-                        col,
-                    })
-                }
-                "popupmenu_hide" => RedrawEvent::PopupmenuHide(),
-                "popupmenu_select" => {
-                    let args = unwrap_array!(args[1]);
-                    let selected = unwrap_i64!(args[0]);
-                    RedrawEvent::PopupmenuSelect(selected)
-                }
-                "tabline_update" => {
-                    let args = unwrap_array!(args[1]);
-                    let cur_tab = Tabpage::new(args[0].clone());
-                    let tabs = unwrap_array!(args[1])
-                        .iter()
-                        .map(|item| {
-                            let m = map_to_hash(&item);
-                            (
-                                Tabpage::new((*m.get("tab").unwrap()).clone()),
-                                unwrap_str!(m.get("name").unwrap()).to_string(),
-                            )
-                        })
-                        .collect();
-
-                    RedrawEvent::TablineUpdate(cur_tab, tabs)
-                }
-                "cmdline_show" => {
-                    let args = unwrap_array!(args[1]);
-                    let content: Vec<(u64, String)> = unwrap_array!(args[0])
-                        .into_iter()
-                        .map(|v| {
-                            let hl_id = unwrap_u64!(v[0]);
-                            let text = unwrap_str!(v[1]);
-
-                            (hl_id, String::from(text))
-                        })
-                        .collect();
-                    let pos = unwrap_u64!(args[1]);
-                    let firstc = String::from(unwrap_str!(args[2]));
-                    let prompt = String::from(unwrap_str!(args[3]));
-                    let indent = unwrap_u64!(args[4]);
-                    let level = unwrap_u64!(args[5]);
-
-                    RedrawEvent::CmdlineShow(CmdlineShow {
-                        content,
-                        pos,
-                        firstc,
-                        prompt,
-                        indent,
-                        level,
-                    })
-                }
-                "cmdline_hide" => RedrawEvent::CmdlineHide(),
-                "cmdline_pos" => {
-                    let args = unwrap_array!(args[1]);
-                    let pos = unwrap_u64!(args[0]);
-                    let level = unwrap_u64!(args[1]);
-                    RedrawEvent::CmdlinePos(pos, level)
-                }
-                "cmdline_special_char" => {
-                    let args = unwrap_array!(args[1]);
-                    let c = unwrap_str!(args[0]);
-                    let shift = unwrap_bool!(args[1]);
-                    let level = unwrap_u64!(args[2]);
-                    RedrawEvent::CmdlineSpecialChar(c.to_string(), shift, level)
-                }
-                "cmdline_block_show" => {
-                    let args = unwrap_array!(args[1]);
-                    let args = unwrap_array!(args[0]);
-
-                    let lines: Vec<(u64, String)> = unwrap_array!(args[0])
-                        .iter()
-                        .map(|v| {
-                            let hl_id = unwrap_u64!(v[0]);
-                            let text = unwrap_str!(v[1]);
-
-                            (hl_id, text.to_string())
-                        })
-                        .collect();
-
-                    RedrawEvent::CmdlineBlockShow(lines)
-                }
-                "cmdline_block_append" => {
-                    let args = unwrap_array!(args[1]);
-                    let args = unwrap_array!(args[0]);
-                    let line_raw = unwrap_array!(args[0]);
-
-                    RedrawEvent::CmdlineBlockAppend((
-                        unwrap_u64!(line_raw[0]),
-                        unwrap_str!(line_raw[1]).to_string(),
-                    ))
-                }
-                "cmdline_block_hide" => RedrawEvent::CmdlineBlockHide(),
-                "wildmenu_show" => {
-                    let args = unwrap_array!(args[1]);
-                    let items: Vec<String> = unwrap_array!(args[0])
-                        .iter()
-                        .map(|v| unwrap_str!(v).to_string())
-                        .collect();
-
-                    RedrawEvent::WildmenuShow(items)
-                }
-                "wildmenu_hide" => RedrawEvent::WildmenuHide(),
-                "wildmenu_select" => {
-                    let args = unwrap_array!(args[1]);
-                    let item = unwrap_i64!(args[0]);
-                    RedrawEvent::WildmenuSelect(item)
-                }
-                "mouse_on" | "mouse_off" => {
-                    RedrawEvent::Ignored(cmd.to_string())
-                }
-                _ => RedrawEvent::Unknown(cmd.to_string()),
-            }
+            parse_single_redraw_event(cmd, args[1..].to_vec())
         })
         .collect()
 }

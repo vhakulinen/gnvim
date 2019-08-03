@@ -18,15 +18,18 @@ mod parse_redraw_event_tests {
     use neovim_lib::Value;
     use nvim_bridge;
     use nvim_bridge::{
-        Cell, CmdlineShow, CompletionItem, CompletionItemKind, CursorShape,
-        GridLineSegment, GridScroll, ModeInfo, OptionSet, PopupmenuShow,
-        RedrawEvent,
+        Cell, CmdlineBlockAppend, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
+        CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
+        GridCursorGoto, GridLineSegment, GridResize, GridScroll, HlAttrDefine,
+        ModeChange, ModeInfo, ModeInfoSet, OptionSet, PopupmenuShow,
+        RedrawEvent, TablineUpdate, WildmenuShow,
     };
     use ui::color::{Color, Highlight};
 
     #[test]
     fn set_title() {
-        let expected = vec![RedrawEvent::SetTitle("my title".into())];
+        let expected =
+            vec![RedrawEvent::SetTitle(vec!["my title".to_string()])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             String::from("set_title").into(),
@@ -120,7 +123,12 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_cursor_goto() {
-        let expected = vec![RedrawEvent::GridCursorGoto(123, 321, 2)];
+        let expected =
+            vec![RedrawEvent::GridCursorGoto(vec![GridCursorGoto {
+                grid: 123,
+                row: 321,
+                col: 2,
+            }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             String::from("grid_cursor_goto").into(),
@@ -132,7 +140,11 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_resize() {
-        let expected = vec![RedrawEvent::GridResize(2, 32, 12)];
+        let expected = vec![RedrawEvent::GridResize(vec![GridResize {
+            grid: 2,
+            width: 32,
+            height: 12,
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "grid_resize".into(),
@@ -144,7 +156,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn grid_clear() {
-        let expected = vec![RedrawEvent::GridClear(32)];
+        let expected = vec![RedrawEvent::GridClear(vec![32])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "grid_clear".into(),
@@ -181,11 +193,12 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn default_colors_set() {
-        let expected = vec![RedrawEvent::DefaultColorsSet(
-            Color::from_u64(321921),
-            Color::from_u64(94921),
-            Color::from_u64(983821232),
-        )];
+        let expected =
+            vec![RedrawEvent::DefaultColorsSet(vec![DefaultColorsSet {
+                fg: Color::from_u64(321921),
+                bg: Color::from_u64(94921),
+                sp: Color::from_u64(983821232),
+            }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "default_colors_set".into(),
@@ -198,11 +211,12 @@ mod parse_redraw_event_tests {
     /// Test default values.
     #[test]
     fn default_colors_set2() {
-        let expected = vec![RedrawEvent::DefaultColorsSet(
-            Color::from_u64(0),
-            Color::from_u64(std::u64::MAX),
-            Color::from_u64(16711680),
-        )];
+        let expected =
+            vec![RedrawEvent::DefaultColorsSet(vec![DefaultColorsSet {
+                fg: Color::from_u64(0),
+                bg: Color::from_u64(std::u64::MAX),
+                sp: Color::from_u64(16711680),
+            }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "default_colors_set".into(),
@@ -219,9 +233,9 @@ mod parse_redraw_event_tests {
     #[test]
     fn hl_attr_define() {
         let expected = vec![RedrawEvent::HlAttrDefine(vec![
-            (
-                1,
-                Highlight {
+            HlAttrDefine {
+                id: 1,
+                hl: Highlight {
                     foreground: Some(Color::from_u64(3215)),
                     background: Some(Color::from_u64(214)),
                     special: Some(Color::from_u64(2019092)),
@@ -231,10 +245,10 @@ mod parse_redraw_event_tests {
                     underline: true,
                     undercurl: false,
                 },
-            ),
-            (
-                42,
-                Highlight {
+            },
+            HlAttrDefine {
+                id: 42,
+                hl: Highlight {
                     foreground: Some(Color::from_u64(3215)),
                     background: None,
                     special: Some(Color::from_u64(2019092)),
@@ -244,10 +258,10 @@ mod parse_redraw_event_tests {
                     underline: false,
                     undercurl: true,
                 },
-            ),
-            (
-                32,
-                Highlight {
+            },
+            HlAttrDefine {
+                id: 32,
+                hl: Highlight {
                     foreground: Some(Color::from_u64(215)),
                     background: Some(Color::from_u64(315)),
                     special: Some(Color::from_u64(19092)),
@@ -257,10 +271,10 @@ mod parse_redraw_event_tests {
                     underline: false,
                     undercurl: true,
                 },
-            ),
-            (
-                3,
-                Highlight {
+            },
+            HlAttrDefine {
+                id: 3,
+                hl: Highlight {
                     foreground: None,
                     background: None,
                     special: None,
@@ -270,7 +284,7 @@ mod parse_redraw_event_tests {
                     underline: false,
                     undercurl: false,
                 },
-            ),
+            },
         ])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
@@ -333,9 +347,9 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn mode_info_set() {
-        let expected = vec![RedrawEvent::ModeInfoSet(
-            true,
-            vec![
+        let expected = vec![RedrawEvent::ModeInfoSet(vec![ModeInfoSet {
+            cursor_shape_enabled: true,
+            mode_info: vec![
                 ModeInfo {
                     blink_on: 32,
                     cursor_shape: CursorShape::Horizontal,
@@ -347,7 +361,7 @@ mod parse_redraw_event_tests {
                     cell_percentage: 1.0,
                 },
             ],
-        )];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "mode_info_set".into(),
@@ -373,7 +387,10 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn mode_change() {
-        let expected = vec![RedrawEvent::ModeChange("foo".into(), 32)];
+        let expected = vec![RedrawEvent::ModeChange(vec![ModeChange {
+            name: "foo".into(),
+            index: 32,
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "mode_change".into(),
@@ -412,7 +429,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn popupmenu_show() {
-        let expected = vec![RedrawEvent::PopupmenuShow(PopupmenuShow {
+        let expected = vec![RedrawEvent::PopupmenuShow(vec![PopupmenuShow {
             selected: 4,
             row: 3,
             col: 6,
@@ -432,7 +449,7 @@ mod parse_redraw_event_tests {
                     info: "ofni".to_owned(),
                 },
             ],
-        })];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "popupmenu_show".into(),
@@ -472,7 +489,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn popupmenu_select() {
-        let expected = vec![RedrawEvent::PopupmenuSelect(32)];
+        let expected = vec![RedrawEvent::PopupmenuSelect(vec![32])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "popupmenu_select".into(),
@@ -484,13 +501,13 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn tabline_update() {
-        let expected = vec![RedrawEvent::TablineUpdate(
-            Tabpage::new("foo".into()),
-            vec![
+        let expected = vec![RedrawEvent::TablineUpdate(vec![TablineUpdate {
+            current: Tabpage::new("foo".into()),
+            tabs: vec![
                 (Tabpage::new("bar".into()), "bar_name".into()),
                 (Tabpage::new("ugh".into()), "ugh_name".into()),
             ],
-        )];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "tabline_update".into(),
@@ -514,14 +531,14 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn cmdline_show() {
-        let expected = vec![RedrawEvent::CmdlineShow(CmdlineShow {
+        let expected = vec![RedrawEvent::CmdlineShow(vec![CmdlineShow {
             content: vec![(91, "foo".to_owned()), (33, "bar".to_owned())],
             pos: 32,
             firstc: "f".to_owned(),
             prompt: "p".to_owned(),
             indent: 2,
             level: 4,
-        })];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "cmdline_show".into(),
@@ -552,7 +569,10 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn cmdline_pos() {
-        let expected = vec![RedrawEvent::CmdlinePos(3, 9)];
+        let expected = vec![RedrawEvent::CmdlinePos(vec![CmdlinePos {
+            pos: 3,
+            level: 9,
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "cmdline_pos".into(),
@@ -565,7 +585,11 @@ mod parse_redraw_event_tests {
     #[test]
     fn cmdline_special_char() {
         let expected =
-            vec![RedrawEvent::CmdlineSpecialChar("^V".to_string(), false, 1)];
+            vec![RedrawEvent::CmdlineSpecialChar(vec![CmdlineSpecialChar {
+                character: "^V".to_string(),
+                shift: false,
+                level: 1,
+            }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "cmdline_special_char".into(),
@@ -578,14 +602,16 @@ mod parse_redraw_event_tests {
     #[test]
     fn cmdline_block_append() {
         let expected =
-            vec![RedrawEvent::CmdlineBlockAppend((2, "foobar".to_string()))];
+            vec![RedrawEvent::CmdlineBlockAppend(vec![CmdlineBlockAppend {
+                line: vec![(2, "foobar".to_string()), (1, "bar".to_string())],
+            }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "cmdline_block_append".into(),
-            Value::Array(vec!(Value::Array(vec!(Value::Array(vec!(
-                2.into(),
-                "foobar".into(),
-            )),)),))
+            Value::Array(vec!(Value::Array(vec!(
+                Value::Array(vec!(2.into(), "foobar".into(),)),
+                Value::Array(vec!(1.into(), "bar".into(),)),
+            )),))
         ));
 
         assert_eq!(expected, res);
@@ -603,10 +629,11 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn wildmenu_show() {
-        let expected = vec![RedrawEvent::WildmenuShow(vec![
-            "foo".to_owned(),
-            "bar".to_owned(),
-        ])];
+        let expected =
+            vec![RedrawEvent::WildmenuShow(vec![WildmenuShow(vec![
+                "foo".to_owned(),
+                "bar".to_owned(),
+            ])])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "wildmenu_show".into(),
@@ -630,7 +657,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn wildmenu_select() {
-        let expected = vec![RedrawEvent::WildmenuSelect(32)];
+        let expected = vec![RedrawEvent::WildmenuSelect(vec![32])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "wildmenu_select".into(),

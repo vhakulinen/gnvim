@@ -78,20 +78,23 @@ impl CmdlineBlock {
         self.frame.clone().upcast()
     }
 
-    fn show(&mut self, lines: &Vec<(u64, String)>, hl_defs: &HlDefs) {
+    fn show(&mut self, show: &nvim_bridge::CmdlineBlockShow, hl_defs: &HlDefs) {
         self.frame.show();
         let buffer = self.textview.get_buffer().unwrap();
         let mut iter = buffer.get_iter_at_offset(0);
 
-        for (i, line) in lines.iter().enumerate() {
-            let hl = hl_defs.get(&line.0).unwrap();
+        for (i, line) in show.lines.iter().enumerate() {
+            let mut markup = String::new();
+            for seg in line.iter() {
+                let hl = hl_defs.get(&seg.0).unwrap();
 
-            let markup = hl.pango_markup(
-                &line.1,
-                &hl_defs.default_fg,
-                &hl_defs.default_bg,
-                &hl_defs.default_sp,
-            );
+                markup += &hl.pango_markup(
+                    &seg.1,
+                    &hl_defs.default_fg,
+                    &hl_defs.default_bg,
+                    &hl_defs.default_sp,
+                );
+            }
 
             if i > 0 {
                 buffer.insert(&mut iter, "\n");
@@ -101,19 +104,28 @@ impl CmdlineBlock {
         }
     }
 
-    fn append(&mut self, line: &(u64, String), hl_defs: &HlDefs) {
+    fn append(
+        &mut self,
+        append: &nvim_bridge::CmdlineBlockAppend,
+        hl_defs: &HlDefs,
+    ) {
         let buffer = self.textview.get_buffer().unwrap();
 
         let mut iter = buffer.get_end_iter();
 
-        let hl = hl_defs.get(&line.0).unwrap();
-
-        let markup = hl.pango_markup(
-            &line.1,
-            &hl_defs.default_fg,
-            &hl_defs.default_bg,
-            &hl_defs.default_sp,
-        );
+        let markup: String = append
+            .line
+            .iter()
+            .map(|seg| {
+                let hl = hl_defs.get(&seg.0).unwrap();
+                hl.pango_markup(
+                    &seg.1,
+                    &hl_defs.default_fg,
+                    &hl_defs.default_bg,
+                    &hl_defs.default_sp,
+                )
+            })
+            .collect();
 
         buffer.insert(&mut iter, "\n");
         buffer.insert_markup(&mut iter, &markup);
@@ -596,8 +608,12 @@ impl Cmdline {
         self.input.set_cursor(pos as usize, level);
     }
 
-    pub fn show_block(&mut self, lines: &Vec<(u64, String)>, hl_defs: &HlDefs) {
-        self.block.show(lines, hl_defs);
+    pub fn show_block(
+        &mut self,
+        show: &nvim_bridge::CmdlineBlockShow,
+        hl_defs: &HlDefs,
+    ) {
+        self.block.show(show, hl_defs);
         self.show_block = true;
     }
 
@@ -606,7 +622,11 @@ impl Cmdline {
         self.show_block = false;
     }
 
-    pub fn block_append(&mut self, line: &(u64, String), hl_defs: &HlDefs) {
+    pub fn block_append(
+        &mut self,
+        line: &nvim_bridge::CmdlineBlockAppend,
+        hl_defs: &HlDefs,
+    ) {
         self.block.append(line, &hl_defs);
     }
 
