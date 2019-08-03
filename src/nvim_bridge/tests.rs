@@ -22,7 +22,7 @@ mod parse_redraw_event_tests {
         CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
         GridCursorGoto, GridLineSegment, GridResize, GridScroll, HlAttrDefine,
         ModeChange, ModeInfo, ModeInfoSet, OptionSet, PopupmenuShow,
-        RedrawEvent,
+        RedrawEvent, TablineUpdate, WildmenuShow,
     };
     use ui::color::{Color, Highlight};
 
@@ -501,13 +501,13 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn tabline_update() {
-        let expected = vec![RedrawEvent::TablineUpdate(
-            Tabpage::new("foo".into()),
-            vec![
+        let expected = vec![RedrawEvent::TablineUpdate(vec![TablineUpdate {
+            current: Tabpage::new("foo".into()),
+            tabs: vec![
                 (Tabpage::new("bar".into()), "bar_name".into()),
                 (Tabpage::new("ugh".into()), "ugh_name".into()),
             ],
-        )];
+        }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "tabline_update".into(),
@@ -603,16 +603,15 @@ mod parse_redraw_event_tests {
     fn cmdline_block_append() {
         let expected =
             vec![RedrawEvent::CmdlineBlockAppend(vec![CmdlineBlockAppend {
-                hl_id: 2,
-                text: "foobar".to_string(),
+                line: vec![(2, "foobar".to_string()), (1, "bar".to_string())],
             }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "cmdline_block_append".into(),
-            Value::Array(vec!(Value::Array(vec!(Value::Array(vec!(
-                2.into(),
-                "foobar".into(),
-            )),)),))
+            Value::Array(vec!(Value::Array(vec!(
+                Value::Array(vec!(2.into(), "foobar".into(),)),
+                Value::Array(vec!(1.into(), "bar".into(),)),
+            )),))
         ));
 
         assert_eq!(expected, res);
@@ -630,10 +629,11 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn wildmenu_show() {
-        let expected = vec![RedrawEvent::WildmenuShow(vec![
-            "foo".to_owned(),
-            "bar".to_owned(),
-        ])];
+        let expected =
+            vec![RedrawEvent::WildmenuShow(vec![WildmenuShow(vec![
+                "foo".to_owned(),
+                "bar".to_owned(),
+            ])])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "wildmenu_show".into(),
@@ -657,7 +657,7 @@ mod parse_redraw_event_tests {
 
     #[test]
     fn wildmenu_select() {
-        let expected = vec![RedrawEvent::WildmenuSelect(32)];
+        let expected = vec![RedrawEvent::WildmenuSelect(vec![32])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
             "wildmenu_select".into(),

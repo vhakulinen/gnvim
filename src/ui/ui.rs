@@ -15,7 +15,9 @@ use neovim_lib::Value;
 use gtk::prelude::*;
 
 use nvim_bridge::{
-    GnvimEvent, Message, ModeInfo, Notify, OptionSet, RedrawEvent, Request,
+    CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
+    GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
+    ModeInfoSet, Notify, OptionSet, RedrawEvent, Request, TablineUpdate,
 };
 use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
@@ -497,49 +499,69 @@ fn handle_redraw_event(
 ) {
     for event in events {
         match event {
-            RedrawEvent::SetTitle(title) => {
-                window.set_title(title);
+            RedrawEvent::SetTitle(evt) => {
+                evt.iter().for_each(|title| {
+                    window.set_title(title);
+                });
             }
-            RedrawEvent::GridLine(lines) => {
-                for line in lines {
+            RedrawEvent::GridLine(evt) => {
+                evt.iter().for_each(|line| {
                     let grid = state.grids.get(&line.grid).unwrap();
                     grid.put_line(line, &state.hl_defs);
-                }
+                });
             }
-            RedrawEvent::GridCursorGoto(grid_id, row, col) => {
-                // Gird cursor goto sets the current cursor to grid_id,
-                // so we'll need to handle that here...
-                let grid = if *grid_id != state.current_grid {
-                    // ...so if the grid_id is not same as the state tells us,
-                    // set the previous current grid to inactive state.
-                    state
-                        .grids
-                        .get(&state.current_grid)
-                        .unwrap()
-                        .set_active(false);
-                    state.current_grid = *grid_id;
+            RedrawEvent::GridCursorGoto(evt) => {
+                evt.iter().for_each(
+                    |GridCursorGoto {
+                         grid: grid_id,
+                         row,
+                         col,
+                     }| {
+                        // Gird cursor goto sets the current cursor to grid_id,
+                        // so we'll need to handle that here...
+                        let grid = if *grid_id != state.current_grid {
+                            // ...so if the grid_id is not same as the state tells us,
+                            // set the previous current grid to inactive state.
+                            state
+                                .grids
+                                .get(&state.current_grid)
+                                .unwrap()
+                                .set_active(false);
+                            state.current_grid = *grid_id;
 
-                    // And set the new current grid to active.
-                    let grid = state.grids.get(grid_id).unwrap();
-                    grid.set_active(true);
-                    grid
-                } else {
-                    state.grids.get(grid_id).unwrap()
-                };
+                            // And set the new current grid to active.
+                            let grid = state.grids.get(grid_id).unwrap();
+                            grid.set_active(true);
+                            grid
+                        } else {
+                            state.grids.get(grid_id).unwrap()
+                        };
 
-                // And after all that, set the current grid's cursor position.
-                grid.cursor_goto(*row, *col);
+                        // And after all that, set the current grid's cursor position.
+                        grid.cursor_goto(*row, *col);
+                    },
+                );
             }
-            RedrawEvent::GridResize(grid, width, height) => {
-                let grid = state.grids.get(grid).unwrap();
-                grid.resize(*width, *height);
+            RedrawEvent::GridResize(evt) => {
+                evt.iter().for_each(
+                    |GridResize {
+                         grid,
+                         width,
+                         height,
+                     }| {
+                        let grid = state.grids.get(grid).unwrap();
+                        grid.resize(*width, *height);
+                    },
+                );
             }
-            RedrawEvent::GridClear(grid) => {
-                let grid = state.grids.get(grid).unwrap();
-                grid.clear(&state.hl_defs);
+            RedrawEvent::GridClear(evt) => {
+                evt.iter().for_each(|grid| {
+                    let grid = state.grids.get(grid).unwrap();
+                    grid.clear(&state.hl_defs);
+                });
             }
-            RedrawEvent::GridScroll(scroll) => {
-                for info in scroll {
+            RedrawEvent::GridScroll(evt) => {
+                evt.iter().for_each(|info| {
                     let grid = state.grids.get(&info.grid).unwrap();
                     grid.scroll(info.reg, info.rows, info.cols, &state.hl_defs);
 
@@ -552,34 +574,36 @@ fn handle_redraw_event(
                          Err(err) => println!("GnvimScroll error: {:?}", err),
                      })
                      .call();
-                }
+                });
             }
-            RedrawEvent::DefaultColorsSet(fg, bg, sp) => {
-                state.hl_defs.default_fg = *fg;
-                state.hl_defs.default_bg = *bg;
-                state.hl_defs.default_sp = *sp;
+            RedrawEvent::DefaultColorsSet(evt) => {
+                evt.iter().for_each(|DefaultColorsSet { fg, bg, sp }| {
+                    state.hl_defs.default_fg = *fg;
+                    state.hl_defs.default_bg = *bg;
+                    state.hl_defs.default_sp = *sp;
 
-                {
-                    // NOTE(ville): Not sure if these are actually needed.
-                    let hl = state.hl_defs.get_mut(&0).unwrap();
-                    hl.foreground = Some(*fg);
-                    hl.background = Some(*bg);
-                    hl.special = Some(*sp);
-                }
+                    {
+                        // NOTE(ville): Not sure if these are actually needed.
+                        let hl = state.hl_defs.get_mut(&0).unwrap();
+                        hl.foreground = Some(*fg);
+                        hl.background = Some(*bg);
+                        hl.special = Some(*sp);
+                    }
 
-                for grid in state.grids.values() {
-                    grid.redraw(&state.hl_defs);
-                }
+                    for grid in state.grids.values() {
+                        grid.redraw(&state.hl_defs);
+                    }
 
-                state.cursor_tooltip.set_colors(*fg, *bg);
+                    state.cursor_tooltip.set_colors(*fg, *bg);
+                });
             }
-            RedrawEvent::HlAttrDefine(defs) => {
-                for (id, hl) in defs {
+            RedrawEvent::HlAttrDefine(evt) => {
+                evt.iter().for_each(|HlAttrDefine { id, hl }| {
                     state.hl_defs.insert(*id, *hl);
-                }
+                });
             }
-            RedrawEvent::OptionSet(opts) => {
-                for opt in opts {
+            RedrawEvent::OptionSet(evt) => {
+                evt.iter().for_each(|opt| {
                     match opt {
                         OptionSet::GuiFont(font) => {
                             let font = Font::from_guifont(font)
@@ -650,19 +674,23 @@ fn handle_redraw_event(
                             println!("Not supported option set: {}", name);
                         }
                     }
-                }
+                });
             }
-            RedrawEvent::ModeInfoSet(_cursor_shape_enabled, infos) => {
-                state.mode_infos = infos.clone();
+            RedrawEvent::ModeInfoSet(evt) => {
+                evt.iter().for_each(|ModeInfoSet { mode_info, .. }| {
+                    state.mode_infos = mode_info.clone();
+                });
             }
-            RedrawEvent::ModeChange(_name, idx) => {
-                let mode = state.mode_infos.get(*idx as usize).unwrap();
-                // Broadcast the mode change to all grids.
-                // TODO(ville): It might be enough to just set the mode to the
-                //              current active grid.
-                for grid in state.grids.values() {
-                    grid.set_mode(mode);
-                }
+            RedrawEvent::ModeChange(evt) => {
+                evt.iter().for_each(|ModeChange { index, .. }| {
+                    let mode = state.mode_infos.get(*index as usize).unwrap();
+                    // Broadcast the mode change to all grids.
+                    // TODO(ville): It might be enough to just set the mode to the
+                    //              current active grid.
+                    for grid in state.grids.values() {
+                        grid.set_mode(mode);
+                    }
+                });
             }
             RedrawEvent::SetBusy(busy) => {
                 for grid in state.grids.values() {
@@ -674,35 +702,41 @@ fn handle_redraw_event(
                     grid.flush(&state.hl_defs);
                 }
             }
-            RedrawEvent::PopupmenuShow(popupmenu) => {
-                state
-                    .popupmenu
-                    .set_items(popupmenu.items.clone(), &state.hl_defs);
+            RedrawEvent::PopupmenuShow(evt) => {
+                evt.iter().for_each(|popupmenu| {
+                    state
+                        .popupmenu
+                        .set_items(popupmenu.items.clone(), &state.hl_defs);
 
-                let grid = state.grids.get(&state.current_grid).unwrap();
-                let mut rect =
-                    grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+                    let grid = state.grids.get(&state.current_grid).unwrap();
+                    let mut rect =
+                        grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
-                let extra_h = state.tabline.get_height();
-                rect.y -= extra_h;
+                    let extra_h = state.tabline.get_height();
+                    rect.y -= extra_h;
 
-                state.popupmenu.set_anchor(rect);
-                state.popupmenu.show();
-                state
-                    .popupmenu
-                    .select(popupmenu.selected as i32, &state.hl_defs);
+                    state.popupmenu.set_anchor(rect);
+                    state.popupmenu.show();
+                    state
+                        .popupmenu
+                        .select(popupmenu.selected as i32, &state.hl_defs);
 
-                // If the cursor tooltip is visible at the same time, move
-                // it out of our way.
-                if state.cursor_tooltip.is_visible() {
-                    if state.popupmenu.is_above_anchor() {
-                        state.cursor_tooltip.force_gravity(Some(Gravity::Down));
-                    } else {
-                        state.cursor_tooltip.force_gravity(Some(Gravity::Up));
+                    // If the cursor tooltip is visible at the same time, move
+                    // it out of our way.
+                    if state.cursor_tooltip.is_visible() {
+                        if state.popupmenu.is_above_anchor() {
+                            state
+                                .cursor_tooltip
+                                .force_gravity(Some(Gravity::Down));
+                        } else {
+                            state
+                                .cursor_tooltip
+                                .force_gravity(Some(Gravity::Up));
+                        }
+
+                        state.cursor_tooltip.refresh_position();
                     }
-
-                    state.cursor_tooltip.refresh_position();
-                }
+                });
             }
             RedrawEvent::PopupmenuHide() => {
                 state.popupmenu.hide();
@@ -712,42 +746,74 @@ fn handle_redraw_event(
                 state.cursor_tooltip.force_gravity(None);
                 state.cursor_tooltip.refresh_position();
             }
-            RedrawEvent::PopupmenuSelect(selected) => {
-                state.popupmenu.select(*selected as i32, &state.hl_defs);
+            RedrawEvent::PopupmenuSelect(evt) => {
+                evt.iter().for_each(|selected| {
+                    state.popupmenu.select(*selected as i32, &state.hl_defs);
+                });
             }
-            RedrawEvent::TablineUpdate(cur, tabs) => {
-                let mut nvim = nvim.lock().unwrap();
-                state.tabline.update(&mut nvim, cur.clone(), tabs.clone());
+            RedrawEvent::TablineUpdate(evt) => {
+                evt.iter().for_each(|TablineUpdate { current, tabs }| {
+                    let mut nvim = nvim.lock().unwrap();
+                    state.tabline.update(
+                        &mut nvim,
+                        current.clone(),
+                        tabs.clone(),
+                    );
+                });
             }
-            RedrawEvent::CmdlineShow(cmdline_show) => {
-                state.cmdline.show(cmdline_show, &state.hl_defs);
+            RedrawEvent::CmdlineShow(evt) => {
+                evt.iter().for_each(|cmdline_show| {
+                    state.cmdline.show(cmdline_show, &state.hl_defs);
+                });
             }
             RedrawEvent::CmdlineHide() => {
                 state.cmdline.hide();
             }
-            RedrawEvent::CmdlinePos(pos, level) => {
-                state.cmdline.set_pos(*pos, *level);
+            RedrawEvent::CmdlinePos(evt) => {
+                evt.iter().for_each(|CmdlinePos { pos, level }| {
+                    state.cmdline.set_pos(*pos, *level);
+                });
             }
-            RedrawEvent::CmdlineSpecialChar(ch, shift, level) => {
-                state.cmdline.show_special_char(ch.clone(), *shift, *level);
+            RedrawEvent::CmdlineSpecialChar(evt) => {
+                evt.iter().for_each(
+                    |CmdlineSpecialChar {
+                         character: ch,
+                         shift,
+                         level,
+                     }| {
+                        state.cmdline.show_special_char(
+                            ch.clone(),
+                            *shift,
+                            *level,
+                        );
+                    },
+                );
             }
-            RedrawEvent::CmdlineBlockShow(lines) => {
-                state.cmdline.show_block(lines, &state.hl_defs);
+            RedrawEvent::CmdlineBlockShow(evt) => {
+                evt.iter().for_each(|show| {
+                    state.cmdline.show_block(show, &state.hl_defs);
+                });
             }
-            RedrawEvent::CmdlineBlockAppend(line) => {
-                state.cmdline.block_append(line, &state.hl_defs);
+            RedrawEvent::CmdlineBlockAppend(evt) => {
+                evt.iter().for_each(|line| {
+                    state.cmdline.block_append(line, &state.hl_defs);
+                });
             }
             RedrawEvent::CmdlineBlockHide() => {
                 state.cmdline.hide_block();
             }
-            RedrawEvent::WildmenuShow(items) => {
-                state.cmdline.wildmenu_show(items);
+            RedrawEvent::WildmenuShow(evt) => {
+                evt.iter().for_each(|items| {
+                    state.cmdline.wildmenu_show(&items.0);
+                });
             }
             RedrawEvent::WildmenuHide() => {
                 state.cmdline.wildmenu_hide();
             }
-            RedrawEvent::WildmenuSelect(item) => {
-                state.cmdline.wildmenu_select(*item);
+            RedrawEvent::WildmenuSelect(evt) => {
+                evt.iter().for_each(|item| {
+                    state.cmdline.wildmenu_select(*item);
+                });
             }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
