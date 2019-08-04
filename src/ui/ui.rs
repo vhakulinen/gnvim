@@ -468,10 +468,7 @@ fn handle_gnvim_event(
             state.cursor_tooltip.show(content.clone());
 
             let grid = state.grids.get(&state.current_grid).unwrap();
-            let mut rect = grid.get_rect_for_cell(*row, *col);
-
-            let extra_h = state.tabline.get_height();
-            rect.y -= extra_h;
+            let rect = grid.get_rect_for_cell(*row, *col);
 
             state.cursor_tooltip.move_to(&rect);
         }
@@ -709,11 +706,8 @@ fn handle_redraw_event(
                         .set_items(popupmenu.items.clone(), &state.hl_defs);
 
                     let grid = state.grids.get(&state.current_grid).unwrap();
-                    let mut rect =
+                    let rect =
                         grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
-
-                    let extra_h = state.tabline.get_height();
-                    rect.y -= extra_h;
 
                     state.popupmenu.set_anchor(rect);
                     state.popupmenu.show();

@@ -164,7 +164,7 @@ impl Grid {
         let (x, y) = self
             .eb
             .translate_coordinates(
-                &self.eb.get_toplevel().unwrap(),
+                &self.eb.get_parent().unwrap(),
                 x as i32,
                 y as i32,
             )

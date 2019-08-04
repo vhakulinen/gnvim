@@ -144,10 +144,6 @@ impl Tabline {
         glib::signal_handler_unblock(&self.notebook, &self.switch_tab_signal);
     }
 
-    pub fn get_height(&self) -> i32 {
-        self.notebook.get_preferred_height().0
-    }
-
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
         self.set_styles(hl_defs);
