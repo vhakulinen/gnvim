@@ -400,7 +400,7 @@ fn handle_request(
         Request::CursorTooltipStyles => {
             let styles = state.cursor_tooltip.get_styles();
 
-            let mut res: Vec<Value> =
+            let res: Vec<Value> =
                 styles.into_iter().map(|s| s.into()).collect();
 
             Ok(res.into())
