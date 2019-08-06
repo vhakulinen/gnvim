@@ -53,6 +53,11 @@ impl HlDefs {
     }
 }
 
+struct ResizeOptions {
+    font: Font,
+    line_space: i64,
+}
+
 /// Internal structure for `UI` to work on.
 struct UIState {
     /// All grids currently in the UI.
@@ -76,6 +81,8 @@ struct UIState {
 
     /// Source id for delayed call to ui_try_resize.
     resize_source_id: Arc<Mutex<Option<glib::SourceId>>>,
+    /// Resize options that is some if a resize should be send to nvim on flush.
+    resize_on_flush: Option<ResizeOptions>,
 }
 
 /// Main UI structure.
@@ -135,7 +142,9 @@ impl UI {
         // When resizing our window (main grid), we'll have to tell neovim to
         // resize it self also. The notify to nvim is send with a small delay,
         // so we don't spam it multiple times a second. source_id is used to
-        // track the function timeout.
+        // track the function timeout. This timeout might be canceled in
+        // redraw even handler if we receive a message that changes the size
+        // of the main grid.
         let source_id = Arc::new(Mutex::new(None));
         let source_id_ref = source_id.clone();
         let nvim_ref = nvim.clone();
@@ -165,12 +174,9 @@ impl UI {
 
             let source_id = source_id_ref.clone();
             let mut source_id = source_id.lock().unwrap();
-            {
-                // If we have earlier timeout, remove it.
-                let old = source_id.take();
-                if let Some(old) = old {
-                    glib::source::source_remove(old);
-                }
+            // If we have earlier timeout, remove it.
+            if let Some(old) = source_id.take() {
+                glib::source::source_remove(old);
             }
 
             *source_id = Some(new);
@@ -296,6 +302,7 @@ impl UI {
                 cursor_tooltip,
                 resize_source_id: source_id,
                 hl_defs,
+                resize_on_flush: None,
             })),
             nvim,
         }
@@ -600,76 +607,40 @@ fn handle_redraw_event(
                 });
             }
             RedrawEvent::OptionSet(evt) => {
-                evt.iter().for_each(|opt| {
-                    match opt {
-                        OptionSet::GuiFont(font) => {
-                            let font = Font::from_guifont(font)
-                                .unwrap_or(Font::default());
-                            let pango_font = font.as_pango_font();
+                evt.iter().for_each(|opt| match opt {
+                    OptionSet::GuiFont(font) => {
+                        let font =
+                            Font::from_guifont(font).unwrap_or(Font::default());
 
-                            for grid in (state.grids).values() {
-                                grid.set_font(pango_font.clone());
-                            }
+                        let mut opts =
+                            state.resize_on_flush.take().unwrap_or_else(|| {
+                                let grid = state.grids.get(&1).unwrap();
+                                ResizeOptions {
+                                    font: grid.get_font(),
+                                    line_space: grid.get_line_space(),
+                                }
+                            });
 
-                            // Cancel any possible delayed call for ui_try_resize.
-                            let mut id = state.resize_source_id.lock().unwrap();
-                            if let Some(id) = id.take() {
-                                glib::source::source_remove(id);
-                            }
+                        opts.font = font;
 
-                            // Channing the font affects the grid size, so we'll
-                            // need to tell nvim our new size.
-                            let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) =
-                                grid.calc_size_for_new_metrics().unwrap();
-                            let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize_async(cols as i64, rows as i64)
-                                .cb(|res| {
-                                    if let Err(err) = res {
-                                        eprintln!("Error: failed to resize nvim on font change ({:?})", err);
-                                    }
-                                })
-                                .call();
+                        state.resize_on_flush = Some(opts);
+                    }
+                    OptionSet::LineSpace(val) => {
+                        let mut opts =
+                            state.resize_on_flush.take().unwrap_or_else(|| {
+                                let grid = state.grids.get(&1).unwrap();
+                                ResizeOptions {
+                                    font: grid.get_font(),
+                                    line_space: grid.get_line_space(),
+                                }
+                            });
 
-                            state
-                                .popupmenu
-                                .set_font(font.clone(), &state.hl_defs);
-                            state
-                                .cmdline
-                                .set_font(font.clone(), &state.hl_defs);
-                            state
-                                .tabline
-                                .set_font(font.clone(), &state.hl_defs);
-                            state.cursor_tooltip.set_font(font.clone());
-                        }
-                        OptionSet::LineSpace(val) => {
-                            for grid in state.grids.values() {
-                                grid.set_line_space(*val);
-                            }
+                        opts.line_space = *val;
 
-                            // Channing the linespace affects the grid size,
-                            // so we'll need to tell nvim our new size.
-                            let grid = state.grids.get(&1).unwrap();
-                            let (rows, cols) =
-                                grid.calc_size_for_new_metrics().unwrap();
-                            let mut nvim = nvim.lock().unwrap();
-                            nvim.ui_try_resize_async(cols as i64, rows as i64)
-                                .cb(|res| {
-                                    if let Err(err) = res {
-                                        eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
-                                    }
-                                })
-                                .call();
-
-                            state.cmdline.set_line_space(*val);
-                            state
-                                .popupmenu
-                                .set_line_space(*val, &state.hl_defs);
-                            state.tabline.set_line_space(*val, &state.hl_defs);
-                        }
-                        OptionSet::NotSupported(name) => {
-                            println!("Not supported option set: {}", name);
-                        }
+                        state.resize_on_flush = Some(opts);
+                    }
+                    OptionSet::NotSupported(name) => {
+                        println!("Not supported option set: {}", name);
                     }
                 });
             }
@@ -697,6 +668,45 @@ fn handle_redraw_event(
             RedrawEvent::Flush() => {
                 for grid in state.grids.values() {
                     grid.flush(&state.hl_defs);
+                }
+
+                if let Some(opts) = state.resize_on_flush.take() {
+                    for grid in state.grids.values() {
+                        grid.update_cell_metrics(
+                            opts.font.clone(),
+                            opts.line_space,
+                        );
+                    }
+
+                    let grid = state.grids.get(&1).unwrap();
+                    let (cols, rows) = grid.calc_size();
+
+                    // Cancel any possible delayed call for ui_try_resize.
+                    let mut id = state.resize_source_id.lock().unwrap();
+                    if let Some(id) = id.take() {
+                        glib::source::source_remove(id);
+                    }
+
+                    nvim.lock().unwrap().ui_try_resize_async(cols as i64, rows as i64)
+                        .cb(|res| {
+                            if let Err(err) = res {
+                                eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
+                            }
+                        })
+                    .call();
+
+                    state.popupmenu.set_font(opts.font.clone(), &state.hl_defs);
+                    state.cmdline.set_font(opts.font.clone(), &state.hl_defs);
+                    state.tabline.set_font(opts.font.clone(), &state.hl_defs);
+                    state.cursor_tooltip.set_font(opts.font.clone());
+
+                    state.cmdline.set_line_space(opts.line_space);
+                    state
+                        .popupmenu
+                        .set_line_space(opts.line_space, &state.hl_defs);
+                    state
+                        .tabline
+                        .set_line_space(opts.line_space, &state.hl_defs);
                 }
             }
             RedrawEvent::PopupmenuShow(evt) => {

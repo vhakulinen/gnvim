@@ -7,12 +7,12 @@ use gdk;
 use gdk::{EventMask, ModifierType};
 use gtk;
 use gtk::{DrawingArea, EventBox};
-use pango::FontDescription;
 
 use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
 use thread_guard::ThreadGuard;
+use ui::font::Font;
 use ui::grid::context::Context;
 use ui::grid::render;
 use ui::grid::row::Row;
@@ -348,11 +348,22 @@ impl Grid {
         }
     }
 
-    pub fn resize(&self, width: u64, height: u64) {
+    /// Calcualtes the current size of the grid.
+    pub fn calc_size(&self) -> (i64, i64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        ctx.finish_metrics_update(&self.da);
+        let w = self.da.get_allocated_width();
+        let h = self.da.get_allocated_height();
+        let cols = (w / ctx.cell_metrics.width as i32) as i64;
+        let rows = (h / ctx.cell_metrics.height as i32) as i64;
+
+        (cols, rows)
+    }
+
+    pub fn resize(&self, width: u64, height: u64) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
 
         // Clear internal grid (rows).
         ctx.rows = vec![];
@@ -437,20 +448,26 @@ impl Grid {
             .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
-    /// Sets line space. Actual change is postponed till the next call
-    /// to `resize`.
-    pub fn set_line_space(&self, space: i64) {
+    /// Set a new font and line space. This will likely change the cell metrics.
+    /// Use `calc_size` to receive the updated size (cols and rows) of the grid.
+    pub fn update_cell_metrics(&self, font: Font, line_space: i64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        ctx.update_metrics(None, Some(space));
+        ctx.update_metrics(font, line_space, &self.da);
     }
 
-    /// Sets font. Actual change is postponed till the next call
-    /// to `resize`.
-    pub fn set_font(&self, font: FontDescription) {
-        let mut ctx = self.context.borrow_mut();
-        let ctx = ctx.as_mut().unwrap();
-        ctx.update_metrics(Some(font), None);
+    /// Get the current line space value.
+    pub fn get_line_space(&self) -> i64 {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+        ctx.cell_metrics.line_space
+    }
+
+    /// Get a copy of the current font.
+    pub fn get_font(&self) -> Font {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+        ctx.cell_metrics.font.clone()
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {
@@ -466,23 +483,6 @@ impl Grid {
         let ctx = ctx.as_mut().unwrap();
 
         ctx.busy = busy;
-    }
-
-    /// Calculates the current gird size. Returns (rows, cols).
-    pub fn calc_size_for_new_metrics(&self) -> Option<(usize, usize)> {
-        let ctx = self.context.borrow();
-        let ctx = ctx.as_ref().unwrap();
-
-        if let Some(ref cm) = ctx.cell_metrics_update {
-            let w = self.da.get_allocated_width();
-            let h = self.da.get_allocated_height();
-            let cols = (w / cm.width as i32) as usize;
-            let rows = (h / cm.height as i32) as usize;
-
-            Some((rows, cols))
-        } else {
-            None
-        }
     }
 }
 

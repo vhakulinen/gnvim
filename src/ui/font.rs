@@ -17,7 +17,7 @@ impl Display for FontUnit {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Font {
     name: String,
     pub height: f32,
