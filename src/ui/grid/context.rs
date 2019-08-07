@@ -1,7 +1,6 @@
 use cairo;
 use gtk::DrawingArea;
 use pango;
-use pangocairo;
 
 use gtk::prelude::*;
 
@@ -14,8 +13,6 @@ use ui::grid::row::Row;
 pub struct Context {
     /// Our cairo context, that is evetually drawn to the screen.
     pub cairo_context: cairo::Context,
-    /// Our pango context.
-    pub pango_context: pango::Context,
     /// Our cell metrics.
     pub cell_metrics: CellMetrics,
     /// Cell metrics to be updated.
@@ -59,8 +56,7 @@ impl Context {
             .unwrap();
 
         let cairo_context = cairo::Context::new(&surface);
-        let pango_context =
-            da.get_pango_context().unwrap();
+        let pango_context = da.get_pango_context().unwrap();
 
         let font = Font::from_guifont("Monospace:h12").unwrap();
         let font_desc = font.as_pango_font();
@@ -84,7 +80,6 @@ impl Context {
 
         Context {
             cairo_context,
-            pango_context,
             cell_metrics,
             cell_metrics_update: None,
             rows: vec![],
@@ -125,9 +120,8 @@ impl Context {
         pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 
         self.cairo_context = ctx;
-        self.pango_context = pctx;
 
-        self.cell_metrics.update(&self.pango_context);
+        self.cell_metrics.update(&pctx);
     }
 
     /// Sets the cell metrics to be updated. If font or line_space is None,
@@ -139,12 +133,12 @@ impl Context {
         line_space: i64,
         da: &gtk::DrawingArea,
     ) {
-        self.pango_context
-            .set_font_description(&font.as_pango_font());
+        let pango_context = da.get_pango_context().unwrap();
+        pango_context.set_font_description(&font.as_pango_font());
 
         self.cell_metrics.font = font;
         self.cell_metrics.line_space = line_space;
-        self.cell_metrics.update(&self.pango_context);
+        self.cell_metrics.update(&pango_context);
 
         self.cursor_context = {
             let win = da.get_window().unwrap();

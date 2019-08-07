@@ -124,7 +124,7 @@ impl Grid {
                 let cell = row.cell_at(ctx.cursor.1 as usize + 1);
                 render::cursor_cell(
                     &ctx.cursor_context,
-                    &ctx.pango_context,
+                    &self.da.get_pango_context().unwrap(),
                     &cell,
                     &ctx.cell_metrics,
                     hl_defs,
@@ -312,13 +312,18 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        render::put_line(ctx, line, hl_defs);
+        render::put_line(
+            ctx,
+            &self.da.get_pango_context().unwrap(),
+            line,
+            hl_defs,
+        );
     }
 
     pub fn redraw(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        render::redraw(ctx, hl_defs);
+        render::redraw(ctx, &self.da.get_pango_context().unwrap(), hl_defs);
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
