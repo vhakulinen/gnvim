@@ -25,9 +25,9 @@ use ui::color::{Color, Highlight};
 use ui::cursor_tooltip::{CursorTooltip, Gravity};
 use ui::font::Font;
 use ui::grid::Grid;
+use ui::messages::MessagesHandler;
 use ui::popupmenu::Popupmenu;
 use ui::tabline::Tabline;
-use ui::messages::MessagesHandler;
 
 type Grids = HashMap<u64, Grid>;
 

@@ -1,11 +1,11 @@
-use pango;
 use gtk;
 use gtk::prelude::*;
+use pango;
 
-use ui::ui::HlDefs;
-use ui::font::{Font, FontUnit};
-use ui::color::Color;
 use nvim_bridge::{MsgShow, MsgShowKind};
+use ui::color::Color;
+use ui::font::{Font, FontUnit};
+use ui::ui::HlDefs;
 
 struct Message {
     frame: gtk::Box,
@@ -14,7 +14,12 @@ struct Message {
 }
 
 impl Message {
-    fn new(msg: &MsgShow, hl_defs: &HlDefs, css_provider: &gtk::CssProvider, size: f64) -> Self {
+    fn new(
+        msg: &MsgShow,
+        hl_defs: &HlDefs,
+        css_provider: &gtk::CssProvider,
+        size: f64,
+    ) -> Self {
         let label = gtk::Label::new(None);
 
         let mut content = String::new();
@@ -49,11 +54,7 @@ impl Message {
 
         add_css_provider!(css_provider, frame, label, kind);
 
-        Self {
-            frame,
-            label,
-            kind,
-        }
+        Self { frame, label, kind }
     }
 
     fn widget(&self) -> gtk::Widget {
@@ -95,18 +96,22 @@ impl MessagesHandler {
         MessagesHandler {
             css_provider,
             container,
-            messages: vec!(),
+            messages: vec![],
             font: Font::default(),
         }
     }
 
     pub fn show(&mut self, msg: &MsgShow, hl_defs: &HlDefs) {
-
         if msg.replace_last {
             self.messages.pop();
         }
 
-        let msg = Message::new(msg, hl_defs, &self.css_provider, self.font.height as f64);
+        let msg = Message::new(
+            msg,
+            hl_defs,
+            &self.css_provider,
+            self.font.height as f64,
+        );
         self.container.pack_end(&msg.widget(), false, true, 0);
         self.messages.push(msg);
 
@@ -143,7 +148,8 @@ impl MessagesHandler {
             fg = hl_defs.default_fg.to_hex(),
         );
 
-        gtk::CssProvider::load_from_data(&self.css_provider, css.as_bytes()).unwrap();
+        gtk::CssProvider::load_from_data(&self.css_provider, css.as_bytes())
+            .unwrap();
     }
 
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
@@ -161,25 +167,43 @@ fn get_icon_pixbuf(
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
-    let buf = gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>).unwrap();
+    let buf =
+        gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>)
+            .unwrap();
 
     buf
 }
 
-fn get_icon_name_for_kind(kind: &MsgShowKind, color: &Color, size: f64) -> String {
+fn get_icon_name_for_kind(
+    kind: &MsgShowKind,
+    color: &Color,
+    size: f64,
+) -> String {
     let color = color.to_hex();
 
     let size = size * 1.5;
 
     match kind {
-        MsgShowKind::Unknown => icon!("../../assets/icons/help-circle.svg", color, size),
-        MsgShowKind::Confirm | MsgShowKind::ConfirmSub => icon!("../../assets/icons/check-square.svg", color, size),
-        MsgShowKind::Emsg |
-        MsgShowKind::EchoErr => icon!("../../assets/icons/x-octagon.svg", color, size),
-        MsgShowKind::Echo |
-        MsgShowKind::EchoMsg => icon!("../../assets/icons/message-circle.svg", color, size),
-        MsgShowKind::Wmsg => icon!("../../assets/icons/alert-octagon.svg", color, size),
-        MsgShowKind::QuickFix => icon!("../../assets/icons/zap.svg", color, size),
-        MsgShowKind::ReturnPrompt => icon!("../../assets/icons/info.svg", color, size),
+        MsgShowKind::Unknown => {
+            icon!("../../assets/icons/help-circle.svg", color, size)
+        }
+        MsgShowKind::Confirm | MsgShowKind::ConfirmSub => {
+            icon!("../../assets/icons/check-square.svg", color, size)
+        }
+        MsgShowKind::Emsg | MsgShowKind::EchoErr => {
+            icon!("../../assets/icons/x-octagon.svg", color, size)
+        }
+        MsgShowKind::Echo | MsgShowKind::EchoMsg => {
+            icon!("../../assets/icons/message-circle.svg", color, size)
+        }
+        MsgShowKind::Wmsg => {
+            icon!("../../assets/icons/alert-octagon.svg", color, size)
+        }
+        MsgShowKind::QuickFix => {
+            icon!("../../assets/icons/zap.svg", color, size)
+        }
+        MsgShowKind::ReturnPrompt => {
+            icon!("../../assets/icons/info.svg", color, size)
+        }
     }
 }

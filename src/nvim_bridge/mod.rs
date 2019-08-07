@@ -1105,18 +1105,20 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
                             let attr_id = unwrap_u64!(v[0]);
                             let text = unwrap_str!(v[1]);
                             (attr_id, text.to_string())
-                        }).collect();
+                        })
+                        .collect();
 
                     MsgShow {
-                        kind, content, replace_last,
+                        kind,
+                        content,
+                        replace_last,
                     }
-                }).collect();
+                })
+                .collect();
 
             RedrawEvent::MsgShow(msgs)
         }
-        "msg_clear" => {
-            RedrawEvent::MsgClear()
-        }
+        "msg_clear" => RedrawEvent::MsgClear(),
         "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
 
         _ => RedrawEvent::Unknown(cmd.to_string()),
@@ -1130,7 +1132,7 @@ pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
             let cmd = unwrap_str!(args[0]);
             parse_single_redraw_event(cmd, args[1..].to_vec())
         })
-    .collect()
+        .collect()
 }
 
 pub(crate) fn parse_gnvim_event(
@@ -1146,10 +1148,10 @@ pub(crate) fn parse_gnvim_event(
                 "colors"
             ) {
                 let color = Color::from_hex_string(String::from(try_str!(
-                            e.1,
-                            "color hex value"
+                    e.1,
+                    "color hex value"
                 )))
-                    .ok();
+                .ok();
                 match try_str!(e.0, "color name") {
                     "pmenu_bg" => colors.pmenu.bg = color,
                     "pmenu_fg" => colors.pmenu.fg = color,
