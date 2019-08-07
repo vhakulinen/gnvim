@@ -60,7 +60,7 @@ impl Context {
 
         let cairo_context = cairo::Context::new(&surface);
         let pango_context =
-            pangocairo::functions::create_context(&cairo_context).unwrap();
+            da.get_pango_context().unwrap();
 
         let font = Font::from_guifont("Monospace:h12").unwrap();
         let font_desc = font.as_pango_font();
@@ -121,7 +121,7 @@ impl Context {
         ctx.paint();
         self.cairo_context.restore();
 
-        let pctx = pangocairo::functions::create_context(&ctx).unwrap();
+        let pctx = da.get_pango_context().unwrap();
         pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 
         self.cairo_context = ctx;
