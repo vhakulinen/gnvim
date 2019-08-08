@@ -113,13 +113,15 @@ impl CursorTooltip {
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
+        let frame_weak = frame.downgrade();
+        let fixed_weak = fixed.downgrade();
         webview.connect_load_changed(
-            clone!(frame, fixed, state => move |webview, e| match e {
+            clone!(frame_weak, fixed_weak, state => move |webview, e| match e {
                 webkit::LoadEvent::Finished => {
                     webview_load_finished(
                         webview,
-                        frame.clone(),
-                        fixed.clone(),
+                        frame_weak.clone(),
+                        fixed_weak.clone(),
                         state.clone(),
                     );
                 }
@@ -417,12 +419,11 @@ fn set_position(
 /// the size of the webview's container.
 fn webview_load_finished(
     webview: &webkit::WebView,
-    frame: gtk::Frame,
-    fixed: gtk::Fixed,
+    frame: glib::WeakRef<gtk::Frame>,
+    fixed: glib::WeakRef<gtk::Fixed>,
     state: Arc<ThreadGuard<State>>,
 ) {
-    let widgets =
-        ThreadGuard::new((frame.clone(), fixed.clone(), state.clone()));
+    let widgets = ThreadGuard::new((frame, fixed, state.clone()));
 
     let cb =
         move |width: Option<f64>,
@@ -444,9 +445,14 @@ fn webview_load_finished(
 
             let state = state.borrow();
 
-            widgets.0.show();
+            let frame_weak = &widgets.0;
+            let fixed_weak = &widgets.1;
+            let frame = upgrade_weak!(frame_weak);
+            let fixed = upgrade_weak!(fixed_weak);
 
-            set_position(&widgets.0, &widgets.1, &state, width, height);
+            frame.show();
+
+            set_position(&frame, &fixed, &state, width, height);
         };
 
     let webview_ref = ThreadGuard::new(webview.clone());

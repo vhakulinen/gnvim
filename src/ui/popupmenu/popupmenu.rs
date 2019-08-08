@@ -201,7 +201,9 @@ impl Popupmenu {
             state.available_size = Some(*alloc);
         }));
 
-        box_.connect_size_allocate(clone!(state, layout, scrolled_info, scrolled_list => move |box_, alloc| {
+        let layout_weak = layout.downgrade();
+        box_.connect_size_allocate(clone!(state, layout_weak, scrolled_info, scrolled_list => move |box_, alloc| {
+            let layout = upgrade_weak!(layout_weak);
             let state = state.borrow();
 
             if let Some(area) = state.available_size {
@@ -434,8 +436,10 @@ impl Popupmenu {
                     // this signal handler here to ensure the row is in view.
                     // NOTE(ville): According to some IRC discussions, this
                     // hack wont work on GTK4. Prepare yourself!
+                    let list_weak = list.downgrade();
                     let sig_id = item.row.connect_size_allocate(
-                        clone!(id, list => move |row, _| {
+                        clone!(id, list_weak => move |row, _| {
+                            let list = upgrade_weak!(list_weak);
                             ensure_row_visible(&list, &row);
 
                             let id = id.borrow_mut().take().unwrap();

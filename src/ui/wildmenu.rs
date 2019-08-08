@@ -45,8 +45,10 @@ impl Wildmenu {
 
         frame.add(&scrolledwindow);
 
+        let frame_weak = frame.downgrade();
         // Make sure our container grows to certain height.
-        list.connect_size_allocate(clone!(frame => move |list, _| {
+        list.connect_size_allocate(clone!(frame_weak => move |list, _| {
+            let frame = upgrade_weak!(frame_weak);
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             let row_height = if let Some(item) = list.get_children().get(0) {

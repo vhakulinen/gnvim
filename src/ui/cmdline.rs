@@ -40,22 +40,26 @@ impl CmdlineBlock {
         scrolledwindow.add(&textview);
         frame.add(&scrolledwindow);
 
-        textview.connect_size_allocate(clone!(scrolledwindow => move |tv, _| {
-            let h = tv.get_preferred_height();
+        let scrolledwindow_weak = scrolledwindow.downgrade();
+        textview.connect_size_allocate(
+            clone!(scrolledwindow_weak => move |tv, _| {
+                let scrolledwindow = upgrade_weak!(scrolledwindow_weak);
+                let h = tv.get_preferred_height();
 
-            if h.1 > 250 {
-                if scrolledwindow.get_size_request().1 == -1 {
-                    scrolledwindow.set_size_request(-1, h.1);
-                    scrolledwindow.set_policy(
-                        gtk::PolicyType::Automatic,
-                        gtk::PolicyType::Automatic,
-                    );
+                if h.1 > 250 {
+                    if scrolledwindow.get_size_request().1 == -1 {
+                        scrolledwindow.set_size_request(-1, h.1);
+                        scrolledwindow.set_policy(
+                            gtk::PolicyType::Automatic,
+                            gtk::PolicyType::Automatic,
+                        );
+                    }
+
+                    let adj = scrolledwindow.get_vadjustment().unwrap();
+                    adj.set_value(adj.get_upper());
                 }
-
-                let adj = scrolledwindow.get_vadjustment().unwrap();
-                adj.set_value(adj.get_upper());
-            }
-        }));
+            }),
+        );
 
         add_css_provider!(&css_provider, textview, scrolledwindow, frame);
 

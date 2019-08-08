@@ -13,7 +13,7 @@ macro_rules! add_css_provider {
 }
 
 // Make moving clones into closures more convenient.
-// Sources from https://github.com/gtk-rs/examples/blob/e17372b1c65788b022ff152fff37d392d0f31e87/src/bin/treeview.rs#L20-L36
+// Sourced from https://github.com/gtk-rs/examples/blob/e17372b1c65788b022ff152fff37d392d0f31e87/src/bin/treeview.rs#L20-L36
 #[macro_export]
 macro_rules! clone {
     (@param _) => ( _ );
@@ -30,6 +30,21 @@ macro_rules! clone {
             move |$(clone!(@param $p),)+| $body
         }
     );
+}
+
+// Upgrade weak reference or return.
+// Sourced from https://github.com/gtk-rs/examples/blob/e17372b1c65788b022ff152fff37d392d0f31e87/src/bin/gtktest.rs#L36-L48
+#[macro_export]
+macro_rules! upgrade_weak {
+    ($x:ident, $r:expr) => {{
+        match $x.upgrade() {
+            Some(o) => o,
+            None => return $r,
+        }
+    }};
+    ($x:ident) => {
+        upgrade_weak!($x, ())
+    };
 }
 
 mod cmdline;
