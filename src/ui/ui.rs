@@ -146,15 +146,11 @@ impl UI {
         // redraw even handler if we receive a message that changes the size
         // of the main grid.
         let source_id = Arc::new(Mutex::new(None));
-        let source_id_ref = source_id.clone();
-        let nvim_ref = nvim.clone();
-        grid.connect_da_resize(move |rows, cols| {
-            let nvim_ref = nvim_ref.clone();
+        grid.connect_da_resize(clone!(nvim, source_id => move |rows, cols| {
 
-            let source_id_moved = source_id_ref.clone();
             // Set timeout to notify nvim about the new size.
-            let new = glib::timeout_add(30, move || {
-                let mut nvim = nvim_ref.lock().unwrap();
+            let new = glib::timeout_add(30, clone!(nvim, source_id => move || {
+                let mut nvim = nvim.lock().unwrap();
                 nvim.ui_try_resize_async(cols as i64, rows as i64)
                     .cb(|res| {
                         if let Err(err) = res {
@@ -165,14 +161,12 @@ impl UI {
 
                 // Set the source_id to none, so we don't accidentally remove
                 // it since it used at this point.
-                let source_id = source_id_moved.clone();
                 let mut source_id = source_id.lock().unwrap();
                 *source_id = None;
 
                 Continue(false)
-            });
+            }));
 
-            let source_id = source_id_ref.clone();
             let mut source_id = source_id.lock().unwrap();
             // If we have earlier timeout, remove it.
             if let Some(old) = source_id.take() {
@@ -182,68 +176,67 @@ impl UI {
             *source_id = Some(new);
 
             false
-        });
+        }));
 
         // Mouse button press event.
-        let nvim_ref = nvim.clone();
-        grid.connect_mouse_button_press_events(move |button, row, col| {
-            let mut nvim = nvim_ref.lock().unwrap();
-            let input = format!("<{}Mouse><{},{}>", button, col, row);
-            nvim.input(&input).expect("Couldn't send mouse input");
+        grid.connect_mouse_button_press_events(
+            clone!(nvim => move |button, row, col| {
+                let mut nvim = nvim.lock().unwrap();
+                let input = format!("<{}Mouse><{},{}>", button, col, row);
+                nvim.input(&input).expect("Couldn't send mouse input");
 
-            Inhibit(false)
-        });
+                Inhibit(false)
+            }),
+        );
 
         // Mouse button release events.
-        let nvim_ref = nvim.clone();
-        grid.connect_mouse_button_release_events(move |button, row, col| {
-            let mut nvim = nvim_ref.lock().unwrap();
-            let input = format!("<{}Release><{},{}>", button, col, row);
-            nvim.input(&input).expect("Couldn't send mouse input");
+        grid.connect_mouse_button_release_events(
+            clone!(nvim => move |button, row, col| {
+                let mut nvim = nvim.lock().unwrap();
+                let input = format!("<{}Release><{},{}>", button, col, row);
+                nvim.input(&input).expect("Couldn't send mouse input");
 
-            Inhibit(false)
-        });
+                Inhibit(false)
+            }),
+        );
 
         // Mouse drag events.
-        let nvim_ref = nvim.clone();
-        grid.connect_motion_events_for_drag(move |button, row, col| {
-            let mut nvim = nvim_ref.lock().unwrap();
-            let input = format!("<{}Drag><{},{}>", button, col, row);
-            nvim.input(&input).expect("Couldn't send mouse input");
+        grid.connect_motion_events_for_drag(
+            clone!(nvim => move |button, row, col| {
+                let mut nvim = nvim.lock().unwrap();
+                let input = format!("<{}Drag><{},{}>", button, col, row);
+                nvim.input(&input).expect("Couldn't send mouse input");
 
-            Inhibit(false)
-        });
+                Inhibit(false)
+            }),
+        );
 
         // Scrolling events.
-        let nvim_ref = nvim.clone();
-        grid.connect_scroll_events(move |dir, row, col| {
-            let mut nvim = nvim_ref.lock().unwrap();
+        grid.connect_scroll_events(clone!(nvim => move |dir, row, col| {
+            let mut nvim = nvim.lock().unwrap();
             let input = format!("<{}><{},{}>", dir, col, row);
             nvim.input(&input).expect("Couldn't send mouse input");
 
             Inhibit(false)
-        });
+        }));
 
         // IMMulticontext is used to handle most of the inputs.
         let im_context = gtk::IMMulticontext::new();
-        let nvim_ref = nvim.clone();
         im_context.set_use_preedit(false);
-        im_context.connect_commit(move |_, input| {
+        im_context.connect_commit(clone!(nvim => move |_, input| {
             // "<" needs to be escaped for nvim.input()
             let nvim_input = input.replace("<", "<lt>");
 
-            let mut nvim = nvim_ref.lock().unwrap();
+            let mut nvim = nvim.lock().unwrap();
             nvim.input(&nvim_input).expect("Couldn't send input");
-        });
+        }));
 
-        let im_ref = im_context.clone();
-        let nvim_ref = nvim.clone();
-        window.connect_key_press_event(move |_, e| {
-            if im_ref.filter_keypress(e) {
+        window.connect_key_press_event(clone!(nvim, im_context => move |_, e| {
+            if im_context.filter_keypress(e) {
                 Inhibit(true)
             } else {
                 if let Some(input) = event_to_nvim_input(e) {
-                    let mut nvim = nvim_ref.lock().unwrap();
+                    let mut nvim = nvim.lock().unwrap();
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
                 } else {
@@ -255,25 +248,22 @@ impl UI {
 
                 Inhibit(false)
             }
-        });
+        }));
 
-        let im_ref = im_context.clone();
-        window.connect_key_release_event(move |_, e| {
-            im_ref.filter_keypress(e);
+        window.connect_key_release_event(clone!(im_context => move |_, e| {
+            im_context.filter_keypress(e);
             Inhibit(false)
-        });
+        }));
 
-        let im_ref = im_context.clone();
-        window.connect_focus_in_event(move |_, _| {
-            im_ref.focus_in();
+        window.connect_focus_in_event(clone!(im_context => move |_, _| {
+            im_context.focus_in();
             Inhibit(false)
-        });
+        }));
 
-        let im_ref = im_context.clone();
-        window.connect_focus_out_event(move |_, _| {
-            im_ref.focus_out();
+        window.connect_focus_out_event(clone!(im_context => move |_, _| {
+            im_context.focus_out();
             Inhibit(false)
-        });
+        }));
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
         let cursor_tooltip = CursorTooltip::new(&overlay);

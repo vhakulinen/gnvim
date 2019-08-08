@@ -40,23 +40,22 @@ impl CmdlineBlock {
         scrolledwindow.add(&textview);
         frame.add(&scrolledwindow);
 
-        let scrolledwindow_ref = scrolledwindow.clone();
-        textview.connect_size_allocate(move |tv, _| {
+        textview.connect_size_allocate(clone!(scrolledwindow => move |tv, _| {
             let h = tv.get_preferred_height();
 
             if h.1 > 250 {
-                if scrolledwindow_ref.get_size_request().1 == -1 {
-                    scrolledwindow_ref.set_size_request(-1, h.1);
-                    scrolledwindow_ref.set_policy(
+                if scrolledwindow.get_size_request().1 == -1 {
+                    scrolledwindow.set_size_request(-1, h.1);
+                    scrolledwindow.set_policy(
                         gtk::PolicyType::Automatic,
                         gtk::PolicyType::Automatic,
                     );
                 }
 
-                let adj = scrolledwindow_ref.get_vadjustment().unwrap();
+                let adj = scrolledwindow.get_vadjustment().unwrap();
                 adj.set_value(adj.get_upper());
             }
-        });
+        }));
 
         add_css_provider!(&css_provider, textview, scrolledwindow, frame);
 
@@ -463,16 +462,14 @@ impl Cmdline {
 
         parent.add_overlay(&fixed);
 
-        let fixed_ref = fixed.clone();
-        let box_ref = box_.clone();
-        parent.connect_size_allocate(move |_, alloc| {
+        parent.connect_size_allocate(clone!(fixed, box_ => move |_, alloc| {
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
-            box_ref.set_size_request(width, -1);
+            box_.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;
-            fixed_ref.move_(&box_ref, x, 0);
-        });
+            fixed.move_(&box_, x, 0);
+        }));
 
         Cmdline {
             css_provider,

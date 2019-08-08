@@ -156,12 +156,10 @@ impl Popupmenu {
 
         let state = Arc::new(ThreadGuard::new(State::new()));
 
-        let state_ref = state.clone();
-        let nvim_ref = nvim.clone();
         // When a row is activated (by mouse click), notify neovim to change
         // the selection to the activated row.
-        list.connect_row_activated(move |_, row| {
-            let state = state_ref.borrow_mut();
+        list.connect_row_activated(clone!(nvim, state => move |_, row| {
+            let state = state.borrow_mut();
             let new = row.get_index();
 
             let selected = state.selected;
@@ -173,22 +171,21 @@ impl Popupmenu {
                 payload.push_str(op)
             }
 
-            let mut nvim = nvim_ref.lock().unwrap();
+            let mut nvim = nvim.lock().unwrap();
             nvim.input(payload.as_str()).unwrap();
-        });
+        }));
 
-        let nvim_ref = nvim.clone();
         // On (mouse) button press...
-        list.connect_button_press_event(move |_, e| {
+        list.connect_button_press_event(clone!(nvim => move |_, e| {
             // ...check if the button press is double click.
             if e.get_event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
-                let mut nvim = nvim_ref.lock().unwrap();
+                let mut nvim = nvim.lock().unwrap();
                 nvim.input("<C-y>").unwrap();
             }
 
             Inhibit(false)
-        });
+        }));
 
         // TODO(ville): Should use gtk::Fixed here.
         let layout = gtk::Layout::new(
@@ -199,19 +196,13 @@ impl Popupmenu {
         layout.show_all();
         scrolled_info.hide();
 
-        let state_ref = state.clone();
-        layout.connect_size_allocate(move |_, alloc| {
-            let mut state = state_ref.borrow_mut();
+        layout.connect_size_allocate(clone!(state => move |_, alloc| {
+            let mut state = state.borrow_mut();
             state.available_size = Some(*alloc);
-        });
+        }));
 
-        let state_ref = state.clone();
-        let layout_ref = layout.clone();
-        let scrolled_list_ref = scrolled_list.clone();
-        let scrolled_info_ref = scrolled_info.clone();
-        box_.connect_size_allocate(move |box_, alloc| {
-            let state = state_ref.borrow();
-            let layout = layout_ref.clone();
+        box_.connect_size_allocate(clone!(state, layout, scrolled_info, scrolled_list => move |box_, alloc| {
+            let state = state.borrow();
 
             if let Some(area) = state.available_size {
                 let pos = state.anchor;
@@ -238,26 +229,26 @@ impl Popupmenu {
                     // Use get_child to get the viewport which is between
                     // the scrolled window and the actual widget that is
                     // inside it.
-                    scrolled_list_ref
+                    scrolled_list
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
-                    scrolled_info_ref
+                    scrolled_info
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
                 } else {
-                    scrolled_list_ref
+                    scrolled_list
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
-                    scrolled_info_ref
+                    scrolled_info
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
                 }
             }
-        });
+        }));
 
         parent.add_overlay(&layout);
         // Hide the layout initially so it wont catch any input events that
@@ -436,8 +427,6 @@ impl Popupmenu {
 
                 {
                     let id = Arc::new(ThreadGuard::new(None));
-                    let id_ref = id.clone();
-                    let list = list.clone();
                     // Ensure that the row is in the view, but make sure first
                     // that the row it self has allocated itself. It is possible
                     // that when we selected the row and grabbed focus for it
@@ -445,13 +434,14 @@ impl Popupmenu {
                     // this signal handler here to ensure the row is in view.
                     // NOTE(ville): According to some IRC discussions, this
                     // hack wont work on GTK4. Prepare yourself!
-                    let sig_id =
-                        item.row.connect_size_allocate(move |row, _| {
+                    let sig_id = item.row.connect_size_allocate(
+                        clone!(id, list => move |row, _| {
                             ensure_row_visible(&list, &row);
 
-                            let id = id_ref.borrow_mut().take().unwrap();
+                            let id = id.borrow_mut().take().unwrap();
                             row.disconnect(id);
-                        });
+                        }),
+                    );
                     *id.borrow_mut() = Some(sig_id);
                 }
 

@@ -40,18 +40,17 @@ impl Tabline {
         add_css_provider!(&css_provider, notebook);
 
         let tabpage_data = Rc::new(RefCell::new(Box::new(vec![])));
-        let tabpage_data_ref = tabpage_data.clone();
-        let nvim_ref = nvim.clone();
-        let switch_tab_signal =
-            notebook.connect_switch_page(move |_, _, page_num| {
-                let pages = tabpage_data_ref.borrow();
+        let switch_tab_signal = notebook.connect_switch_page(
+            clone!(tabpage_data, nvim => move |_, _, page_num| {
+                let pages = tabpage_data.borrow();
                 if let Some(ref page) = pages.get(page_num as usize) {
-                    let mut nvim = nvim_ref.lock().unwrap();
+                    let mut nvim = nvim.lock().unwrap();
                     nvim.set_current_tabpage(&page).unwrap();
                 } else {
                     println!("Failed to get tab page {}", page_num);
                 }
-            });
+            }),
+        );
 
         Tabline {
             notebook,

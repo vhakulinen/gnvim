@@ -69,9 +69,8 @@ impl Grid {
         let da = DrawingArea::new();
         let ctx = Arc::new(ThreadGuard::new(None));
 
-        let ctx_ref = ctx.clone();
-        da.connect_configure_event(move |da, _| {
-            let mut ctx = ctx_ref.borrow_mut();
+        da.connect_configure_event(clone!(ctx => move |da, _| {
+            let mut ctx = ctx.borrow_mut();
             if ctx.is_none() {
                 // On initial expose, we'll need to create our internal context,
                 // since this is the first time we'll have drawing area present...
@@ -83,18 +82,17 @@ impl Grid {
             }
 
             false
-        });
+        }));
 
-        let ctx_ref = ctx.clone();
-        da.connect_draw(move |_, cr| {
-            let ctx = ctx_ref.clone();
+        da.connect_draw(clone!(ctx => move |_, cr| {
+            let ctx = ctx.clone();
             if let Some(ref mut ctx) = *ctx.borrow_mut() {
                 // After making sure we have our internal context, draw us (e.g.
                 // our drawingarea) to the screen!
                 drawingarea_draw(cr, ctx);
             }
             Inhibit(false)
-        });
+        }));
 
         let eb = EventBox::new();
         eb.add_events(EventMask::SCROLL_MASK);

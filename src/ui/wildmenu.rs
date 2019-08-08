@@ -45,9 +45,8 @@ impl Wildmenu {
 
         frame.add(&scrolledwindow);
 
-        let frame_ref = frame.clone();
         // Make sure our container grows to certain height.
-        list.connect_size_allocate(move |list, _| {
+        list.connect_size_allocate(clone!(frame => move |list, _| {
             // Calculate height based on shown rows.
             let count = list.get_children().len() as i32;
             let row_height = if let Some(item) = list.get_children().get(0) {
@@ -58,15 +57,14 @@ impl Wildmenu {
 
             let h = (row_height * count).min(MAX_HEIGHT);
 
-            frame_ref.set_size_request(-1, h);
-        });
+            frame.set_size_request(-1, h);
+        }));
 
         let state = Rc::new(RefCell::new(State::default()));
 
-        let state_ref = state.clone();
         // If user selects some row with a mouse, notify nvim about it.
-        list.connect_row_activated(move |_, row| {
-            let prev = state_ref.borrow().selected;
+        list.connect_row_activated(clone!(state => move |_, row| {
+            let prev = state.borrow().selected;
             let new = row.get_index();
 
             let op = if new > prev { "<Tab>" } else { "<S-Tab>" };
@@ -78,7 +76,7 @@ impl Wildmenu {
                 //              individually.
                 nvim.input(&op).unwrap();
             }
-        });
+        }));
 
         add_css_provider!(&css_provider, list, frame);
 

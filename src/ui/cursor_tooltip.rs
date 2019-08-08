@@ -113,20 +113,19 @@ impl CursorTooltip {
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
-        let frame_ref = frame.clone();
-        let fixed_ref = fixed.clone();
-        let state_ref = state.clone();
-        webview.connect_load_changed(move |webview, e| match e {
-            webkit::LoadEvent::Finished => {
-                webview_load_finished(
-                    webview,
-                    frame_ref.clone(),
-                    fixed_ref.clone(),
-                    state_ref.clone(),
-                );
-            }
-            _ => {}
-        });
+        webview.connect_load_changed(
+            clone!(frame, fixed, state => move |webview, e| match e {
+                webkit::LoadEvent::Finished => {
+                    webview_load_finished(
+                        webview,
+                        frame.clone(),
+                        fixed.clone(),
+                        state.clone(),
+                    );
+                }
+                _ => {}
+            }),
+        );
 
         let settings = WebViewExt::get_settings(&webview).unwrap();
         settings.set_enable_javascript(true);
@@ -136,11 +135,10 @@ impl CursorTooltip {
 
         fixed.show_all();
 
-        let state_ref = state.clone();
-        fixed.connect_size_allocate(move |_, alloc| {
-            let mut state = state_ref.borrow_mut();
+        fixed.connect_size_allocate(clone!(state => move |_, alloc| {
+            let mut state = state.borrow_mut();
             state.available_area = alloc.clone();
-        });
+        }));
 
         let syntax_set: SyntaxSet =
             from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
