@@ -10,7 +10,8 @@ debug = true
 unstable = []
 
 [dependencies]
-neovim-lib = "0.6"
+#neovim-lib = "0.6"
+neovim-lib = { path = "../neovim-lib" }
 structopt = "0.2"
 
 gio = "0.7"
