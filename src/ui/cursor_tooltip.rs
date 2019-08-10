@@ -52,6 +52,7 @@ struct State {
     anchor: gdk::Rectangle,
     available_area: gdk::Rectangle,
     force_gravity: Option<Gravity>,
+    scale: f64,
 }
 
 impl Default for State {
@@ -70,6 +71,7 @@ impl Default for State {
                 height: 0,
             },
             force_gravity: None,
+            scale: 1.0,
         }
     }
 }
@@ -137,8 +139,13 @@ impl CursorTooltip {
 
         fixed.show_all();
 
-        fixed.connect_size_allocate(clone!(state => move |_, alloc| {
+        fixed.connect_size_allocate(clone!(state, webview => move |fixed, alloc| {
             let mut state = state.borrow_mut();
+            let ctx = fixed.get_pango_context().unwrap();
+            let res = pangocairo::functions::context_get_resolution(&ctx);
+            state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
+            webview.set_zoom_level(state.scale);
+
             state.available_area = alloc.clone();
         }));
 
@@ -435,15 +442,14 @@ fn webview_load_finished(
             };
 
             let widgets = widgets.borrow();
+            let state = state.borrow();
             // NOTE(ville): Extra height coming from GTK styles
             //              (parent container's border).
             let extra_height = 2;
             let height = height
-                .map_or(MAX_HEIGHT, |v| v as i32 + extra_height)
+                .map_or(MAX_HEIGHT, |v| (v * state.scale) as i32 + extra_height)
                 .min(MAX_HEIGHT);
-            let width = width.map_or(MAX_WIDTH, |v| v as i32).min(MAX_WIDTH);
-
-            let state = state.borrow();
+            let width = width.map_or(MAX_WIDTH, |v| (v * state.scale) as i32).min(MAX_WIDTH);
 
             let frame_weak = &widgets.0;
             let fixed_weak = &widgets.1;
@@ -457,9 +463,10 @@ fn webview_load_finished(
 
     let webview_ref = ThreadGuard::new(webview.clone());
     webview.run_javascript("
-        document.body.style.width = '-webkit-max-content';
-        let width = document.body.getBoundingClientRect().width;
-        document.body.style.width = '';
+        let el = document.getElementById('wrapper');
+        el.style.width = '-webkit-max-content';
+        let width = el.getBoundingClientRect().width;
+        el.style.width = '';
         // Add some extra (16) to adjust for padding.
         width + 16",
         None::<&gio::Cancellable>,
