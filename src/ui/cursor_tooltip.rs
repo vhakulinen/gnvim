@@ -139,15 +139,17 @@ impl CursorTooltip {
 
         fixed.show_all();
 
-        fixed.connect_size_allocate(clone!(state, webview => move |fixed, alloc| {
-            let mut state = state.borrow_mut();
-            let ctx = fixed.get_pango_context().unwrap();
-            let res = pangocairo::functions::context_get_resolution(&ctx);
-            state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
-            webview.set_zoom_level(state.scale);
+        fixed.connect_size_allocate(
+            clone!(state, webview => move |fixed, alloc| {
+                let mut state = state.borrow_mut();
+                let ctx = fixed.get_pango_context().unwrap();
+                let res = pangocairo::functions::context_get_resolution(&ctx);
+                state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
+                webview.set_zoom_level(state.scale);
 
-            state.available_area = alloc.clone();
-        }));
+                state.available_area = alloc.clone();
+            }),
+        );
 
         let syntax_set: SyntaxSet =
             from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
@@ -449,7 +451,9 @@ fn webview_load_finished(
             let height = height
                 .map_or(MAX_HEIGHT, |v| (v * state.scale) as i32 + extra_height)
                 .min(MAX_HEIGHT);
-            let width = width.map_or(MAX_WIDTH, |v| (v * state.scale) as i32).min(MAX_WIDTH);
+            let width = width
+                .map_or(MAX_WIDTH, |v| (v * state.scale) as i32)
+                .min(MAX_WIDTH);
 
             let frame_weak = &widgets.0;
             let fixed_weak = &widgets.1;
