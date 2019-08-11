@@ -1,8 +1,6 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time;
+use std::rc::Rc;
 
 use gdk;
 use glib;
@@ -19,7 +17,6 @@ use nvim_bridge::{
     GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
     ModeInfoSet, Notify, OptionSet, RedrawEvent, Request, TablineUpdate,
 };
-use thread_guard::ThreadGuard;
 use ui::cmdline::Cmdline;
 use ui::color::{Color, Highlight};
 use ui::cursor_tooltip::{CursorTooltip, Gravity};
@@ -80,7 +77,7 @@ struct UIState {
     overlay: gtk::Overlay,
 
     /// Source id for delayed call to ui_try_resize.
-    resize_source_id: Arc<Mutex<Option<glib::SourceId>>>,
+    resize_source_id: Rc<RefCell<Option<glib::SourceId>>>,
     /// Resize options that is some if a resize should be send to nvim on flush.
     resize_on_flush: Option<ResizeOptions>,
 }
@@ -88,14 +85,14 @@ struct UIState {
 /// Main UI structure.
 pub struct UI {
     /// Main window.
-    win: Arc<ThreadGuard<gtk::ApplicationWindow>>,
+    win: gtk::ApplicationWindow,
     /// Neovim instance.
-    nvim: Arc<Mutex<Neovim>>,
+    nvim: Rc<RefCell<Neovim>>,
     /// Channel to receive event from nvim.
-    rx: Receiver<Message>,
+    rx: glib::Receiver<Message>,
     /// Our internal state, containing basically everything we manipulate
     /// when we receive an event from nvim.
-    state: Arc<ThreadGuard<UIState>>,
+    state: Rc<RefCell<UIState>>,
 }
 
 impl UI {
@@ -107,8 +104,8 @@ impl UI {
     ///            of `rx` events.
     pub fn init(
         app: &gtk::Application,
-        rx: Receiver<Message>,
-        nvim: Arc<Mutex<Neovim>>,
+        rx: glib::Receiver<Message>,
+        nvim: Rc<RefCell<Neovim>>,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
@@ -145,12 +142,12 @@ impl UI {
         // track the function timeout. This timeout might be canceled in
         // redraw even handler if we receive a message that changes the size
         // of the main grid.
-        let source_id = Arc::new(Mutex::new(None));
+        let source_id = Rc::new(RefCell::new(None));
         grid.connect_da_resize(clone!(nvim, source_id => move |rows, cols| {
 
             // Set timeout to notify nvim about the new size.
-            let new = glib::timeout_add(30, clone!(nvim, source_id => move || {
-                let mut nvim = nvim.lock().unwrap();
+            let new = gtk::timeout_add(30, clone!(nvim, source_id => move || {
+                let mut nvim = nvim.borrow_mut();
                 nvim.ui_try_resize_async(cols as i64, rows as i64)
                     .cb(|res| {
                         if let Err(err) = res {
@@ -161,13 +158,12 @@ impl UI {
 
                 // Set the source_id to none, so we don't accidentally remove
                 // it since it used at this point.
-                let mut source_id = source_id.lock().unwrap();
-                *source_id = None;
+                source_id.borrow_mut().take();
 
                 Continue(false)
             }));
 
-            let mut source_id = source_id.lock().unwrap();
+            let mut source_id = source_id.borrow_mut();
             // If we have earlier timeout, remove it.
             if let Some(old) = source_id.take() {
                 glib::source::source_remove(old);
@@ -181,7 +177,7 @@ impl UI {
         // Mouse button press event.
         grid.connect_mouse_button_press_events(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.lock().unwrap();
+                let mut nvim = nvim.borrow_mut();
                 let input = format!("<{}Mouse><{},{}>", button, col, row);
                 nvim.input(&input).expect("Couldn't send mouse input");
 
@@ -192,7 +188,7 @@ impl UI {
         // Mouse button release events.
         grid.connect_mouse_button_release_events(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.lock().unwrap();
+                let mut nvim = nvim.borrow_mut();
                 let input = format!("<{}Release><{},{}>", button, col, row);
                 nvim.input(&input).expect("Couldn't send mouse input");
 
@@ -203,7 +199,7 @@ impl UI {
         // Mouse drag events.
         grid.connect_motion_events_for_drag(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.lock().unwrap();
+                let mut nvim = nvim.borrow_mut();
                 let input = format!("<{}Drag><{},{}>", button, col, row);
                 nvim.input(&input).expect("Couldn't send mouse input");
 
@@ -213,7 +209,7 @@ impl UI {
 
         // Scrolling events.
         grid.connect_scroll_events(clone!(nvim => move |dir, row, col| {
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             let input = format!("<{}><{},{}>", dir, col, row);
             nvim.input(&input).expect("Couldn't send mouse input");
 
@@ -227,7 +223,7 @@ impl UI {
             // "<" needs to be escaped for nvim.input()
             let nvim_input = input.replace("<", "<lt>");
 
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             nvim.input(&nvim_input).expect("Couldn't send input");
         }));
 
@@ -236,7 +232,7 @@ impl UI {
                 Inhibit(true)
             } else {
                 if let Some(input) = event_to_nvim_input(e) {
-                    let mut nvim = nvim.lock().unwrap();
+                    let mut nvim = nvim.borrow_mut();
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
                 } else {
@@ -279,10 +275,10 @@ impl UI {
         grids.insert(1, grid);
 
         UI {
-            win: Arc::new(ThreadGuard::new(window)),
+            win: window,
             rx,
-            state: Arc::new(ThreadGuard::new(UIState {
-                grids: grids,
+            state: Rc::new(RefCell::new(UIState {
+                grids,
                 mode_infos: vec![],
                 current_grid: 1,
                 popupmenu: Popupmenu::new(&overlay, nvim.clone()),
@@ -301,83 +297,48 @@ impl UI {
     /// Starts to listen events from `rx` (e.g. from nvim) and processing those.
     /// Think this as the "main" function of the UI.
     pub fn start(self) {
-        let rx = self.rx;
-        let state = self.state.clone();
-        let win = self.win.clone();
-        let nvim = self.nvim.clone();
+        let UI {
+            rx,
+            state,
+            win,
+            nvim,
+        } = self;
 
-        thread::spawn(move || {
-            let timeout = time::Duration::from_millis(33);
+        gtk::timeout_add(
+            33,
+            clone!(state => move || {
+                let state = state.borrow();
+                // Tick the current active grid.
+                let grid =
+                    state.grids.get(&state.current_grid).unwrap();
+                grid.tick();
 
-            loop {
-                // Use timeout, so we can use this loop to "tick" the current
-                // grid (mainly to just blink the cursor).
-                let message = rx.recv_timeout(timeout);
+                glib::Continue(true)
+            }),
+        );
 
-                match message {
-                    // If the sender disconnects, then neovim exited. This
-                    // means that we need to exit too.
-                    Err(RecvTimeoutError::Disconnected) => {
-                        break;
-                    }
-                    // If we 'just' got a timeout, then we should tick the
-                    // current grid (e.g. blink the cursor).
-                    Err(RecvTimeoutError::Timeout) => {
-                        // TODO(ville): Can we combine this with Ok(Message::Notify(notify))?
-                        let state = state.clone();
-                        glib::idle_add(move || {
-                            let state = state.borrow_mut();
-                            let grid =
-                                state.grids.get(&state.current_grid).unwrap();
-                            grid.tick();
+        rx.attach(None, move |message| {
+            match message {
+                // Handle a notify.
+                Message::Notify(notify) => {
+                    let mut state = state.borrow_mut();
 
-                            glib::Continue(false)
-                        });
-                    }
-                    // Handle a notify.
-                    Ok(Message::Notify(notify)) => {
-                        let state = state.clone();
-                        let nvim = nvim.clone();
-                        let win = win.clone();
-                        glib::idle_add(move || {
-                            let mut state = state.borrow_mut();
-
-                            handle_notify(
-                                &win.borrow(),
-                                &notify,
-                                &mut state,
-                                nvim.clone(),
-                            );
-
-                            // Tick the current active grid.
-                            let grid =
-                                state.grids.get(&state.current_grid).unwrap();
-                            grid.tick();
-
-                            glib::Continue(false)
-                        });
-                    }
-                    // Handle a request.
-                    Ok(Message::Request(tx, request)) => {
-                        let state = state.clone();
-
-                        glib::idle_add(move || {
-                            let mut state = state.borrow_mut();
-                            let res = handle_request(&request, &mut state);
-                            tx.send(res)
-                                .expect("Failed to respond to a request");
-
-                            glib::Continue(false)
-                        });
-                    }
+                    handle_notify(&win, &notify, &mut state, nvim.clone());
+                }
+                // Handle a request.
+                Message::Request(tx, request) => {
+                    let mut state = state.borrow_mut();
+                    let res = handle_request(&request, &mut state);
+                    tx.send(res).expect("Failed to respond to a request");
+                }
+                // Handle close.
+                Message::Close => {
+                    win.close();
+                    return Continue(false);
                 }
             }
 
-            // Close the window once the recv loop exits.
-            glib::idle_add(move || {
-                win.borrow().close();
-                glib::Continue(false)
-            });
+            Continue(true)
         });
     }
 }
@@ -402,7 +363,7 @@ fn handle_notify(
     window: &gtk::ApplicationWindow,
     notify: &Notify,
     state: &mut UIState,
-    nvim: Arc<Mutex<Neovim>>,
+    nvim: Rc<RefCell<Neovim>>,
 ) {
     match notify {
         Notify::RedrawEvent(events) => {
@@ -411,7 +372,7 @@ fn handle_notify(
         Notify::GnvimEvent(event) => match event {
             Ok(event) => handle_gnvim_event(event, state, nvim),
             Err(err) => {
-                let mut nvim = nvim.lock().unwrap();
+                let mut nvim = nvim.borrow_mut();
                 nvim.command_async(&format!(
                     "echom \"Failed to parse gnvim notify: '{}'\"",
                     err
@@ -431,7 +392,7 @@ fn handle_notify(
 fn handle_gnvim_event(
     event: &GnvimEvent,
     state: &mut UIState,
-    nvim: Arc<Mutex<Neovim>>,
+    nvim: Rc<RefCell<Neovim>>,
 ) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
@@ -447,7 +408,7 @@ fn handle_gnvim_event(
         }
         GnvimEvent::CursorTooltipLoadStyle(path) => {
             if let Err(err) = state.cursor_tooltip.load_style(path.clone()) {
-                let mut nvim = nvim.lock().unwrap();
+                let mut nvim = nvim.borrow_mut();
                 nvim.command_async(&format!(
                     "echom \"Cursor tooltip load style failed: '{}'\"",
                     err
@@ -489,7 +450,7 @@ fn handle_redraw_event(
     window: &gtk::ApplicationWindow,
     events: &Vec<RedrawEvent>,
     state: &mut UIState,
-    nvim: Arc<Mutex<Neovim>>,
+    nvim: Rc<RefCell<Neovim>>,
 ) {
     for event in events {
         match event {
@@ -559,7 +520,7 @@ fn handle_redraw_event(
                     let grid = state.grids.get(&info.grid).unwrap();
                     grid.scroll(info.reg, info.rows, info.cols, &state.hl_defs);
 
-                    let mut nvim = nvim.lock().unwrap();
+                    let mut nvim = nvim.borrow_mut();
                     // Since nvim doesn't have its own 'scroll' autocmd, we'll
                     // have to do it on our own. This use useful for the cursor tooltip.
                     nvim.command_async("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif")
@@ -672,12 +633,12 @@ fn handle_redraw_event(
                     let (cols, rows) = grid.calc_size();
 
                     // Cancel any possible delayed call for ui_try_resize.
-                    let mut id = state.resize_source_id.lock().unwrap();
+                    let mut id = state.resize_source_id.borrow_mut();
                     if let Some(id) = id.take() {
                         glib::source::source_remove(id);
                     }
 
-                    nvim.lock().unwrap().ui_try_resize_async(cols as i64, rows as i64)
+                    nvim.borrow_mut().ui_try_resize_async(cols as i64, rows as i64)
                         .cb(|res| {
                             if let Err(err) = res {
                                 eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
@@ -747,7 +708,7 @@ fn handle_redraw_event(
             }
             RedrawEvent::TablineUpdate(evt) => {
                 evt.iter().for_each(|TablineUpdate { current, tabs }| {
-                    let mut nvim = nvim.lock().unwrap();
+                    let mut nvim = nvim.borrow_mut();
                     state.tabline.update(
                         &mut nvim,
                         current.clone(),

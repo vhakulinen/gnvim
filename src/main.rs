@@ -24,9 +24,9 @@ use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::session::Session as NeovimSession;
 use neovim_lib::NeovimApi;
 
+use std::cell::RefCell;
 use std::process::Command;
-use std::sync::mpsc::channel;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 use structopt::StructOpt;
 
@@ -82,7 +82,7 @@ struct Options {
 }
 
 fn build(app: &gtk::Application, opts: &Options) {
-    let (tx, rx) = channel();
+    let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
@@ -132,7 +132,7 @@ fn build(app: &gtk::Application, opts: &Options) {
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
 
-    let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
+    let ui = ui::UI::init(app, rx, Rc::new(RefCell::new(nvim)));
     ui.start();
 }
 

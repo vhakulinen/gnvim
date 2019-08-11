@@ -1,6 +1,7 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use cairo;
 use gdk;
@@ -11,7 +12,6 @@ use gtk::{DrawingArea, EventBox};
 use gtk::prelude::*;
 
 use nvim_bridge::{GridLineSegment, ModeInfo};
-use thread_guard::ThreadGuard;
 use ui::font::Font;
 use ui::grid::context::Context;
 use ui::grid::render;
@@ -56,10 +56,10 @@ pub struct Grid {
     /// EventBox to get mouse events for this grid.
     eb: EventBox,
     /// Internal context that is manipulated and used when handling events.
-    context: Arc<ThreadGuard<Option<Context>>>,
+    context: Rc<RefCell<Option<Context>>>,
     /// Pointer position for dragging if we should call callback from
     /// `connect_motion_events_for_drag`.
-    drag_position: Arc<ThreadGuard<(u64, u64)>>,
+    drag_position: Rc<RefCell<(u64, u64)>>,
     /// Input context that need to be updated for the cursor position
     im_context: Option<gtk::IMMulticontext>,
 }
@@ -67,7 +67,7 @@ pub struct Grid {
 impl Grid {
     pub fn new(_id: u64) -> Self {
         let da = DrawingArea::new();
-        let ctx = Arc::new(ThreadGuard::new(None));
+        let ctx = Rc::new(RefCell::new(None));
 
         da.connect_configure_event(clone!(ctx => move |da, _| {
             let mut ctx = ctx.borrow_mut();
@@ -102,7 +102,7 @@ impl Grid {
             da: da,
             eb: eb,
             context: ctx,
-            drag_position: Arc::new(ThreadGuard::new((0, 0))),
+            drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
         }
     }

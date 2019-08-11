@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use gdk;
 use gtk;
@@ -8,7 +9,6 @@ use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
 use nvim_bridge::{CompletionItem, PmenuColors};
-use thread_guard::ThreadGuard;
 use ui::common::calc_line_space;
 use ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
@@ -77,8 +77,7 @@ pub struct Popupmenu {
     /// Label for displaying full info of a completion item.
     info_label: gtk::Label,
 
-    /// State that is in Arc because its passed into widget signal handlers.
-    state: Arc<ThreadGuard<State>>,
+    state: Rc<RefCell<State>>,
     items: LazyLoader,
 
     /// Our colors.
@@ -97,7 +96,7 @@ impl Popupmenu {
     ///              is where all the (neovim) grids are drawn.
     /// * `nvim` - Neovim instance. Popupmenu will instruct neovim to act on
     ///            user interaction.
-    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let info_label = gtk::Label::new(Some(""));
@@ -154,7 +153,7 @@ impl Popupmenu {
             scrolled_list.get_child().unwrap()
         );
 
-        let state = Arc::new(ThreadGuard::new(State::new()));
+        let state = Rc::new(RefCell::new(State::new()));
 
         // When a row is activated (by mouse click), notify neovim to change
         // the selection to the activated row.
@@ -171,8 +170,7 @@ impl Popupmenu {
                 payload.push_str(op)
             }
 
-            let mut nvim = nvim.lock().unwrap();
-            nvim.input(payload.as_str()).unwrap();
+            nvim.borrow_mut().input(payload.as_str()).unwrap();
         }));
 
         // On (mouse) button press...
@@ -180,8 +178,7 @@ impl Popupmenu {
             // ...check if the button press is double click.
             if e.get_event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
-                let mut nvim = nvim.lock().unwrap();
-                nvim.input("<C-y>").unwrap();
+                nvim.borrow_mut().input("<C-y>").unwrap();
             }
 
             Inhibit(false)
@@ -428,7 +425,7 @@ impl Popupmenu {
                 list.select_row(Some(&item.row));
 
                 {
-                    let id = Arc::new(ThreadGuard::new(None));
+                    let id = Rc::new(RefCell::new(None));
                     // Ensure that the row is in the view, but make sure first
                     // that the row it self has allocated itself. It is possible
                     // that when we selected the row and grabbed focus for it

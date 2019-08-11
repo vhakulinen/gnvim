@@ -2,7 +2,6 @@ use gtk;
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
@@ -27,7 +26,7 @@ pub struct Wildmenu {
 }
 
 impl Wildmenu {
-    pub fn new(nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(nvim: Rc<RefCell<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let frame = gtk::Frame::new(None);
@@ -71,7 +70,7 @@ impl Wildmenu {
 
             let op = if new > prev { "<Tab>" } else { "<S-Tab>" };
 
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             for _ in 0..(new - prev).abs() {
                 // NOTE(ville): nvim doesn't like single input with many
                 //              tabs in it, so we'll have to send each

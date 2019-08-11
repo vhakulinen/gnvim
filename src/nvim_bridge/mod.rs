@@ -882,11 +882,13 @@ pub enum Message {
     Notify(Notify),
     /// RPC Request (see `: rpcrequest()`).
     Request(Sender<Result<Value, Value>>, Request),
+    /// Nvim went away or reading from the rcp connection failed.
+    Close,
 }
 
 pub struct NvimBridge {
     /// Channel to send messages to the ui.
-    tx: Sender<Message>,
+    tx: glib::Sender<Message>,
 
     /// Channel to pass to the UI when we receive a request from nvim.
     /// The UI should send values to this channel when ever it gets a message
@@ -897,7 +899,7 @@ pub struct NvimBridge {
 }
 
 impl NvimBridge {
-    pub fn new(tx: Sender<Message>) -> Self {
+    pub fn new(tx: glib::Sender<Message>) -> Self {
         let (request_tx, request_rx) = channel();
 
         NvimBridge {
@@ -939,6 +941,10 @@ impl Handler for NvimBridge {
         } else {
             println!("Unknown notify: {}", name);
         }
+    }
+
+    fn handle_close(&mut self) {
+        self.tx.send(Message::Close).unwrap();
     }
 }
 

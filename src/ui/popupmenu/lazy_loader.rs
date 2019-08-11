@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use glib;
 use gtk;
 use gtk::prelude::*;
 
 use nvim_bridge::CompletionItem;
-use thread_guard::ThreadGuard;
 use ui::color::Color;
 use ui::popupmenu::CompletionItemWidgetWrap;
 
@@ -51,13 +51,13 @@ impl State {
 }
 
 pub struct LazyLoader {
-    state: Arc<ThreadGuard<State>>,
+    state: Rc<RefCell<State>>,
 }
 
 impl LazyLoader {
     pub fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
         Self {
-            state: Arc::new(ThreadGuard::new(State::new(list, css_provider))),
+            state: Rc::new(RefCell::new(State::new(list, css_provider))),
         }
     }
 
@@ -78,7 +78,7 @@ impl LazyLoader {
         state.items_to_load = items;
 
         let state_ref = self.state.clone();
-        let source_id = glib::idle_add(move || {
+        let source_id = gtk::idle_add(move || {
             let mut state = state_ref.borrow_mut();
 
             // Load the rows in patches so we avoid renders of "half height"

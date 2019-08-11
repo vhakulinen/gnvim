@@ -10,7 +10,7 @@ debug = true
 unstable = []
 
 [dependencies]
-neovim-lib = "0.6"
+#neovim-lib = "0.6"
 structopt = "0.2"
 
 gio = "0.7"
@@ -33,3 +33,7 @@ features = ["v3_18"]
 [dependencies.webkit2gtk]
 version = "0.8"
 features = ["v2_14"]
+
+[dependencies.neovim-lib]
+#git = "https://github.com/vhakulinen/neovim-lib"
+git = "https://github.com/daa84/neovim-lib"

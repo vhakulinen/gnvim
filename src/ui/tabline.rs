@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use glib;
 use gtk;
@@ -32,7 +31,7 @@ pub struct Tabline {
 }
 
 impl Tabline {
-    pub fn new(nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(nvim: Rc<RefCell<Neovim>>) -> Self {
         let notebook = gtk::Notebook::new();
         notebook.set_show_border(false);
 
@@ -44,7 +43,7 @@ impl Tabline {
             clone!(tabpage_data, nvim => move |_, _, page_num| {
                 let pages = tabpage_data.borrow();
                 if let Some(ref page) = pages.get(page_num as usize) {
-                    let mut nvim = nvim.lock().unwrap();
+                    let mut nvim = nvim.borrow_mut();
                     nvim.set_current_tabpage(&page).unwrap();
                 } else {
                     println!("Failed to get tab page {}", page_num);

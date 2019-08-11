@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use gtk;
 use gtk::prelude::*;
@@ -436,7 +437,7 @@ pub struct Cmdline {
 }
 
 impl Cmdline {
-    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         // Inner box contains cmdline block and input.
