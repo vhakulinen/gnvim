@@ -119,14 +119,15 @@ impl Grid {
         // cairo context.
         if ctx.cursor_blink_on == 0 {
             if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
-                let cell = row.cell_at(ctx.cursor.1 as usize + 1);
-                render::cursor_cell(
-                    &ctx.cursor_context,
-                    &self.da.get_pango_context().unwrap(),
-                    &cell,
-                    &ctx.cell_metrics,
-                    hl_defs,
-                );
+                if let Some(cell) = row.cell_at(ctx.cursor.1 as usize + 1) {
+                  render::cursor_cell(
+                      &ctx.cursor_context,
+                      &self.da.get_pango_context().unwrap(),
+                      &cell,
+                      &ctx.cell_metrics,
+                      hl_defs,
+                  );
+                }
             }
         }
 

@@ -232,15 +232,16 @@ impl Rope {
     }
 
     /// Retruns single cell at `at`. Note that index starts at 1 and not 0.
-    pub fn cell_at(&self, at: usize) -> Cell {
+    pub fn cell_at(&self, at: usize) -> Option<Cell> {
         match self {
             Rope::Leaf(leaf) => {
-                let c = leaf.text.chars().nth(at - 1).unwrap();
-                Cell {
-                    text: c.to_string(),
-                    hl_id: leaf.hl_id,
-                    double_width: leaf.double_width,
-                }
+                leaf.text.chars().nth(at - 1).map(|c| {
+                  Cell {
+                      text: c.to_string(),
+                      hl_id: leaf.hl_id,
+                      double_width: leaf.double_width,
+                  }
+                })
             }
             Rope::Node(left, right) => {
                 let weight = left.weight();
@@ -330,7 +331,7 @@ impl Row {
         self.rope.as_ref().unwrap().leaf_at(at)
     }
 
-    pub fn cell_at(&self, at: usize) -> Cell {
+    pub fn cell_at(&self, at: usize) -> Option<Cell> {
         self.rope.as_ref().unwrap().cell_at(at)
     }
 
@@ -593,11 +594,11 @@ mod tests {
         let right = Rope::Leaf(Leaf::new(String::from("456"), 1, false));
         let rope = Rope::Node(Box::new(left), Box::new(right));
 
-        let cell = rope.cell_at(5);
+        let cell = rope.cell_at(5).unwrap();
         assert_eq!(cell.text, "5");
         assert_eq!(cell.hl_id, 1);
 
-        let cell = rope.cell_at(1);
+        let cell = rope.cell_at(1).unwrap();
         assert_eq!(cell.text, "1");
         assert_eq!(cell.hl_id, 0);
     }
