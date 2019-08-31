@@ -235,12 +235,11 @@ impl Rope {
     pub fn cell_at(&self, at: usize) -> Cell {
         match self {
             Rope::Leaf(leaf) => {
-                let c = leaf.text.chars().nth(
-                  if leaf.double_width() {
-                    0
-                  } else {
-                  at - 1
-                  }).unwrap();
+                let c = leaf
+                    .text
+                    .chars()
+                    .nth(if leaf.double_width() { 0 } else { at - 1 })
+                    .unwrap();
                 Cell {
                     text: c.to_string(),
                     hl_id: leaf.hl_id,
