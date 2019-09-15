@@ -827,6 +827,7 @@ pub enum GnvimEvent {
 
     PopupmenuWidth(u64),
     PopupmenuWidthDetails(u64),
+    PopupmenuShowMenuOnAllItems(bool),
 
     Unknown(String),
 }
@@ -1155,6 +1156,23 @@ pub(crate) fn parse_gnvim_event(
             let w =
                 try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");
             GnvimEvent::PopupmenuWidthDetails(w)
+        }
+        "PopupmenuShowMenuOnAllItems" => {
+            let show_menu_on_all = try_str!(
+                args.get(1).ok_or("bool missing")?,
+                "pmenu show menu on all items"
+            )
+            .parse::<bool>();
+
+            if let Err(err) = show_menu_on_all {
+                return Err(format!(
+                    "PopupmenuShowMenuOnAllItems event given a value other than
+                                    a bool: '{}'",
+                    err
+                ));
+            }
+
+            GnvimEvent::PopupmenuShowMenuOnAllItems(show_menu_on_all.unwrap())
         }
         _ => GnvimEvent::Unknown(String::from(cmd)),
     };

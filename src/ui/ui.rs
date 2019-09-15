@@ -440,6 +440,9 @@ fn handle_gnvim_event(
         GnvimEvent::PopupmenuWidthDetails(width) => {
             state.popupmenu.set_width_details(*width as i32);
         }
+        GnvimEvent::PopupmenuShowMenuOnAllItems(should_show) => {
+            state.popupmenu.set_menu_on_all_items(*should_show);
+        }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }
@@ -671,10 +674,11 @@ fn handle_redraw_event(
                         grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
                     state.popupmenu.set_anchor(rect);
-                    state.popupmenu.show();
                     state
                         .popupmenu
                         .select(popupmenu.selected as i32, &state.hl_defs);
+
+                    state.popupmenu.show();
 
                     // If the cursor tooltip is visible at the same time, move
                     // it out of our way.

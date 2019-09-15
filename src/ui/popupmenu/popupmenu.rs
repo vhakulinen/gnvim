@@ -77,6 +77,8 @@ pub struct Popupmenu {
     /// Label for displaying full info of a completion item.
     info_label: gtk::Label,
 
+    menu_on_all_items: bool,
+
     state: Rc<RefCell<State>>,
     items: LazyLoader,
 
@@ -256,6 +258,7 @@ impl Popupmenu {
 
         Popupmenu {
             items: LazyLoader::new(list.clone(), css_provider.clone()),
+            menu_on_all_items: false,
             box_,
             layout,
             css_provider,
@@ -269,6 +272,18 @@ impl Popupmenu {
             font: Font::default(),
             line_space: 0,
         }
+    }
+
+    pub fn set_menu_on_all_items(&mut self, b: bool) {
+        self.menu_on_all_items = b;
+    }
+
+    pub fn show_menu_for_all_items(&mut self) {
+        self.items.once_loaded(Some(5), move |items| {
+            for item in items {
+                item.menu.set_visible(true);
+            }
+        });
     }
 
     pub fn is_above_anchor(&self) -> bool {
@@ -348,7 +363,11 @@ impl Popupmenu {
     }
 
     /// Shows the popupmenu.
-    pub fn show(&self) {
+    pub fn show(&mut self) {
+        if self.menu_on_all_items {
+            self.show_menu_for_all_items();
+        }
+
         self.layout.show();
         self.box_.check_resize();
     }
@@ -381,12 +400,14 @@ impl Popupmenu {
         let info_shown = self.info_shown;
         let show_kind = self.items.get_show_kind();
 
+        let menu_on_all_items = self.menu_on_all_items;
+
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
 
             if let Some(prev) = items.get(state.selected as usize) {
                 prev.info.set_visible(false);
-                prev.menu.set_visible(false);
+                prev.menu.set_visible(menu_on_all_items);
 
                 if show_kind {
                     // Update the `kind` icon with default fg color.
