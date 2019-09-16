@@ -105,12 +105,13 @@ impl UI {
     pub fn init(
         app: &gtk::Application,
         rx: glib::Receiver<Message>,
+        window_size: (i32, i32),
         nvim: Rc<RefCell<Neovim>>,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
         window.set_title("Neovim");
-        window.set_default_size(1280, 720);
+        window.set_default_size(window_size.0, window_size.1);
 
         // Top level widget.
         let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
