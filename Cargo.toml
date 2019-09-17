@@ -7,7 +7,10 @@ authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 debug = true
 
 [features]
+default = ["webkit"]
+
 unstable = []
+webkit = ["webkit2gtk"]
 
 [dependencies]
 #neovim-lib = "0.6"
@@ -33,6 +36,7 @@ features = ["v3_18"]
 [dependencies.webkit2gtk]
 version = "0.8"
 features = ["v2_14"]
+optional = true
 
 [dependencies.neovim-lib]
 #git = "https://github.com/vhakulinen/neovim-lib"

@@ -16,6 +16,7 @@ extern crate gtk;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
+#[cfg(feature = "webkit")]
 extern crate webkit2gtk;
 
 use gio::prelude::*;

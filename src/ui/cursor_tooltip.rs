@@ -7,7 +7,9 @@ use std::sync::Arc;
 use gtk;
 use gtk::prelude::*;
 
+#[cfg(feature = "webkit")]
 use webkit2gtk as webkit;
+#[cfg(feature = "webkit")]
 use webkit2gtk::{SettingsExt, WebViewExt};
 
 use ammonia;
@@ -82,6 +84,7 @@ pub struct CursorTooltip {
     css_provider: gtk::CssProvider,
     frame: gtk::Frame,
     fixed: gtk::Fixed,
+    #[cfg(feature = "webkit")]
     webview: webkit::WebView,
     state: Arc<ThreadGuard<State>>,
 
@@ -99,6 +102,57 @@ pub struct CursorTooltip {
 }
 
 impl CursorTooltip {
+    #[cfg(not(feature = "webkit"))]
+    pub fn new(parent: &gtk::Overlay) -> Self {
+        let css_provider = gtk::CssProvider::new();
+
+        let frame = gtk::Frame::new(None);
+
+        add_css_provider!(&css_provider, frame);
+
+        let fixed = gtk::Fixed::new();
+        fixed.put(&frame, 0, 0);
+
+        let state = Arc::new(ThreadGuard::new(State::default()));
+
+        parent.add_overlay(&fixed);
+        parent.set_overlay_pass_through(&fixed, true);
+
+        fixed.show_all();
+
+        fixed.connect_size_allocate(
+            clone!(state, frame => move |fixed, alloc| {
+                let mut state = state.borrow_mut();
+                let ctx = fixed.get_pango_context().unwrap();
+                let res = pangocairo::functions::context_get_resolution(&ctx);
+                state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
+
+                state.available_area = alloc.clone();
+            }),
+        );
+
+        let syntax_set: SyntaxSet =
+            from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
+        let theme_set = ThemeSet::load_defaults();
+
+        let current_theme = theme_set.themes["base16-ocean.dark"].clone();
+
+        CursorTooltip {
+            css_provider,
+            frame,
+            fixed,
+            state,
+
+            fg: Color::default(),
+            bg: Color::default(),
+            font: Font::default(),
+
+            syntax_set,
+            theme_set,
+            current_theme,
+        }
+    }
+    #[cfg(feature = "webkit")]
     pub fn new(parent: &gtk::Overlay) -> Self {
         let css_provider = gtk::CssProvider::new();
 
@@ -360,6 +414,7 @@ impl CursorTooltip {
             font = self.font.as_wild_css(FontUnit::Point)
         );
 
+        #[cfg(feature = "webkit")]
         self.webview.load_html(&all, None);
     }
 
@@ -426,6 +481,7 @@ fn set_position(
 /// Once the webview has loaded its content, we need to check how much
 /// height and width does the rendered content take. After this, we can set
 /// the size of the webview's container.
+#[cfg(feature = "webkit")]
 fn webview_load_finished(
     webview: &webkit::WebView,
     frame: glib::WeakRef<gtk::Frame>,
