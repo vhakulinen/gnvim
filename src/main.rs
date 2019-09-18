@@ -43,7 +43,9 @@ fn parse_geometry(input: &str) -> Result<(i32, i32), String> {
     } else {
         match (ret_tuple[0].parse(), ret_tuple[1].parse()) {
             (Ok(x), Ok(y)) => Ok((x, y)),
-            (_, _) => Err(String::from("at least one argument wasn't an integer")),
+            (_, _) => {
+                Err(String::from("at least one argument wasn't an integer"))
+            }
         }
     }
 }
