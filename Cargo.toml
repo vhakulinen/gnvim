@@ -11,7 +11,7 @@ unstable = []
 
 [dependencies]
 #neovim-lib = "0.6"
-structopt = "0.2"
+structopt = "0.3"
 
 gio = "0.7"
 pango = "0.7"

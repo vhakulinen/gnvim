@@ -36,11 +36,25 @@ mod nvim_bridge;
 mod thread_guard;
 mod ui;
 
+fn parse_geometry(input: &str) -> Result<(i32, i32), String> {
+    let ret_tuple: Vec<&str> = input.split("x").collect();
+    if ret_tuple.len() != 2 {
+        Err(String::from("must be of form 'width'x'height'"))
+    } else {
+        match (ret_tuple[0].parse(), ret_tuple[1].parse()) {
+            (Ok(x), Ok(y)) => Ok((x, y)),
+            (_, _) => {
+                Err(String::from("at least one argument wasn't an integer"))
+            }
+        }
+    }
+}
+
 /// Gnvim is a graphical UI for neovim.
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "gnvim",
-    raw(version = "VERSION"),
+    version = VERSION,
     author = "Ville Hakulinen"
 )]
 struct Options {
@@ -79,6 +93,10 @@ struct Options {
     /// Disables externalized tab line
     #[structopt(long = "disable-ext-tabline")]
     disable_ext_tabline: bool,
+
+    /// Geometry of the window in widthxheight form
+    #[structopt(long = "geometry", parse(try_from_str = parse_geometry), default_value = "1280x720")]
+    geometry: (i32, i32),
 }
 
 fn build(app: &gtk::Application, opts: &Options) {
@@ -132,7 +150,7 @@ fn build(app: &gtk::Application, opts: &Options) {
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
 
-    let ui = ui::UI::init(app, rx, Rc::new(RefCell::new(nvim)));
+    let ui = ui::UI::init(app, rx, opts.geometry, Rc::new(RefCell::new(nvim)));
     ui.start();
 }
 
