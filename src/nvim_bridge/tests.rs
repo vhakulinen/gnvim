@@ -863,4 +863,24 @@ mod parse_gnvim_event_tests {
 
         assert_eq!(expected, res);
     }
+
+    #[test]
+    fn popupmenu_menu_on_all_items() {
+        let data: Vec<(Result<GnvimEvent, String>, Vec<Value>)> = vec![
+            (
+                Ok(GnvimEvent::PopupmenuShowMenuOnAllItems(true)),
+                vec!["PopupmenuShowMenuOnAllItems".into(), 1.into()],
+            ),
+            (
+                Ok(GnvimEvent::PopupmenuShowMenuOnAllItems(false)),
+                vec!["PopupmenuShowMenuOnAllItems".into(), 0.into()],
+            ),
+        ];
+
+        for (expected, input) in data.into_iter() {
+            let res = nvim_bridge::parse_gnvim_event(input);
+
+            assert_eq!(expected, res);
+        }
+    }
 }

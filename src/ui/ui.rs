@@ -441,7 +441,7 @@ fn handle_gnvim_event(
             state.popupmenu.set_width_details(*width as i32);
         }
         GnvimEvent::PopupmenuShowMenuOnAllItems(should_show) => {
-            state.popupmenu.set_menu_on_all_items(*should_show);
+            state.popupmenu.set_show_menu_on_all_items(*should_show);
         }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
