@@ -1,10 +1,14 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
+#[cfg(feature = "libwebkit2gtk")]
 #[macro_use]
 extern crate lazy_static;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate ammonia;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate pulldown_cmark;
 extern crate structopt;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate syntect;
 
 extern crate cairo;
@@ -16,6 +20,7 @@ extern crate gtk;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate webkit2gtk;
 
 use gio::prelude::*;
@@ -33,6 +38,7 @@ use structopt::StructOpt;
 include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
 
 mod nvim_bridge;
+#[cfg(feature = "libwebkit2gtk")]
 mod thread_guard;
 mod ui;
 

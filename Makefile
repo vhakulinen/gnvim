@@ -2,8 +2,12 @@ ifeq ($(PREFIX),)
     PREFIX := /usr/local
 endif
 
+ifdef NOWEBKIT2GTK
+    FEATURES := --no-default-features
+endif
+
 build:
-	cargo build --release
+	cargo build --release $(FEATURES)
 
 syntect-pack:
 	git submodule update --init
