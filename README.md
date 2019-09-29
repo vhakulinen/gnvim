@@ -32,10 +32,13 @@ $ make && sudo make install
 ## macOS (without webkit2gtk)
 
 Webkit2gtk isn't really available for macOS. GNvim is available without said
-dependency, but such builds wont have the cursor tooltip feature. To build
-without webkit2gtk:
+dependency, but such builds won't have the cursor tooltip feature. 
 
-```
+To install all dependencies and build without webkit2gtk (`gtk+3` required for 
+building, `librsvg` is a runtime dependency for showing LSP icons in completion):
+
+```bash
+$ brew install gtk+3 librsvg
 $ make NOWEBKIT2GTK=1
 $ # or with cargo
 $ cargo build --no-default-features
