@@ -441,9 +441,7 @@ fn handle_gnvim_event(
             )
             .cb(|res| match res {
                 Ok(_) => {}
-                Err(err) => {
-                    println!("Failed to execute nvim command: {}", err)
-                }
+                Err(err) => println!("Failed to execute nvim command: {}", err),
             })
             .call();
         }
@@ -745,7 +743,8 @@ fn handle_redraw_event(
 
                 // Undo any force positioning of cursor tool tip that might
                 // have occured on popupmenu show.
-                #[cfg(feature = "libwebkit2gtk")] {
+                #[cfg(feature = "libwebkit2gtk")]
+                {
                     state.cursor_tooltip.force_gravity(None);
                     state.cursor_tooltip.refresh_position();
                 }
