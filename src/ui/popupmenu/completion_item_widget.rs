@@ -1,8 +1,8 @@
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::{CompletionItem, CompletionItemKind};
-use ui::color::Color;
+use crate::nvim_bridge::{CompletionItem, CompletionItemKind};
+use crate::ui::color::Color;
 
 macro_rules! icon {
     ($file:expr, $color:expr, $size:expr) => {

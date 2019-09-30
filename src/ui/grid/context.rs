@@ -4,10 +4,10 @@ use pango;
 
 use gtk::prelude::*;
 
-use ui::color::{Color, Highlight};
-use ui::font::Font;
-use ui::grid::render;
-use ui::grid::row::Row;
+use crate::ui::color::{Color, Highlight};
+use crate::ui::font::Font;
+use crate::ui::grid::render;
+use crate::ui::grid::row::Row;
 
 /// Context is manipulated by Grid.
 pub struct Context {

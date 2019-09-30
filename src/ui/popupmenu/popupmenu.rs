@@ -8,15 +8,15 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
-use nvim_bridge::{CompletionItem, PmenuColors};
-use ui::common::calc_line_space;
-use ui::common::{
+use crate::nvim_bridge::{CompletionItem, PmenuColors};
+use crate::ui::common::calc_line_space;
+use crate::ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
-use ui::font::{Font, FontUnit};
-use ui::popupmenu::get_icon_pixbuf;
-use ui::popupmenu::LazyLoader;
-use ui::ui::HlDefs;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::popupmenu::get_icon_pixbuf;
+use crate::ui::popupmenu::LazyLoader;
+use crate::ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;

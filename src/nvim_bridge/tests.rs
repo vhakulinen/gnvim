@@ -16,15 +16,15 @@ mod parse_redraw_event_tests {
 
     use neovim_lib::neovim_api::Tabpage;
     use neovim_lib::Value;
-    use nvim_bridge;
-    use nvim_bridge::{
+    use crate::nvim_bridge;
+    use crate::nvim_bridge::{
         Cell, CmdlineBlockAppend, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
         CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
         GridCursorGoto, GridLineSegment, GridResize, GridScroll, HlAttrDefine,
         ModeChange, ModeInfo, ModeInfoSet, OptionSet, PopupmenuShow,
         RedrawEvent, TablineUpdate, WildmenuShow,
     };
-    use ui::color::{Color, Highlight};
+    use crate::ui::color::{Color, Highlight};
 
     #[test]
     fn set_title() {
@@ -689,12 +689,12 @@ mod parse_redraw_event_tests {
 mod parse_gnvim_event_tests {
 
     use neovim_lib::Value;
-    use nvim_bridge;
-    use nvim_bridge::{
+    use crate::nvim_bridge;
+    use crate::nvim_bridge::{
         CmdlineColors, GnvimEvent, PmenuColors, SetGuiColors, TablineColors,
         WildmenuColors,
     };
-    use ui::color::Color;
+    use crate::ui::color::Color;
 
     #[test]
     fn set_gui_colors() {

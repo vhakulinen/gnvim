@@ -4,7 +4,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 
 use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
 
-use ui::color::{Color, Highlight};
+use crate::ui::color::{Color, Highlight};
 
 #[cfg(test)]
 mod tests;

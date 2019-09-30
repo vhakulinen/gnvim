@@ -12,19 +12,19 @@ use neovim_lib::Value;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{
+use crate::nvim_bridge::{
     CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
     GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
     ModeInfoSet, Notify, OptionSet, RedrawEvent, Request, TablineUpdate,
 };
-use ui::cmdline::Cmdline;
-use ui::color::{Color, Highlight};
+use crate::ui::cmdline::Cmdline;
+use crate::ui::color::{Color, Highlight};
 #[cfg(feature = "libwebkit2gtk")]
-use ui::cursor_tooltip::{CursorTooltip, Gravity};
-use ui::font::Font;
-use ui::grid::Grid;
-use ui::popupmenu::Popupmenu;
-use ui::tabline::Tabline;
+use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
+use crate::ui::font::Font;
+use crate::ui::grid::Grid;
+use crate::ui::popupmenu::Popupmenu;
+use crate::ui::tabline::Tabline;
 
 type Grids = HashMap<u64, Grid>;
 

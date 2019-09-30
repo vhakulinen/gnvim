@@ -2,6 +2,7 @@
 name = "gnvim"
 version = "0.1.0"
 authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
+edition = "2018"
 
 [profile.dev]
 debug = true
