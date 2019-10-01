@@ -595,12 +595,11 @@ mod tests {
     fn test_rope_cell_at() {
         let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
         let right = Rope::Leaf(Leaf::new(String::from("456"), 1, false));
-        let right_double_width = Rope::Leaf(Leaf::new(String::from("あ"), 1, true));
+        let right_double_width =
+            Rope::Leaf(Leaf::new(String::from("あ"), 1, true));
         let rope = Rope::Node(
-          Box::new(left),
-          Box::new(
-            Rope::Node(Box::new(right), Box::new(right_double_width))
-          )
+            Box::new(left),
+            Box::new(Rope::Node(Box::new(right), Box::new(right_double_width))),
         );
 
         let cell = rope.cell_at(5);
