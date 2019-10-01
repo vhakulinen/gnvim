@@ -50,6 +50,7 @@ macro_rules! upgrade_weak {
 mod cmdline;
 pub mod color;
 mod common;
+#[cfg(feature = "libwebkit2gtk")]
 mod cursor_tooltip;
 mod font;
 mod grid;

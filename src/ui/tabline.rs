@@ -10,10 +10,10 @@ use neovim_lib::{
 };
 use pango;
 
-use nvim_bridge;
-use ui::common::calc_line_space;
-use ui::font::{Font, FontUnit};
-use ui::ui::HlDefs;
+use crate::nvim_bridge;
+use crate::ui::common::calc_line_space;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::ui::HlDefs;
 
 pub struct Tabline {
     notebook: gtk::Notebook,

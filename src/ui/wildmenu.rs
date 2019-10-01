@@ -6,8 +6,8 @@ use std::rc::Rc;
 use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 
-use nvim_bridge;
-use ui::ui::HlDefs;
+use crate::nvim_bridge;
+use crate::ui::ui::HlDefs;
 
 const MAX_HEIGHT: i32 = 500;
 

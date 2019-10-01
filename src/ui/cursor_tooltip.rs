@@ -17,12 +17,12 @@ use syntect::dumps::from_binary;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
-use thread_guard::ThreadGuard;
-use ui::color::Color;
-use ui::common::{
+use crate::thread_guard::ThreadGuard;
+use crate::ui::color::Color;
+use crate::ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
-use ui::font::{Font, FontUnit};
+use crate::ui::font::{Font, FontUnit};
 
 pub enum Gravity {
     Up,

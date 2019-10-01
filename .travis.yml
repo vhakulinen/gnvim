@@ -15,4 +15,6 @@ before_script:
 script:
   - cargo fmt --all -- --check
   - cargo build
+  - cargo build --no-default-features # build without webkit2gtk
   - cargo test
+  - cargo test --no-default-features # test without webkit2gtk

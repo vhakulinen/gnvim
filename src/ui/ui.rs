@@ -12,18 +12,19 @@ use neovim_lib::Value;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{
+use crate::nvim_bridge::{
     CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
     GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
     ModeInfoSet, Notify, OptionSet, RedrawEvent, Request, TablineUpdate,
 };
-use ui::cmdline::Cmdline;
-use ui::color::{Color, Highlight};
-use ui::cursor_tooltip::{CursorTooltip, Gravity};
-use ui::font::Font;
-use ui::grid::Grid;
-use ui::popupmenu::Popupmenu;
-use ui::tabline::Tabline;
+use crate::ui::cmdline::Cmdline;
+use crate::ui::color::{Color, Highlight};
+#[cfg(feature = "libwebkit2gtk")]
+use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
+use crate::ui::font::Font;
+use crate::ui::grid::Grid;
+use crate::ui::popupmenu::Popupmenu;
+use crate::ui::tabline::Tabline;
 
 type Grids = HashMap<u64, Grid>;
 
@@ -70,6 +71,7 @@ struct UIState {
     popupmenu: Popupmenu,
     cmdline: Cmdline,
     tabline: Tabline,
+    #[cfg(feature = "libwebkit2gtk")]
     cursor_tooltip: CursorTooltip,
 
     /// Overlay contains our grid(s) and popupmenu.
@@ -105,12 +107,13 @@ impl UI {
     pub fn init(
         app: &gtk::Application,
         rx: glib::Receiver<Message>,
+        window_size: (i32, i32),
         nvim: Rc<RefCell<Neovim>>,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
         window.set_title("Neovim");
-        window.set_default_size(1280, 720);
+        window.set_default_size(window_size.0, window_size.1);
 
         // Top level widget.
         let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -262,6 +265,7 @@ impl UI {
         }));
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
+        #[cfg(feature = "libwebkit2gtk")]
         let cursor_tooltip = CursorTooltip::new(&overlay);
 
         window.show_all();
@@ -269,6 +273,7 @@ impl UI {
         grid.set_im_context(&im_context);
 
         cmdline.hide();
+        #[cfg(feature = "libwebkit2gtk")]
         cursor_tooltip.hide();
 
         let mut grids = HashMap::new();
@@ -285,6 +290,7 @@ impl UI {
                 cmdline,
                 overlay,
                 tabline,
+                #[cfg(feature = "libwebkit2gtk")]
                 cursor_tooltip,
                 resize_source_id: source_id,
                 hl_defs,
@@ -348,6 +354,7 @@ fn handle_request(
     state: &mut UIState,
 ) -> Result<Value, Value> {
     match request {
+        #[cfg(feature = "libwebkit2gtk")]
         Request::CursorTooltipStyles => {
             let styles = state.cursor_tooltip.get_styles();
 
@@ -355,6 +362,10 @@ fn handle_request(
                 styles.into_iter().map(|s| s.into()).collect();
 
             Ok(res.into())
+        }
+        #[cfg(not(feature = "libwebkit2gtk"))]
+        Request::CursorTooltipStyles => {
+            Err("Cursor tooltip is not supported in this build".into())
         }
     }
 }
@@ -406,43 +417,71 @@ fn handle_gnvim_event(
         GnvimEvent::CompletionMenuToggleInfo => {
             state.popupmenu.toggle_show_info()
         }
-        GnvimEvent::CursorTooltipLoadStyle(path) => {
-            if let Err(err) = state.cursor_tooltip.load_style(path.clone()) {
-                let mut nvim = nvim.borrow_mut();
-                nvim.command_async(&format!(
-                    "echom \"Cursor tooltip load style failed: '{}'\"",
-                    err
-                ))
-                .cb(|res| match res {
-                    Ok(_) => {}
-                    Err(err) => {
-                        println!("Failed to execute nvim command: {}", err)
-                    }
-                })
-                .call();
-            }
-        }
-        GnvimEvent::CursorTooltipShow(content, row, col) => {
-            state.cursor_tooltip.show(content.clone());
-
-            let grid = state.grids.get(&state.current_grid).unwrap();
-            let rect = grid.get_rect_for_cell(*row, *col);
-
-            state.cursor_tooltip.move_to(&rect);
-        }
-        GnvimEvent::CursorTooltipHide => state.cursor_tooltip.hide(),
-        GnvimEvent::CursorTooltipSetStyle(style) => {
-            state.cursor_tooltip.set_style(style)
-        }
         GnvimEvent::PopupmenuWidth(width) => {
             state.popupmenu.set_width(*width as i32);
         }
         GnvimEvent::PopupmenuWidthDetails(width) => {
             state.popupmenu.set_width_details(*width as i32);
         }
+        GnvimEvent::PopupmenuShowMenuOnAllItems(should_show) => {
+            state.popupmenu.set_show_menu_on_all_items(*should_show);
+        }
         GnvimEvent::Unknown(msg) => {
             println!("Received unknown GnvimEvent: {}", msg);
         }
+
+        #[cfg(not(feature = "libwebkit2gtk"))]
+        GnvimEvent::CursorTooltipLoadStyle(..)
+        | GnvimEvent::CursorTooltipShow(..)
+        | GnvimEvent::CursorTooltipHide
+        | GnvimEvent::CursorTooltipSetStyle(..) => {
+            let mut nvim = nvim.borrow_mut();
+            nvim.command_async(
+                "echom \"Cursor tooltip not supported in this build\"",
+            )
+            .cb(|res| match res {
+                Ok(_) => {}
+                Err(err) => println!("Failed to execute nvim command: {}", err),
+            })
+            .call();
+        }
+
+        #[cfg(feature = "libwebkit2gtk")]
+        GnvimEvent::CursorTooltipLoadStyle(..)
+        | GnvimEvent::CursorTooltipShow(..)
+        | GnvimEvent::CursorTooltipHide
+        | GnvimEvent::CursorTooltipSetStyle(..) => match event {
+            GnvimEvent::CursorTooltipLoadStyle(path) => {
+                if let Err(err) = state.cursor_tooltip.load_style(path.clone())
+                {
+                    let mut nvim = nvim.borrow_mut();
+                    nvim.command_async(&format!(
+                        "echom \"Cursor tooltip load style failed: '{}'\"",
+                        err
+                    ))
+                    .cb(|res| match res {
+                        Ok(_) => {}
+                        Err(err) => {
+                            println!("Failed to execute nvim command: {}", err)
+                        }
+                    })
+                    .call();
+                }
+            }
+            GnvimEvent::CursorTooltipShow(content, row, col) => {
+                state.cursor_tooltip.show(content.clone());
+
+                let grid = state.grids.get(&state.current_grid).unwrap();
+                let rect = grid.get_rect_for_cell(*row, *col);
+
+                state.cursor_tooltip.move_to(&rect);
+            }
+            GnvimEvent::CursorTooltipHide => state.cursor_tooltip.hide(),
+            GnvimEvent::CursorTooltipSetStyle(style) => {
+                state.cursor_tooltip.set_style(style)
+            }
+            _ => unreachable!(),
+        },
     }
 }
 
@@ -549,6 +588,7 @@ fn handle_redraw_event(
                         grid.redraw(&state.hl_defs);
                     }
 
+                    #[cfg(feature = "libwebkit2gtk")]
                     state.cursor_tooltip.set_colors(*fg, *bg);
                 });
             }
@@ -649,6 +689,7 @@ fn handle_redraw_event(
                     state.popupmenu.set_font(opts.font.clone(), &state.hl_defs);
                     state.cmdline.set_font(opts.font.clone(), &state.hl_defs);
                     state.tabline.set_font(opts.font.clone(), &state.hl_defs);
+                    #[cfg(feature = "libwebkit2gtk")]
                     state.cursor_tooltip.set_font(opts.font.clone());
 
                     state.cmdline.set_line_space(opts.line_space);
@@ -671,25 +712,29 @@ fn handle_redraw_event(
                         grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
                     state.popupmenu.set_anchor(rect);
-                    state.popupmenu.show();
                     state
                         .popupmenu
                         .select(popupmenu.selected as i32, &state.hl_defs);
 
+                    state.popupmenu.show();
+
                     // If the cursor tooltip is visible at the same time, move
                     // it out of our way.
-                    if state.cursor_tooltip.is_visible() {
-                        if state.popupmenu.is_above_anchor() {
-                            state
-                                .cursor_tooltip
-                                .force_gravity(Some(Gravity::Down));
-                        } else {
-                            state
-                                .cursor_tooltip
-                                .force_gravity(Some(Gravity::Up));
-                        }
+                    #[cfg(feature = "libwebkit2gtk")]
+                    {
+                        if state.cursor_tooltip.is_visible() {
+                            if state.popupmenu.is_above_anchor() {
+                                state
+                                    .cursor_tooltip
+                                    .force_gravity(Some(Gravity::Down));
+                            } else {
+                                state
+                                    .cursor_tooltip
+                                    .force_gravity(Some(Gravity::Up));
+                            }
 
-                        state.cursor_tooltip.refresh_position();
+                            state.cursor_tooltip.refresh_position();
+                        }
                     }
                 });
             }
@@ -698,8 +743,11 @@ fn handle_redraw_event(
 
                 // Undo any force positioning of cursor tool tip that might
                 // have occured on popupmenu show.
-                state.cursor_tooltip.force_gravity(None);
-                state.cursor_tooltip.refresh_position();
+                #[cfg(feature = "libwebkit2gtk")]
+                {
+                    state.cursor_tooltip.force_gravity(None);
+                    state.cursor_tooltip.refresh_position();
+                }
             }
             RedrawEvent::PopupmenuSelect(evt) => {
                 evt.iter().for_each(|selected| {

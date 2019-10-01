@@ -5,9 +5,9 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::CompletionItem;
-use ui::color::Color;
-use ui::popupmenu::CompletionItemWidgetWrap;
+use crate::nvim_bridge::CompletionItem;
+use crate::ui::color::Color;
+use crate::ui::popupmenu::CompletionItemWidgetWrap;
 
 struct State {
     items: Vec<CompletionItemWidgetWrap>,
@@ -70,6 +70,7 @@ impl LazyLoader {
         items: Vec<CompletionItem>,
         icon_fg: Color,
         size: f64,
+        show_menu: bool,
     ) {
         let mut state = self.state.borrow_mut();
         state.clear();
@@ -98,6 +99,7 @@ impl LazyLoader {
                 let widget = CompletionItemWidgetWrap::create(
                     item,
                     state.show_kind,
+                    show_menu,
                     &state.css_provider,
                     &icon_fg,
                     size,

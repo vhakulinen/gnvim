@@ -6,6 +6,7 @@ gnvim#cursor_tooltip#load_style	gnvim.txt	/*gnvim#cursor_tooltip#load_style*
 gnvim#cursor_tooltip#show	gnvim.txt	/*gnvim#cursor_tooltip#show*
 gnvim#popupmenu#set_width	gnvim.txt	/*gnvim#popupmenu#set_width*
 gnvim#popupmenu#set_width_details	gnvim.txt	/*gnvim#popupmenu#set_width_details*
+gnvim#popupmenu#show_menu_on_all_items	gnvim.txt	/*gnvim#popupmenu#show_menu_on_all_items*
 gnvim#popupmenu#toggle_details	gnvim.txt	/*gnvim#popupmenu#toggle_details*
 gnvim-commands	gnvim.txt	/*gnvim-commands*
 gnvim-complete	gnvim.txt	/*gnvim-complete*

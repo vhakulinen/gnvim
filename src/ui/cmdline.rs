@@ -6,11 +6,11 @@ use gtk::prelude::*;
 
 use neovim_lib::neovim::Neovim;
 
-use nvim_bridge;
-use ui::common::calc_line_space;
-use ui::font::{Font, FontUnit};
-use ui::ui::HlDefs;
-use ui::wildmenu::Wildmenu;
+use crate::nvim_bridge;
+use crate::ui::common::calc_line_space;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::ui::HlDefs;
+use crate::ui::wildmenu::Wildmenu;
 
 const MAX_WIDTH: i32 = 650;
 

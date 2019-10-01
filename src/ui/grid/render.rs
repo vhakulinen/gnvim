@@ -5,11 +5,11 @@ use pango;
 use pango::Attribute;
 use pangocairo;
 
-use nvim_bridge::GridLineSegment;
-use ui::color::Highlight;
-use ui::grid::context::{CellMetrics, Context};
-use ui::grid::row::{Cell, Segment};
-use ui::ui::HlDefs;
+use crate::nvim_bridge::GridLineSegment;
+use crate::ui::color::Highlight;
+use crate::ui::grid::context::{CellMetrics, Context};
+use crate::ui::grid::row::{Cell, Segment};
+use crate::ui::ui::HlDefs;
 
 /// Renders text to `cr`.
 ///

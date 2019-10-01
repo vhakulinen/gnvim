@@ -16,15 +16,15 @@ mod parse_redraw_event_tests {
 
     use neovim_lib::neovim_api::Tabpage;
     use neovim_lib::Value;
-    use nvim_bridge;
-    use nvim_bridge::{
+    use crate::nvim_bridge;
+    use crate::nvim_bridge::{
         Cell, CmdlineBlockAppend, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
         CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
         GridCursorGoto, GridLineSegment, GridResize, GridScroll, HlAttrDefine,
         ModeChange, ModeInfo, ModeInfoSet, OptionSet, PopupmenuShow,
         RedrawEvent, TablineUpdate, WildmenuShow,
     };
-    use ui::color::{Color, Highlight};
+    use crate::ui::color::{Color, Highlight};
 
     #[test]
     fn set_title() {
@@ -689,12 +689,12 @@ mod parse_redraw_event_tests {
 mod parse_gnvim_event_tests {
 
     use neovim_lib::Value;
-    use nvim_bridge;
-    use nvim_bridge::{
+    use crate::nvim_bridge;
+    use crate::nvim_bridge::{
         CmdlineColors, GnvimEvent, PmenuColors, SetGuiColors, TablineColors,
         WildmenuColors,
     };
-    use ui::color::Color;
+    use crate::ui::color::Color;
 
     #[test]
     fn set_gui_colors() {
@@ -862,5 +862,25 @@ mod parse_gnvim_event_tests {
         ]);
 
         assert_eq!(expected, res);
+    }
+
+    #[test]
+    fn popupmenu_menu_on_all_items() {
+        let data: Vec<(Result<GnvimEvent, String>, Vec<Value>)> = vec![
+            (
+                Ok(GnvimEvent::PopupmenuShowMenuOnAllItems(true)),
+                vec!["PopupmenuShowMenuOnAllItems".into(), 1.into()],
+            ),
+            (
+                Ok(GnvimEvent::PopupmenuShowMenuOnAllItems(false)),
+                vec!["PopupmenuShowMenuOnAllItems".into(), 0.into()],
+            ),
+        ];
+
+        for (expected, input) in data.into_iter() {
+            let res = nvim_bridge::parse_gnvim_event(input);
+
+            assert_eq!(expected, res);
+        }
     }
 }

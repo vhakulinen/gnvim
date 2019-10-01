@@ -8,15 +8,15 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
-use nvim_bridge::{CompletionItem, PmenuColors};
-use ui::common::calc_line_space;
-use ui::common::{
+use crate::nvim_bridge::{CompletionItem, PmenuColors};
+use crate::ui::common::calc_line_space;
+use crate::ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
-use ui::font::{Font, FontUnit};
-use ui::popupmenu::get_icon_pixbuf;
-use ui::popupmenu::LazyLoader;
-use ui::ui::HlDefs;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::popupmenu::get_icon_pixbuf;
+use crate::ui::popupmenu::LazyLoader;
+use crate::ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -76,6 +76,8 @@ pub struct Popupmenu {
     info_shown: bool,
     /// Label for displaying full info of a completion item.
     info_label: gtk::Label,
+    /// Flag telling if the menu label should be shown on inactive items too.
+    show_menu_on_all_items: bool,
 
     state: Rc<RefCell<State>>,
     items: LazyLoader,
@@ -256,6 +258,7 @@ impl Popupmenu {
 
         Popupmenu {
             items: LazyLoader::new(list.clone(), css_provider.clone()),
+            show_menu_on_all_items: false,
             box_,
             layout,
             css_provider,
@@ -269,6 +272,10 @@ impl Popupmenu {
             font: Font::default(),
             line_space: 0,
         }
+    }
+
+    pub fn set_show_menu_on_all_items(&mut self, b: bool) {
+        self.show_menu_on_all_items = b;
     }
 
     pub fn is_above_anchor(&self) -> bool {
@@ -348,7 +355,7 @@ impl Popupmenu {
     }
 
     /// Shows the popupmenu.
-    pub fn show(&self) {
+    pub fn show(&mut self) {
         self.layout.show();
         self.box_.check_resize();
     }
@@ -365,6 +372,7 @@ impl Popupmenu {
             items,
             self.colors.fg.unwrap_or(hl_defs.default_fg),
             self.font.height as f64,
+            self.show_menu_on_all_items,
         );
 
         self.list.show_all();
@@ -381,12 +389,14 @@ impl Popupmenu {
         let info_shown = self.info_shown;
         let show_kind = self.items.get_show_kind();
 
+        let show_menu_on_all_items = self.show_menu_on_all_items;
+
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
 
             if let Some(prev) = items.get(state.selected as usize) {
                 prev.info.set_visible(false);
-                prev.menu.set_visible(false);
+                prev.menu.set_visible(show_menu_on_all_items);
 
                 if show_kind {
                     // Update the `kind` icon with default fg color.

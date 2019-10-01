@@ -1,7 +1,7 @@
-use nvim_bridge::{Cell as NvimCell, GridLineSegment};
+use crate::nvim_bridge::{Cell as NvimCell, GridLineSegment};
 
 #[cfg(test)]
-use nvim_bridge;
+use crate::nvim_bridge;
 
 pub struct Cell {
     pub text: String,

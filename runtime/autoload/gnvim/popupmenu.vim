@@ -10,3 +10,8 @@ function! gnvim#popupmenu#toggle_details()
     call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'CompletionMenuToggleInfo')
     return ''
 endfunction
+
+function! gnvim#popupmenu#show_menu_on_all_items(bool)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'PopupmenuShowMenuOnAllItems', a:bool)
+    return ''
+endfunction

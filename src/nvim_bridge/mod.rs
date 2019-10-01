@@ -4,7 +4,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 
 use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
 
-use ui::color::{Color, Highlight};
+use crate::ui::color::{Color, Highlight};
 
 #[cfg(test)]
 mod tests;
@@ -827,6 +827,7 @@ pub enum GnvimEvent {
 
     PopupmenuWidth(u64),
     PopupmenuWidthDetails(u64),
+    PopupmenuShowMenuOnAllItems(bool),
 
     Unknown(String),
 }
@@ -1155,6 +1156,14 @@ pub(crate) fn parse_gnvim_event(
             let w =
                 try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");
             GnvimEvent::PopupmenuWidthDetails(w)
+        }
+        "PopupmenuShowMenuOnAllItems" => {
+            let b = try_u64!(
+                args.get(1).ok_or("bool missing")?,
+                "pmenu show menu on all items"
+            );
+
+            GnvimEvent::PopupmenuShowMenuOnAllItems(b != 0)
         }
         _ => GnvimEvent::Unknown(String::from(cmd)),
     };

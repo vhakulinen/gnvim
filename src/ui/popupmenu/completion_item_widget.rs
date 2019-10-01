@@ -1,8 +1,8 @@
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::{CompletionItem, CompletionItemKind};
-use ui::color::Color;
+use crate::nvim_bridge::{CompletionItem, CompletionItemKind};
+use crate::ui::color::Color;
 
 macro_rules! icon {
     ($file:expr, $color:expr, $size:expr) => {
@@ -31,6 +31,7 @@ impl CompletionItemWidgetWrap {
     pub fn create(
         item: CompletionItem,
         show_kind: bool,
+        show_menu: bool,
         css_provider: &gtk::CssProvider,
         icon_fg: &Color,
         size: f64,
@@ -74,9 +75,11 @@ impl CompletionItemWidgetWrap {
         info.connect_realize(|info| {
             info.hide();
         });
-        menu.connect_realize(|menu| {
-            menu.hide();
-        });
+        if !show_menu {
+            menu.connect_realize(|menu| {
+                menu.hide();
+            });
+        }
 
         grid.attach(&info, 1, 1, 2, 1);
 
