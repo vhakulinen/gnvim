@@ -162,23 +162,21 @@ fn build(app: &gtk::Application, opts: &Options) {
 
 fn main() {
     let opts = Options::clap();
-    let opts =
-        Options::from_clap(&opts.get_matches_safe().unwrap_or_else(|err| {
+    let opts = Options::from_clap(&opts.get_matches_safe().unwrap_or_else(
+        |mut err| {
             if let clap::ErrorKind::UnknownArgument = err.kind {
                 // Arg likely passed for nvim, notify user of how to pass args to nvim.
-                clap::Error::with_description(
-                    &format!(
-                        "{}\nIf this is an argument for nvim, try moving \
-                         it after a -- separator.",
-                        err.message
-                    ),
-                    err.kind,
-                )
-                .exit()
+                err.message = format!(
+                    "{}\n\nIf this is an argument for nvim, try moving \
+                     it after a -- separator.",
+                    err.message
+                );
+                err.exit();
             } else {
                 err.exit()
             }
-        }));
+        },
+    ));
 
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
