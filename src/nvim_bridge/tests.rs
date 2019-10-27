@@ -14,8 +14,6 @@ macro_rules! args {
 
 mod parse_redraw_event_tests {
 
-    use neovim_lib::neovim_api::Tabpage;
-    use neovim_lib::Value;
     use crate::nvim_bridge;
     use crate::nvim_bridge::{
         Cell, CmdlineBlockAppend, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
@@ -25,6 +23,8 @@ mod parse_redraw_event_tests {
         RedrawEvent, TablineUpdate, WildmenuShow,
     };
     use crate::ui::color::{Color, Highlight};
+    use neovim_lib::neovim_api::Tabpage;
+    use neovim_lib::Value;
 
     #[test]
     fn set_title() {
@@ -688,13 +688,13 @@ mod parse_redraw_event_tests {
 
 mod parse_gnvim_event_tests {
 
-    use neovim_lib::Value;
     use crate::nvim_bridge;
     use crate::nvim_bridge::{
         CmdlineColors, GnvimEvent, PmenuColors, SetGuiColors, TablineColors,
         WildmenuColors,
     };
     use crate::ui::color::Color;
+    use neovim_lib::Value;
 
     #[test]
     fn set_gui_colors() {
