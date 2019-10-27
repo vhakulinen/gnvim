@@ -238,6 +238,8 @@ impl Rope {
                 let c = leaf
                     .text
                     .chars()
+                    // Double widht leafs only have one characther even tho'
+                    // their lenght is two.
                     .nth(if leaf.double_width() { 0 } else { at - 1 })
                     .unwrap();
                 Cell {
