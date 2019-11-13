@@ -22,6 +22,7 @@ extern crate pango;
 extern crate pangocairo;
 #[cfg(feature = "libwebkit2gtk")]
 extern crate webkit2gtk;
+extern crate log;
 
 use gio::prelude::*;
 
@@ -161,6 +162,8 @@ fn build(app: &gtk::Application, opts: &Options) {
 }
 
 fn main() {
+    env_logger::init();
+
     let opts = Options::clap();
     let opts = Options::from_clap(&opts.get_matches_safe().unwrap_or_else(
         |mut err| {

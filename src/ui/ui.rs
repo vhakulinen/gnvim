@@ -1,3 +1,5 @@
+use log::{debug, error};
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -154,7 +156,7 @@ impl UI {
                 nvim.ui_try_resize_async(cols as i64, rows as i64)
                     .cb(|res| {
                         if let Err(err) = res {
-                            eprintln!("Error: failed to resize nvim when grid size changed ({:?})", err);
+                            error!("Error: failed to resize nvim when grid size changed ({:?})", err);
                         }
                     })
                 .call();
@@ -239,7 +241,7 @@ impl UI {
                     nvim.input(input.as_str()).expect("Couldn't send input");
                     return Inhibit(true);
                 } else {
-                    println!(
+                    debug!(
                         "Failed to turn input event into nvim key (keyval: {})",
                         e.get_keyval()
                     )
@@ -391,7 +393,7 @@ fn handle_notify(
                 .cb(|res| match res {
                     Ok(_) => {}
                     Err(err) => {
-                        println!("Failed to execute nvim command: {}", err)
+                        error!("Failed to execute nvim command: {}", err)
                     }
                 })
                 .call();
@@ -427,7 +429,7 @@ fn handle_gnvim_event(
             state.popupmenu.set_show_menu_on_all_items(*should_show);
         }
         GnvimEvent::Unknown(msg) => {
-            println!("Received unknown GnvimEvent: {}", msg);
+            debug!("Received unknown GnvimEvent: {}", msg);
         }
 
         #[cfg(not(feature = "libwebkit2gtk"))]
@@ -441,7 +443,7 @@ fn handle_gnvim_event(
             )
             .cb(|res| match res {
                 Ok(_) => {}
-                Err(err) => println!("Failed to execute nvim command: {}", err),
+                Err(err) => error!("Failed to execute nvim command: {}", err),
             })
             .call();
         }
@@ -462,7 +464,7 @@ fn handle_gnvim_event(
                     .cb(|res| match res {
                         Ok(_) => {}
                         Err(err) => {
-                            println!("Failed to execute nvim command: {}", err)
+                            error!("Failed to execute nvim command: {}", err)
                         }
                     })
                     .call();
@@ -565,7 +567,7 @@ fn handle_redraw_event(
                     nvim.command_async("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif")
                      .cb(|res| match res {
                          Ok(_) => {}
-                         Err(err) => println!("GnvimScroll error: {:?}", err),
+                         Err(err) => error!("GnvimScroll error: {:?}", err),
                      })
                      .call();
                 });
@@ -631,7 +633,7 @@ fn handle_redraw_event(
                         state.resize_on_flush = Some(opts);
                     }
                     OptionSet::NotSupported(name) => {
-                        println!("Not supported option set: {}", name);
+                        debug!("Not supported option set: {}", name);
                     }
                 });
             }
@@ -681,7 +683,7 @@ fn handle_redraw_event(
                     nvim.borrow_mut().ui_try_resize_async(cols as i64, rows as i64)
                         .cb(|res| {
                             if let Err(err) = res {
-                                eprintln!("Error: failed to resize nvim on line space change ({:?})", err);
+                                error!("Error: failed to resize nvim on line space change ({:?})", err);
                             }
                         })
                     .call();
@@ -820,7 +822,7 @@ fn handle_redraw_event(
             }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
-                println!("Received unknown redraw event: {}", e);
+                debug!("Received unknown redraw event: {}", e);
             }
         }
     }

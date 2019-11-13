@@ -20,7 +20,9 @@ libwebkit2gtk = [
 ]
 
 [dependencies]
-#neovim-lib = "0.6"
+log = "0.4.8"
+env_logger = "0.7.1"
+
 structopt = "0.3"
 
 gio = "0.7"

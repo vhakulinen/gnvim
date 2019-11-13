@@ -1,3 +1,5 @@
+use log::{debug, error};
+
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -116,7 +118,7 @@ impl Highlight {
             "cterm_fg" => {}
             "cterm_bg" => {}
             _ => {
-                println!("Unknown highligh property: {}", prop);
+                debug!("Unknown highligh property: {}", prop);
             }
         }
     }
@@ -928,7 +930,7 @@ impl RequestHandler for NvimBridge {
                 Err(_) => Err("Failed to parse request".into()),
             },
             _ => {
-                println!("Unknown request: {}", name);
+                error!("Unknown request: {}", name);
                 Err("Unkown request".into())
             }
         }
@@ -940,7 +942,7 @@ impl Handler for NvimBridge {
         if let Some(notify) = parse_notify(name, args) {
             self.tx.send(Message::Notify(notify)).unwrap();
         } else {
-            println!("Unknown notify: {}", name);
+            error!("Unknown notify: {}", name);
         }
     }
 
@@ -1112,7 +1114,7 @@ pub(crate) fn parse_gnvim_event(
                     "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
                     "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
                     _ => {
-                        println!(
+                        error!(
                             "Unknown SetGuiColor: {}",
                             try_str!(e.0, "color name")
                         );
