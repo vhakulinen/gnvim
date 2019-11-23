@@ -401,13 +401,17 @@ impl CmdlineInput {
         let buffer = self.textview.get_buffer().unwrap();
         let mut iter = buffer.get_start_iter();
 
-        let pos = self.content.split_at(self.cursor_pos).0.chars().count();
+        if self.content.as_bytes().len() > self.cursor_pos
+            && self.content.is_char_boundary(self.cursor_pos)
+        {
+            let pos = self.content.split_at(self.cursor_pos).0.chars().count();
 
-        iter.forward_chars(self.prompt_len + pos as i32);
-        buffer.place_cursor(&iter);
+            iter.forward_chars(self.prompt_len + pos as i32);
+            buffer.place_cursor(&iter);
 
-        let mark = buffer.create_mark(None, &iter, false).unwrap();
-        self.textview.scroll_to_mark(&mark, 0.1, false, 0.0, 0.0);
+            let mark = buffer.create_mark(None, &iter, false).unwrap();
+            self.textview.scroll_to_mark(&mark, 0.1, false, 0.0, 0.0);
+        }
     }
 
     fn set_line_space(&self, space: i64) {
