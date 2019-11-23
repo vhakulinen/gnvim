@@ -17,12 +17,12 @@ extern crate gdk_pixbuf;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
+extern crate log;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
 #[cfg(feature = "libwebkit2gtk")]
 extern crate webkit2gtk;
-extern crate log;
 
 use gio::prelude::*;
 
