@@ -204,10 +204,13 @@ impl CellMetrics {
             .get_metrics(Some(&self.font.as_pango_font()), None)
             .unwrap();
         let extra = self.line_space as f64 / 2.0;
-        self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64 + extra;
-        self.decent = fm.get_descent() as f64 / pango::SCALE as f64 + extra;
-        self.height = self.ascent + self.decent;
-        self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
+        self.ascent =
+            (fm.get_ascent() as f64 / pango::SCALE as f64 + extra).ceil();
+        self.decent =
+            (fm.get_descent() as f64 / pango::SCALE as f64 + extra).ceil();
+        self.height = self.ascent + self.decent + self.line_space as f64;
+        self.width =
+            fm.get_approximate_char_width() as f64 / pango::SCALE as f64;
 
         self.underline_position =
             fm.get_underline_position() as f64 / pango::SCALE as f64 - extra;
