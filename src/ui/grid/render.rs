@@ -159,7 +159,12 @@ fn put_segments(
         let text = seg.leaf.text();
         render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h);
 
-        queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
+        queue_draw_area.push((
+            x.ceil() as i32,
+            y.ceil() as i32,
+            w.ceil() as i32,
+            h.ceil() as i32,
+        ));
     }
 }
 
@@ -304,8 +309,12 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     cr.set_operator(cairo::Operator::Source);
     cr.rectangle(x1, y1, w, h);
     cr.fill();
-    ctx.queue_draw_area
-        .push((x1 as i32, y1 as i32, w as i32, h as i32));
+    ctx.queue_draw_area.push((
+        x1.ceil() as i32,
+        y1.ceil() as i32,
+        w.ceil() as i32,
+        h.ceil() as i32,
+    ));
 
     // Clear the area that is left "dirty".
     let (x1, y1, x2, y2) = get_rect(
@@ -321,8 +330,12 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     cr.rectangle(x1, y1, x2 - x1, y2 - y1);
     cr.set_source_rgb(bg.r, bg.g, bg.b);
     cr.fill();
-    ctx.queue_draw_area
-        .push((x1 as i32, y1 as i32, w as i32, h as i32));
+    ctx.queue_draw_area.push((
+        x1.ceil() as i32,
+        y1.ceil() as i32,
+        w.ceil() as i32,
+        h.ceil() as i32,
+    ));
 
     cr.restore();
 }
