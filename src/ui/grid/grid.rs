@@ -330,15 +330,23 @@ impl Grid {
 
         // Clear old cursor position.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area
-            .push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area.push((
+            x.ceil() as i32,
+            y.ceil() as i32,
+            w.ceil() as i32,
+            h.ceil() as i32,
+        ));
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area
-            .push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area.push((
+            x.ceil() as i32,
+            y.ceil() as i32,
+            w.ceil() as i32,
+            h.ceil() as i32,
+        ));
 
         if let Some(ref im_context) = self.im_context {
             let rect = gdk::Rectangle {
