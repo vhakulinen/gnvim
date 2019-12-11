@@ -446,6 +446,35 @@ fn handle_gnvim_event(
                         err
                     ));
                 });
+
+            if !*option {
+                state.tabline.get_widget().hide();
+                return;
+            }
+
+            match (nvim.get_current_tabpage(), nvim.list_tabpages()) {
+                (Ok(current), Ok(tabpages)) => {
+                    let tabpages = tabpages
+                        .iter()
+                        .map(|x| (x.clone(), String::from("")))
+                        .collect();
+
+                    state.tabline.update(&mut nvim, current, tabpages);
+                }
+                (Err(err), Ok(_)) => {
+                    nvim.command_async(&format!(
+                            "echo \"Unable to get current tabpage for updating tabline: '{}'\"", err));
+                }
+                (Ok(_), Err(err)) => {
+                    nvim.command_async(&format!(
+                            "echo \"Unable to get tabpages for updating tabline: '{}'\"", err));
+                }
+                (Err(get_current_err), Err(list_tabpages_err)) => {
+                    nvim.command_async(&format!(
+                            "echo \"Unable to get current tabpage for updating tabline: '{}'\n
+                            Unable to get tabpages for updating tabline: '{}'\"", get_current_err, list_tabpages_err));
+                }
+            }
         }
         GnvimEvent::EnableExtPmenu(option) => {
             let mut nvim = nvim.lock().unwrap();
