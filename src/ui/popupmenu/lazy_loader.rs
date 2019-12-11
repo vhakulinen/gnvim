@@ -1,13 +1,13 @@
-use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use glib;
 use gtk;
 use gtk::prelude::*;
 
-use nvim_bridge::CompletionItem;
-use thread_guard::ThreadGuard;
-use ui::color::Color;
-use ui::popupmenu::CompletionItemWidgetWrap;
+use crate::nvim_bridge::CompletionItem;
+use crate::ui::color::Color;
+use crate::ui::popupmenu::CompletionItemWidgetWrap;
 
 struct State {
     items: Vec<CompletionItemWidgetWrap>,
@@ -19,7 +19,8 @@ struct State {
     /// Once we're loaded some (or all) data, this closure gets called if
     /// one exists. The first value in the tuple can is indication on the
     /// number of items needed before calling the closure.
-    once_loaded: Option<(Option<i32>, Box<Fn(&Vec<CompletionItemWidgetWrap>)>)>,
+    once_loaded:
+        Option<(Option<i32>, Box<dyn Fn(&Vec<CompletionItemWidgetWrap>)>)>,
 
     list: gtk::ListBox,
     css_provider: gtk::CssProvider,
@@ -50,13 +51,13 @@ impl State {
 }
 
 pub struct LazyLoader {
-    state: Arc<ThreadGuard<State>>,
+    state: Rc<RefCell<State>>,
 }
 
 impl LazyLoader {
     pub fn new(list: gtk::ListBox, css_provider: gtk::CssProvider) -> Self {
         Self {
-            state: Arc::new(ThreadGuard::new(State::new(list, css_provider))),
+            state: Rc::new(RefCell::new(State::new(list, css_provider))),
         }
     }
 
@@ -69,6 +70,7 @@ impl LazyLoader {
         items: Vec<CompletionItem>,
         icon_fg: Color,
         size: f64,
+        show_menu: bool,
     ) {
         let mut state = self.state.borrow_mut();
         state.clear();
@@ -77,7 +79,7 @@ impl LazyLoader {
         state.items_to_load = items;
 
         let state_ref = self.state.clone();
-        let source_id = glib::idle_add(move || {
+        let source_id = gtk::idle_add(move || {
             let mut state = state_ref.borrow_mut();
 
             // Load the rows in patches so we avoid renders of "half height"
@@ -97,6 +99,7 @@ impl LazyLoader {
                 let widget = CompletionItemWidgetWrap::create(
                     item,
                     state.show_kind,
+                    show_menu,
                     &state.css_provider,
                     &icon_fg,
                     size,

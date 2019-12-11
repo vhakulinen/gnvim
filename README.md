@@ -26,8 +26,22 @@ $ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
 $ # Run (unoptimized version) without installing
 $ GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 $ # Install
-$ make
-$ sudo make install
+$ make && sudo make install
+```
+
+## macOS (without webkit2gtk)
+
+Webkit2gtk isn't really available for macOS. GNvim is available without said
+dependency, but such builds won't have the cursor tooltip feature. 
+
+To install all dependencies and build without webkit2gtk (`gtk+3` required for 
+building, `librsvg` is a runtime dependency for showing LSP icons in completion):
+
+```bash
+$ brew install gtk+3 librsvg
+$ make NOWEBKIT2GTK=1
+$ # or with cargo
+$ cargo build --no-default-features
 ```
 
 ## Features
@@ -51,7 +65,7 @@ More externalized features will follow as they are implemented for neovim.
 GNvim requires
 
 * Stable rust to compile
-* Latest nvim master (gnvim 0.1.0 works with nvim 0.3.4)
+* Latest nvim release or master
 * Gtk version 3.18 or higher
 
 On some systems, Gtk packages doesn't include development files. On Ubuntu

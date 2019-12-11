@@ -1,15 +1,16 @@
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use gtk;
 use gtk::prelude::*;
 
 use neovim_lib::neovim::Neovim;
 
-use nvim_bridge;
-use ui::common::calc_line_space;
-use ui::font::{Font, FontUnit};
-use ui::ui::HlDefs;
-use ui::wildmenu::Wildmenu;
+use crate::nvim_bridge;
+use crate::ui::common::calc_line_space;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::ui::HlDefs;
+use crate::ui::wildmenu::Wildmenu;
 
 const MAX_WIDTH: i32 = 650;
 
@@ -40,23 +41,26 @@ impl CmdlineBlock {
         scrolledwindow.add(&textview);
         frame.add(&scrolledwindow);
 
-        let scrolledwindow_ref = scrolledwindow.clone();
-        textview.connect_size_allocate(move |tv, _| {
-            let h = tv.get_preferred_height();
+        let scrolledwindow_weak = scrolledwindow.downgrade();
+        textview.connect_size_allocate(
+            clone!(scrolledwindow_weak => move |tv, _| {
+                let scrolledwindow = upgrade_weak!(scrolledwindow_weak);
+                let h = tv.get_preferred_height();
 
-            if h.1 > 250 {
-                if scrolledwindow_ref.get_size_request().1 == -1 {
-                    scrolledwindow_ref.set_size_request(-1, h.1);
-                    scrolledwindow_ref.set_policy(
-                        gtk::PolicyType::Automatic,
-                        gtk::PolicyType::Automatic,
-                    );
+                if h.1 > 250 {
+                    if scrolledwindow.get_size_request().1 == -1 {
+                        scrolledwindow.set_size_request(-1, h.1);
+                        scrolledwindow.set_policy(
+                            gtk::PolicyType::Automatic,
+                            gtk::PolicyType::Automatic,
+                        );
+                    }
+
+                    let adj = scrolledwindow.get_vadjustment().unwrap();
+                    adj.set_value(adj.get_upper());
                 }
-
-                let adj = scrolledwindow_ref.get_vadjustment().unwrap();
-                adj.set_value(adj.get_upper());
-            }
-        });
+            }),
+        );
 
         add_css_provider!(&css_provider, textview, scrolledwindow, frame);
 
@@ -433,7 +437,7 @@ pub struct Cmdline {
 }
 
 impl Cmdline {
-    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         // Inner box contains cmdline block and input.
@@ -463,16 +467,14 @@ impl Cmdline {
 
         parent.add_overlay(&fixed);
 
-        let fixed_ref = fixed.clone();
-        let box_ref = box_.clone();
-        parent.connect_size_allocate(move |_, alloc| {
+        parent.connect_size_allocate(clone!(fixed, box_ => move |_, alloc| {
             // Make sure we'll fit to the available space.
             let width = MAX_WIDTH.min(alloc.width);
-            box_ref.set_size_request(width, -1);
+            box_.set_size_request(width, -1);
 
             let x = alloc.width / 2 - width / 2;
-            fixed_ref.move_(&box_ref, x, 0);
-        });
+            fixed.move_(&box_, x, 0);
+        }));
 
         Cmdline {
             css_provider,

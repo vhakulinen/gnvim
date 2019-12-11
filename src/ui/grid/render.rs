@@ -5,11 +5,11 @@ use pango;
 use pango::Attribute;
 use pangocairo;
 
-use nvim_bridge::GridLineSegment;
-use ui::color::Highlight;
-use ui::grid::context::{CellMetrics, Context};
-use ui::grid::row::{Cell, Segment};
-use ui::ui::HlDefs;
+use crate::nvim_bridge::GridLineSegment;
+use crate::ui::color::Highlight;
+use crate::ui::grid::context::{CellMetrics, Context};
+use crate::ui::grid::row::{Cell, Segment};
+use crate::ui::ui::HlDefs;
 
 /// Renders text to `cr`.
 ///
@@ -163,13 +163,17 @@ fn put_segments(
     }
 }
 
-pub fn redraw(context: &mut Context, hl_defs: &HlDefs) {
+pub fn redraw(
+    context: &mut Context,
+    pango_context: &pango::Context,
+    hl_defs: &HlDefs,
+) {
     for (i, row) in context.rows.iter_mut().enumerate() {
         let segments = row.as_segments();
 
         put_segments(
             &context.cairo_context,
-            &context.pango_context,
+            pango_context,
             &mut context.queue_draw_area,
             &context.cell_metrics,
             hl_defs,
@@ -182,6 +186,7 @@ pub fn redraw(context: &mut Context, hl_defs: &HlDefs) {
 /// Renders `line` to `context.cairo_context`.
 pub fn put_line(
     context: &mut Context,
+    pango_context: &pango::Context,
     line: &GridLineSegment,
     hl_defs: &HlDefs,
 ) {
@@ -200,7 +205,7 @@ pub fn put_line(
     affected_segments.reverse();
     put_segments(
         &context.cairo_context,
-        &context.pango_context,
+        pango_context,
         &mut context.queue_draw_area,
         &context.cell_metrics,
         hl_defs,

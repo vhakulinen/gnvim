@@ -15,3 +15,8 @@ function! gnvim#popupmenu#enable(bool)
     call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'EnableExtPmenu', a:bool)
     return ''
 endfunction
+
+function! gnvim#popupmenu#show_menu_on_all_items(bool)
+    call rpcnotify(g:gnvim_channel_id, 'Gnvim', 'PopupmenuShowMenuOnAllItems', a:bool)
+    return ''
+endfunction

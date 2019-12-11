@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use gdk;
 use gtk;
@@ -7,16 +8,15 @@ use neovim_lib::neovim::Neovim;
 use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
-use nvim_bridge::{CompletionItem, PmenuColors};
-use thread_guard::ThreadGuard;
-use ui::common::calc_line_space;
-use ui::common::{
+use crate::nvim_bridge::{CompletionItem, PmenuColors};
+use crate::ui::common::calc_line_space;
+use crate::ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
-use ui::font::{Font, FontUnit};
-use ui::popupmenu::get_icon_pixbuf;
-use ui::popupmenu::LazyLoader;
-use ui::ui::HlDefs;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::popupmenu::get_icon_pixbuf;
+use crate::ui::popupmenu::LazyLoader;
+use crate::ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;
@@ -76,9 +76,10 @@ pub struct Popupmenu {
     info_shown: bool,
     /// Label for displaying full info of a completion item.
     info_label: gtk::Label,
+    /// Flag telling if the menu label should be shown on inactive items too.
+    show_menu_on_all_items: bool,
 
-    /// State that is in Arc because its passed into widget signal handlers.
-    state: Arc<ThreadGuard<State>>,
+    state: Rc<RefCell<State>>,
     items: LazyLoader,
 
     /// Our colors.
@@ -97,7 +98,7 @@ impl Popupmenu {
     ///              is where all the (neovim) grids are drawn.
     /// * `nvim` - Neovim instance. Popupmenu will instruct neovim to act on
     ///            user interaction.
-    pub fn new(parent: &gtk::Overlay, nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let info_label = gtk::Label::new(Some(""));
@@ -154,14 +155,12 @@ impl Popupmenu {
             scrolled_list.get_child().unwrap()
         );
 
-        let state = Arc::new(ThreadGuard::new(State::new()));
+        let state = Rc::new(RefCell::new(State::new()));
 
-        let state_ref = state.clone();
-        let nvim_ref = nvim.clone();
         // When a row is activated (by mouse click), notify neovim to change
         // the selection to the activated row.
-        list.connect_row_activated(move |_, row| {
-            let state = state_ref.borrow_mut();
+        list.connect_row_activated(clone!(nvim, state => move |_, row| {
+            let state = state.borrow_mut();
             let new = row.get_index();
 
             let selected = state.selected;
@@ -173,22 +172,19 @@ impl Popupmenu {
                 payload.push_str(op)
             }
 
-            let mut nvim = nvim_ref.lock().unwrap();
-            nvim.input(payload.as_str()).unwrap();
-        });
+            nvim.borrow_mut().input(payload.as_str()).unwrap();
+        }));
 
-        let nvim_ref = nvim.clone();
         // On (mouse) button press...
-        list.connect_button_press_event(move |_, e| {
+        list.connect_button_press_event(clone!(nvim => move |_, e| {
             // ...check if the button press is double click.
             if e.get_event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
-                let mut nvim = nvim_ref.lock().unwrap();
-                nvim.input("<C-y>").unwrap();
+                nvim.borrow_mut().input("<C-y>").unwrap();
             }
 
             Inhibit(false)
-        });
+        }));
 
         // TODO(ville): Should use gtk::Fixed here.
         let layout = gtk::Layout::new(
@@ -199,19 +195,15 @@ impl Popupmenu {
         layout.show_all();
         scrolled_info.hide();
 
-        let state_ref = state.clone();
-        layout.connect_size_allocate(move |_, alloc| {
-            let mut state = state_ref.borrow_mut();
+        layout.connect_size_allocate(clone!(state => move |_, alloc| {
+            let mut state = state.borrow_mut();
             state.available_size = Some(*alloc);
-        });
+        }));
 
-        let state_ref = state.clone();
-        let layout_ref = layout.clone();
-        let scrolled_list_ref = scrolled_list.clone();
-        let scrolled_info_ref = scrolled_info.clone();
-        box_.connect_size_allocate(move |box_, alloc| {
-            let state = state_ref.borrow();
-            let layout = layout_ref.clone();
+        let layout_weak = layout.downgrade();
+        box_.connect_size_allocate(clone!(state, layout_weak, scrolled_info, scrolled_list => move |box_, alloc| {
+            let layout = upgrade_weak!(layout_weak);
+            let state = state.borrow();
 
             if let Some(area) = state.available_size {
                 let pos = state.anchor;
@@ -238,26 +230,26 @@ impl Popupmenu {
                     // Use get_child to get the viewport which is between
                     // the scrolled window and the actual widget that is
                     // inside it.
-                    scrolled_list_ref
+                    scrolled_list
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
-                    scrolled_info_ref
+                    scrolled_info
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
                 } else {
-                    scrolled_list_ref
+                    scrolled_list
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
-                    scrolled_info_ref
+                    scrolled_info
                         .get_child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
                 }
             }
-        });
+        }));
 
         parent.add_overlay(&layout);
         // Hide the layout initially so it wont catch any input events that
@@ -266,6 +258,7 @@ impl Popupmenu {
 
         Popupmenu {
             items: LazyLoader::new(list.clone(), css_provider.clone()),
+            show_menu_on_all_items: false,
             box_,
             layout,
             css_provider,
@@ -279,6 +272,10 @@ impl Popupmenu {
             font: Font::default(),
             line_space: 0,
         }
+    }
+
+    pub fn set_show_menu_on_all_items(&mut self, b: bool) {
+        self.show_menu_on_all_items = b;
     }
 
     pub fn is_above_anchor(&self) -> bool {
@@ -358,7 +355,7 @@ impl Popupmenu {
     }
 
     /// Shows the popupmenu.
-    pub fn show(&self) {
+    pub fn show(&mut self) {
         self.layout.show();
         self.box_.check_resize();
     }
@@ -375,6 +372,7 @@ impl Popupmenu {
             items,
             self.colors.fg.unwrap_or(hl_defs.default_fg),
             self.font.height as f64,
+            self.show_menu_on_all_items,
         );
 
         self.list.show_all();
@@ -391,12 +389,14 @@ impl Popupmenu {
         let info_shown = self.info_shown;
         let show_kind = self.items.get_show_kind();
 
+        let show_menu_on_all_items = self.show_menu_on_all_items;
+
         self.items.once_loaded(Some(item_num), move |items| {
             let mut state = state.borrow_mut();
 
             if let Some(prev) = items.get(state.selected as usize) {
                 prev.info.set_visible(false);
-                prev.menu.set_visible(false);
+                prev.menu.set_visible(show_menu_on_all_items);
 
                 if show_kind {
                     // Update the `kind` icon with default fg color.
@@ -435,9 +435,7 @@ impl Popupmenu {
                 list.select_row(Some(&item.row));
 
                 {
-                    let mut id = Arc::new(ThreadGuard::new(None));
-                    let id_ref = id.clone();
-                    let list = list.clone();
+                    let id = Rc::new(RefCell::new(None));
                     // Ensure that the row is in the view, but make sure first
                     // that the row it self has allocated itself. It is possible
                     // that when we selected the row and grabbed focus for it
@@ -445,13 +443,16 @@ impl Popupmenu {
                     // this signal handler here to ensure the row is in view.
                     // NOTE(ville): According to some IRC discussions, this
                     // hack wont work on GTK4. Prepare yourself!
-                    let sig_id =
-                        item.row.connect_size_allocate(move |row, _| {
+                    let list_weak = list.downgrade();
+                    let sig_id = item.row.connect_size_allocate(
+                        clone!(id, list_weak => move |row, _| {
+                            let list = upgrade_weak!(list_weak);
                             ensure_row_visible(&list, &row);
 
-                            let id = id_ref.borrow_mut().take().unwrap();
+                            let id = id.borrow_mut().take().unwrap();
                             row.disconnect(id);
-                        });
+                        }),
+                    );
                     *id.borrow_mut() = Some(sig_id);
                 }
 

@@ -1,10 +1,14 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
+#[cfg(feature = "libwebkit2gtk")]
 #[macro_use]
 extern crate lazy_static;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate ammonia;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate pulldown_cmark;
 extern crate structopt;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate syntect;
 
 extern crate cairo;
@@ -13,9 +17,11 @@ extern crate gdk_pixbuf;
 extern crate gio;
 extern crate glib;
 extern crate gtk;
+extern crate log;
 extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
+#[cfg(feature = "libwebkit2gtk")]
 extern crate webkit2gtk;
 
 use gio::prelude::*;
@@ -24,23 +30,38 @@ use neovim_lib::neovim::{Neovim, UiAttachOptions};
 use neovim_lib::session::Session as NeovimSession;
 use neovim_lib::NeovimApi;
 
+use std::cell::RefCell;
 use std::process::Command;
-use std::sync::mpsc::channel;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
 
 include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
 
 mod nvim_bridge;
+#[cfg(feature = "libwebkit2gtk")]
 mod thread_guard;
 mod ui;
+
+fn parse_geometry(input: &str) -> Result<(i32, i32), String> {
+    let ret_tuple: Vec<&str> = input.split("x").collect();
+    if ret_tuple.len() != 2 {
+        Err(String::from("must be of form 'width'x'height'"))
+    } else {
+        match (ret_tuple[0].parse(), ret_tuple[1].parse()) {
+            (Ok(x), Ok(y)) => Ok((x, y)),
+            (_, _) => {
+                Err(String::from("at least one argument wasn't an integer"))
+            }
+        }
+    }
+}
 
 /// Gnvim is a graphical UI for neovim.
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "gnvim",
-    raw(version = "VERSION"),
+    version = VERSION,
     author = "Ville Hakulinen"
 )]
 struct Options {
@@ -79,10 +100,14 @@ struct Options {
     /// Disables externalized tab line
     #[structopt(long = "disable-ext-tabline")]
     disable_ext_tabline: bool,
+
+    /// Geometry of the window in widthxheight form
+    #[structopt(long = "geometry", parse(try_from_str = parse_geometry), default_value = "1280x720")]
+    geometry: (i32, i32),
 }
 
 fn build(app: &gtk::Application, opts: &Options) {
-    let (tx, rx) = channel();
+    let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     let bridge = nvim_bridge::NvimBridge::new(tx);
 
@@ -132,12 +157,29 @@ fn build(app: &gtk::Application, opts: &Options) {
     nvim.ui_attach(80, 30, &ui_opts)
         .expect("Failed to attach UI");
 
-    let ui = ui::UI::init(app, rx, Arc::new(Mutex::new(nvim)));
+    let ui = ui::UI::init(app, rx, opts.geometry, Rc::new(RefCell::new(nvim)));
     ui.start();
 }
 
 fn main() {
-    let opts = Options::from_args();
+    env_logger::init();
+
+    let opts = Options::clap();
+    let opts = Options::from_clap(&opts.get_matches_safe().unwrap_or_else(
+        |mut err| {
+            if let clap::ErrorKind::UnknownArgument = err.kind {
+                // Arg likely passed for nvim, notify user of how to pass args to nvim.
+                err.message = format!(
+                    "{}\n\nIf this is an argument for nvim, try moving \
+                     it after a -- separator.",
+                    err.message
+                );
+                err.exit();
+            } else {
+                err.exit()
+            }
+        },
+    ));
 
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);

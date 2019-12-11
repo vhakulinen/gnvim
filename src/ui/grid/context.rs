@@ -1,21 +1,18 @@
 use cairo;
 use gtk::DrawingArea;
 use pango;
-use pango::FontDescription;
-use pangocairo;
 
 use gtk::prelude::*;
 
-use ui::color::{Color, Highlight};
-use ui::grid::render;
-use ui::grid::row::Row;
+use crate::ui::color::{Color, Highlight};
+use crate::ui::font::Font;
+use crate::ui::grid::render;
+use crate::ui::grid::row::Row;
 
 /// Context is manipulated by Grid.
 pub struct Context {
     /// Our cairo context, that is evetually drawn to the screen.
     pub cairo_context: cairo::Context,
-    /// Our pango context.
-    pub pango_context: pango::Context,
     /// Our cell metrics.
     pub cell_metrics: CellMetrics,
     /// Cell metrics to be updated.
@@ -59,14 +56,14 @@ impl Context {
             .unwrap();
 
         let cairo_context = cairo::Context::new(&surface);
-        let pango_context =
-            pangocairo::functions::create_context(&cairo_context).unwrap();
+        let pango_context = da.get_pango_context().unwrap();
 
-        let font_desc = FontDescription::from_string("Monospace 12");
+        let font = Font::from_guifont("Monospace:h12").unwrap();
+        let font_desc = font.as_pango_font();
         pango_context.set_font_description(&font_desc);
 
         let mut cell_metrics = CellMetrics::default();
-        cell_metrics.font_desc = font_desc;
+        cell_metrics.font = font;
         cell_metrics.line_space = 0;
         cell_metrics.update(&pango_context);
 
@@ -83,7 +80,6 @@ impl Context {
 
         Context {
             cairo_context,
-            pango_context,
             cell_metrics,
             cell_metrics_update: None,
             rows: vec![],
@@ -120,13 +116,12 @@ impl Context {
         ctx.paint();
         self.cairo_context.restore();
 
-        let pctx = pangocairo::functions::create_context(&ctx).unwrap();
-        pctx.set_font_description(&self.cell_metrics.font_desc);
+        let pctx = da.get_pango_context().unwrap();
+        pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 
         self.cairo_context = ctx;
-        self.pango_context = pctx;
 
-        self.cell_metrics.update(&self.pango_context);
+        self.cell_metrics.update(&pctx);
     }
 
     /// Sets the cell metrics to be updated. If font or line_space is None,
@@ -134,44 +129,29 @@ impl Context {
     /// make the update take place.
     pub fn update_metrics(
         &mut self,
-        mut font: Option<FontDescription>,
-        mut line_space: Option<i64>,
+        font: Font,
+        line_space: i64,
+        da: &gtk::DrawingArea,
     ) {
-        if self.cell_metrics_update.is_none() {
-            self.cell_metrics_update = Some(self.cell_metrics.clone());
-        }
+        let pango_context = da.get_pango_context().unwrap();
+        pango_context.set_font_description(&font.as_pango_font());
 
-        if let Some(ref mut cm) = self.cell_metrics_update {
-            if let Some(font) = font.take() {
-                cm.font_desc = font;
-            }
-            if let Some(line_space) = line_space.take() {
-                cm.line_space = line_space;
-            }
+        self.cell_metrics.font = font;
+        self.cell_metrics.line_space = line_space;
+        self.cell_metrics.update(&pango_context);
 
-            cm.update(&self.pango_context);
-        }
-    }
-
-    /// Finishes cell metrics update if one is on going.
-    pub fn finish_metrics_update(&mut self, da: &DrawingArea) {
-        if let Some(cm) = self.cell_metrics_update.take() {
-            self.pango_context.set_font_description(&cm.font_desc);
-            self.cell_metrics = cm;
-
-            self.cursor_context = {
-                let win = da.get_window().unwrap();
-                let surface = win
-                    .create_similar_surface(
-                        cairo::Content::ColorAlpha,
-                        (self.cell_metrics.width * 2.0) as i32, // times two for double width chars.
-                        self.cell_metrics.height as i32
-                            + self.cell_metrics.ascent as i32,
-                    )
-                    .unwrap();
-                cairo::Context::new(&surface)
-            };
-        }
+        self.cursor_context = {
+            let win = da.get_window().unwrap();
+            let surface = win
+                .create_similar_surface(
+                    cairo::Content::ColorAlpha,
+                    (self.cell_metrics.width * 2.0) as i32, // times two for double width chars.
+                    self.cell_metrics.height as i32
+                        + self.cell_metrics.ascent as i32,
+                )
+                .unwrap();
+            cairo::Context::new(&surface)
+        };
     }
 
     /// Returns x, y, width and height for current cursor location.
@@ -215,12 +195,14 @@ pub struct CellMetrics {
     pub underline_position: f64,
 
     pub line_space: i64,
-    pub font_desc: FontDescription,
+    pub font: Font,
 }
 
 impl CellMetrics {
     pub fn update(&mut self, ctx: &pango::Context) {
-        let fm = ctx.get_metrics(Some(&self.font_desc), None).unwrap();
+        let fm = ctx
+            .get_metrics(Some(&self.font.as_pango_font()), None)
+            .unwrap();
         let extra = self.line_space as f64 / 2.0;
         self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64 + extra;
         self.decent = fm.get_descent() as f64 / pango::SCALE as f64 + extra;

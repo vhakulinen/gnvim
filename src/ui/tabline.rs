@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use glib;
 use gtk;
@@ -11,10 +10,10 @@ use neovim_lib::{
 };
 use pango;
 
-use nvim_bridge;
-use ui::common::calc_line_space;
-use ui::font::{Font, FontUnit};
-use ui::ui::HlDefs;
+use crate::nvim_bridge;
+use crate::ui::common::calc_line_space;
+use crate::ui::font::{Font, FontUnit};
+use crate::ui::ui::HlDefs;
 
 pub struct Tabline {
     notebook: gtk::Notebook,
@@ -32,7 +31,7 @@ pub struct Tabline {
 }
 
 impl Tabline {
-    pub fn new(nvim: Arc<Mutex<Neovim>>) -> Self {
+    pub fn new(nvim: Rc<RefCell<Neovim>>) -> Self {
         let notebook = gtk::Notebook::new();
         notebook.set_show_border(false);
 
@@ -40,18 +39,17 @@ impl Tabline {
         add_css_provider!(&css_provider, notebook);
 
         let tabpage_data = Rc::new(RefCell::new(Box::new(vec![])));
-        let tabpage_data_ref = tabpage_data.clone();
-        let nvim_ref = nvim.clone();
-        let switch_tab_signal =
-            notebook.connect_switch_page(move |_, _, page_num| {
-                let pages = tabpage_data_ref.borrow();
+        let switch_tab_signal = notebook.connect_switch_page(
+            clone!(tabpage_data, nvim => move |_, _, page_num| {
+                let pages = tabpage_data.borrow();
                 if let Some(ref page) = pages.get(page_num as usize) {
-                    let mut nvim = nvim_ref.lock().unwrap();
+                    let mut nvim = nvim.borrow_mut();
                     nvim.set_current_tabpage(&page).unwrap();
                 } else {
                     println!("Failed to get tab page {}", page_num);
                 }
-            });
+            }),
+        );
 
         Tabline {
             notebook,

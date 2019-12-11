@@ -1,22 +1,22 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use cairo;
 use gdk;
 use gdk::{EventMask, ModifierType};
 use gtk;
 use gtk::{DrawingArea, EventBox};
-use pango::FontDescription;
 
 use gtk::prelude::*;
 
-use nvim_bridge::{GridLineSegment, ModeInfo};
-use thread_guard::ThreadGuard;
-use ui::grid::context::Context;
-use ui::grid::render;
-use ui::grid::row::Row;
-use ui::ui::HlDefs;
+use crate::nvim_bridge::{GridLineSegment, ModeInfo};
+use crate::ui::font::Font;
+use crate::ui::grid::context::Context;
+use crate::ui::grid::render;
+use crate::ui::grid::row::Row;
+use crate::ui::ui::HlDefs;
 
 pub enum ScrollDirection {
     Up,
@@ -56,10 +56,10 @@ pub struct Grid {
     /// EventBox to get mouse events for this grid.
     eb: EventBox,
     /// Internal context that is manipulated and used when handling events.
-    context: Arc<ThreadGuard<Option<Context>>>,
+    context: Rc<RefCell<Option<Context>>>,
     /// Pointer position for dragging if we should call callback from
     /// `connect_motion_events_for_drag`.
-    drag_position: Arc<ThreadGuard<(u64, u64)>>,
+    drag_position: Rc<RefCell<(u64, u64)>>,
     /// Input context that need to be updated for the cursor position
     im_context: Option<gtk::IMMulticontext>,
 }
@@ -67,11 +67,10 @@ pub struct Grid {
 impl Grid {
     pub fn new(_id: u64) -> Self {
         let da = DrawingArea::new();
-        let ctx = Arc::new(ThreadGuard::new(None));
+        let ctx = Rc::new(RefCell::new(None));
 
-        let ctx_ref = ctx.clone();
-        da.connect_configure_event(move |da, _| {
-            let mut ctx = ctx_ref.borrow_mut();
+        da.connect_configure_event(clone!(ctx => move |da, _| {
+            let mut ctx = ctx.borrow_mut();
             if ctx.is_none() {
                 // On initial expose, we'll need to create our internal context,
                 // since this is the first time we'll have drawing area present...
@@ -83,18 +82,17 @@ impl Grid {
             }
 
             false
-        });
+        }));
 
-        let ctx_ref = ctx.clone();
-        da.connect_draw(move |_, cr| {
-            let ctx = ctx_ref.clone();
+        da.connect_draw(clone!(ctx => move |_, cr| {
+            let ctx = ctx.clone();
             if let Some(ref mut ctx) = *ctx.borrow_mut() {
                 // After making sure we have our internal context, draw us (e.g.
                 // our drawingarea) to the screen!
                 drawingarea_draw(cr, ctx);
             }
             Inhibit(false)
-        });
+        }));
 
         let eb = EventBox::new();
         eb.add_events(EventMask::SCROLL_MASK);
@@ -104,7 +102,7 @@ impl Grid {
             da: da,
             eb: eb,
             context: ctx,
-            drag_position: Arc::new(ThreadGuard::new((0, 0))),
+            drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
         }
     }
@@ -124,7 +122,7 @@ impl Grid {
                 let cell = row.cell_at(ctx.cursor.1 as usize + 1);
                 render::cursor_cell(
                     &ctx.cursor_context,
-                    &ctx.pango_context,
+                    &self.da.get_pango_context().unwrap(),
                     &cell,
                     &ctx.cell_metrics,
                     hl_defs,
@@ -312,13 +310,18 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        render::put_line(ctx, line, hl_defs);
+        render::put_line(
+            ctx,
+            &self.da.get_pango_context().unwrap(),
+            line,
+            hl_defs,
+        );
     }
 
     pub fn redraw(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        render::redraw(ctx, hl_defs);
+        render::redraw(ctx, &self.da.get_pango_context().unwrap(), hl_defs);
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
@@ -348,11 +351,22 @@ impl Grid {
         }
     }
 
-    pub fn resize(&self, width: u64, height: u64) {
+    /// Calcualtes the current size of the grid.
+    pub fn calc_size(&self) -> (i64, i64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
-        ctx.finish_metrics_update(&self.da);
+        let w = self.da.get_allocated_width();
+        let h = self.da.get_allocated_height();
+        let cols = (w / ctx.cell_metrics.width as i32) as i64;
+        let rows = (h / ctx.cell_metrics.height as i32) as i64;
+
+        (cols, rows)
+    }
+
+    pub fn resize(&self, width: u64, height: u64) {
+        let mut ctx = self.context.borrow_mut();
+        let ctx = ctx.as_mut().unwrap();
 
         // Clear internal grid (rows).
         ctx.rows = vec![];
@@ -437,20 +451,26 @@ impl Grid {
             .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
     }
 
-    /// Sets line space. Actual change is postponed till the next call
-    /// to `resize`.
-    pub fn set_line_space(&self, space: i64) {
+    /// Set a new font and line space. This will likely change the cell metrics.
+    /// Use `calc_size` to receive the updated size (cols and rows) of the grid.
+    pub fn update_cell_metrics(&self, font: Font, line_space: i64) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
-        ctx.update_metrics(None, Some(space));
+        ctx.update_metrics(font, line_space, &self.da);
     }
 
-    /// Sets font. Actual change is postponed till the next call
-    /// to `resize`.
-    pub fn set_font(&self, font: FontDescription) {
-        let mut ctx = self.context.borrow_mut();
-        let ctx = ctx.as_mut().unwrap();
-        ctx.update_metrics(Some(font), None);
+    /// Get the current line space value.
+    pub fn get_line_space(&self) -> i64 {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+        ctx.cell_metrics.line_space
+    }
+
+    /// Get a copy of the current font.
+    pub fn get_font(&self) -> Font {
+        let ctx = self.context.borrow();
+        let ctx = ctx.as_ref().unwrap();
+        ctx.cell_metrics.font.clone()
     }
 
     pub fn set_mode(&self, mode: &ModeInfo) {
@@ -466,23 +486,6 @@ impl Grid {
         let ctx = ctx.as_mut().unwrap();
 
         ctx.busy = busy;
-    }
-
-    /// Calculates the current gird size. Returns (rows, cols).
-    pub fn calc_size_for_new_metrics(&self) -> Option<(usize, usize)> {
-        let ctx = self.context.borrow();
-        let ctx = ctx.as_ref().unwrap();
-
-        if let Some(ref cm) = ctx.cell_metrics_update {
-            let w = self.da.get_allocated_width();
-            let h = self.da.get_allocated_height();
-            let cols = (w / cm.width as i32) as usize;
-            let rows = (h / cm.height as i32) as usize;
-
-            Some((rows, cols))
-        } else {
-            None
-        }
     }
 }
 

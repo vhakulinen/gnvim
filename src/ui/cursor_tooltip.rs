@@ -17,12 +17,12 @@ use syntect::dumps::from_binary;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
-use thread_guard::ThreadGuard;
-use ui::color::Color;
-use ui::common::{
+use crate::thread_guard::ThreadGuard;
+use crate::ui::color::Color;
+use crate::ui::common::{
     get_preferred_horizontal_position, get_preferred_vertical_position,
 };
-use ui::font::{Font, FontUnit};
+use crate::ui::font::{Font, FontUnit};
 
 pub enum Gravity {
     Up,
@@ -52,6 +52,7 @@ struct State {
     anchor: gdk::Rectangle,
     available_area: gdk::Rectangle,
     force_gravity: Option<Gravity>,
+    scale: f64,
 }
 
 impl Default for State {
@@ -70,6 +71,7 @@ impl Default for State {
                 height: 0,
             },
             force_gravity: None,
+            scale: 1.0,
         }
     }
 }
@@ -113,20 +115,21 @@ impl CursorTooltip {
 
         let state = Arc::new(ThreadGuard::new(State::default()));
 
-        let frame_ref = frame.clone();
-        let fixed_ref = fixed.clone();
-        let state_ref = state.clone();
-        webview.connect_load_changed(move |webview, e| match e {
-            webkit::LoadEvent::Finished => {
-                webview_load_finished(
-                    webview,
-                    frame_ref.clone(),
-                    fixed_ref.clone(),
-                    state_ref.clone(),
-                );
-            }
-            _ => {}
-        });
+        let frame_weak = frame.downgrade();
+        let fixed_weak = fixed.downgrade();
+        webview.connect_load_changed(
+            clone!(frame_weak, fixed_weak, state => move |webview, e| match e {
+                webkit::LoadEvent::Finished => {
+                    webview_load_finished(
+                        webview,
+                        frame_weak.clone(),
+                        fixed_weak.clone(),
+                        state.clone(),
+                    );
+                }
+                _ => {}
+            }),
+        );
 
         let settings = WebViewExt::get_settings(&webview).unwrap();
         settings.set_enable_javascript(true);
@@ -136,11 +139,17 @@ impl CursorTooltip {
 
         fixed.show_all();
 
-        let state_ref = state.clone();
-        fixed.connect_size_allocate(move |_, alloc| {
-            let mut state = state_ref.borrow_mut();
-            state.available_area = alloc.clone();
-        });
+        fixed.connect_size_allocate(
+            clone!(state, webview => move |fixed, alloc| {
+                let mut state = state.borrow_mut();
+                let ctx = fixed.get_pango_context().unwrap();
+                let res = pangocairo::functions::context_get_resolution(&ctx);
+                state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
+                webview.set_zoom_level(state.scale);
+
+                state.available_area = alloc.clone();
+            }),
+        );
 
         let syntax_set: SyntaxSet =
             from_binary(include_bytes!("../../sublime-syntaxes/all.pack"));
@@ -419,12 +428,11 @@ fn set_position(
 /// the size of the webview's container.
 fn webview_load_finished(
     webview: &webkit::WebView,
-    frame: gtk::Frame,
-    fixed: gtk::Fixed,
+    frame: glib::WeakRef<gtk::Frame>,
+    fixed: glib::WeakRef<gtk::Fixed>,
     state: Arc<ThreadGuard<State>>,
 ) {
-    let widgets =
-        ThreadGuard::new((frame.clone(), fixed.clone(), state.clone()));
+    let widgets = ThreadGuard::new((frame, fixed, state.clone()));
 
     let cb =
         move |width: Option<f64>,
@@ -436,26 +444,33 @@ fn webview_load_finished(
             };
 
             let widgets = widgets.borrow();
+            let state = state.borrow();
             // NOTE(ville): Extra height coming from GTK styles
             //              (parent container's border).
             let extra_height = 2;
             let height = height
-                .map_or(MAX_HEIGHT, |v| v as i32 + extra_height)
+                .map_or(MAX_HEIGHT, |v| (v * state.scale) as i32 + extra_height)
                 .min(MAX_HEIGHT);
-            let width = width.map_or(MAX_WIDTH, |v| v as i32).min(MAX_WIDTH);
+            let width = width
+                .map_or(MAX_WIDTH, |v| (v * state.scale) as i32)
+                .min(MAX_WIDTH);
 
-            let state = state.borrow();
+            let frame_weak = &widgets.0;
+            let fixed_weak = &widgets.1;
+            let frame = upgrade_weak!(frame_weak);
+            let fixed = upgrade_weak!(fixed_weak);
 
-            widgets.0.show();
+            frame.show();
 
-            set_position(&widgets.0, &widgets.1, &state, width, height);
+            set_position(&frame, &fixed, &state, width, height);
         };
 
     let webview_ref = ThreadGuard::new(webview.clone());
     webview.run_javascript("
-        document.body.style.width = '-webkit-max-content';
-        let width = document.body.getBoundingClientRect().width;
-        document.body.style.width = '';
+        let el = document.getElementById('wrapper');
+        el.style.width = '-webkit-max-content';
+        let width = el.getBoundingClientRect().width;
+        el.style.width = '';
         // Add some extra (16) to adjust for padding.
         width + 16",
         None::<&gio::Cancellable>,

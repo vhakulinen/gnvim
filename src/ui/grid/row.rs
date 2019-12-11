@@ -1,7 +1,7 @@
-use nvim_bridge::{Cell as NvimCell, GridLineSegment};
+use crate::nvim_bridge::{Cell as NvimCell, GridLineSegment};
 
 #[cfg(test)]
-use nvim_bridge;
+use crate::nvim_bridge;
 
 pub struct Cell {
     pub text: String,
@@ -235,7 +235,13 @@ impl Rope {
     pub fn cell_at(&self, at: usize) -> Cell {
         match self {
             Rope::Leaf(leaf) => {
-                let c = leaf.text.chars().nth(at - 1).unwrap();
+                let c = leaf
+                    .text
+                    .chars()
+                    // Double widht leafs only have one characther even tho'
+                    // their lenght is two.
+                    .nth(if leaf.double_width() { 0 } else { at - 1 })
+                    .unwrap();
                 Cell {
                     text: c.to_string(),
                     hl_id: leaf.hl_id,
@@ -591,7 +597,12 @@ mod tests {
     fn test_rope_cell_at() {
         let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
         let right = Rope::Leaf(Leaf::new(String::from("456"), 1, false));
-        let rope = Rope::Node(Box::new(left), Box::new(right));
+        let right_double_width =
+            Rope::Leaf(Leaf::new(String::from("あ"), 1, true));
+        let rope = Rope::Node(
+            Box::new(left),
+            Box::new(Rope::Node(Box::new(right), Box::new(right_double_width))),
+        );
 
         let cell = rope.cell_at(5);
         assert_eq!(cell.text, "5");
@@ -600,6 +611,14 @@ mod tests {
         let cell = rope.cell_at(1);
         assert_eq!(cell.text, "1");
         assert_eq!(cell.hl_id, 0);
+
+        let cell = rope.cell_at(7);
+        assert_eq!(cell.text, "あ");
+        assert_eq!(cell.hl_id, 1);
+
+        let cell = rope.cell_at(8);
+        assert_eq!(cell.text, "あ");
+        assert_eq!(cell.hl_id, 1);
     }
 
     #[test]

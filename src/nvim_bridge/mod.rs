@@ -1,10 +1,12 @@
+use log::{debug, error};
+
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
 
-use ui::color::{Color, Highlight};
+use crate::ui::color::{Color, Highlight};
 
 #[cfg(test)]
 mod tests;
@@ -116,7 +118,7 @@ impl Highlight {
             "cterm_fg" => {}
             "cterm_bg" => {}
             _ => {
-                println!("Unknown highligh property: {}", prop);
+                debug!("Unknown highligh property: {}", prop);
             }
         }
     }
@@ -831,6 +833,7 @@ pub enum GnvimEvent {
 
     PopupmenuWidth(u64),
     PopupmenuWidthDetails(u64),
+    PopupmenuShowMenuOnAllItems(bool),
 
     Unknown(String),
 }
@@ -886,11 +889,13 @@ pub enum Message {
     Notify(Notify),
     /// RPC Request (see `: rpcrequest()`).
     Request(Sender<Result<Value, Value>>, Request),
+    /// Nvim went away or reading from the rcp connection failed.
+    Close,
 }
 
 pub struct NvimBridge {
     /// Channel to send messages to the ui.
-    tx: Sender<Message>,
+    tx: glib::Sender<Message>,
 
     /// Channel to pass to the UI when we receive a request from nvim.
     /// The UI should send values to this channel when ever it gets a message
@@ -901,7 +906,7 @@ pub struct NvimBridge {
 }
 
 impl NvimBridge {
-    pub fn new(tx: Sender<Message>) -> Self {
+    pub fn new(tx: glib::Sender<Message>) -> Self {
         let (request_tx, request_rx) = channel();
 
         NvimBridge {
@@ -929,7 +934,7 @@ impl RequestHandler for NvimBridge {
                 Err(_) => Err("Failed to parse request".into()),
             },
             _ => {
-                println!("Unknown request: {}", name);
+                error!("Unknown request: {}", name);
                 Err("Unkown request".into())
             }
         }
@@ -941,8 +946,12 @@ impl Handler for NvimBridge {
         if let Some(notify) = parse_notify(name, args) {
             self.tx.send(Message::Notify(notify)).unwrap();
         } else {
-            println!("Unknown notify: {}", name);
+            error!("Unknown notify: {}", name);
         }
+    }
+
+    fn handle_close(&mut self) {
+        self.tx.send(Message::Close).unwrap();
     }
 }
 
@@ -1145,7 +1154,7 @@ pub(crate) fn parse_gnvim_event(
                     "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
                     "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
                     _ => {
-                        println!(
+                        error!(
                             "Unknown SetGuiColor: {}",
                             try_str!(e.0, "color name")
                         );
@@ -1189,6 +1198,14 @@ pub(crate) fn parse_gnvim_event(
             let w =
                 try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");
             GnvimEvent::PopupmenuWidthDetails(w)
+        }
+        "PopupmenuShowMenuOnAllItems" => {
+            let b = try_u64!(
+                args.get(1).ok_or("bool missing")?,
+                "pmenu show menu on all items"
+            );
+
+            GnvimEvent::PopupmenuShowMenuOnAllItems(b != 0)
         }
         _ => GnvimEvent::Unknown(String::from(cmd)),
     };
