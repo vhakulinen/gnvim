@@ -409,7 +409,7 @@ fn handle_gnvim_event(
 ) {
     match event {
         GnvimEvent::EnableExtTabline(option) => {
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             nvim.set_option(UiOption::ExtTabline(*option))
                 .unwrap_or_else(|err| {
                     nvim.command_async(&format!(
@@ -448,7 +448,7 @@ fn handle_gnvim_event(
             }
         }
         GnvimEvent::EnableExtPmenu(option) => {
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             nvim.set_option(UiOption::ExtPopupmenu(*option))
                 .unwrap_or_else(|err| {
                     nvim.command_async(&format!(
@@ -458,7 +458,7 @@ fn handle_gnvim_event(
                 });
         }
         GnvimEvent::EnableExtCmdline(option) => {
-            let mut nvim = nvim.lock().unwrap();
+            let mut nvim = nvim.borrow_mut();
             nvim.set_option(UiOption::ExtCmdline(*option))
                 .unwrap_or_else(|err| {
                     nvim.command_async(&format!(
