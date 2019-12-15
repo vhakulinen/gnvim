@@ -511,6 +511,7 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     // If we're not "busy", draw the cursor.
     if !ctx.busy {
         let (x, y, w, h) = ctx.get_cursor_rect();
+        let (x, y, w, h) = (x.ceil(), y.ceil(), w.ceil(), h.ceil());
 
         cr.save();
         cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
