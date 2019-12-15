@@ -155,7 +155,7 @@ impl Context {
     }
 
     /// Returns x, y, width and height for current cursor location.
-    pub fn get_cursor_rect(&self) -> (f64, f64, f64, f64) {
+    pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
             .rows
             .get(self.cursor.0 as usize)
@@ -172,14 +172,14 @@ impl Context {
             self.cursor.1 as f64,
         );
         (
-            x,
-            y,
+            x.ceil() as i32,
+            y.ceil() as i32,
             if double_width {
-                cm.width * 2.0
+                (cm.width * 2.0).ceil() as i32
             } else {
-                cm.width
+                (cm.width).ceil() as i32
             },
-            cm.height,
+            cm.height.ceil() as i32,
         )
     }
 }

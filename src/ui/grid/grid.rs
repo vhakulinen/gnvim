@@ -330,30 +330,20 @@ impl Grid {
 
         // Clear old cursor position.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area.push((
-            x.ceil() as i32,
-            y.ceil() as i32,
-            w.ceil() as i32,
-            h.ceil() as i32,
-        ));
+        ctx.queue_draw_area.push((x, y, w, h));
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area.push((
-            x.ceil() as i32,
-            y.ceil() as i32,
-            w.ceil() as i32,
-            h.ceil() as i32,
-        ));
+        ctx.queue_draw_area.push((x, y, w, h));
 
         if let Some(ref im_context) = self.im_context {
             let rect = gdk::Rectangle {
-                x: x as i32,
-                y: y as i32,
-                width: w as i32,
-                height: h as i32,
+                x: x,
+                y: y,
+                width: w,
+                height: h,
             };
             im_context.set_cursor_location(&rect);
         }
@@ -455,8 +445,7 @@ impl Grid {
         // Don't use the ctx.queue_draw_area, because those draws will only
         // happen once nvim sends 'flush' event. This draw needs to happen
         // on each tick so the cursor blinks.
-        self.da
-            .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da.queue_draw_area(x, y, w, h);
     }
 
     /// Set a new font and line space. This will likely change the cell metrics.
@@ -511,13 +500,17 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
     // If we're not "busy", draw the cursor.
     if !ctx.busy {
         let (x, y, w, h) = ctx.get_cursor_rect();
-        let (x, y, w, h) = (x.ceil(), y.ceil(), w.ceil(), h.ceil());
 
         cr.save();
-        cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
+        cr.rectangle(
+            x as f64,
+            y as f64,
+            w as f64 * ctx.cursor_cell_percentage,
+            h as f64,
+        );
         let surface = ctx.cursor_context.get_target();
         surface.flush();
-        cr.set_source_surface(&surface, x, y);
+        cr.set_source_surface(&surface, x as f64, y as f64);
         cr.fill();
         cr.restore();
     }
