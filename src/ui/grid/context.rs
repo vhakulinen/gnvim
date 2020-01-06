@@ -43,7 +43,7 @@ pub struct Context {
     pub active: bool,
 
     /// Areas to call queue_draw_area on the drawing area on flush.
-    pub queue_draw_area: Vec<(i32, i32, i32, i32)>,
+    pub queue_draw_area: Vec<(f64, f64, f64, f64)>,
 }
 
 impl Context {
@@ -155,7 +155,7 @@ impl Context {
     }
 
     /// Returns x, y, width and height for current cursor location.
-    pub fn get_cursor_rect(&self) -> (f64, f64, f64, f64) {
+    pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
             .rows
             .get(self.cursor.0 as usize)
@@ -172,14 +172,14 @@ impl Context {
             self.cursor.1 as f64,
         );
         (
-            x,
-            y,
+            x.floor() as i32,
+            y.floor() as i32,
             if double_width {
-                cm.width * 2.0
+                (cm.width * 2.0).ceil() as i32
             } else {
-                cm.width
+                cm.width.ceil() as i32
             },
-            cm.height,
+            cm.height.ceil() as i32,
         )
     }
 }
@@ -204,15 +204,16 @@ impl CellMetrics {
             .get_metrics(Some(&self.font.as_pango_font()), None)
             .unwrap();
         let extra = self.line_space as f64 / 2.0;
-        self.ascent = fm.get_ascent() as f64 / pango::SCALE as f64 + extra;
-        self.decent = fm.get_descent() as f64 / pango::SCALE as f64 + extra;
+        let scale = f64::from(pango::SCALE);
+        self.ascent = (f64::from(fm.get_ascent()) / scale + extra).ceil();
+        self.decent = (f64::from(fm.get_descent()) / scale + extra).ceil();
         self.height = self.ascent + self.decent;
-        self.width = (fm.get_approximate_digit_width() / pango::SCALE) as f64;
+        self.width = f64::from(fm.get_approximate_char_width()) / scale;
 
         self.underline_position =
-            fm.get_underline_position() as f64 / pango::SCALE as f64 - extra;
+            f64::from(fm.get_underline_position()) / scale - extra;
         // TODO(ville): make the underline thickness a bit thicker (one 10th of the cell height?).
         self.underline_thickness =
-            fm.get_underline_thickness() as f64 / pango::SCALE as f64 * 2.0;
+            f64::from(fm.get_underline_thickness()) / scale * 2.0;
     }
 }

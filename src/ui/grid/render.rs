@@ -85,8 +85,8 @@ fn render_text(
         cr.move_to(x + x_offset, y + cm.ascent);
         pangocairo::functions::show_glyph_string(&cr, &a.font(), &mut glyphs);
 
-        x_offset += item.num_chars() as f64 * cm.width;
-        //x_offset += glyphs.glyphs.get_width() as f64;
+        x_offset += f64::from(item.num_chars()) * cm.width;
+        //x_offset += f64::from(glyphs.get_width());
     }
 
     // Since we can't (for some reason) use pango attributes to draw
@@ -139,7 +139,7 @@ pub fn cursor_cell(
 fn put_segments(
     cr: &cairo::Context,
     pango_context: &pango::Context,
-    queue_draw_area: &mut Vec<(i32, i32, i32, i32)>,
+    queue_draw_area: &mut Vec<(f64, f64, f64, f64)>,
     cm: &CellMetrics,
     hl_defs: &HlDefs,
     segments: Vec<Segment>,
@@ -151,15 +151,15 @@ fn put_segments(
     for seg in segments {
         let hl = hl_defs.get(&seg.leaf.hl_id()).unwrap();
 
-        let x = seg.start as f64 * cw;
-        let y = row as f64 * ch;
-        let w = seg.len as f64 * cw;
-        let h = ch;
+        let x = (seg.start as f64 * cw).floor();
+        let y = (row as f64 * ch).floor();
+        let w = (seg.len as f64 * cw).ceil();
+        let h = ch.ceil();
 
         let text = seg.leaf.text();
         render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h);
 
-        queue_draw_area.push((x as i32, y as i32, w as i32, h as i32));
+        queue_draw_area.push((x, y, w, h));
     }
 }
 
@@ -223,11 +223,12 @@ pub fn clear(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs) {
 
     cr.save();
     cr.set_source_rgb(bg.r, bg.g, bg.b);
-    cr.rectangle(0.0, 0.0, w as f64, h as f64);
+    cr.rectangle(0.0, 0.0, f64::from(w), f64::from(h));
     cr.fill();
     cr.restore();
 
-    ctx.queue_draw_area.push((0, 0, w, h));
+    ctx.queue_draw_area
+        .push((0.0, 0.0, f64::from(w), f64::from(h)));
 }
 
 /// Scrolls contents in `ctx.cairo_context` and `ctx.rows`, based on `reg`.
@@ -304,8 +305,7 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     cr.set_operator(cairo::Operator::Source);
     cr.rectangle(x1, y1, w, h);
     cr.fill();
-    ctx.queue_draw_area
-        .push((x1 as i32, y1 as i32, w as i32, h as i32));
+    ctx.queue_draw_area.push((x1, y1, w, h));
 
     // Clear the area that is left "dirty".
     let (x1, y1, x2, y2) = get_rect(
@@ -321,8 +321,7 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     cr.rectangle(x1, y1, x2 - x1, y2 - y1);
     cr.set_source_rgb(bg.r, bg.g, bg.b);
     cr.fill();
-    ctx.queue_draw_area
-        .push((x1 as i32, y1 as i32, w as i32, h as i32));
+    ctx.queue_draw_area.push((x1, y1, w, h));
 
     cr.restore();
 }

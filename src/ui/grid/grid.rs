@@ -137,7 +137,12 @@ impl Grid {
         ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
 
         while let Some(area) = ctx.queue_draw_area.pop() {
-            self.da.queue_draw_area(area.0, area.1, area.2, area.3);
+            self.da.queue_draw_area(
+                area.0.floor() as i32,
+                area.1.floor() as i32,
+                area.2.ceil() as i32,
+                area.3.ceil() as i32,
+            );
         }
     }
 
@@ -297,10 +302,10 @@ impl Grid {
             let ctx = ctx.borrow();
             let ctx = ctx.as_ref().unwrap();
 
-            let w = da.get_allocated_width();
-            let h = da.get_allocated_height();
-            let cols = (w / ctx.cell_metrics.width as i32) as u64;
-            let rows = (h / ctx.cell_metrics.height as i32) as u64;
+            let w = f64::from(da.get_allocated_width());
+            let h = f64::from(da.get_allocated_height());
+            let cols = (w / ctx.cell_metrics.width).floor() as u64;
+            let rows = (h / ctx.cell_metrics.height).floor() as u64;
 
             f(rows, cols)
         });
@@ -330,22 +335,30 @@ impl Grid {
 
         // Clear old cursor position.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area
-            .push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area.push((
+            f64::from(x),
+            f64::from(y),
+            f64::from(w),
+            f64::from(h),
+        ));
         ctx.cursor.0 = row;
         ctx.cursor.1 = col;
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area
-            .push((x as i32, y as i32, w as i32, h as i32));
+        ctx.queue_draw_area.push((
+            f64::from(x),
+            f64::from(y),
+            f64::from(w),
+            f64::from(h),
+        ));
 
         if let Some(ref im_context) = self.im_context {
             let rect = gdk::Rectangle {
-                x: x as i32,
-                y: y as i32,
-                width: w as i32,
-                height: h as i32,
+                x: x,
+                y: y,
+                width: w,
+                height: h,
             };
             im_context.set_cursor_location(&rect);
         }
@@ -447,8 +460,7 @@ impl Grid {
         // Don't use the ctx.queue_draw_area, because those draws will only
         // happen once nvim sends 'flush' event. This draw needs to happen
         // on each tick so the cursor blinks.
-        self.da
-            .queue_draw_area(x as i32, y as i32, w as i32, h as i32);
+        self.da.queue_draw_area(x, y, w, h);
     }
 
     /// Set a new font and line space. This will likely change the cell metrics.
@@ -505,10 +517,15 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
         let (x, y, w, h) = ctx.get_cursor_rect();
 
         cr.save();
-        cr.rectangle(x, y, w * ctx.cursor_cell_percentage, h);
+        cr.rectangle(
+            f64::from(x),
+            f64::from(y),
+            f64::from(w) * ctx.cursor_cell_percentage,
+            f64::from(h),
+        );
         let surface = ctx.cursor_context.get_target();
         surface.flush();
-        cr.set_source_surface(&surface, x, y);
+        cr.set_source_surface(&surface, x.into(), y.into());
         cr.fill();
         cr.restore();
     }
