@@ -149,14 +149,14 @@ fn put_segments(
     let ch = cm.height;
 
     for seg in segments {
-        let hl = hl_defs.get(&seg.leaf.hl_id()).unwrap();
+        let hl = hl_defs.get(&seg.hl_id).unwrap();
 
         let x = (seg.start as f64 * cw).floor();
         let y = (row as f64 * ch).floor();
         let w = (seg.len as f64 * cw).ceil();
         let h = ch.ceil();
 
-        let text = seg.leaf.text();
+        let text = &seg.text;
         render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h);
 
         queue_draw_area.push((x, y, w, h));
@@ -169,7 +169,7 @@ pub fn redraw(
     hl_defs: &HlDefs,
 ) {
     for (i, row) in context.rows.iter_mut().enumerate() {
-        let segments = row.as_segments();
+        let segments = row.as_segments(0, row.len);
 
         put_segments(
             &context.cairo_context,
@@ -267,7 +267,7 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
         ctx.rows
             .get_mut(i)
             .unwrap()
-            .insert_rope_at(left as usize, src.pop().unwrap());
+            .insert_at(left as usize, src.pop().unwrap());
     }
 
     for i in clr_top as usize..clr_bot as usize {
