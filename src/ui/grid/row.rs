@@ -1,4 +1,4 @@
-use crate::nvim_bridge::{GridLineSegment};
+use crate::nvim_bridge::GridLineSegment;
 
 #[cfg(test)]
 use crate::nvim_bridge;
