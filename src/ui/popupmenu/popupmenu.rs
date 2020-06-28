@@ -4,14 +4,13 @@ use std::rc::Rc;
 use gdk;
 use gtk;
 use gtk::prelude::*;
-use neovim_lib::neovim::Neovim;
-use neovim_lib::neovim_api::NeovimApi;
 use pango;
 
 use crate::nvim_bridge::{CompletionItem, PmenuColors};
-use crate::ui::common::calc_line_space;
+use crate::nvim_gio::GioNeovim;
 use crate::ui::common::{
-    get_preferred_horizontal_position, get_preferred_vertical_position,
+    calc_line_space, get_preferred_horizontal_position,
+    get_preferred_vertical_position, spawn_local,
 };
 use crate::ui::font::{Font, FontUnit};
 use crate::ui::popupmenu::get_icon_pixbuf;
@@ -98,7 +97,7 @@ impl Popupmenu {
     ///              is where all the (neovim) grids are drawn.
     /// * `nvim` - Neovim instance. Popupmenu will instruct neovim to act on
     ///            user interaction.
-    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: GioNeovim) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let info_label = gtk::Label::new(Some(""));
@@ -107,7 +106,7 @@ impl Popupmenu {
         info_label.set_xalign(0.0);
         info_label.set_line_wrap(true);
         info_label.set_line_wrap_mode(pango::WrapMode::WordChar);
-        gtk::WidgetExt::set_name(&info_label, "info-label");
+        //gtk::WidgetExt::set_name(&info_label, "info-label");
 
         // Because we're setting valign and halign to the info label, we'll
         // need to have some container in between the label and scrolled window.
@@ -172,7 +171,12 @@ impl Popupmenu {
                 payload.push_str(op)
             }
 
-            nvim.borrow_mut().input(payload.as_str()).unwrap();
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                nvim.input(payload.as_str())
+                    .await
+                    .unwrap();
+            });
         }));
 
         // On (mouse) button press...
@@ -180,7 +184,12 @@ impl Popupmenu {
             // ...check if the button press is double click.
             if e.get_event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
-                nvim.borrow_mut().input("<C-y>").unwrap();
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    nvim.input("<C-y>")
+                        .await
+                        .unwrap();
+                });
             }
 
             Inhibit(false)

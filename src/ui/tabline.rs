@@ -4,14 +4,13 @@ use std::rc::Rc;
 use glib;
 use gtk;
 use gtk::prelude::*;
-use neovim_lib::{
-    neovim_api::{Buffer, NeovimApi, Tabpage},
-    Neovim, Value,
-};
 use pango;
 
+use nvim_rs::Tabpage;
+
 use crate::nvim_bridge;
-use crate::ui::common::calc_line_space;
+use crate::nvim_gio::{GioNeovim, GioWriter};
+use crate::ui::common::{calc_line_space, spawn_local};
 use crate::ui::font::{Font, FontUnit};
 use crate::ui::ui::HlDefs;
 
@@ -20,7 +19,7 @@ pub struct Tabline {
     css_provider: gtk::CssProvider,
     switch_tab_signal: glib::SignalHandlerId,
 
-    tabpage_data: Rc<RefCell<Box<Vec<Tabpage>>>>,
+    tabpage_data: Rc<RefCell<Box<Vec<Tabpage<GioWriter>>>>>,
 
     /// Our colors.
     colors: nvim_bridge::TablineColors,
@@ -31,7 +30,7 @@ pub struct Tabline {
 }
 
 impl Tabline {
-    pub fn new(nvim: Rc<RefCell<Neovim>>) -> Self {
+    pub fn new(nvim: GioNeovim) -> Self {
         let notebook = gtk::Notebook::new();
         notebook.set_show_border(false);
 
@@ -41,13 +40,18 @@ impl Tabline {
         let tabpage_data = Rc::new(RefCell::new(Box::new(vec![])));
         let switch_tab_signal = notebook.connect_switch_page(
             clone!(tabpage_data, nvim => move |_, _, page_num| {
-                let pages = tabpage_data.borrow();
-                if let Some(ref page) = pages.get(page_num as usize) {
-                    let mut nvim = nvim.borrow_mut();
-                    nvim.set_current_tabpage(&page).unwrap();
-                } else {
-                    println!("Failed to get tab page {}", page_num);
-                }
+                let tabpage_data = tabpage_data.clone();
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    let pages = tabpage_data.borrow();
+                    if let Some(ref page) = pages.get(page_num as usize) {
+                        nvim.set_current_tabpage(&page)
+                            .await
+                            .unwrap();
+                    } else {
+                        println!("Failed to get tab page {}", page_num);
+                    }
+                });
             }),
         );
 
@@ -66,41 +70,10 @@ impl Tabline {
         self.notebook.clone().upcast()
     }
 
-    fn get_tab_label(
-        nvim: &mut Neovim,
-        tab: &Tabpage,
-        tab_name: &str,
-    ) -> gtk::Label {
-        let modified = tab
-            .list_wins(nvim)
-            .and_then(|wins| wins.iter().map(|win| win.get_buf(nvim)).collect())
-            .and_then(|bufs: Vec<Buffer>| {
-                bufs.iter().map(|buf| buf.get_option(nvim, "mod")).collect()
-            })
-            .and_then(|vals: Vec<Value>| {
-                Ok(vals
-                    .iter()
-                    // If parsing to bool fails, default to false.
-                    .map(|val| val.as_bool().unwrap_or(false))
-                    .collect())
-            })
-            .and_then(|mods: Vec<bool>| {
-                // If any of the buffers is modified, mark the tab with modified
-                // indicator.
-                Ok(mods.iter().find(|m| **m == true).is_some())
-            })
-            // If something went wrong, default to false.
-            .unwrap_or(false);
-
-        let title = format!("{}{}", tab_name, if modified { " +" } else { "" });
-        gtk::Label::new(Some(title.as_str()))
-    }
-
     pub fn update(
         &self,
-        nvim: &mut Neovim,
-        current: Tabpage,
-        tabs: Vec<(Tabpage, String)>,
+        current: Tabpage<GioWriter>,
+        tabs: Vec<(Tabpage<GioWriter>, String)>,
     ) {
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
         for child in self.notebook.get_children() {
@@ -117,7 +90,7 @@ impl Tabline {
 
         let mut page = 0;
         for (i, tab) in tabs.iter().enumerate() {
-            let tab_label = Tabline::get_tab_label(nvim, &tab.0, &tab.1);
+            let tab_label = gtk::Label::new(Some(tab.1.as_str()));
             tab_label.set_hexpand(true);
             tab_label.set_ellipsize(pango::EllipsizeMode::End);
             add_css_provider!(&self.css_provider, tab_label);
@@ -127,7 +100,7 @@ impl Tabline {
                 Some(&tab_label),
             );
 
-            if tab.0 == current {
+            if tab.0.get_value() == current.get_value() {
                 page = i;
             }
         }

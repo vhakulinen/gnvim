@@ -1,12 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use gtk;
 use gtk::prelude::*;
 
-use neovim_lib::neovim::Neovim;
-
 use crate::nvim_bridge;
+use crate::nvim_gio::GioNeovim;
 use crate::ui::common::calc_line_space;
 use crate::ui::font::{Font, FontUnit};
 use crate::ui::ui::HlDefs;
@@ -437,7 +433,7 @@ pub struct Cmdline {
 }
 
 impl Cmdline {
-    pub fn new(parent: &gtk::Overlay, nvim: Rc<RefCell<Neovim>>) -> Self {
+    pub fn new(parent: &gtk::Overlay, nvim: GioNeovim) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         // Inner box contains cmdline block and input.

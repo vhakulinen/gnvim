@@ -18,7 +18,6 @@ extern crate gio;
 extern crate glib;
 extern crate gtk;
 extern crate log;
-extern crate neovim_lib;
 extern crate pango;
 extern crate pangocairo;
 #[cfg(feature = "libwebkit2gtk")]
@@ -26,20 +25,12 @@ extern crate webkit2gtk;
 
 use gio::prelude::*;
 
-use neovim_lib::neovim::{Neovim, UiAttachOptions};
-use neovim_lib::session::Session as NeovimSession;
-use neovim_lib::NeovimApi;
-
-use std::cell::RefCell;
-use std::process::Command;
-use std::rc::Rc;
-
 use structopt::{clap, StructOpt};
 
 include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
 
 mod nvim_bridge;
-#[cfg(feature = "libwebkit2gtk")]
+mod nvim_gio;
 mod thread_guard;
 mod ui;
 
@@ -106,47 +97,53 @@ struct Options {
     geometry: (i32, i32),
 }
 
-fn build(app: &gtk::Application, opts: &Options) {
+async fn build(app: &gtk::Application, opts: &Options) {
     let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+    let bridge = nvim_bridge::NvimBridge::new(tx.clone());
 
-    let bridge = nvim_bridge::NvimBridge::new(tx);
-
-    let mut cmd = Command::new(&opts.nvim_path);
-    cmd.arg("--embed")
-        .arg("--cmd")
-        .arg("let g:gnvim=1")
-        .arg("--cmd")
-        .arg("set termguicolors")
-        .arg("--cmd")
-        .arg(format!("let &rtp.=',{}'", opts.gnvim_rtp));
+    let rtp = format!("let &rtp.=',{}'", opts.gnvim_rtp);
+    let mut args: Vec<&str> = vec![
+        &opts.nvim_path,
+        "--embed",
+        "--cmd",
+        "let g:gnvim=1",
+        "--cmd",
+        "set termguicolors",
+        "--cmd",
+        &rtp,
+    ];
 
     // Pass arguments from cli to nvim.
     for arg in opts.nvim_args.iter() {
-        cmd.arg(arg);
+        args.push(arg);
     }
 
     // Open files "normally" through nvim.
     for file in opts.open_files.iter() {
-        cmd.arg(file);
+        args.push(file);
     }
 
     // Print the nvim cmd which is executed if asked.
     if opts.print_nvim_cmd {
-        println!("nvim cmd: {:?}", cmd);
+        println!("nvim cmd: {:?}", args);
     }
 
-    let mut session = NeovimSession::new_child_cmd(&mut cmd).unwrap();
-    session.start_event_loop_handler(bridge);
+    let mut nvim = nvim_gio::new_child(
+        bridge,
+        args.iter().map(|a| std::ffi::OsStr::new(a)).collect(),
+        tx,
+    );
 
-    let mut nvim = Neovim::new(session);
     nvim.subscribe("Gnvim")
+        .await
         .expect("Failed to subscribe to 'Gnvim' events");
 
-    let api_info = nvim.get_api_info().expect("Failed to get API info");
+    let api_info = nvim.get_api_info().await.expect("Failed to get API info");
     nvim.set_var("gnvim_channel_id", api_info[0].clone())
+        .await
         .expect("Failed to set g:gnvim_channel_id");
 
-    let mut ui_opts = UiAttachOptions::new();
+    let mut ui_opts = nvim_rs::UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_linegrid_external(true);
     ui_opts.set_popupmenu_external(!opts.disable_ext_popupmenu);
@@ -155,9 +152,10 @@ fn build(app: &gtk::Application, opts: &Options) {
 
     ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts)
+        .await
         .expect("Failed to attach UI");
 
-    let ui = ui::UI::init(app, rx, opts.geometry, Rc::new(RefCell::new(nvim)));
+    let ui = ui::UI::init(app, rx, opts.geometry, nvim);
     ui.start();
 }
 
@@ -192,7 +190,8 @@ fn main() {
     gtk::Window::set_default_icon_name("gnvim");
 
     app.connect_activate(move |app| {
-        build(app, &opts);
+        let c = glib::MainContext::default();
+        c.block_on(build(app, &opts));
     });
 
     app.run(&vec![]);

@@ -3,9 +3,15 @@ use log::{debug, error};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
 
-use neovim_lib::{neovim_api::Tabpage, Handler, RequestHandler, Value};
+use async_trait::async_trait;
+use futures::future::Future;
+use nvim_rs::{create::Spawner, neovim::Neovim, Handler, Tabpage};
+use rmpv::Value;
 
+use crate::nvim_gio::{GioNeovim, GioWriter};
+use crate::thread_guard::ThreadGuard;
 use crate::ui::color::{Color, Highlight};
 
 #[cfg(test)]
@@ -666,21 +672,24 @@ impl From<Value> for CmdlineBlockAppend {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone)]
 pub struct TablineUpdate {
-    pub current: Tabpage,
-    pub tabs: Vec<(Tabpage, String)>,
+    pub current: Tabpage<GioWriter>,
+    pub tabs: Vec<(Tabpage<GioWriter>, String)>,
 }
 
-impl From<Value> for TablineUpdate {
-    fn from(args: Value) -> Self {
-        let current = Tabpage::new(args[0].clone());
-        let tabs = unwrap_array!(args[1])
+impl From<(Value, GioNeovim)> for TablineUpdate {
+    fn from(args: (Value, GioNeovim)) -> Self {
+        let current = Tabpage::new(args.0[0].clone(), args.1.clone());
+        let tabs = unwrap_array!(args.0[1])
             .iter()
             .map(|item| {
                 let m = map_to_hash(&item);
                 (
-                    Tabpage::new((*m.get("tab").unwrap()).clone()),
+                    Tabpage::new(
+                        (*m.get("tab").unwrap()).clone(),
+                        args.1.clone(),
+                    ),
                     unwrap_str!(m.get("name").unwrap()).to_string(),
                 )
             })
@@ -730,7 +739,7 @@ impl From<Value> for WildmenuShow {
     }
 }
 
-#[derive(Debug, PartialEq)]
+//#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(Vec<String>),
 
@@ -754,7 +763,6 @@ pub enum RedrawEvent {
     PopupmenuSelect(Vec<i64>),
 
     TablineUpdate(Vec<TablineUpdate>),
-
     CmdlineShow(Vec<CmdlineShow>),
     CmdlineHide(),
     CmdlinePos(Vec<CmdlinePos>),
@@ -889,16 +897,17 @@ pub enum Message {
     Close,
 }
 
+#[derive(Clone)]
 pub struct NvimBridge {
     /// Channel to send messages to the ui.
-    tx: glib::Sender<Message>,
+    tx: Arc<ThreadGuard<glib::Sender<Message>>>,
 
     /// Channel to pass to the UI when we receive a request from nvim.
     /// The UI should send values to this channel when ever it gets a message
     /// Message::Request on its receiving end of `tx`.
-    request_tx: Sender<Result<Value, Value>>,
+    request_tx: Arc<ThreadGuard<Sender<Result<Value, Value>>>>,
     /// Receiving end of `request_tx`.
-    request_rx: Receiver<Result<Value, Value>>,
+    request_rx: Arc<ThreadGuard<Receiver<Result<Value, Value>>>>,
 }
 
 impl NvimBridge {
@@ -906,26 +915,38 @@ impl NvimBridge {
         let (request_tx, request_rx) = channel();
 
         NvimBridge {
-            tx,
-            request_tx,
-            request_rx,
+            tx: Arc::new(ThreadGuard::new(tx)),
+            request_tx: Arc::new(ThreadGuard::new(request_tx)),
+            request_rx: Arc::new(ThreadGuard::new(request_rx)),
         }
     }
 }
 
-impl RequestHandler for NvimBridge {
-    fn handle_request(
-        &mut self,
-        name: &str,
+#[async_trait]
+impl Handler for NvimBridge {
+    //type Writer: AsyncWrite + Send + Unpin + 'static;
+
+    type Writer = GioWriter;
+
+    /// Handling an rpc request. The ID's of requests are handled by the
+    /// [`neovim`](crate::neovim::Neovim) instance.
+    async fn handle_request(
+        &self,
+        name: String,
         args: Vec<Value>,
+        _neovim: Neovim<Self::Writer>,
     ) -> Result<Value, Value> {
-        match name {
+        match name.as_str() {
             "Gnvim" => match parse_request(args) {
                 Ok(msg) => {
-                    self.tx
-                        .send(Message::Request(self.request_tx.clone(), msg))
-                        .unwrap();
-                    self.request_rx.recv().unwrap()
+                    let tx = self.tx.borrow_mut();
+                    tx.send(Message::Request(
+                        self.request_tx.borrow_mut().clone(),
+                        msg,
+                    ))
+                    .unwrap();
+                    let rx = self.request_rx.borrow_mut();
+                    rx.recv().unwrap()
                 }
                 Err(_) => Err("Failed to parse request".into()),
             },
@@ -935,21 +956,76 @@ impl RequestHandler for NvimBridge {
             }
         }
     }
-}
 
-impl Handler for NvimBridge {
-    fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
-        if let Some(notify) = parse_notify(name, args) {
-            self.tx.send(Message::Notify(notify)).unwrap();
+    /// Handling an rpc notification.
+    async fn handle_notify(
+        &self,
+        name: String,
+        args: Vec<Value>,
+        neovim: Neovim<<Self as Handler>::Writer>,
+    ) {
+        //println!("bridge async: {}", _name);
+        if let Some(notify) = parse_notify(&name, args, neovim) {
+            let tx = self.tx.borrow_mut();
+            tx.send(Message::Notify(notify)).unwrap();
         } else {
             error!("Unknown notify: {}", name);
         }
     }
+}
 
-    fn handle_close(&mut self) {
-        self.tx.send(Message::Close).unwrap();
+impl Spawner for NvimBridge {
+    type Handle = ();
+
+    fn spawn<Fut>(&self, future: Fut) -> Self::Handle
+    where
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        let c = glib::MainContext::default();
+
+        c.spawn(future);
+
+        ()
     }
 }
+
+//impl RequestHandler for NvimBridge {
+//fn handle_request(
+//&mut self,
+//name: &str,
+//args: Vec<Value>,
+//) -> Result<Value, Value> {
+//match name {
+//"Gnvim" => match parse_request(args) {
+//Ok(msg) => {
+//self.tx
+//.send(Message::Request(self.request_tx.clone(), msg))
+//.unwrap();
+//self.request_rx.recv().unwrap()
+//}
+//Err(_) => Err("Failed to parse request".into()),
+//},
+//_ => {
+//error!("Unknown request: {}", name);
+//Err("Unkown request".into())
+//}
+//}
+//}
+//}
+
+//impl Handler for NvimBridge {
+//fn handle_notify(&mut self, name: &str, args: Vec<Value>) {
+//if let Some(notify) = parse_notify(name, args) {
+//self.tx.send(Message::Notify(notify)).unwrap();
+//} else {
+//error!("Unknown notify: {}", name);
+//}
+//}
+
+//fn handle_close(&mut self) {
+//self.tx.send(Message::Close).unwrap();
+//}
+//}
 
 fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
     let cmd = unwrap_str!(args[0]);
@@ -960,9 +1036,13 @@ fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
     }
 }
 
-fn parse_notify(name: &str, args: Vec<Value>) -> Option<Notify> {
+fn parse_notify(
+    name: &str,
+    args: Vec<Value>,
+    neovim: Neovim<<NvimBridge as Handler>::Writer>,
+) -> Option<Notify> {
     match name {
-        "redraw" => Some(Notify::RedrawEvent(parse_redraw_event(args))),
+        "redraw" => Some(Notify::RedrawEvent(parse_redraw_event(args, neovim))),
         "Gnvim" => Some(Notify::GnvimEvent(parse_gnvim_event(args))),
         _ => None,
     }
@@ -985,7 +1065,11 @@ GLOBALS:
     ["visual_bell"]
  */
 
-fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
+fn parse_single_redraw_event(
+    cmd: &str,
+    args: Vec<Value>,
+    neovim: Neovim<<NvimBridge as Handler>::Writer>,
+) -> RedrawEvent {
     match cmd {
         "set_title" => RedrawEvent::SetTitle(
             args.into_iter()
@@ -1033,7 +1117,9 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
             args.into_iter().map(|s| unwrap_i64!(s[0])).collect(),
         ),
         "tabline_update" => RedrawEvent::TablineUpdate(
-            args.into_iter().map(TablineUpdate::from).collect(),
+            args.into_iter()
+                .map(|a| TablineUpdate::from((a, neovim.clone())))
+                .collect(),
         ),
         "cmdline_show" => RedrawEvent::CmdlineShow(
             args.into_iter().map(CmdlineShow::from).collect(),
@@ -1065,12 +1151,15 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
     }
 }
 
-pub(crate) fn parse_redraw_event(args: Vec<Value>) -> Vec<RedrawEvent> {
+pub(crate) fn parse_redraw_event(
+    args: Vec<Value>,
+    neovim: Neovim<<NvimBridge as Handler>::Writer>,
+) -> Vec<RedrawEvent> {
     args.into_iter()
         .map(|args| {
             let args = unwrap_array!(args);
             let cmd = unwrap_str!(args[0]);
-            parse_single_redraw_event(cmd, args[1..].to_vec())
+            parse_single_redraw_event(cmd, args[1..].to_vec(), neovim.clone())
         })
         .collect()
 }

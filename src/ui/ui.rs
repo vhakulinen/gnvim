@@ -7,20 +7,19 @@ use std::rc::Rc;
 use gdk;
 use glib;
 use gtk;
-use neovim_lib::neovim::Neovim;
-use neovim_lib::neovim_api::NeovimApi;
-use neovim_lib::NeovimApiAsync;
-use neovim_lib::Value;
-
 use gtk::prelude::*;
+
+use rmpv::Value;
 
 use crate::nvim_bridge::{
     CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
     GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
     ModeInfoSet, Notify, OptionSet, RedrawEvent, Request, TablineUpdate,
 };
+use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
 use crate::ui::color::{Color, Highlight};
+use crate::ui::common::spawn_local;
 #[cfg(feature = "libwebkit2gtk")]
 use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
 use crate::ui::font::Font;
@@ -91,7 +90,7 @@ pub struct UI {
     /// Main window.
     win: gtk::ApplicationWindow,
     /// Neovim instance.
-    nvim: Rc<RefCell<Neovim>>,
+    nvim: GioNeovim,
     /// Channel to receive event from nvim.
     rx: glib::Receiver<Message>,
     /// Our internal state, containing basically everything we manipulate
@@ -110,7 +109,7 @@ impl UI {
         app: &gtk::Application,
         rx: glib::Receiver<Message>,
         window_size: (i32, i32),
-        nvim: Rc<RefCell<Neovim>>,
+        nvim: GioNeovim,
     ) -> Self {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
@@ -152,14 +151,13 @@ impl UI {
 
             // Set timeout to notify nvim about the new size.
             let new = gtk::timeout_add(30, clone!(nvim, source_id => move || {
-                let mut nvim = nvim.borrow_mut();
-                nvim.ui_try_resize_async(cols as i64, rows as i64)
-                    .cb(|res| {
-                        if let Err(err) = res {
-                            error!("Error: failed to resize nvim when grid size changed ({:?})", err);
-                        }
-                    })
-                .call();
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    match nvim.ui_try_resize(cols as i64, rows as i64).await {
+                        Err(err) => error!("Error: failed to resize nvim when grid size changed ({:?})", err),
+                        Ok(_) => {},
+                    }
+                });
 
                 // Set the source_id to none, so we don't accidentally remove
                 // it since it used at this point.
@@ -182,9 +180,11 @@ impl UI {
         // Mouse button press event.
         grid.connect_mouse_button_press_events(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.borrow_mut();
-                let input = format!("<{}Mouse><{},{}>", button, col, row);
-                nvim.input(&input).expect("Couldn't send mouse input");
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    let input = format!("<{}Mouse><{},{}>", button, col, row);
+                    nvim.input(&input).await.expect("Couldn't send mouse input");
+                });
 
                 Inhibit(false)
             }),
@@ -193,9 +193,11 @@ impl UI {
         // Mouse button release events.
         grid.connect_mouse_button_release_events(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.borrow_mut();
-                let input = format!("<{}Release><{},{}>", button, col, row);
-                nvim.input(&input).expect("Couldn't send mouse input");
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    let input = format!("<{}Release><{},{}>", button, col, row);
+                    nvim.input(&input).await.expect("Couldn't send mouse input");
+                });
 
                 Inhibit(false)
             }),
@@ -204,9 +206,11 @@ impl UI {
         // Mouse drag events.
         grid.connect_motion_events_for_drag(
             clone!(nvim => move |button, row, col| {
-                let mut nvim = nvim.borrow_mut();
-                let input = format!("<{}Drag><{},{}>", button, col, row);
-                nvim.input(&input).expect("Couldn't send mouse input");
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    let input = format!("<{}Drag><{},{}>", button, col, row);
+                    nvim.input(&input).await.expect("Couldn't send mouse input");
+                });
 
                 Inhibit(false)
             }),
@@ -214,9 +218,11 @@ impl UI {
 
         // Scrolling events.
         grid.connect_scroll_events(clone!(nvim => move |dir, row, col| {
-            let mut nvim = nvim.borrow_mut();
-            let input = format!("<{}><{},{}>", dir, col, row);
-            nvim.input(&input).expect("Couldn't send mouse input");
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                let input = format!("<{}><{},{}>", dir, col, row);
+                nvim.input(&input).await.expect("Couldn't send mouse input");
+            });
 
             Inhibit(false)
         }));
@@ -228,8 +234,10 @@ impl UI {
             // "<" needs to be escaped for nvim.input()
             let nvim_input = input.replace("<", "<lt>");
 
-            let mut nvim = nvim.borrow_mut();
-            nvim.input(&nvim_input).expect("Couldn't send input");
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                nvim.input(&nvim_input).await.expect("Couldn't send input");
+            });
         }));
 
         window.connect_key_press_event(clone!(nvim, im_context => move |_, e| {
@@ -237,8 +245,10 @@ impl UI {
                 Inhibit(true)
             } else {
                 if let Some(input) = event_to_nvim_input(e) {
-                    let mut nvim = nvim.borrow_mut();
-                    nvim.input(input.as_str()).expect("Couldn't send input");
+                    let nvim = nvim.clone();
+                    spawn_local(async move {
+                        nvim.input(input.as_str()).await.expect("Couldn't send input");
+                    });
                     return Inhibit(true);
                 } else {
                     debug!(
@@ -331,7 +341,7 @@ impl UI {
                 Message::Notify(notify) => {
                     let mut state = state.borrow_mut();
 
-                    handle_notify(&win, &notify, &mut state, nvim.clone());
+                    handle_notify(&win, &notify, &mut state, &nvim);
                 }
                 // Handle a request.
                 Message::Request(tx, request) => {
@@ -376,27 +386,25 @@ fn handle_notify(
     window: &gtk::ApplicationWindow,
     notify: &Notify,
     state: &mut UIState,
-    nvim: Rc<RefCell<Neovim>>,
+    nvim: &GioNeovim,
 ) {
     match notify {
         Notify::RedrawEvent(events) => {
-            handle_redraw_event(window, events, state, nvim);
+            handle_redraw_event(window, events, state, &nvim);
         }
         Notify::GnvimEvent(event) => match event {
             Ok(event) => handle_gnvim_event(event, state, nvim),
             Err(err) => {
-                let mut nvim = nvim.borrow_mut();
-                nvim.command_async(&format!(
+                let nvim = nvim.clone();
+                let msg = format!(
                     "echom \"Failed to parse gnvim notify: '{}'\"",
                     err
-                ))
-                .cb(|res| match res {
-                    Ok(_) => {}
-                    Err(err) => {
+                );
+                spawn_local(async move {
+                    if let Err(err) = nvim.command(&msg).await {
                         error!("Failed to execute nvim command: {}", err)
                     }
-                })
-                .call();
+                });
             }
         },
     }
@@ -405,7 +413,7 @@ fn handle_notify(
 fn handle_gnvim_event(
     event: &GnvimEvent,
     state: &mut UIState,
-    nvim: Rc<RefCell<Neovim>>,
+    nvim: &GioNeovim,
 ) {
     match event {
         GnvimEvent::SetGuiColors(colors) => {
@@ -437,15 +445,13 @@ fn handle_gnvim_event(
         | GnvimEvent::CursorTooltipShow(..)
         | GnvimEvent::CursorTooltipHide
         | GnvimEvent::CursorTooltipSetStyle(..) => {
-            let mut nvim = nvim.borrow_mut();
-            nvim.command_async(
-                "echom \"Cursor tooltip not supported in this build\"",
-            )
-            .cb(|res| match res {
-                Ok(_) => {}
-                Err(err) => error!("Failed to execute nvim command: {}", err),
-            })
-            .call();
+            let nvim = nvim.clone();
+            let msg = "echom \"Cursor tooltip not supported in this build\"";
+            spawn_local(async move {
+                if let Err(error) = nvim.command(&msg).await {
+                    error!("Failed to execute nvim command: {}", err)
+                }
+            });
         }
 
         #[cfg(feature = "libwebkit2gtk")]
@@ -456,18 +462,16 @@ fn handle_gnvim_event(
             GnvimEvent::CursorTooltipLoadStyle(path) => {
                 if let Err(err) = state.cursor_tooltip.load_style(path.clone())
                 {
-                    let mut nvim = nvim.borrow_mut();
-                    nvim.command_async(&format!(
+                    let msg = format!(
                         "echom \"Cursor tooltip load style failed: '{}'\"",
                         err
-                    ))
-                    .cb(|res| match res {
-                        Ok(_) => {}
-                        Err(err) => {
+                    );
+                    let nvim = nvim.clone();
+                    spawn_local(async move {
+                        if let Err(err) = nvim.command(&msg).await {
                             error!("Failed to execute nvim command: {}", err)
                         }
-                    })
-                    .call();
+                    });
                 }
             }
             GnvimEvent::CursorTooltipShow(content, row, col) => {
@@ -491,7 +495,7 @@ fn handle_redraw_event(
     window: &gtk::ApplicationWindow,
     events: &Vec<RedrawEvent>,
     state: &mut UIState,
-    nvim: Rc<RefCell<Neovim>>,
+    nvim: &GioNeovim,
 ) {
     for event in events {
         match event {
@@ -561,15 +565,14 @@ fn handle_redraw_event(
                     let grid = state.grids.get(&info.grid).unwrap();
                     grid.scroll(info.reg, info.rows, info.cols, &state.hl_defs);
 
-                    let mut nvim = nvim.borrow_mut();
                     // Since nvim doesn't have its own 'scroll' autocmd, we'll
                     // have to do it on our own. This use useful for the cursor tooltip.
-                    nvim.command_async("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif")
-                     .cb(|res| match res {
-                         Ok(_) => {}
-                         Err(err) => error!("GnvimScroll error: {:?}", err),
-                     })
-                     .call();
+                    let nvim = nvim.clone();
+                    spawn_local(async move {
+                        if let Err(err) = nvim.command("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif").await {
+                            error!("GnvimScroll error: {:?}", err);
+                        }
+                    });
                 });
             }
             RedrawEvent::DefaultColorsSet(evt) => {
@@ -680,13 +683,14 @@ fn handle_redraw_event(
                         glib::source::source_remove(id);
                     }
 
-                    nvim.borrow_mut().ui_try_resize_async(cols as i64, rows as i64)
-                        .cb(|res| {
-                            if let Err(err) = res {
-                                error!("Error: failed to resize nvim on line space change ({:?})", err);
-                            }
-                        })
-                    .call();
+                    let nvim = nvim.clone();
+                    spawn_local(async move {
+                        if let Err(err) =
+                            nvim.ui_try_resize(cols as i64, rows as i64).await
+                        {
+                            error!("Error: failed to resize nvim on line space change ({:?})", err);
+                        }
+                    });
 
                     state.popupmenu.set_font(opts.font.clone(), &state.hl_defs);
                     state.cmdline.set_font(opts.font.clone(), &state.hl_defs);
@@ -758,12 +762,7 @@ fn handle_redraw_event(
             }
             RedrawEvent::TablineUpdate(evt) => {
                 evt.iter().for_each(|TablineUpdate { current, tabs }| {
-                    let mut nvim = nvim.borrow_mut();
-                    state.tabline.update(
-                        &mut nvim,
-                        current.clone(),
-                        tabs.clone(),
-                    );
+                    state.tabline.update(current.clone(), tabs.clone());
                 });
             }
             RedrawEvent::CmdlineShow(evt) => {

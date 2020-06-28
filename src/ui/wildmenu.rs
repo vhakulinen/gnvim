@@ -3,10 +3,9 @@ use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use neovim_lib::neovim::Neovim;
-use neovim_lib::neovim_api::NeovimApi;
-
 use crate::nvim_bridge;
+use crate::nvim_gio::GioNeovim;
+use crate::ui::common::spawn_local;
 use crate::ui::ui::HlDefs;
 
 const MAX_HEIGHT: i32 = 500;
@@ -26,7 +25,7 @@ pub struct Wildmenu {
 }
 
 impl Wildmenu {
-    pub fn new(nvim: Rc<RefCell<Neovim>>) -> Self {
+    pub fn new(nvim: GioNeovim) -> Self {
         let css_provider = gtk::CssProvider::new();
 
         let frame = gtk::Frame::new(None);
@@ -70,12 +69,16 @@ impl Wildmenu {
 
             let op = if new > prev { "<Tab>" } else { "<S-Tab>" };
 
-            let mut nvim = nvim.borrow_mut();
             for _ in 0..(new - prev).abs() {
                 // NOTE(ville): nvim doesn't like single input with many
                 //              tabs in it, so we'll have to send each
                 //              individually.
-                nvim.input(&op).unwrap();
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    nvim.input(&op)
+                        .await
+                        .unwrap();
+                })
             }
         }));
 
