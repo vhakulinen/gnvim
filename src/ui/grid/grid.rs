@@ -119,7 +119,7 @@ impl Grid {
         // cairo context.
         if ctx.cursor_blink_on == 0 {
             if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
-                let cell = row.cell_at(ctx.cursor.1 as usize + 1);
+                let cell = row.cell_at(ctx.cursor.1 as usize);
                 render::cursor_cell(
                     &ctx.cursor_context,
                     &self.da.get_pango_context().unwrap(),
@@ -132,7 +132,7 @@ impl Grid {
 
         // Update cursor color.
         let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-        let cell = row.cell_at(ctx.cursor.1 as usize + 1);
+        let cell = row.cell_at(ctx.cursor.1 as usize);
         let hl = hl_defs.get(&cell.hl_id).unwrap();
         ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
 

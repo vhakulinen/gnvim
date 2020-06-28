@@ -160,7 +160,7 @@ impl Context {
             .rows
             .get(self.cursor.0 as usize)
             .and_then(|row| {
-                Some(row.cell_at(self.cursor.1 as usize + 1).double_width)
+                Some(row.cell_at(self.cursor.1 as usize).double_width)
             })
             .unwrap_or(false);
 
