@@ -23,8 +23,8 @@ mod parse_redraw_event_tests {
         RedrawEvent, TablineUpdate, WildmenuShow,
     };
     use crate::ui::color::{Color, Highlight};
-    use neovim_lib::neovim_api::Tabpage;
-    use neovim_lib::Value;
+    use nvim_rs::Tabpage;
+    use rmpv::Value;
 
     #[test]
     fn set_title() {
@@ -502,10 +502,10 @@ mod parse_redraw_event_tests {
     #[test]
     fn tabline_update() {
         let expected = vec![RedrawEvent::TablineUpdate(vec![TablineUpdate {
-            current: Tabpage::new("foo".into()),
+            current: "foo".into(),
             tabs: vec![
-                (Tabpage::new("bar".into()), "bar_name".into()),
-                (Tabpage::new("ugh".into()), "ugh_name".into()),
+                ("bar".into(), "bar_name".into()),
+                ("ugh".into(), "ugh_name".into()),
             ],
         }])];
 
@@ -694,7 +694,7 @@ mod parse_gnvim_event_tests {
         WildmenuColors,
     };
     use crate::ui::color::Color;
-    use neovim_lib::Value;
+    use rmpv::Value;
 
     #[test]
     fn set_gui_colors() {

@@ -11,6 +11,8 @@ use gtk::prelude::*;
 
 use rmpv::Value;
 
+use nvim_rs::Tabpage;
+
 use crate::nvim_bridge::{
     CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
     GridCursorGoto, GridResize, HlAttrDefine, Message, ModeChange, ModeInfo,
@@ -762,7 +764,17 @@ fn handle_redraw_event(
             }
             RedrawEvent::TablineUpdate(evt) => {
                 evt.iter().for_each(|TablineUpdate { current, tabs }| {
-                    state.tabline.update(current.clone(), tabs.clone());
+                    let current = Tabpage::new(current.clone(), nvim.clone());
+                    let tabs = tabs
+                        .iter()
+                        .map(|v| {
+                            (
+                                Tabpage::new(v.0.clone(), nvim.clone()),
+                                v.1.clone(),
+                            )
+                        })
+                        .collect();
+                    state.tabline.update(current, tabs);
                 });
             }
             RedrawEvent::CmdlineShow(evt) => {

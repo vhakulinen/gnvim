@@ -110,7 +110,7 @@ impl Tabline {
         self.notebook.set_current_page(Some(page as u32));
 
         self.tabpage_data
-            .replace(Box::new(tabs.iter().map(|t| t.0.clone()).collect()));
+            .replace(Box::new(tabs.into_iter().map(|t| t.0).collect()));
 
         glib::signal_handler_unblock(&self.notebook, &self.switch_tab_signal);
     }

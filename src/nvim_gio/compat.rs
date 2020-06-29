@@ -1,7 +1,6 @@
 use std::{
     io,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -13,21 +12,13 @@ use crate::thread_guard::ThreadGuard;
 #[pin_project]
 pub struct Compat<T> {
     #[pin]
-    inner: Arc<ThreadGuard<T>>,
-}
-
-impl<T> Clone for Compat<T> {
-    fn clone(&self) -> Self {
-        Compat {
-            inner: self.inner.clone(),
-        }
-    }
+    inner: ThreadGuard<T>,
 }
 
 impl<T> Compat<T> {
     pub fn new(inner: T) -> Self {
         Self {
-            inner: Arc::new(ThreadGuard::new(inner)),
+            inner: ThreadGuard::new(inner),
         }
     }
 }
