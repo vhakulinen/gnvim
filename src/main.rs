@@ -25,6 +25,8 @@ extern crate webkit2gtk;
 
 use gio::prelude::*;
 
+use log::error;
+
 use structopt::{clap, StructOpt};
 
 include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
@@ -97,7 +99,33 @@ struct Options {
     geometry: (i32, i32),
 }
 
-async fn build(app: &gtk::Application, opts: &Options) {
+enum Error {
+    Start(nvim_gio::Error),
+    Call(Box<nvim_rs::error::CallError>),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Error::Start(e) => write!(fmt, "Failed to start nvim: {}", e),
+            Error::Call(e) => write!(fmt, "Call to nvim failed: {}", e),
+        }
+    }
+}
+
+impl From<nvim_gio::Error> for Error {
+    fn from(arg: nvim_gio::Error) -> Self {
+        Error::Start(arg)
+    }
+}
+
+impl From<Box<nvim_rs::error::CallError>> for Error {
+    fn from(arg: Box<nvim_rs::error::CallError>) -> Self {
+        Error::Call(arg)
+    }
+}
+
+async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
     let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
     let bridge = nvim_bridge::NvimBridge::new(tx.clone());
 
@@ -132,16 +160,15 @@ async fn build(app: &gtk::Application, opts: &Options) {
         bridge,
         args.iter().map(|a| std::ffi::OsStr::new(a)).collect(),
         tx,
-    );
+    )
+    .map_err(Error::from)?;
 
-    nvim.subscribe("Gnvim")
-        .await
-        .expect("Failed to subscribe to 'Gnvim' events");
+    nvim.subscribe("Gnvim").await.map_err(Error::from)?;
 
-    let api_info = nvim.get_api_info().await.expect("Failed to get API info");
+    let api_info = nvim.get_api_info().await.map_err(Error::from)?;
     nvim.set_var("gnvim_channel_id", api_info[0].clone())
         .await
-        .expect("Failed to set g:gnvim_channel_id");
+        .map_err(Error::from)?;
 
     let mut ui_opts = nvim_rs::UiAttachOptions::new();
     ui_opts.set_rgb(true);
@@ -153,10 +180,12 @@ async fn build(app: &gtk::Application, opts: &Options) {
     ui_opts.set_wildmenu_external(true);
     nvim.ui_attach(80, 30, &ui_opts)
         .await
-        .expect("Failed to attach UI");
+        .map_err(Error::from)?;
 
     let ui = ui::UI::init(app, rx, opts.geometry, nvim);
     ui.start();
+
+    Ok(())
 }
 
 fn main() {
@@ -190,8 +219,13 @@ fn main() {
     gtk::Window::set_default_icon_name("gnvim");
 
     app.connect_activate(move |app| {
+        let opts = &opts;
         let c = glib::MainContext::default();
-        c.block_on(build(app, &opts));
+        c.block_on(async move {
+            if let Err(err) = build(app, opts).await {
+                error!("Failed to build UI: {}", err);
+            }
+        });
     });
 
     app.run(&vec![]);

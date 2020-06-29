@@ -14,13 +14,44 @@ pub type GioWriter =
     Compat<gio::OutputStreamAsyncWrite<gio::PollableOutputStream>>;
 pub type GioNeovim = Neovim<GioWriter>;
 
+#[derive(Debug)]
+pub enum Error {
+    Pipe,
+    ToPollaple,
+    ToAsync,
+    GlibError(glib::Error),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Error::Pipe => write!(fmt, "Failed to open pipe to subprocess"),
+            Error::ToPollaple => {
+                write!(fmt, "Failed to turn pipe into pollable stream")
+            }
+            Error::ToAsync => {
+                write!(fmt, "Failed to turn pollable stream into async")
+            }
+            Error::GlibError(e) => {
+                write!(fmt, "Failed to open nvim subprocess: {}", e)
+            }
+        }
+    }
+}
+
+impl From<glib::Error> for Error {
+    fn from(arg: glib::Error) -> Self {
+        Error::GlibError(arg)
+    }
+}
+
 use compat::Compat;
 
 pub fn new_child<H>(
     handler: H,
     args: Vec<&std::ffi::OsStr>,
     tx: glib::Sender<nvim_bridge::Message>,
-) -> GioNeovim
+) -> Result<GioNeovim, Error>
 where
     H: Spawner + Handler<Writer = GioWriter>,
 {
@@ -29,21 +60,23 @@ where
     flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
     flags.insert(gio::SubprocessFlags::STDERR_PIPE);
 
-    let p = gio::Subprocess::newv(&args, flags).unwrap();
+    let p = gio::Subprocess::newv(&args, flags).map_err(Error::from)?;
 
     let input = p
         .get_stdin_pipe()
-        .unwrap()
+        .ok_or(Error::Pipe)?
         .dynamic_cast::<gio::PollableOutputStream>()
-        .unwrap();
-    let write = Compat::new(input.into_async_write().unwrap());
+        .map_err(|_| Error::ToPollaple)?;
+    let write =
+        Compat::new(input.into_async_write().map_err(|_| Error::ToAsync)?);
 
     let output = p
         .get_stdout_pipe()
-        .unwrap()
+        .ok_or(Error::Pipe)?
         .dynamic_cast::<gio::PollableInputStream>()
-        .unwrap();
-    let read = Compat::new(output.into_async_read().unwrap());
+        .map_err(|_| Error::ToPollaple)?;
+    let read =
+        Compat::new(output.into_async_read().map_err(|_| Error::ToAsync)?);
 
     let (neovim, io) = Neovim::<
         Compat<gio::OutputStreamAsyncWrite<gio::PollableOutputStream>>,
@@ -60,5 +93,5 @@ where
 
     c.spawn(f);
 
-    neovim
+    Ok(neovim)
 }
