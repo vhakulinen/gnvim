@@ -106,7 +106,7 @@ impl Popupmenu {
         info_label.set_xalign(0.0);
         info_label.set_line_wrap(true);
         info_label.set_line_wrap_mode(pango::WrapMode::WordChar);
-        //gtk::WidgetExt::set_name(&info_label, "info-label");
+        info_label.set_widget_name("info-label");
 
         // Because we're setting valign and halign to the info label, we'll
         // need to have some container in between the label and scrolled window.
