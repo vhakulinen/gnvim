@@ -1,5 +1,3 @@
-use log::{debug, error};
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -9,8 +7,8 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 
+use log::{debug, error};
 use rmpv::Value;
-
 use nvim_rs::Tabpage;
 
 use crate::nvim_bridge::{

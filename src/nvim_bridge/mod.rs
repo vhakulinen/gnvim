@@ -921,8 +921,6 @@ impl NvimBridge {
 
 #[async_trait]
 impl Handler for NvimBridge {
-    //type Writer: AsyncWrite + Send + Unpin + 'static;
-
     type Writer = GioWriter;
 
     async fn handle_request(

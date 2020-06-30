@@ -84,14 +84,13 @@ where
 
     let c = glib::MainContext::default();
 
-    let f = async move {
+
+    c.spawn(async move {
         let _ = io.await;
         if let Err(err) = tx.send(nvim_bridge::Message::Close) {
             error!("Failed to send close message to the gui: {}", err)
         }
-    };
-
-    c.spawn(f);
+    });
 
     Ok(neovim)
 }
