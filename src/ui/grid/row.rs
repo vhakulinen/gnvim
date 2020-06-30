@@ -64,8 +64,25 @@ impl Row {
 
     /// Clears (resets) the row.
     pub fn clear(&mut self) {
-        //self.rope = Some(Rope::new(" ".repeat(self.len), 0));
         self.cells = Row::create_empty_cells(self.len).into_boxed_slice();
+    }
+
+    pub fn grow(&mut self, new_size: usize) {
+        let mut n = self.cells.clone().into_vec();
+        n.resize_with(new_size, || {
+            Cell {
+                text: String::from(" "),
+                hl_id: 0,
+                double_width: false,
+            }
+        });
+
+        self.cells = n.into_boxed_slice();
+        self.len = self.cells.len();
+    }
+
+    pub fn truncate(&mut self, new_size: usize) {
+        self.grow(new_size);
     }
 
     /// Clears range from `from` to `to`.
@@ -911,5 +928,23 @@ mod tests {
         assert_eq!(second.text, "3333");
         assert_eq!(second.start, 6);
         assert_eq!(second.len, 4);
+    }
+
+    #[test]
+    fn test_row_grow() {
+        let mut row = Row::new(10);
+        row.grow(15);
+
+        assert_eq!(row.len, 15);
+        assert_eq!(row.cells.iter().map(|c| c.text.clone()).collect::<String>(), String::from(" ").repeat(15));
+    }
+
+    #[test]
+    fn test_row_truncate() {
+        let mut row = Row::new(10);
+        row.truncate(5);
+
+        assert_eq!(row.len, 5);
+        assert_eq!(row.cells.iter().map(|c| c.text.clone()).collect::<String>(), String::from(" ").repeat(5));
     }
 }

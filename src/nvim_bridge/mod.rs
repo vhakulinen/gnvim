@@ -35,6 +35,12 @@ macro_rules! unwrap_i64 {
     };
 }
 
+macro_rules! unwrap_f64 {
+    ($val:expr) => {
+        $val.as_f64().unwrap();
+    };
+}
+
 macro_rules! unwrap_array {
     ($val:expr) => {
         $val.as_array().unwrap();
@@ -325,6 +331,7 @@ pub struct PopupmenuShow {
     pub selected: i64,
     pub row: u64,
     pub col: u64,
+    pub grid: i64,
 }
 
 impl From<Value> for PopupmenuShow {
@@ -334,6 +341,7 @@ impl From<Value> for PopupmenuShow {
         let selected = unwrap_i64!(args[1]);
         let row = unwrap_u64!(args[2]);
         let col = unwrap_u64!(args[3]);
+        let grid = unwrap_i64!(args[4]);
 
         let mut items = vec![];
         for item in unwrap_array!(args[0]) {
@@ -359,6 +367,7 @@ impl From<Value> for PopupmenuShow {
             selected,
             row,
             col,
+            grid,
         }
     }
 }
@@ -404,7 +413,7 @@ impl From<Value> for CmdlineShow {
 
 #[derive(Debug, PartialEq)]
 pub struct GridLineSegment {
-    pub grid: u64,
+    pub grid: i64,
     pub row: u64,
     pub col_start: u64,
     pub cells: Vec<Cell>,
@@ -414,7 +423,7 @@ impl From<Value> for GridLineSegment {
     fn from(args: Value) -> Self {
         let entry = unwrap_array!(args);
 
-        let grid = unwrap_u64!(entry[0]);
+        let grid = unwrap_i64!(entry[0]);
         let row = unwrap_u64!(entry[1]);
         let col_start = unwrap_u64!(entry[2]);
 
@@ -466,7 +475,7 @@ impl From<Value> for GridLineSegment {
 
 #[derive(Debug, PartialEq)]
 pub struct GridResize {
-    pub grid: u64,
+    pub grid: i64,
     pub width: u64,
     pub height: u64,
 }
@@ -475,7 +484,7 @@ impl From<Value> for GridResize {
     fn from(args: Value) -> Self {
         let args = unwrap_array!(args);
         GridResize {
-            grid: unwrap_u64!(args[0]),
+            grid: unwrap_i64!(args[0]),
             width: unwrap_u64!(args[1]),
             height: unwrap_u64!(args[2]),
         }
@@ -484,7 +493,7 @@ impl From<Value> for GridResize {
 
 #[derive(Debug, PartialEq)]
 pub struct GridCursorGoto {
-    pub grid: u64,
+    pub grid: i64,
     pub row: u64,
     pub col: u64,
 }
@@ -493,7 +502,7 @@ impl From<Value> for GridCursorGoto {
     fn from(args: Value) -> Self {
         let args = unwrap_array!(args);
         GridCursorGoto {
-            grid: unwrap_u64!(args[0]),
+            grid: unwrap_i64!(args[0]),
             row: unwrap_u64!(args[1]),
             col: unwrap_u64!(args[2]),
         }
@@ -502,7 +511,7 @@ impl From<Value> for GridCursorGoto {
 
 #[derive(Debug, PartialEq)]
 pub struct GridScroll {
-    pub grid: u64,
+    pub grid: i64,
     pub reg: [u64; 4],
     pub rows: i64,
     pub cols: i64,
@@ -515,7 +524,7 @@ impl From<Value> for GridScroll {
             args[1..5].into_iter().map(|v| unwrap_u64!(v)).collect();
         let reg = [reg[0], reg[1], reg[2], reg[3]];
         GridScroll {
-            grid: unwrap_u64!(args[0]),
+            grid: unwrap_i64!(args[0]),
             reg,
             rows: unwrap_i64!(args[5]),
             cols: unwrap_i64!(args[6]),
@@ -746,13 +755,137 @@ impl From<Value> for WildmenuShow {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct WindowPos {
+    pub grid: i64,
+    pub win: Value,
+    pub start_row: u64,
+    pub start_col: u64,
+    pub width: u64,
+    pub height: u64,
+}
+
+impl From<Value> for WindowPos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        Self {
+            grid: unwrap_i64!(args[0]),
+            win: args[1].clone(),
+            start_row: unwrap_u64!(args[2]),
+            start_col: unwrap_u64!(args[3]),
+            width: unwrap_u64!(args[4]),
+            height: unwrap_u64!(args[5]),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Anchor {
+    NW,
+    NE,
+    SW,
+    SE,
+}
+
+impl Anchor {
+    pub fn is_west(&self) -> bool {
+        match self {
+            Self::NW | Self::SW => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_north(&self) -> bool {
+        match self {
+            Self::NW | Self::NE => true,
+            _ => false,
+        }
+    }
+}
+
+impl From<Value> for Anchor {
+    fn from(args: Value) -> Self {
+        let args = unwrap_str!(args);
+        match args {
+            "NW" => Self::NW,
+            "NE" => Self::NE,
+            "SW" => Self::SW,
+            "SE" => Self::SE,
+            _ => Self::NW,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct WindowFloatPos {
+    pub grid: i64,
+    pub win: Value,
+    pub anchor: Anchor,
+    pub anchor_grid: i64,
+    pub anchor_row: f64,
+    pub anchor_col: f64,
+    pub focusable: bool,
+}
+
+impl From<Value> for WindowFloatPos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        Self {
+            grid: unwrap_i64!(args[0]),
+            win: args[1].clone(),
+            anchor: Anchor::from(args[2].clone()),
+            anchor_grid: unwrap_i64!(args[3]),
+            anchor_row: unwrap_f64!(args[4]),
+            anchor_col: unwrap_f64!(args[5]),
+            focusable: unwrap_bool!(args[6]),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct WindowExternalPos {
+    pub grid: i64,
+    pub win: Value,
+}
+
+impl From<Value> for WindowExternalPos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        Self {
+            grid: unwrap_i64!(args[0]),
+            win: args[1].clone(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MsgSetPos {
+    pub grid: i64,
+    pub row: u64,
+    pub scrolled: bool,
+    pub sep_char: String,
+}
+
+impl From<Value> for MsgSetPos {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        Self {
+            grid: unwrap_i64!(args[0]),
+            row: unwrap_u64!(args[1]),
+            scrolled: unwrap_bool!(args[2]),
+            sep_char: unwrap_str!(args[3]).to_string(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum RedrawEvent {
     SetTitle(Vec<String>),
 
     GridLine(Vec<GridLineSegment>),
     GridResize(Vec<GridResize>),
     GridCursorGoto(Vec<GridCursorGoto>),
-    GridClear(Vec<u64>),
+    GridClear(Vec<i64>),
+    GridDestroy(Vec<i64>),
     GridScroll(Vec<GridScroll>),
 
     DefaultColorsSet(Vec<DefaultColorsSet>),
@@ -782,6 +915,13 @@ pub enum RedrawEvent {
     WildmenuHide(),
     WildmenuSelect(Vec<i64>),
 
+    WindowPos(Vec<WindowPos>),
+    WindowFloatPos(Vec<WindowFloatPos>),
+    WindowExternalPos(Vec<WindowExternalPos>),
+    WindowHide(Vec<i64>),
+    WindowClose(Vec<i64>),
+    MsgSetPos(Vec<MsgSetPos>),
+
     Ignored(String),
     Unknown(String),
 }
@@ -794,6 +934,7 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::GridResize(..) => write!(fmt, "GridResize"),
             RedrawEvent::GridCursorGoto(..) => write!(fmt, "GridCursorGoto"),
             RedrawEvent::GridClear(..) => write!(fmt, "GridClear"),
+            RedrawEvent::GridDestroy(..) => write!(fmt, "GridDestroy"),
             RedrawEvent::GridScroll(..) => write!(fmt, "GridScroll"),
             RedrawEvent::DefaultColorsSet(..) => {
                 write!(fmt, "DefaultColorsSet")
@@ -827,8 +968,18 @@ impl fmt::Display for RedrawEvent {
             RedrawEvent::WildmenuShow(..) => write!(fmt, "WildmenuShow"),
             RedrawEvent::WildmenuHide(..) => write!(fmt, "WildmenuHide"),
             RedrawEvent::WildmenuSelect(..) => write!(fmt, "WildmenuSelect"),
+
+            RedrawEvent::WindowPos(..) => write!(fmt, "WindowPos"),
+            RedrawEvent::WindowFloatPos(..) => write!(fmt, "WindowFloatPos"),
+            RedrawEvent::WindowExternalPos(..) => {
+                write!(fmt, "WindowExternalPos")
+            }
+            RedrawEvent::WindowHide(..) => write!(fmt, "WindowHide"),
+            RedrawEvent::WindowClose(..) => write!(fmt, "WindowClose"),
+            RedrawEvent::MsgSetPos(..) => write!(fmt, "MsgSetPos"),
+
             RedrawEvent::Ignored(..) => write!(fmt, "Ignored"),
-            RedrawEvent::Unknown(..) => write!(fmt, "Unknown"),
+            RedrawEvent::Unknown(e) => write!(fmt, "Unknown({})", e),
         }
     }
 }
@@ -966,23 +1117,6 @@ fn parse_notify(name: &str, args: Vec<Value>) -> Option<Notify> {
     }
 }
 
-/*
-GLOBALS:
-    ["set_title", title]
-    ["set_icon", icon]
-    ["mode_info_set", cursor_style_enabled, mode_info]
-    ["option_set", name, value]
-    ["mode_change", mode, mode_idx]
-    ["mouse_on"]
-    ["mouse_off"]
-    ["busy_on"]
-    ["busy_off"]
-    ["suspend"]
-    ["update_menu"]
-    ["bell"]
-    ["visual_bell"]
- */
-
 fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
     match cmd {
         "set_title" => RedrawEvent::SetTitle(
@@ -997,7 +1131,10 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
             args.into_iter().map(GridCursorGoto::from).collect(),
         ),
         "grid_clear" => RedrawEvent::GridClear(
-            args.into_iter().map(|v| unwrap_u64!(v[0])).collect(),
+            args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
+        ),
+        "grid_destroy" => RedrawEvent::GridDestroy(
+            args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
         ),
         "grid_scroll" => RedrawEvent::GridScroll(
             args.into_iter().map(GridScroll::from).collect(),
@@ -1060,8 +1197,36 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         "wildmenu_select" => RedrawEvent::WildmenuSelect(
             args.into_iter().map(|v| unwrap_i64!(v[0])).collect(),
         ),
-        "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
+        "win_pos" => RedrawEvent::WindowPos(
+            args.into_iter().map(WindowPos::from).collect(),
+        ),
+        "win_float_pos" => RedrawEvent::WindowFloatPos(
+            args.into_iter().map(WindowFloatPos::from).collect(),
+        ),
+        "win_external_pos" => RedrawEvent::WindowExternalPos(
+            args.into_iter().map(WindowExternalPos::from).collect(),
+        ),
+        "win_hide" => RedrawEvent::WindowHide(
+            args.into_iter()
+                .map(|v| {
+                    let v = unwrap_array!(v);
+                    unwrap_i64!(v[0])
+                })
+                .collect(),
+        ),
+        "win_close" => RedrawEvent::WindowClose(
+            args.into_iter()
+                .map(|v| {
+                    let v = unwrap_array!(v);
+                    unwrap_i64!(v[0])
+                })
+                .collect(),
+        ),
+        "msg_set_pos" => RedrawEvent::MsgSetPos(
+            args.into_iter().map(MsgSetPos::from).collect(),
+        ),
 
+        "mouse_on" | "mouse_off" => RedrawEvent::Ignored(cmd.to_string()),
         _ => RedrawEvent::Unknown(cmd.to_string()),
     }
 }

@@ -53,5 +53,6 @@ features = ["v2_14"]
 optional = true
 
 [dependencies.nvim-rs]
-git = "https://github.com/KillTheMule/nvim-rs"
+#git = "https://github.com/KillTheMule/nvim-rs"
+path = "../nvim-rs"
 default-features = false

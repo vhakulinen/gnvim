@@ -2,9 +2,12 @@ use cairo;
 use gtk::DrawingArea;
 use pango;
 
+use gdk::prelude::*;
 use gtk::prelude::*;
 
-use crate::ui::color::{Color, Highlight};
+use log::warn;
+
+use crate::ui::color::{Color, Highlight, HlDefs};
 use crate::ui::font::Font;
 use crate::ui::grid::render;
 use crate::ui::grid::row::Row;
@@ -47,25 +50,40 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(da: &DrawingArea) -> Self {
-        let win = da.get_window().unwrap();
-        let w = da.get_allocated_width();
-        let h = da.get_allocated_height();
-        let surface = win
-            .create_similar_surface(cairo::Content::Color, w, h)
-            .unwrap();
-
-        let cairo_context = cairo::Context::new(&surface);
+    pub fn new(
+        da: &DrawingArea,
+        win: &gdk::Window,
+        font: Font,
+        line_space: i64,
+        cols: usize,
+        rows: usize,
+        hl_defs: &HlDefs,
+    ) -> Self {
         let pango_context = da.get_pango_context().unwrap();
 
-        let font = Font::from_guifont("Monospace:h12").unwrap();
         let font_desc = font.as_pango_font();
         pango_context.set_font_description(&font_desc);
 
         let mut cell_metrics = CellMetrics::default();
         cell_metrics.font = font;
-        cell_metrics.line_space = 0;
+        cell_metrics.line_space = line_space;
         cell_metrics.update(&pango_context);
+
+        let w = cell_metrics.width as usize * cols;
+        let h = cell_metrics.height as usize * rows;
+        let surface = create_surface_clamp(win, w as i32, h as i32);
+
+        let cairo_context = cairo::Context::new(&surface);
+
+        // Fill the context with default bg color.
+        cairo_context.save();
+        cairo_context.set_source_rgb(
+            hl_defs.default_bg.r,
+            hl_defs.default_bg.g,
+            hl_defs.default_bg.b,
+        );
+        cairo_context.paint();
+        cairo_context.restore();
 
         let cursor_context = {
             let surface = win
@@ -100,28 +118,52 @@ impl Context {
     }
 
     /// Updates internals that are dependant on the drawing area.
-    pub fn update(&mut self, da: &DrawingArea) {
-        let win = da.get_window().unwrap();
-        let w = da.get_allocated_width();
-        let h = da.get_allocated_height();
-        let surface = win
-            .create_similar_surface(cairo::Content::Color, w, h)
-            .unwrap();
+    pub fn update(
+        &mut self,
+        da: &DrawingArea,
+        win: &gdk::Window,
+        cols: usize,
+        rows: usize,
+        hl_defs: &HlDefs,
+        prev_cols: usize,
+        prev_rows: usize,
+    ) {
+        let pctx = da.get_pango_context().unwrap();
+        pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
+
+        self.cell_metrics.update(&pctx);
+
+        let w = self.cell_metrics.width as usize * cols;
+        let h = self.cell_metrics.height as usize * rows;
+        let surface = create_surface_clamp(win, w as i32, h as i32);
         let ctx = cairo::Context::new(&surface);
+
+        // Fill the context with default bg color.
+        ctx.save();
+        ctx.set_source_rgb(
+            hl_defs.default_bg.r,
+            hl_defs.default_bg.g,
+            hl_defs.default_bg.b,
+        );
+        ctx.paint();
+        ctx.restore();
 
         let s = self.cairo_context.get_target();
         self.cairo_context.save();
         ctx.set_source_surface(&s, 0.0, 0.0);
         ctx.set_operator(cairo::Operator::Source);
-        ctx.paint();
+        // Make sure we only paint the area that _was_ visible before this update
+        // so we don't undo the bg color paint we did earlier.
+        ctx.rectangle(
+            0.0,
+            0.0,
+            self.cell_metrics.width * prev_cols as f64,
+            self.cell_metrics.height * prev_rows as f64,
+        );
+        ctx.fill();
         self.cairo_context.restore();
 
-        let pctx = da.get_pango_context().unwrap();
-        pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
-
         self.cairo_context = ctx;
-
-        self.cell_metrics.update(&pctx);
     }
 
     /// Sets the cell metrics to be updated. If font or line_space is None,
@@ -132,6 +174,7 @@ impl Context {
         font: Font,
         line_space: i64,
         da: &gtk::DrawingArea,
+        win: &gdk::Window,
     ) {
         let pango_context = da.get_pango_context().unwrap();
         pango_context.set_font_description(&font.as_pango_font());
@@ -141,7 +184,6 @@ impl Context {
         self.cell_metrics.update(&pango_context);
 
         self.cursor_context = {
-            let win = da.get_window().unwrap();
             let surface = win
                 .create_similar_surface(
                     cairo::Content::ColorAlpha,
@@ -216,4 +258,34 @@ impl CellMetrics {
         self.underline_thickness =
             f64::from(fm.get_underline_thickness()) / scale * 2.0;
     }
+}
+
+/// Creates a new surface from `win`. Clamps width and height to the size of `win`.
+/// When clamping, warn level log messages are emitted.
+fn create_surface_clamp(win: &gdk::Window, w: i32, h: i32) -> cairo::Surface {
+    let max_height = win.get_height();
+    let max_width = win.get_width();
+
+    let width = if w > max_width {
+        warn!(
+            "Want to allocate surface with width {}, clamping to {}",
+            w, max_width
+        );
+        max_width
+    } else {
+        w
+    };
+
+    let height = if h > max_height {
+        warn!(
+            "Want to allocate surface with height {}, clamping to {}",
+            h, max_height
+        );
+        max_height
+    } else {
+        h
+    };
+
+    win.create_similar_surface(cairo::Content::Color, width, height)
+        .unwrap()
 }

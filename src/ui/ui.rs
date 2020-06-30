@@ -19,8 +19,10 @@ use crate::ui::common::spawn_local;
 use crate::ui::cursor_tooltip::CursorTooltip;
 use crate::ui::grid::Grid;
 use crate::ui::popupmenu::Popupmenu;
-use crate::ui::state::UIState;
+use crate::ui::state::{UIState, attach_grid_events, Windows};
 use crate::ui::tabline::Tabline;
+use crate::ui::font::Font;
+use crate::ui::window::MsgWindow;
 
 /// Main UI structure.
 pub struct UI {
@@ -53,6 +55,9 @@ impl UI {
         window.set_title("Neovim");
         window.set_default_size(window_size.0, window_size.1);
 
+        // Realize window resources.
+        window.realize();
+
         // Top level widget.
         let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&b);
@@ -60,12 +65,9 @@ impl UI {
         let tabline = Tabline::new(nvim.clone());
         b.pack_start(&tabline.get_widget(), false, false, 0);
 
-        // Our root widget.
+        // Our root widget for all grids/windows.
         let overlay = gtk::Overlay::new();
         b.pack_start(&overlay, true, true, 0);
-
-        let box_ = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        overlay.add(&box_);
 
         // Create hl defs and initialize 0th element because we'll need to have
         // something that is accessible for the default grid that we're gonna
@@ -73,9 +75,38 @@ impl UI {
         let mut hl_defs = HlDefs::default();
         hl_defs.insert(0, Highlight::default());
 
+        let font = Font::from_guifont("Monospace:h12").unwrap();
+        let line_space = 0;
+
         // Create default grid.
-        let mut grid = Grid::new(1);
-        box_.pack_start(&grid.widget(), true, true, 0);
+        let mut grid = Grid::new(
+            1,
+            &window.get_window().unwrap(),
+            font.clone(),
+            line_space,
+            80,
+            30,
+            &hl_defs,
+        );
+        overlay.add(&grid.widget());
+
+        let windows_container = gtk::Fixed::new();
+        windows_container.set_widget_name("Windows contianer");
+        let windows_float_container = gtk::Fixed::new();
+        windows_float_container.set_widget_name("Floating windows contianer");
+        let msg_window_container = gtk::Fixed::new();
+        msg_window_container.set_widget_name("Message grid contianer");
+        overlay.add_overlay(&windows_container);
+        overlay.add_overlay(&msg_window_container);
+        overlay.add_overlay(&windows_float_container);
+
+        let css_provider = gtk::CssProvider::new();
+        let msg_window =
+            MsgWindow::new(msg_window_container.clone(), css_provider.clone());
+
+        overlay.set_overlay_pass_through(&windows_container, true);
+        overlay.set_overlay_pass_through(&windows_float_container, true);
+        overlay.set_overlay_pass_through(&msg_window_container, true);
 
         // When resizing our window (main grid), we'll have to tell neovim to
         // resize it self also. The notify to nvim is send with a small delay,
@@ -114,55 +145,7 @@ impl UI {
             false
         }));
 
-        // Mouse button press event.
-        grid.connect_mouse_button_press_events(
-            clone!(nvim => move |button, row, col| {
-                let nvim = nvim.clone();
-                spawn_local(async move {
-                    let input = format!("<{}Mouse><{},{}>", button, col, row);
-                    nvim.input(&input).await.expect("Couldn't send mouse input");
-                });
-
-                Inhibit(false)
-            }),
-        );
-
-        // Mouse button release events.
-        grid.connect_mouse_button_release_events(
-            clone!(nvim => move |button, row, col| {
-                let nvim = nvim.clone();
-                spawn_local(async move {
-                    let input = format!("<{}Release><{},{}>", button, col, row);
-                    nvim.input(&input).await.expect("Couldn't send mouse input");
-                });
-
-                Inhibit(false)
-            }),
-        );
-
-        // Mouse drag events.
-        grid.connect_motion_events_for_drag(
-            clone!(nvim => move |button, row, col| {
-                let nvim = nvim.clone();
-                spawn_local(async move {
-                    let input = format!("<{}Drag><{},{}>", button, col, row);
-                    nvim.input(&input).await.expect("Couldn't send mouse input");
-                });
-
-                Inhibit(false)
-            }),
-        );
-
-        // Scrolling events.
-        grid.connect_scroll_events(clone!(nvim => move |dir, row, col| {
-            let nvim = nvim.clone();
-            spawn_local(async move {
-                let input = format!("<{}><{},{}>", dir, col, row);
-                nvim.input(&input).await.expect("Couldn't send mouse input");
-            });
-
-            Inhibit(false)
-        }));
+        attach_grid_events(&grid, nvim.clone());
 
         // IMMulticontext is used to handle most of the inputs.
         let im_context = gtk::IMMulticontext::new();
@@ -228,10 +211,18 @@ impl UI {
         let mut grids = HashMap::new();
         grids.insert(1, grid);
 
+        add_css_provider!(&css_provider, window);
+
         UI {
             win: window,
             rx,
             state: Rc::new(RefCell::new(UIState {
+                css_provider,
+                windows: Windows::new(),
+                windows_container,
+                msg_window_container,
+                msg_window,
+                windows_float_container,
                 grids,
                 mode_infos: vec![],
                 current_grid: 1,
@@ -245,6 +236,9 @@ impl UI {
                 hl_defs,
                 resize_on_flush: None,
                 hl_groups_changed: false,
+                font,
+                line_space,
+                current_mode: None,
             })),
             nvim,
         }

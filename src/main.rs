@@ -173,6 +173,7 @@ async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
     let mut ui_opts = nvim_rs::UiAttachOptions::new();
     ui_opts.set_rgb(true);
     ui_opts.set_linegrid_external(true);
+    ui_opts.set_multigrid_external(true);
     ui_opts.set_popupmenu_external(!opts.disable_ext_popupmenu);
     ui_opts.set_tabline_external(!opts.disable_ext_tabline);
     ui_opts.set_cmdline_external(!opts.disable_ext_cmdline);

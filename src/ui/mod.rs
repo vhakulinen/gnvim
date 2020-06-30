@@ -59,4 +59,5 @@ mod state;
 mod tabline;
 mod ui;
 mod wildmenu;
+mod window;
 pub use self::ui::UI;

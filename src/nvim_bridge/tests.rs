@@ -448,6 +448,7 @@ mod parse_redraw_event_tests {
                     info: "ofni".to_owned(),
                 },
             ],
+            grid: 1,
         }])];
 
         let res = nvim_bridge::parse_redraw_event(args!(
@@ -470,6 +471,7 @@ mod parse_redraw_event_tests {
                 4.into(),
                 3.into(),
                 6.into(),
+                1.into(),
             ))
         ));
 
