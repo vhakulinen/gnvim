@@ -23,7 +23,6 @@ mod parse_redraw_event_tests {
         RedrawEvent, TablineUpdate, WildmenuShow,
     };
     use crate::ui::color::{Color, Highlight};
-    use nvim_rs::Tabpage;
     use rmpv::Value;
 
     #[test]
