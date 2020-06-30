@@ -3,9 +3,9 @@ use gtk::prelude::*;
 
 use crate::nvim_bridge;
 use crate::nvim_gio::GioNeovim;
+use crate::ui::color::HlDefs;
 use crate::ui::common::calc_line_space;
 use crate::ui::font::{Font, FontUnit};
-use crate::ui::ui::HlDefs;
 use crate::ui::wildmenu::Wildmenu;
 
 const MAX_WIDTH: i32 = 650;

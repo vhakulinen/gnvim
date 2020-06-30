@@ -55,6 +55,7 @@ mod cursor_tooltip;
 mod font;
 mod grid;
 mod popupmenu;
+mod state;
 mod tabline;
 mod ui;
 mod wildmenu;

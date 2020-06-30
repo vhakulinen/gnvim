@@ -1,4 +1,29 @@
+use std::collections::HashMap;
+
 use glib;
+
+#[derive(Default)]
+pub struct HlDefs {
+    hl_defs: HashMap<u64, Highlight>,
+
+    pub default_fg: Color,
+    pub default_bg: Color,
+    pub default_sp: Color,
+}
+
+impl HlDefs {
+    pub fn get_mut(&mut self, id: &u64) -> Option<&mut Highlight> {
+        self.hl_defs.get_mut(id)
+    }
+
+    pub fn get(&self, id: &u64) -> Option<&Highlight> {
+        self.hl_defs.get(id)
+    }
+
+    pub fn insert(&mut self, id: u64, hl: Highlight) -> Option<Highlight> {
+        self.hl_defs.insert(id, hl)
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Highlight {

@@ -10,9 +10,9 @@ use nvim_rs::Tabpage;
 
 use crate::nvim_bridge;
 use crate::nvim_gio::{GioNeovim, GioWriter};
+use crate::ui::color::HlDefs;
 use crate::ui::common::{calc_line_space, spawn_local};
 use crate::ui::font::{Font, FontUnit};
-use crate::ui::ui::HlDefs;
 
 pub struct Tabline {
     notebook: gtk::Notebook,

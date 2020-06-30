@@ -8,6 +8,7 @@ use pango;
 
 use crate::nvim_bridge::{CompletionItem, PmenuColors};
 use crate::nvim_gio::GioNeovim;
+use crate::ui::color::HlDefs;
 use crate::ui::common::{
     calc_line_space, get_preferred_horizontal_position,
     get_preferred_vertical_position, spawn_local,
@@ -15,7 +16,6 @@ use crate::ui::common::{
 use crate::ui::font::{Font, FontUnit};
 use crate::ui::popupmenu::get_icon_pixbuf;
 use crate::ui::popupmenu::LazyLoader;
-use crate::ui::ui::HlDefs;
 
 /// Maximum height of completion menu.
 const MAX_HEIGHT: i32 = 500;

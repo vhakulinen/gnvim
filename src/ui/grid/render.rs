@@ -7,9 +7,9 @@ use pangocairo;
 
 use crate::nvim_bridge::GridLineSegment;
 use crate::ui::color::Highlight;
+use crate::ui::color::HlDefs;
 use crate::ui::grid::context::{CellMetrics, Context};
 use crate::ui::grid::row::{Cell, Segment};
-use crate::ui::ui::HlDefs;
 
 /// Renders text to `cr`.
 ///

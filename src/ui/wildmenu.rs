@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use crate::nvim_bridge;
 use crate::nvim_gio::GioNeovim;
+use crate::ui::color::HlDefs;
 use crate::ui::common::spawn_local;
-use crate::ui::ui::HlDefs;
 
 const MAX_HEIGHT: i32 = 500;
 

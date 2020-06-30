@@ -12,11 +12,11 @@ use gtk::{DrawingArea, EventBox};
 use gtk::prelude::*;
 
 use crate::nvim_bridge::{GridLineSegment, ModeInfo};
+use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
 use crate::ui::grid::context::Context;
 use crate::ui::grid::render;
 use crate::ui::grid::row::Row;
-use crate::ui::ui::HlDefs;
 
 pub enum ScrollDirection {
     Up,
