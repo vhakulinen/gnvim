@@ -8,8 +8,8 @@ use gtk;
 use gtk::prelude::*;
 
 use log::{debug, error};
-use rmpv::Value;
 use nvim_rs::Tabpage;
+use rmpv::Value;
 
 use crate::nvim_bridge::{
     CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,

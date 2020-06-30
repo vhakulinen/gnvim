@@ -84,7 +84,6 @@ where
 
     let c = glib::MainContext::default();
 
-
     c.spawn(async move {
         let _ = io.await;
         if let Err(err) = tx.send(nvim_bridge::Message::Close) {
