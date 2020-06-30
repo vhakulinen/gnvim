@@ -96,13 +96,14 @@ impl Row {
 
     /// Updates row. `line` should be coming straight from nvim's 'grid_line'.
     /// event.
-    pub fn update(&mut self, line: &GridLineSegment) -> Vec<Segment> {
+    pub fn update(&mut self, line: GridLineSegment) -> Vec<Segment> {
         let col_start = line.col_start as usize;
 
         let mut offset = col_start;
         for cell in line.cells.iter() {
             for r in 0..cell.repeat as usize {
                 self.cells[offset + r] = Cell {
+                    // TODO(ville): Avoid clone here?
                     text: cell.text.clone(),
                     hl_id: cell.hl_id,
                     double_width: cell.double_width,
@@ -504,7 +505,7 @@ mod tests {
             ],
         );
 
-        row.update(&GridLineSegment {
+        row.update(GridLineSegment {
             grid: 0,
             row: 0,
             col_start: 3,

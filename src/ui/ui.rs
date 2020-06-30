@@ -10,9 +10,7 @@ use gtk::prelude::*;
 use log::{debug, error};
 use rmpv::Value;
 
-use crate::nvim_bridge::{
-    Message, Request,
-};
+use crate::nvim_bridge::{Message, Request};
 use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
 use crate::ui::color::{Highlight, HlDefs};
@@ -280,7 +278,7 @@ impl UI {
                 Message::Notify(notify) => {
                     let mut state = state.borrow_mut();
 
-                    state.handle_notify(&win, &notify, &nvim);
+                    state.handle_notify(&win, notify, &nvim);
                 }
                 // Handle a request.
                 Message::Request(tx, request) => {

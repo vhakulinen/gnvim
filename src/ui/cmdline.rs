@@ -106,7 +106,7 @@ impl CmdlineBlock {
 
     fn append(
         &mut self,
-        append: &nvim_bridge::CmdlineBlockAppend,
+        append: nvim_bridge::CmdlineBlockAppend,
         hl_defs: &HlDefs,
     ) {
         let buffer = self.textview.get_buffer().unwrap();
@@ -271,7 +271,7 @@ impl CmdlineInput {
 
     fn set_text(
         &mut self,
-        content: &nvim_bridge::CmdlineShow,
+        content: nvim_bridge::CmdlineShow,
         hl_defs: &HlDefs,
     ) {
         let buffer = self.textview.get_buffer().unwrap();
@@ -305,7 +305,7 @@ impl CmdlineInput {
         }
 
         self.current_level = content.level;
-        self.content = content.content.iter().map(|c| c.1.clone()).collect();
+        self.content = content.content.into_iter().map(|c| c.1).collect();
 
         self.textview.grab_focus();
 
@@ -564,7 +564,7 @@ impl Cmdline {
 
     pub fn show(
         &mut self,
-        content: &nvim_bridge::CmdlineShow,
+        content: nvim_bridge::CmdlineShow,
         hl_defs: &HlDefs,
     ) {
         self.input.set_text(content, hl_defs);
@@ -622,7 +622,7 @@ impl Cmdline {
 
     pub fn block_append(
         &mut self,
-        line: &nvim_bridge::CmdlineBlockAppend,
+        line: nvim_bridge::CmdlineBlockAppend,
         hl_defs: &HlDefs,
     ) {
         self.block.append(line, &hl_defs);

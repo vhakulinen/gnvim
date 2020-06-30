@@ -10,9 +10,11 @@ use log::{debug, error};
 use nvim_rs::Tabpage;
 
 use crate::nvim_bridge::{
-    CmdlinePos, CmdlineSpecialChar, DefaultColorsSet, GnvimEvent,
-    GridCursorGoto, GridResize, HlAttrDefine, ModeChange, ModeInfo,
-    ModeInfoSet, Notify, OptionSet, RedrawEvent, TablineUpdate,
+    CmdlineBlockAppend, CmdlineBlockShow, CmdlinePos, CmdlineShow,
+    CmdlineSpecialChar, DefaultColorsSet, GnvimEvent, GridCursorGoto,
+    GridLineSegment, GridResize, GridScroll, HlAttrDefine, ModeChange,
+    ModeInfo, ModeInfoSet, Notify, OptionSet, PopupmenuShow, RedrawEvent,
+    TablineUpdate, WildmenuShow,
 };
 use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
@@ -64,17 +66,17 @@ impl UIState {
     pub fn handle_notify(
         &mut self,
         window: &gtk::ApplicationWindow,
-        notify: &Notify,
+        notify: Notify,
         nvim: &GioNeovim,
     ) {
         match notify {
             Notify::RedrawEvent(events) => {
-                events.iter().for_each(|e| {
+                events.into_iter().for_each(|e| {
                     self.handle_redraw_event(window, e, &nvim);
                 });
             }
             Notify::GnvimEvent(event) => match event {
-                Ok(event) => self.handle_gnvim_event(event, nvim),
+                Ok(event) => self.handle_gnvim_event(&event, nvim),
                 Err(err) => {
                     let nvim = nvim.clone();
                     let msg = format!(
@@ -88,6 +90,378 @@ impl UIState {
                     });
                 }
             },
+        }
+    }
+
+    fn set_title(&mut self, window: &gtk::ApplicationWindow, title: &str) {
+        window.set_title(title);
+    }
+
+    fn grid_cursor_goto(
+        &mut self,
+        GridCursorGoto {
+            grid: grid_id,
+            row,
+            col,
+        }: GridCursorGoto,
+    ) {
+        // Gird cursor goto sets the current cursor to grid_id,
+        // so we'll need to handle that here...
+        let grid = if grid_id != self.current_grid {
+            // ...so if the grid_id is not same as the self tells us,
+            // set the previous current grid to inactive self.
+            self.grids
+                .get(&self.current_grid)
+                .unwrap()
+                .set_active(false);
+            self.current_grid = grid_id;
+
+            // And set the new current grid to active.
+            let grid = self.grids.get(&grid_id).unwrap();
+            grid.set_active(true);
+            grid
+        } else {
+            self.grids.get(&grid_id).unwrap()
+        };
+
+        // And after all that, set the current grid's cursor position.
+        grid.cursor_goto(row, col);
+    }
+
+    fn grid_resize(&mut self, e: GridResize) {
+        let grid = self.grids.get(&e.grid).unwrap();
+        grid.resize(e.width, e.height);
+    }
+
+    fn grid_line(&mut self, line: GridLineSegment) {
+        let grid = self.grids.get(&line.grid).unwrap();
+        grid.put_line(line, &self.hl_defs);
+    }
+
+    fn grid_clear(&mut self, grid: &u64) {
+        let grid = self.grids.get(grid).unwrap();
+        grid.clear(&self.hl_defs);
+    }
+
+    fn grid_scroll(&mut self, info: GridScroll, nvim: &GioNeovim) {
+        let grid = self.grids.get(&info.grid).unwrap();
+        grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs);
+
+        // Since nvim doesn't have its own 'scroll' autocmd, we'll
+        // have to do it on our own. This use useful for the cursor tooltip.
+        let nvim = nvim.clone();
+        spawn_local(async move {
+            if let Err(err) = nvim.command("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif").await {
+                error!("GnvimScroll error: {:?}", err);
+            }
+        });
+    }
+
+    fn default_colors_set(
+        &mut self,
+        DefaultColorsSet { fg, bg, sp }: DefaultColorsSet,
+    ) {
+        self.hl_defs.default_fg = fg;
+        self.hl_defs.default_bg = bg;
+        self.hl_defs.default_sp = sp;
+
+        {
+            // NOTE(ville): Not sure if these are actually needed.
+            let hl = self.hl_defs.get_mut(&0).unwrap();
+            hl.foreground = Some(fg);
+            hl.background = Some(bg);
+            hl.special = Some(sp);
+        }
+
+        for grid in self.grids.values() {
+            grid.redraw(&self.hl_defs);
+        }
+
+        #[cfg(feature = "libwebkit2gtk")]
+        self.cursor_tooltip.set_colors(fg, bg);
+    }
+
+    fn hl_attr_define(&mut self, HlAttrDefine { id, hl }: HlAttrDefine) {
+        self.hl_defs.insert(id, hl);
+    }
+
+    fn option_set(&mut self, opt: OptionSet) {
+        match opt {
+            OptionSet::GuiFont(font) => {
+                let font = Font::from_guifont(&font).unwrap_or(Font::default());
+
+                let mut opts =
+                    self.resize_on_flush.take().unwrap_or_else(|| {
+                        let grid = self.grids.get(&1).unwrap();
+                        ResizeOptions {
+                            font: grid.get_font(),
+                            line_space: grid.get_line_space(),
+                        }
+                    });
+
+                opts.font = font;
+
+                self.resize_on_flush = Some(opts);
+            }
+            OptionSet::LineSpace(val) => {
+                let mut opts =
+                    self.resize_on_flush.take().unwrap_or_else(|| {
+                        let grid = self.grids.get(&1).unwrap();
+                        ResizeOptions {
+                            font: grid.get_font(),
+                            line_space: grid.get_line_space(),
+                        }
+                    });
+
+                opts.line_space = val;
+
+                self.resize_on_flush = Some(opts);
+            }
+            OptionSet::NotSupported(name) => {
+                debug!("Not supported option set: {}", name);
+            }
+        }
+    }
+
+    fn mode_info_set(&mut self, ModeInfoSet { mode_info, .. }: ModeInfoSet) {
+        self.mode_infos = mode_info.clone();
+    }
+
+    fn mode_change(&mut self, ModeChange { index, .. }: ModeChange) {
+        let mode = self.mode_infos.get(index as usize).unwrap();
+        // Broadcast the mode change to all grids.
+        // TODO(ville): It might be enough to just set the mode to the
+        //              current active grid.
+        for grid in self.grids.values() {
+            grid.set_mode(mode);
+        }
+    }
+
+    fn set_busy(&mut self, busy: bool) {
+        for grid in self.grids.values() {
+            grid.set_busy(busy);
+        }
+    }
+
+    fn flush(&mut self, nvim: &GioNeovim) {
+        for grid in self.grids.values() {
+            grid.flush(&self.hl_defs);
+        }
+
+        if let Some(opts) = self.resize_on_flush.take() {
+            for grid in self.grids.values() {
+                grid.update_cell_metrics(opts.font.clone(), opts.line_space);
+            }
+
+            let grid = self.grids.get(&1).unwrap();
+            let (cols, rows) = grid.calc_size();
+
+            // Cancel any possible delayed call for ui_try_resize.
+            let mut id = self.resize_source_id.borrow_mut();
+            if let Some(id) = id.take() {
+                glib::source::source_remove(id);
+            }
+
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                if let Err(err) =
+                    nvim.ui_try_resize(cols as i64, rows as i64).await
+                {
+                    error!("Error: failed to resize nvim on line space change ({:?})", err);
+                }
+            });
+
+            self.popupmenu.set_font(opts.font.clone(), &self.hl_defs);
+            self.cmdline.set_font(opts.font.clone(), &self.hl_defs);
+            self.tabline.set_font(opts.font.clone(), &self.hl_defs);
+            #[cfg(feature = "libwebkit2gtk")]
+            self.cursor_tooltip.set_font(opts.font.clone());
+
+            self.cmdline.set_line_space(opts.line_space);
+            self.popupmenu
+                .set_line_space(opts.line_space, &self.hl_defs);
+            self.tabline.set_line_space(opts.line_space, &self.hl_defs);
+        }
+    }
+
+    fn popupmenu_show(&mut self, popupmenu: PopupmenuShow) {
+        self.popupmenu.set_items(popupmenu.items, &self.hl_defs);
+
+        let grid = self.grids.get(&self.current_grid).unwrap();
+        let rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
+
+        self.popupmenu.set_anchor(rect);
+        self.popupmenu
+            .select(popupmenu.selected as i32, &self.hl_defs);
+
+        self.popupmenu.show();
+
+        // If the cursor tooltip is visible at the same time, move
+        // it out of our way.
+        #[cfg(feature = "libwebkit2gtk")]
+        {
+            if self.cursor_tooltip.is_visible() {
+                if self.popupmenu.is_above_anchor() {
+                    self.cursor_tooltip.force_gravity(Some(Gravity::Down));
+                } else {
+                    self.cursor_tooltip.force_gravity(Some(Gravity::Up));
+                }
+
+                self.cursor_tooltip.refresh_position();
+            }
+        }
+    }
+
+    fn popupmenu_hide(&mut self) {
+        self.popupmenu.hide();
+
+        // Undo any force positioning of cursor tool tip that might
+        // have occured on popupmenu show.
+        #[cfg(feature = "libwebkit2gtk")]
+        {
+            self.cursor_tooltip.force_gravity(None);
+            self.cursor_tooltip.refresh_position();
+        }
+    }
+
+    fn popupmenu_select(&mut self, selected: i64) {
+        self.popupmenu.select(selected as i32, &self.hl_defs);
+    }
+
+    fn tabline_update(
+        &mut self,
+        TablineUpdate { current, tabs }: TablineUpdate,
+        nvim: &GioNeovim,
+    ) {
+        let current = Tabpage::new(current, nvim.clone());
+        let tabs = tabs
+            .into_iter()
+            .map(|(value, name)| (Tabpage::new(value, nvim.clone()), name))
+            .collect();
+        self.tabline.update(current, tabs);
+    }
+
+    fn cmdline_show(&mut self, cmdline_show: CmdlineShow) {
+        self.cmdline.show(cmdline_show, &self.hl_defs);
+    }
+
+    fn cmdline_hide(&mut self) {
+        self.cmdline.hide();
+    }
+
+    fn cmdline_pos(&mut self, CmdlinePos { pos, level }: CmdlinePos) {
+        self.cmdline.set_pos(pos, level);
+    }
+
+    fn cmdline_special_char(&mut self, s: CmdlineSpecialChar) {
+        self.cmdline
+            .show_special_char(s.character, s.shift, s.level);
+    }
+
+    fn cmdline_block_show(&mut self, show: CmdlineBlockShow) {
+        self.cmdline.show_block(&show, &self.hl_defs);
+    }
+
+    fn cmdline_block_append(&mut self, line: CmdlineBlockAppend) {
+        self.cmdline.block_append(line, &self.hl_defs);
+    }
+
+    fn cmdline_block_hide(&mut self) {
+        self.cmdline.hide_block();
+    }
+
+    fn wildmenu_show(&mut self, items: WildmenuShow) {
+        self.cmdline.wildmenu_show(&items.0);
+    }
+
+    fn wildmenu_hide(&mut self) {
+        self.cmdline.wildmenu_hide();
+    }
+
+    fn wildmenu_select(&mut self, item: i64) {
+        self.cmdline.wildmenu_select(item);
+    }
+
+    fn handle_redraw_event(
+        &mut self,
+        window: &gtk::ApplicationWindow,
+        event: RedrawEvent,
+        nvim: &GioNeovim,
+    ) {
+        match event {
+            RedrawEvent::SetTitle(evt) => {
+                evt.iter().for_each(|e| self.set_title(&window, e));
+            }
+            RedrawEvent::GridLine(evt) => {
+                evt.into_iter().for_each(|line| self.grid_line(line))
+            }
+            RedrawEvent::GridCursorGoto(evt) => {
+                evt.into_iter().for_each(|e| self.grid_cursor_goto(e))
+            }
+            RedrawEvent::GridResize(evt) => {
+                evt.into_iter().for_each(|e| self.grid_resize(e))
+            }
+            RedrawEvent::GridClear(evt) => {
+                evt.iter().for_each(|e| self.grid_clear(e))
+            }
+            RedrawEvent::GridScroll(evt) => {
+                evt.into_iter().for_each(|e| self.grid_scroll(e, nvim))
+            }
+            RedrawEvent::DefaultColorsSet(evt) => {
+                evt.into_iter().for_each(|e| self.default_colors_set(e))
+            }
+            RedrawEvent::HlAttrDefine(evt) => {
+                evt.into_iter().for_each(|e| self.hl_attr_define(e))
+            }
+            RedrawEvent::OptionSet(evt) => {
+                evt.into_iter().for_each(|e| self.option_set(e));
+            }
+            RedrawEvent::ModeInfoSet(evt) => {
+                evt.into_iter().for_each(|e| self.mode_info_set(e));
+            }
+            RedrawEvent::ModeChange(evt) => {
+                evt.into_iter().for_each(|e| self.mode_change(e));
+            }
+            RedrawEvent::SetBusy(busy) => self.set_busy(busy),
+            RedrawEvent::Flush() => self.flush(nvim),
+            RedrawEvent::PopupmenuShow(evt) => {
+                evt.into_iter().for_each(|e| self.popupmenu_show(e));
+            }
+            RedrawEvent::PopupmenuHide() => self.popupmenu_hide(),
+            RedrawEvent::PopupmenuSelect(evt) => {
+                evt.into_iter().for_each(|e| self.popupmenu_select(e));
+            }
+            RedrawEvent::TablineUpdate(evt) => {
+                evt.into_iter().for_each(|e| self.tabline_update(e, nvim));
+            }
+            RedrawEvent::CmdlineShow(evt) => {
+                evt.into_iter().for_each(|e| self.cmdline_show(e));
+            }
+            RedrawEvent::CmdlineHide() => self.cmdline_hide(),
+            RedrawEvent::CmdlinePos(evt) => {
+                evt.into_iter().for_each(|e| self.cmdline_pos(e));
+            }
+            RedrawEvent::CmdlineSpecialChar(evt) => {
+                evt.into_iter().for_each(|e| self.cmdline_special_char(e));
+            }
+            RedrawEvent::CmdlineBlockShow(evt) => {
+                evt.into_iter().for_each(|e| self.cmdline_block_show(e));
+            }
+            RedrawEvent::CmdlineBlockAppend(evt) => {
+                evt.into_iter().for_each(|e| self.cmdline_block_append(e));
+            }
+            RedrawEvent::CmdlineBlockHide() => self.cmdline_block_hide(),
+            RedrawEvent::WildmenuShow(evt) => {
+                evt.into_iter().for_each(|e| self.wildmenu_show(e));
+            }
+            RedrawEvent::WildmenuHide() => self.wildmenu_hide(),
+            RedrawEvent::WildmenuSelect(evt) => {
+                evt.into_iter().for_each(|e| self.wildmenu_select(e));
+            }
+            RedrawEvent::Ignored(_) => (),
+            RedrawEvent::Unknown(e) => {
+                debug!("Received unknown redraw event: {}", e);
+            }
         }
     }
 
@@ -169,342 +543,6 @@ impl UIState {
                 }
                 _ => unreachable!(),
             },
-        }
-    }
-
-    fn handle_redraw_event(
-        &mut self,
-        window: &gtk::ApplicationWindow,
-        event: &RedrawEvent,
-        nvim: &GioNeovim,
-    ) {
-        match event {
-            RedrawEvent::SetTitle(evt) => {
-                evt.iter().for_each(|title| {
-                    window.set_title(title);
-                });
-            }
-            RedrawEvent::GridLine(evt) => {
-                evt.iter().for_each(|line| {
-                    let grid = self.grids.get(&line.grid).unwrap();
-                    grid.put_line(line, &self.hl_defs);
-                });
-            }
-            RedrawEvent::GridCursorGoto(evt) => {
-                evt.iter().for_each(
-                    |GridCursorGoto {
-                         grid: grid_id,
-                         row,
-                         col,
-                     }| {
-                        // Gird cursor goto sets the current cursor to grid_id,
-                        // so we'll need to handle that here...
-                        let grid = if *grid_id != self.current_grid {
-                            // ...so if the grid_id is not same as the self tells us,
-                            // set the previous current grid to inactive self.
-                            self.grids
-                                .get(&self.current_grid)
-                                .unwrap()
-                                .set_active(false);
-                            self.current_grid = *grid_id;
-
-                            // And set the new current grid to active.
-                            let grid = self.grids.get(grid_id).unwrap();
-                            grid.set_active(true);
-                            grid
-                        } else {
-                            self.grids.get(grid_id).unwrap()
-                        };
-
-                        // And after all that, set the current grid's cursor position.
-                        grid.cursor_goto(*row, *col);
-                    },
-                );
-            }
-            RedrawEvent::GridResize(evt) => {
-                evt.iter().for_each(
-                    |GridResize {
-                         grid,
-                         width,
-                         height,
-                     }| {
-                        let grid = self.grids.get(grid).unwrap();
-                        grid.resize(*width, *height);
-                    },
-                );
-            }
-            RedrawEvent::GridClear(evt) => {
-                evt.iter().for_each(|grid| {
-                    let grid = self.grids.get(grid).unwrap();
-                    grid.clear(&self.hl_defs);
-                });
-            }
-            RedrawEvent::GridScroll(evt) => {
-                evt.iter().for_each(|info| {
-                    let grid = self.grids.get(&info.grid).unwrap();
-                    grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs);
-
-                    // Since nvim doesn't have its own 'scroll' autocmd, we'll
-                    // have to do it on our own. This use useful for the cursor tooltip.
-                    let nvim = nvim.clone();
-                    spawn_local(async move {
-                        if let Err(err) = nvim.command("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif").await {
-                            error!("GnvimScroll error: {:?}", err);
-                        }
-                    });
-                });
-            }
-            RedrawEvent::DefaultColorsSet(evt) => {
-                evt.iter().for_each(|DefaultColorsSet { fg, bg, sp }| {
-                    self.hl_defs.default_fg = *fg;
-                    self.hl_defs.default_bg = *bg;
-                    self.hl_defs.default_sp = *sp;
-
-                    {
-                        // NOTE(ville): Not sure if these are actually needed.
-                        let hl = self.hl_defs.get_mut(&0).unwrap();
-                        hl.foreground = Some(*fg);
-                        hl.background = Some(*bg);
-                        hl.special = Some(*sp);
-                    }
-
-                    for grid in self.grids.values() {
-                        grid.redraw(&self.hl_defs);
-                    }
-
-                    #[cfg(feature = "libwebkit2gtk")]
-                    self.cursor_tooltip.set_colors(*fg, *bg);
-                });
-            }
-            RedrawEvent::HlAttrDefine(evt) => {
-                evt.iter().for_each(|HlAttrDefine { id, hl }| {
-                    self.hl_defs.insert(*id, *hl);
-                });
-            }
-            RedrawEvent::OptionSet(evt) => {
-                evt.iter().for_each(|opt| match opt {
-                    OptionSet::GuiFont(font) => {
-                        let font =
-                            Font::from_guifont(font).unwrap_or(Font::default());
-
-                        let mut opts =
-                            self.resize_on_flush.take().unwrap_or_else(|| {
-                                let grid = self.grids.get(&1).unwrap();
-                                ResizeOptions {
-                                    font: grid.get_font(),
-                                    line_space: grid.get_line_space(),
-                                }
-                            });
-
-                        opts.font = font;
-
-                        self.resize_on_flush = Some(opts);
-                    }
-                    OptionSet::LineSpace(val) => {
-                        let mut opts =
-                            self.resize_on_flush.take().unwrap_or_else(|| {
-                                let grid = self.grids.get(&1).unwrap();
-                                ResizeOptions {
-                                    font: grid.get_font(),
-                                    line_space: grid.get_line_space(),
-                                }
-                            });
-
-                        opts.line_space = *val;
-
-                        self.resize_on_flush = Some(opts);
-                    }
-                    OptionSet::NotSupported(name) => {
-                        debug!("Not supported option set: {}", name);
-                    }
-                });
-            }
-            RedrawEvent::ModeInfoSet(evt) => {
-                evt.iter().for_each(|ModeInfoSet { mode_info, .. }| {
-                    self.mode_infos = mode_info.clone();
-                });
-            }
-            RedrawEvent::ModeChange(evt) => {
-                evt.iter().for_each(|ModeChange { index, .. }| {
-                    let mode = self.mode_infos.get(*index as usize).unwrap();
-                    // Broadcast the mode change to all grids.
-                    // TODO(ville): It might be enough to just set the mode to the
-                    //              current active grid.
-                    for grid in self.grids.values() {
-                        grid.set_mode(mode);
-                    }
-                });
-            }
-            RedrawEvent::SetBusy(busy) => {
-                for grid in self.grids.values() {
-                    grid.set_busy(*busy);
-                }
-            }
-            RedrawEvent::Flush() => {
-                for grid in self.grids.values() {
-                    grid.flush(&self.hl_defs);
-                }
-
-                if let Some(opts) = self.resize_on_flush.take() {
-                    for grid in self.grids.values() {
-                        grid.update_cell_metrics(
-                            opts.font.clone(),
-                            opts.line_space,
-                        );
-                    }
-
-                    let grid = self.grids.get(&1).unwrap();
-                    let (cols, rows) = grid.calc_size();
-
-                    // Cancel any possible delayed call for ui_try_resize.
-                    let mut id = self.resize_source_id.borrow_mut();
-                    if let Some(id) = id.take() {
-                        glib::source::source_remove(id);
-                    }
-
-                    let nvim = nvim.clone();
-                    spawn_local(async move {
-                        if let Err(err) =
-                            nvim.ui_try_resize(cols as i64, rows as i64).await
-                        {
-                            error!("Error: failed to resize nvim on line space change ({:?})", err);
-                        }
-                    });
-
-                    self.popupmenu.set_font(opts.font.clone(), &self.hl_defs);
-                    self.cmdline.set_font(opts.font.clone(), &self.hl_defs);
-                    self.tabline.set_font(opts.font.clone(), &self.hl_defs);
-                    #[cfg(feature = "libwebkit2gtk")]
-                    self.cursor_tooltip.set_font(opts.font.clone());
-
-                    self.cmdline.set_line_space(opts.line_space);
-                    self.popupmenu
-                        .set_line_space(opts.line_space, &self.hl_defs);
-                    self.tabline.set_line_space(opts.line_space, &self.hl_defs);
-                }
-            }
-            RedrawEvent::PopupmenuShow(evt) => {
-                evt.iter().for_each(|popupmenu| {
-                    self.popupmenu
-                        .set_items(popupmenu.items.clone(), &self.hl_defs);
-
-                    let grid = self.grids.get(&self.current_grid).unwrap();
-                    let rect =
-                        grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
-
-                    self.popupmenu.set_anchor(rect);
-                    self.popupmenu
-                        .select(popupmenu.selected as i32, &self.hl_defs);
-
-                    self.popupmenu.show();
-
-                    // If the cursor tooltip is visible at the same time, move
-                    // it out of our way.
-                    #[cfg(feature = "libwebkit2gtk")]
-                    {
-                        if self.cursor_tooltip.is_visible() {
-                            if self.popupmenu.is_above_anchor() {
-                                self.cursor_tooltip
-                                    .force_gravity(Some(Gravity::Down));
-                            } else {
-                                self.cursor_tooltip
-                                    .force_gravity(Some(Gravity::Up));
-                            }
-
-                            self.cursor_tooltip.refresh_position();
-                        }
-                    }
-                });
-            }
-            RedrawEvent::PopupmenuHide() => {
-                self.popupmenu.hide();
-
-                // Undo any force positioning of cursor tool tip that might
-                // have occured on popupmenu show.
-                #[cfg(feature = "libwebkit2gtk")]
-                {
-                    self.cursor_tooltip.force_gravity(None);
-                    self.cursor_tooltip.refresh_position();
-                }
-            }
-            RedrawEvent::PopupmenuSelect(evt) => {
-                evt.iter().for_each(|selected| {
-                    self.popupmenu.select(*selected as i32, &self.hl_defs);
-                });
-            }
-            RedrawEvent::TablineUpdate(evt) => {
-                evt.iter().for_each(|TablineUpdate { current, tabs }| {
-                    let current = Tabpage::new(current.clone(), nvim.clone());
-                    let tabs = tabs
-                        .iter()
-                        .map(|v| {
-                            (
-                                Tabpage::new(v.0.clone(), nvim.clone()),
-                                v.1.clone(),
-                            )
-                        })
-                        .collect();
-                    self.tabline.update(current, tabs);
-                });
-            }
-            RedrawEvent::CmdlineShow(evt) => {
-                evt.iter().for_each(|cmdline_show| {
-                    self.cmdline.show(cmdline_show, &self.hl_defs);
-                });
-            }
-            RedrawEvent::CmdlineHide() => {
-                self.cmdline.hide();
-            }
-            RedrawEvent::CmdlinePos(evt) => {
-                evt.iter().for_each(|CmdlinePos { pos, level }| {
-                    self.cmdline.set_pos(*pos, *level);
-                });
-            }
-            RedrawEvent::CmdlineSpecialChar(evt) => {
-                evt.iter().for_each(
-                    |CmdlineSpecialChar {
-                         character: ch,
-                         shift,
-                         level,
-                     }| {
-                        self.cmdline.show_special_char(
-                            ch.clone(),
-                            *shift,
-                            *level,
-                        );
-                    },
-                );
-            }
-            RedrawEvent::CmdlineBlockShow(evt) => {
-                evt.iter().for_each(|show| {
-                    self.cmdline.show_block(show, &self.hl_defs);
-                });
-            }
-            RedrawEvent::CmdlineBlockAppend(evt) => {
-                evt.iter().for_each(|line| {
-                    self.cmdline.block_append(line, &self.hl_defs);
-                });
-            }
-            RedrawEvent::CmdlineBlockHide() => {
-                self.cmdline.hide_block();
-            }
-            RedrawEvent::WildmenuShow(evt) => {
-                evt.iter().for_each(|items| {
-                    self.cmdline.wildmenu_show(&items.0);
-                });
-            }
-            RedrawEvent::WildmenuHide() => {
-                self.cmdline.wildmenu_hide();
-            }
-            RedrawEvent::WildmenuSelect(evt) => {
-                evt.iter().for_each(|item| {
-                    self.cmdline.wildmenu_select(*item);
-                });
-            }
-            RedrawEvent::Ignored(_) => (),
-            RedrawEvent::Unknown(e) => {
-                debug!("Received unknown redraw event: {}", e);
-            }
         }
     }
 }

@@ -187,7 +187,7 @@ pub fn redraw(
 pub fn put_line(
     context: &mut Context,
     pango_context: &pango::Context,
-    line: &GridLineSegment,
+    line: GridLineSegment,
     hl_defs: &HlDefs,
 ) {
     let row = line.row as usize;

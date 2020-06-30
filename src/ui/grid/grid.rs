@@ -311,7 +311,7 @@ impl Grid {
         });
     }
 
-    pub fn put_line(&self, line: &GridLineSegment, hl_defs: &HlDefs) {
+    pub fn put_line(&self, line: GridLineSegment, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
         let ctx = ctx.as_mut().unwrap();
 
