@@ -450,7 +450,7 @@ fn handle_gnvim_event(
             let nvim = nvim.clone();
             let msg = "echom \"Cursor tooltip not supported in this build\"";
             spawn_local(async move {
-                if let Err(error) = nvim.command(&msg).await {
+                if let Err(err) = nvim.command(&msg).await {
                     error!("Failed to execute nvim command: {}", err)
                 }
             });
