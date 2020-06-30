@@ -53,6 +53,6 @@ features = ["v2_14"]
 optional = true
 
 [dependencies.nvim-rs]
-#git = "https://github.com/KillTheMule/nvim-rs"
-path = "../nvim-rs"
+git = "https://github.com/vhakulinen/nvim-rs"
+branch = "ext-multigrid"
 default-features = false
