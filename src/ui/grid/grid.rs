@@ -130,10 +130,11 @@ impl Grid {
         }
 
         // Update cursor color.
-        let row = ctx.rows.get(ctx.cursor.0 as usize).unwrap();
-        let cell = row.cell_at(ctx.cursor.1 as usize);
-        let hl = hl_defs.get(&cell.hl_id).unwrap();
-        ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
+        if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
+            let cell = row.cell_at(ctx.cursor.1 as usize);
+            let hl = hl_defs.get(&cell.hl_id).unwrap();
+            ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
+        }
 
         while let Some(area) = ctx.queue_draw_area.pop() {
             self.da.queue_draw_area(

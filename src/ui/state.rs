@@ -571,14 +571,16 @@ impl UIState {
         let x = if evt.anchor.is_west() {
             x_offset + anchor_metrics.cell_width * evt.anchor_col
         } else {
-            x_offset + anchor_metrics.cell_width * evt.anchor_col
-        }.max(0.0);
+            x_offset + anchor_metrics.cell_width * evt.anchor_col - width
+        }
+        .max(0.0);
 
         let y = if evt.anchor.is_north() {
             y_offset + anchor_metrics.cell_height * evt.anchor_row
         } else {
-            y_offset + anchor_metrics.cell_height * evt.anchor_row
-        }.max(0.0);
+            y_offset + anchor_metrics.cell_height * evt.anchor_row - height
+        }
+        .max(0.0);
 
         let base_grid = self.grids.get(&1).unwrap();
         let base_metrics = base_grid.get_grid_metrics();
@@ -600,13 +602,16 @@ impl UIState {
             let nvim = nvim.clone();
             let grid = evt.grid;
             spawn_local(async move {
-                nvim.ui_try_resize_grid(
-                    grid,
-                    new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64,
-                    new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64,
-                )
-                .await
-                .unwrap();
+                if let Err(err) = nvim
+                    .ui_try_resize_grid(
+                        grid,
+                        new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64,
+                        new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64,
+                    )
+                    .await
+                {
+                    error!("Failed to resize grid({}): {}", grid, err);
+                }
             });
         }
 
