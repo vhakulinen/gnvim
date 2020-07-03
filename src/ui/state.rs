@@ -572,13 +572,13 @@ impl UIState {
             x_offset + anchor_metrics.cell_width * evt.anchor_col
         } else {
             x_offset + anchor_metrics.cell_width * evt.anchor_col
-        };
+        }.max(0.0);
 
         let y = if evt.anchor.is_north() {
             y_offset + anchor_metrics.cell_height * evt.anchor_row
         } else {
             y_offset + anchor_metrics.cell_height * evt.anchor_row
-        };
+        }.max(0.0);
 
         let base_grid = self.grids.get(&1).unwrap();
         let base_metrics = base_grid.get_grid_metrics();
