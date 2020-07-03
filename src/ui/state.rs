@@ -13,8 +13,9 @@ use crate::nvim_bridge::{
     CmdlineBlockAppend, CmdlineBlockShow, CmdlinePos, CmdlineShow,
     CmdlineSpecialChar, DefaultColorsSet, GnvimEvent, GridCursorGoto,
     GridLineSegment, GridResize, GridScroll, HlAttrDefine, HlGroupSet,
-    ModeChange, ModeInfo, ModeInfoSet, Notify, OptionSet, PopupmenuShow,
-    RedrawEvent, TablineUpdate, WildmenuShow,
+    ModeChange, ModeInfo, ModeInfoSet, MsgSetPos, Notify, OptionSet,
+    PopupmenuShow, RedrawEvent, TablineUpdate, WildmenuShow, WindowExternalPos,
+    WindowFloatPos, WindowPos,
 };
 use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
@@ -187,6 +188,15 @@ impl UIState {
     fn grid_clear(&mut self, grid: &i64) {
         let grid = self.grids.get(grid).unwrap();
         grid.clear(&self.hl_defs);
+    }
+
+    fn grid_destroy(&mut self, grid: &i64) {
+        // TODO(ville): Make sure all grid resources are freed.
+        self.grids.remove(grid).unwrap(); // Drop grid.
+
+        // Make the current grid to point to the default grid. We relay on the fact
+        // that current_grid is always pointing to a existing grid.
+        self.current_grid = 1;
     }
 
     fn grid_scroll(&mut self, info: GridScroll, nvim: &GioNeovim) {
@@ -494,6 +504,160 @@ impl UIState {
         self.cmdline.wildmenu_select(item);
     }
 
+    fn window_pos(
+        &mut self,
+        evt: WindowPos,
+        window: &gtk::ApplicationWindow,
+        nvim: &GioNeovim,
+    ) {
+        let win = window.get_window().unwrap();
+        let windows_container = self.windows_container.clone();
+
+        let grid = self.grids.get(&evt.grid).unwrap();
+        let css_provider = self.css_provider.clone();
+        let window = self.windows.entry(evt.grid).or_insert_with(|| {
+            Window::new(
+                NvimWindow::new(evt.win.clone(), nvim.clone()),
+                windows_container,
+                &grid,
+                Some(css_provider),
+            )
+        });
+
+        let grid_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
+        let x = evt.start_col as f64 * grid_metrics.cell_width;
+        let y = evt.start_row as f64 * grid_metrics.cell_height;
+        let width = evt.width as f64 * grid_metrics.cell_width;
+        let height = evt.height as f64 * grid_metrics.cell_height;
+
+        window.set_position(x, y, width, height);
+        window.show();
+
+        grid.resize(&win, evt.width, evt.height, &self.hl_defs);
+    }
+
+    fn window_float_pos(&mut self, evt: WindowFloatPos, nvim: &GioNeovim) {
+        let anchor_grid = self.grids.get(&evt.anchor_grid).unwrap();
+
+        let (x_offset, y_offset) = {
+            if evt.anchor_grid == 1 {
+                (0.0, 0.0)
+            } else {
+                let anchor_window = self.windows.get(&evt.anchor_grid).unwrap();
+                (anchor_window.x, anchor_window.y)
+            }
+        };
+
+        let grid = self.grids.get(&evt.grid).unwrap();
+        let windows_float_container = self.windows_float_container.clone();
+        let css_provider = self.css_provider.clone();
+        let window = self.windows.entry(evt.grid).or_insert_with(|| {
+            Window::new(
+                NvimWindow::new(evt.win.clone(), nvim.clone()),
+                windows_float_container,
+                &grid,
+                Some(css_provider),
+            )
+        });
+
+        // TODO(ville): Move window from possible container to float container.
+
+        let anchor_metrics = anchor_grid.get_grid_metrics();
+        let grid_metrics = grid.get_grid_metrics();
+
+        let width = grid_metrics.cols * grid_metrics.cell_width;
+        let height = grid_metrics.rows * grid_metrics.cell_height;
+
+        let x = if evt.anchor.is_west() {
+            x_offset + anchor_metrics.cell_width * evt.anchor_col
+        } else {
+            x_offset + anchor_metrics.cell_width * evt.anchor_col
+        };
+
+        let y = if evt.anchor.is_north() {
+            y_offset + anchor_metrics.cell_height * evt.anchor_row
+        } else {
+            y_offset + anchor_metrics.cell_height * evt.anchor_row
+        };
+
+        let base_grid = self.grids.get(&1).unwrap();
+        let base_metrics = base_grid.get_grid_metrics();
+
+        let mut new_size = (None, None);
+
+        if grid_metrics.rows + y / base_metrics.cell_height > base_metrics.rows
+        {
+            let rows = base_metrics.rows - y / base_metrics.cell_height - 1.0;
+            new_size.1 = Some(rows);
+        }
+
+        if grid_metrics.cols + x / base_metrics.cell_width > base_metrics.cols {
+            let cols = base_metrics.cols - x / base_metrics.cell_width;
+            new_size.0 = Some(cols);
+        }
+
+        if new_size.0.is_some() || new_size.1.is_some() {
+            let nvim = nvim.clone();
+            let grid = evt.grid;
+            spawn_local(async move {
+                nvim.ui_try_resize_grid(
+                    grid,
+                    new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64,
+                    new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64,
+                )
+                .await
+                .unwrap();
+            });
+        }
+
+        window.set_position(x, y, width, height);
+        window.show();
+    }
+
+    fn window_external_pos(
+        &mut self,
+        evt: WindowExternalPos,
+        window: &gtk::ApplicationWindow,
+        nvim: &GioNeovim,
+    ) {
+        let parent_win = window.clone().upcast::<gtk::Window>();
+        let css_provider = self.css_provider.clone();
+        let grid = self.grids.get(&evt.grid).unwrap();
+        let windows_float_container = self.windows_float_container.clone();
+        let window = self.windows.entry(evt.grid).or_insert_with(|| {
+            Window::new(
+                NvimWindow::new(evt.win.clone(), nvim.clone()),
+                windows_float_container,
+                &grid,
+                Some(css_provider),
+            )
+        });
+
+        let grid_metrics = grid.get_grid_metrics();
+        let width = grid_metrics.cols * grid_metrics.cell_width;
+        let height = grid_metrics.rows * grid_metrics.cell_height;
+
+        window.set_external(&parent_win, (width as i32, height as i32));
+    }
+
+    fn window_hide(&mut self, grid_id: i64) {
+        self.windows.get(&grid_id).unwrap().hide();
+    }
+
+    fn window_close(&mut self, grid_id: i64) {
+        // TODO(ville): Make sure all resources are dropped from the window.
+        self.windows.remove(&grid_id).unwrap(); // Drop window.
+    }
+
+    fn msg_set_pos(&mut self, e: MsgSetPos) {
+        let base_grid = self.grids.get(&1).unwrap();
+        let base_metrics = base_grid.get_grid_metrics();
+        let grid = self.grids.get(&e.grid).unwrap();
+        let h = base_metrics.rows * base_metrics.cell_height
+            - e.row as f64 * base_metrics.cell_height;
+        self.msg_window.set_pos(&grid, e.row as f64, h);
+    }
+
     fn handle_redraw_event(
         &mut self,
         window: &gtk::ApplicationWindow,
@@ -517,14 +681,7 @@ impl UIState {
                 evt.iter().for_each(|e| self.grid_clear(e))
             }
             RedrawEvent::GridDestroy(evt) => {
-                evt.iter().for_each(|grid| {
-                    // TODO(ville): Make sure all grid resources are freed.
-                    self.grids.remove(grid).unwrap(); // Drop grid.
-
-                    // Make the current grid to point to the default grid. We relay on the fact
-                    // that current_grid is always pointing to a existing grid.
-                    self.current_grid = 1;
-                });
+                evt.iter().for_each(|e| self.grid_destroy(e));
             }
             RedrawEvent::GridScroll(evt) => {
                 evt.into_iter().for_each(|e| self.grid_scroll(e, nvim))
@@ -584,172 +741,24 @@ impl UIState {
                 evt.into_iter().for_each(|e| self.wildmenu_select(e));
             }
             RedrawEvent::WindowPos(evt) => {
-                evt.into_iter().for_each(|evt| {
-                    let win = window.get_window().unwrap();
-                    let windows_container = self.windows_container.clone();
-
-                    let grid = self.grids.get(&evt.grid).unwrap();
-                    let css_provider = self.css_provider.clone();
-                    let window =
-                        self.windows.entry(evt.grid).or_insert_with(|| {
-                            Window::new(
-                                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                                windows_container,
-                                &grid,
-                                Some(css_provider),
-                            )
-                        });
-
-                    let grid_metrics =
-                        self.grids.get(&1).unwrap().get_grid_metrics();
-                    let x = evt.start_col as f64 * grid_metrics.cell_width;
-                    let y = evt.start_row as f64 * grid_metrics.cell_height;
-                    let width = evt.width as f64 * grid_metrics.cell_width;
-                    let height = evt.height as f64 * grid_metrics.cell_height;
-
-                    window.set_position(x, y, width, height);
-                    window.show();
-
-                    grid.resize(&win, evt.width, evt.height, &self.hl_defs);
-                });
+                evt.into_iter()
+                    .for_each(|e| self.window_pos(e, window, nvim));
             }
             RedrawEvent::WindowFloatPos(evt) => {
-                evt.iter().for_each(|evt| {
-                    let anchor_grid = self.grids.get(&evt.anchor_grid).unwrap();
-
-                    let (x_offset, y_offset) = {
-                        if evt.anchor_grid == 1 {
-                            (0.0, 0.0)
-                        } else {
-                            let anchor_window =
-                                self.windows.get(&evt.anchor_grid).unwrap();
-                            (anchor_window.x, anchor_window.y)
-                        }
-                    };
-
-                    let grid = self.grids.get(&evt.grid).unwrap();
-                    let windows_float_container =
-                        self.windows_float_container.clone();
-                    let css_provider = self.css_provider.clone();
-                    let window =
-                        self.windows.entry(evt.grid).or_insert_with(|| {
-                            Window::new(
-                                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                                windows_float_container,
-                                &grid,
-                                Some(css_provider),
-                            )
-                        });
-
-                    // TODO(ville): Move window from possible container to float container.
-
-                    let anchor_metrics = anchor_grid.get_grid_metrics();
-                    let grid_metrics = grid.get_grid_metrics();
-
-                    let width = grid_metrics.cols * grid_metrics.cell_width;
-                    let height = grid_metrics.rows * grid_metrics.cell_height;
-
-                    let x = if evt.anchor.is_west() {
-                        x_offset + anchor_metrics.cell_width * evt.anchor_col
-                    } else {
-                        x_offset + anchor_metrics.cell_width * evt.anchor_col
-                    };
-
-                    let y = if evt.anchor.is_north() {
-                        y_offset + anchor_metrics.cell_height * evt.anchor_row
-                    } else {
-                        y_offset + anchor_metrics.cell_height * evt.anchor_row
-                    };
-
-                    let base_grid = self.grids.get(&1).unwrap();
-                    let base_metrics = base_grid.get_grid_metrics();
-
-                    let mut new_size = (None, None);
-
-                    if grid_metrics.rows + y / base_metrics.cell_height
-                        > base_metrics.rows
-                    {
-                        let rows = base_metrics.rows
-                            - y / base_metrics.cell_height
-                            - 1.0;
-                        new_size.1 = Some(rows);
-                    }
-
-                    if grid_metrics.cols + x / base_metrics.cell_width
-                        > base_metrics.cols
-                    {
-                        let cols =
-                            base_metrics.cols - x / base_metrics.cell_width;
-                        new_size.0 = Some(cols);
-                    }
-
-                    if new_size.0.is_some() || new_size.1.is_some() {
-                        let nvim = nvim.clone();
-                        let grid = evt.grid;
-                        spawn_local(async move {
-                            nvim.ui_try_resize_grid(
-                                grid,
-                                new_size.0.unwrap_or_else(|| grid_metrics.cols)
-                                    as i64,
-                                new_size.1.unwrap_or_else(|| grid_metrics.rows)
-                                    as i64,
-                            )
-                            .await
-                            .unwrap();
-                        });
-                    }
-
-                    window.set_position(x, y, width, height);
-                    window.show();
-                });
+                evt.into_iter().for_each(|e| self.window_float_pos(e, nvim));
             }
             RedrawEvent::WindowExternalPos(evt) => {
-                evt.iter().for_each(|evt| {
-                    let parent_win = window.clone().upcast::<gtk::Window>();
-                    let css_provider = self.css_provider.clone();
-                    let grid = self.grids.get(&evt.grid).unwrap();
-                    let windows_float_container =
-                        self.windows_float_container.clone();
-                    let window =
-                        self.windows.entry(evt.grid).or_insert_with(|| {
-                            Window::new(
-                                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                                windows_float_container,
-                                &grid,
-                                Some(css_provider),
-                            )
-                        });
-
-                    let grid_metrics = grid.get_grid_metrics();
-                    let width = grid_metrics.cols * grid_metrics.cell_width;
-                    let height = grid_metrics.rows * grid_metrics.cell_height;
-
-                    window.set_external(
-                        &parent_win,
-                        (width as i32, height as i32),
-                    );
-                });
+                evt.into_iter()
+                    .for_each(|e| self.window_external_pos(e, window, nvim));
             }
             RedrawEvent::WindowHide(evt) => {
-                evt.iter().for_each(|grid_id| {
-                    self.windows.get(&grid_id).unwrap().hide();
-                });
+                evt.into_iter().for_each(|e| self.window_hide(e));
             }
             RedrawEvent::WindowClose(evt) => {
-                evt.iter().for_each(|grid_id| {
-                    // TODO(ville): Make sure all resources are dropped from the window.
-                    self.windows.remove(&grid_id).unwrap(); // Drop window.
-                });
+                evt.into_iter().for_each(|e| self.window_close(e));
             }
             RedrawEvent::MsgSetPos(evt) => {
-                evt.iter().for_each(|e| {
-                    let base_grid = self.grids.get(&1).unwrap();
-                    let base_metrics = base_grid.get_grid_metrics();
-                    let grid = self.grids.get(&e.grid).unwrap();
-                    let h = base_metrics.rows * base_metrics.cell_height
-                        - e.row as f64 * base_metrics.cell_height;
-                    self.msg_window.set_pos(&grid, e.row as f64, h);
-                });
+                evt.into_iter().for_each(|e| self.msg_set_pos(e));
             }
             RedrawEvent::Ignored(_) => (),
             RedrawEvent::Unknown(e) => {
