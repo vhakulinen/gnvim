@@ -69,12 +69,10 @@ impl Row {
 
     pub fn grow(&mut self, new_size: usize) {
         let mut n = self.cells.clone().into_vec();
-        n.resize_with(new_size, || {
-            Cell {
-                text: String::from(" "),
-                hl_id: 0,
-                double_width: false,
-            }
+        n.resize_with(new_size, || Cell {
+            text: String::from(" "),
+            hl_id: 0,
+            double_width: false,
         });
 
         self.cells = n.into_boxed_slice();
@@ -936,7 +934,10 @@ mod tests {
         row.grow(15);
 
         assert_eq!(row.len, 15);
-        assert_eq!(row.cells.iter().map(|c| c.text.clone()).collect::<String>(), String::from(" ").repeat(15));
+        assert_eq!(
+            row.cells.iter().map(|c| c.text.clone()).collect::<String>(),
+            String::from(" ").repeat(15)
+        );
     }
 
     #[test]
@@ -945,6 +946,9 @@ mod tests {
         row.truncate(5);
 
         assert_eq!(row.len, 5);
-        assert_eq!(row.cells.iter().map(|c| c.text.clone()).collect::<String>(), String::from(" ").repeat(5));
+        assert_eq!(
+            row.cells.iter().map(|c| c.text.clone()).collect::<String>(),
+            String::from(" ").repeat(5)
+        );
     }
 }

@@ -47,10 +47,14 @@ impl MsgWindow {
 
         let metrics = grid.get_grid_metrics();
         let w = metrics.cols * metrics.cell_width;
-        self.frame.set_size_request(w.ceil() as i32, h.ceil() as i32);
+        self.frame
+            .set_size_request(w.ceil() as i32, h.ceil() as i32);
 
-        self.fixed
-            .move_(&self.frame, 0, (metrics.cell_height as f64 * row) as i32);
+        self.fixed.move_(
+            &self.frame,
+            0,
+            (metrics.cell_height as f64 * row) as i32,
+        );
         self.fixed.show_all();
     }
 }
@@ -128,9 +132,11 @@ impl Window {
 
         self.x = x;
         self.y = y;
-        self.fixed.move_(&self.frame, x.floor() as i32, y.floor() as i32);
+        self.fixed
+            .move_(&self.frame, x.floor() as i32, y.floor() as i32);
 
-        self.frame.set_size_request(w.ceil() as i32, h.ceil() as i32);
+        self.frame
+            .set_size_request(w.ceil() as i32, h.ceil() as i32);
     }
 
     pub fn show(&self) {

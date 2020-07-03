@@ -17,11 +17,11 @@ use crate::ui::color::{Highlight, HlDefs};
 use crate::ui::common::spawn_local;
 #[cfg(feature = "libwebkit2gtk")]
 use crate::ui::cursor_tooltip::CursorTooltip;
+use crate::ui::font::Font;
 use crate::ui::grid::Grid;
 use crate::ui::popupmenu::Popupmenu;
-use crate::ui::state::{UIState, attach_grid_events, Windows};
+use crate::ui::state::{attach_grid_events, UIState, Windows};
 use crate::ui::tabline::Tabline;
-use crate::ui::font::Font;
 use crate::ui::window::MsgWindow;
 
 /// Main UI structure.

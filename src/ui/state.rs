@@ -131,8 +131,7 @@ impl UIState {
         let grid = if grid_id != self.current_grid {
             // ...so if the grid_id is not same as the self tells us,
             // set the previous current grid to inactive self.
-            let grid =
-                self.grids.get(&self.current_grid).unwrap();
+            let grid = self.grids.get(&self.current_grid).unwrap();
 
             grid.set_active(false);
             grid.tick(); // Trick the grid to invalide the cursor's rect.
@@ -151,7 +150,12 @@ impl UIState {
         grid.cursor_goto(row, col);
     }
 
-    fn grid_resize(&mut self, e: GridResize, window: &gtk::ApplicationWindow, nvim: &GioNeovim) {
+    fn grid_resize(
+        &mut self,
+        e: GridResize,
+        window: &gtk::ApplicationWindow,
+        nvim: &GioNeovim,
+    ) {
         let win = window.get_window().unwrap();
         if let Some(grid) = self.grids.get(&e.grid) {
             grid.resize(&win, e.width, e.height, &self.hl_defs);
@@ -339,7 +343,11 @@ impl UIState {
         if let Some(opts) = self.resize_on_flush.take() {
             let win = window.get_window().unwrap();
             for grid in self.grids.values() {
-                grid.update_cell_metrics(opts.font.clone(), opts.line_space, &win);
+                grid.update_cell_metrics(
+                    opts.font.clone(),
+                    opts.line_space,
+                    &win,
+                );
             }
 
             // TODO(ville): Use the root container to get the main grid's size and make
@@ -502,9 +510,9 @@ impl UIState {
             RedrawEvent::GridCursorGoto(evt) => {
                 evt.into_iter().for_each(|e| self.grid_cursor_goto(e))
             }
-            RedrawEvent::GridResize(evt) => {
-                evt.into_iter().for_each(|e| self.grid_resize(e, window, nvim))
-            }
+            RedrawEvent::GridResize(evt) => evt
+                .into_iter()
+                .for_each(|e| self.grid_resize(e, window, nvim)),
             RedrawEvent::GridClear(evt) => {
                 evt.iter().for_each(|e| self.grid_clear(e))
             }
@@ -607,8 +615,7 @@ impl UIState {
             }
             RedrawEvent::WindowFloatPos(evt) => {
                 evt.iter().for_each(|evt| {
-                    let anchor_grid =
-                        self.grids.get(&evt.anchor_grid).unwrap();
+                    let anchor_grid = self.grids.get(&evt.anchor_grid).unwrap();
 
                     let (x_offset, y_offset) = {
                         if evt.anchor_grid == 1 {
@@ -682,11 +689,13 @@ impl UIState {
                         spawn_local(async move {
                             nvim.ui_try_resize_grid(
                                 grid,
-                                new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64,
-                                new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64,
+                                new_size.0.unwrap_or_else(|| grid_metrics.cols)
+                                    as i64,
+                                new_size.1.unwrap_or_else(|| grid_metrics.rows)
+                                    as i64,
                             )
-                                .await
-                                .unwrap();
+                            .await
+                            .unwrap();
                         });
                     }
 
