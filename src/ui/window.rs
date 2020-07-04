@@ -161,6 +161,7 @@ impl Drop for Window {
             // container.
             self.frame.remove(&child);
         }
+
         self.frame.destroy();
 
         if let Some(ref win) = self.external_win {
