@@ -24,7 +24,7 @@ use crate::ui::common::spawn_local;
 #[cfg(feature = "libwebkit2gtk")]
 use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
 use crate::ui::font::Font;
-use crate::ui::grid::Grid;
+use crate::ui::grid::{Grid, GridMetrics};
 use crate::ui::popupmenu::Popupmenu;
 use crate::ui::tabline::Tabline;
 use crate::ui::window::{MsgWindow, Window};
@@ -568,35 +568,18 @@ impl UIState {
         let width = grid_metrics.cols * grid_metrics.cell_width;
         let height = grid_metrics.rows * grid_metrics.cell_height;
 
-        let x = if evt.anchor.is_west() {
-            x_offset + anchor_metrics.cell_width * evt.anchor_col
-        } else {
-            x_offset + anchor_metrics.cell_width * evt.anchor_col - width
-        }
-        .max(0.0);
-
-        let y = if evt.anchor.is_north() {
-            y_offset + anchor_metrics.cell_height * evt.anchor_row
-        } else {
-            y_offset + anchor_metrics.cell_height * evt.anchor_row - height
-        }
-        .max(0.0);
+        let (x, y) = win_float_anchor_pos(
+            &evt,
+            &anchor_metrics,
+            (width, height),
+            (x_offset, y_offset),
+        );
 
         let base_grid = self.grids.get(&1).unwrap();
         let base_metrics = base_grid.get_grid_metrics();
 
-        let mut new_size = (None, None);
-
-        if grid_metrics.rows + y / base_metrics.cell_height > base_metrics.rows
-        {
-            let rows = base_metrics.rows - y / base_metrics.cell_height - 1.0;
-            new_size.1 = Some(rows);
-        }
-
-        if grid_metrics.cols + x / base_metrics.cell_width > base_metrics.cols {
-            let cols = base_metrics.cols - x / base_metrics.cell_width;
-            new_size.0 = Some(cols);
-        }
+        let new_size =
+            win_float_adjust_size(&grid_metrics, &base_metrics, (x, y));
 
         if new_size.0.is_some() || new_size.1.is_some() {
             let nvim = nvim.clone();
@@ -894,4 +877,185 @@ pub fn attach_grid_events(grid: &Grid, nvim: GioNeovim) {
 
         Inhibit(false)
     }));
+}
+
+fn win_float_adjust_size(
+    grid_metrics: &GridMetrics,
+    base_metrics: &GridMetrics,
+    (x, y): (f64, f64),
+) -> (Option<f64>, Option<f64>) {
+    let mut new_size = (None, None);
+    if grid_metrics.rows + y / base_metrics.cell_height > base_metrics.rows {
+        let rows = base_metrics.rows - y / base_metrics.cell_height - 1.0;
+        new_size.1 = Some(rows);
+    }
+
+    if grid_metrics.cols + x / base_metrics.cell_width > base_metrics.cols {
+        let cols = base_metrics.cols - x / base_metrics.cell_width;
+        new_size.0 = Some(cols);
+    }
+
+    new_size
+}
+
+fn win_float_anchor_pos(
+    evt: &WindowFloatPos,
+    anchor_metrics: &GridMetrics,
+    (width, height): (f64, f64),
+    (x_offset, y_offset): (f64, f64),
+) -> (f64, f64) {
+    let x = if evt.anchor.is_west() {
+        x_offset + anchor_metrics.cell_width * evt.anchor_col
+    } else {
+        x_offset + anchor_metrics.cell_width * evt.anchor_col - width
+    }
+    .max(0.0);
+
+    let y = if evt.anchor.is_north() {
+        y_offset + anchor_metrics.cell_height * evt.anchor_row
+    } else {
+        y_offset + anchor_metrics.cell_height * evt.anchor_row - height
+    }
+    .max(0.0);
+
+    (x, y)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::nvim_bridge::Anchor;
+    use rmpv::Value;
+
+    #[test]
+    fn test_float_anchor_pos() {
+        struct Data {
+            anchor: Anchor,
+            width: f64,
+            height: f64,
+            anchor_row: f64,
+            anchor_col: f64,
+            x_offset: f64,
+            y_offset: f64,
+
+            cell_width: f64,
+            cell_height: f64,
+
+            expected: (f64, f64),
+        }
+
+        let data = vec![
+            Data {
+                anchor: Anchor::NW,
+                width: 1000.0,
+                height: 1000.0,
+                anchor_row: 10.0,
+                anchor_col: 10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (105.0, 105.0),
+            },
+            Data {
+                anchor: Anchor::NW,
+                width: 100.0,
+                height: 100.0,
+                anchor_row: -10.0,
+                anchor_col: -10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (0.0, 0.0),
+            },
+            Data {
+                anchor: Anchor::NE,
+                width: 100.0,
+                height: 100.0,
+                anchor_row: 10.0,
+                anchor_col: 10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (5.0, 105.0),
+            },
+            Data {
+                anchor: Anchor::SW,
+                width: 100.0,
+                height: 100.0,
+                anchor_row: 10.0,
+                anchor_col: 10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (105.0, 5.0),
+            },
+            Data {
+                anchor: Anchor::SW,
+                width: 100.0,
+                height: 100.0,
+                anchor_row: -10.0,
+                anchor_col: 10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (105.0, 0.0),
+            },
+            Data {
+                anchor: Anchor::SE,
+                width: 100.0,
+                height: 100.0,
+                anchor_row: 10.0,
+                anchor_col: 10.0,
+                x_offset: 5.0,
+                y_offset: 5.0,
+
+                cell_width: 10.0,
+                cell_height: 10.0,
+
+                expected: (5.0, 5.0),
+            },
+        ];
+
+        for row in data.into_iter() {
+            let evt = WindowFloatPos {
+                grid: 1,
+                win: Value::Nil,
+                anchor: row.anchor,
+                anchor_grid: 1,
+                anchor_row: row.anchor_row,
+                anchor_col: row.anchor_col,
+                focusable: false,
+            };
+
+            assert_eq!(
+                row.expected,
+                win_float_anchor_pos(
+                    &evt,
+                    &GridMetrics {
+                        cell_height: row.cell_height,
+                        cell_width: row.cell_width,
+                        rows: 0.0,
+                        cols: 0.0,
+                    },
+                    (row.width, row.height),
+                    (row.x_offset, row.y_offset),
+                ),
+            );
+        }
+    }
 }
