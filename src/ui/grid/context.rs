@@ -1,11 +1,7 @@
 use cairo;
+use gtk::prelude::*;
 use gtk::DrawingArea;
 use pango;
-
-use gdk::prelude::*;
-use gtk::prelude::*;
-
-use log::warn;
 
 use crate::ui::color::{Color, Highlight, HlDefs};
 use crate::ui::font::Font;
@@ -69,9 +65,15 @@ impl Context {
         cell_metrics.line_space = line_space;
         cell_metrics.update(&pango_context);
 
-        let w = cell_metrics.width as usize * cols;
-        let h = cell_metrics.height as usize * rows;
-        let surface = create_surface_clamp(win, w as i32, h as i32);
+        let w = cell_metrics.width * cols as f64;
+        let h = cell_metrics.height * rows as f64;
+        let surface = win
+            .create_similar_surface(
+                cairo::Content::Color,
+                w.ceil() as i32,
+                h.ceil() as i32,
+            )
+            .unwrap();
 
         let cairo_context = cairo::Context::new(&surface);
 
@@ -90,7 +92,7 @@ impl Context {
                 .create_similar_surface(
                     cairo::Content::ColorAlpha,
                     (cell_metrics.width * 2.0) as i32, // times two for double width chars.
-                    cell_metrics.height as i32 + cell_metrics.ascent as i32,
+                    (cell_metrics.height + cell_metrics.ascent).ceil() as i32,
                 )
                 .unwrap();
             cairo::Context::new(&surface)
@@ -133,9 +135,15 @@ impl Context {
 
         self.cell_metrics.update(&pctx);
 
-        let w = self.cell_metrics.width as usize * cols;
-        let h = self.cell_metrics.height as usize * rows;
-        let surface = create_surface_clamp(win, w as i32, h as i32);
+        let w = self.cell_metrics.width * cols as f64;
+        let h = self.cell_metrics.height * rows as f64;
+        let surface = win
+            .create_similar_surface(
+                cairo::Content::Color,
+                w.ceil() as i32,
+                h.ceil() as i32,
+            )
+            .unwrap();
         let ctx = cairo::Context::new(&surface);
 
         // Fill the context with default bg color.
@@ -187,9 +195,9 @@ impl Context {
             let surface = win
                 .create_similar_surface(
                     cairo::Content::ColorAlpha,
-                    (self.cell_metrics.width * 2.0) as i32, // times two for double width chars.
-                    self.cell_metrics.height as i32
-                        + self.cell_metrics.ascent as i32,
+                    (self.cell_metrics.width * 2.0).ceil() as i32, // times two for double width chars.
+                    (self.cell_metrics.height + self.cell_metrics.ascent).ceil()
+                        as i32,
                 )
                 .unwrap();
             cairo::Context::new(&surface)
@@ -202,7 +210,11 @@ impl Context {
             .rows
             .get(self.cursor.0 as usize)
             .and_then(|row| {
-                Some(row.cell_at(self.cursor.1 as usize).double_width)
+                Some(
+                    row.cell_at(self.cursor.1 as usize)
+                        .map(|c| c.double_width)
+                        .unwrap_or(false),
+                )
             })
             .unwrap_or(false);
 
@@ -258,34 +270,4 @@ impl CellMetrics {
         self.underline_thickness =
             f64::from(fm.get_underline_thickness()) / scale * 2.0;
     }
-}
-
-/// Creates a new surface from `win`. Clamps width and height to the size of `win`.
-/// When clamping, warn level log messages are emitted.
-fn create_surface_clamp(win: &gdk::Window, w: i32, h: i32) -> cairo::Surface {
-    let max_height = win.get_height();
-    let max_width = win.get_width();
-
-    let width = if w > max_width {
-        warn!(
-            "Want to allocate surface with width {}, clamping to {}",
-            w, max_width
-        );
-        max_width
-    } else {
-        w
-    };
-
-    let height = if h > max_height {
-        warn!(
-            "Want to allocate surface with height {}, clamping to {}",
-            h, max_height
-        );
-        max_height
-    } else {
-        h
-    };
-
-    win.create_similar_surface(cairo::Content::Color, width, height)
-        .unwrap()
 }

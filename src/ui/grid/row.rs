@@ -53,8 +53,8 @@ impl Row {
 
     /// Returns a leaf at a position.
     #[inline]
-    pub fn cell_at(&self, at: usize) -> &Cell {
-        self.cells.get(at).unwrap()
+    pub fn cell_at(&self, at: usize) -> Option<&Cell> {
+        self.cells.get(at)
     }
 
     #[allow(unused)] // Not used currently, but tested.

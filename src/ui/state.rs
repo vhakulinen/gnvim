@@ -160,6 +160,17 @@ impl UIState {
         let win = window.get_window().unwrap();
         if let Some(grid) = self.grids.get(&e.grid) {
             grid.resize(&win, e.width, e.height, &self.hl_defs);
+
+            // If the grid is in a window (which is likely), resize the window
+            // to match the grid's size.
+            if let Some(ref w) =
+                self.windows.values().find(|w| w.grid_id == grid.id)
+            {
+                let grid_metrics = grid.get_grid_metrics();
+                let width = grid_metrics.cols * grid_metrics.cell_width;
+                let height = grid_metrics.rows * grid_metrics.cell_height;
+                w.resize((width.ceil() as i32, height.ceil() as i32));
+            }
         } else {
             let grid = Grid::new(
                 e.grid,
@@ -625,7 +636,20 @@ impl UIState {
         let width = grid_metrics.cols * grid_metrics.cell_width;
         let height = grid_metrics.rows * grid_metrics.cell_height;
 
-        window.set_external(&parent_win, (width as i32, height as i32));
+        window.set_external(
+            &parent_win,
+            (width.ceil() as i32, height.ceil() as i32),
+        );
+
+        // NOTE(ville): Without this, "new" grids (e.g. once added to a external
+        // window without appearing in the main grid first) won't get proper
+        // font/linespace values.
+        grid.resize(
+            &parent_win.get_window().unwrap(),
+            grid_metrics.cols as u64,
+            grid_metrics.rows as u64,
+            &self.hl_defs,
+        );
     }
 
     fn window_hide(&mut self, grid_id: i64) {
