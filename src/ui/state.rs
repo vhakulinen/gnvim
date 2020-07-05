@@ -167,9 +167,10 @@ impl UIState {
                 self.windows.values().find(|w| w.grid_id == grid.id)
             {
                 let grid_metrics = grid.get_grid_metrics();
-                let width = grid_metrics.cols * grid_metrics.cell_width;
-                let height = grid_metrics.rows * grid_metrics.cell_height;
-                w.resize((width.ceil() as i32, height.ceil() as i32));
+                w.resize((
+                    grid_metrics.width.ceil() as i32,
+                    grid_metrics.height.ceil() as i32,
+                ));
             }
         } else {
             let grid = Grid::new(
@@ -579,13 +580,10 @@ impl UIState {
         let anchor_metrics = anchor_grid.get_grid_metrics();
         let grid_metrics = grid.get_grid_metrics();
 
-        let width = grid_metrics.cols * grid_metrics.cell_width;
-        let height = grid_metrics.rows * grid_metrics.cell_height;
-
         let (x, y) = win_float_anchor_pos(
             &evt,
             &anchor_metrics,
-            (width, height),
+            (grid_metrics.width, grid_metrics.height),
             (x_offset, y_offset),
         );
 
@@ -598,21 +596,18 @@ impl UIState {
         if new_size.0.is_some() || new_size.1.is_some() {
             let nvim = nvim.clone();
             let grid = evt.grid;
+            let cols = new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64;
+            let rows = new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64;
             spawn_local(async move {
-                if let Err(err) = nvim
-                    .ui_try_resize_grid(
-                        grid,
-                        new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64,
-                        new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64,
-                    )
-                    .await
+                if let Err(err) =
+                    nvim.ui_try_resize_grid(grid, cols, rows).await
                 {
                     error!("Failed to resize grid({}): {}", grid, err);
                 }
             });
         }
 
-        window.set_position(x, y, width, height);
+        window.set_position(x, y, grid_metrics.width, grid_metrics.height);
         window.show();
     }
 
@@ -636,12 +631,13 @@ impl UIState {
         });
 
         let grid_metrics = grid.get_grid_metrics();
-        let width = grid_metrics.cols * grid_metrics.cell_width;
-        let height = grid_metrics.rows * grid_metrics.cell_height;
 
         window.set_external(
             &parent_win,
-            (width.ceil() as i32, height.ceil() as i32),
+            (
+                grid_metrics.width.ceil() as i32,
+                grid_metrics.height.ceil() as i32,
+            ),
         );
 
         // NOTE(ville): Without this, "new" grids (e.g. once added to a external
@@ -668,8 +664,7 @@ impl UIState {
         let base_grid = self.grids.get(&1).unwrap();
         let base_metrics = base_grid.get_grid_metrics();
         let grid = self.grids.get(&e.grid).unwrap();
-        let h = base_metrics.rows * base_metrics.cell_height
-            - e.row as f64 * base_metrics.cell_height;
+        let h = base_metrics.height - e.row as f64 * base_metrics.cell_height;
         self.msg_window.set_pos(&grid, e.row as f64, h);
     }
 

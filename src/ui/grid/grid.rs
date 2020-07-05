@@ -19,10 +19,19 @@ use crate::ui::grid::render;
 use crate::ui::grid::row::Row;
 
 pub struct GridMetrics {
+    // Row count in the grid.
     pub rows: f64,
+    // Col count in the grid.
     pub cols: f64,
+    // Height of a cell.
     pub cell_height: f64,
+    // Width of a cell.
     pub cell_width: f64,
+
+    // Width of the whole grid as required by the cell width and cols.
+    pub height: f64,
+    // Height of the whole grid as required by the cell height and rows.
+    pub width: f64,
 }
 
 pub enum ScrollDirection {
@@ -364,20 +373,20 @@ impl Grid {
     pub fn get_grid_metrics(&self) -> GridMetrics {
         let ctx = self.context.borrow();
 
-        // TODO(ville): At least on other than the base grid, we might want to get the metrics from
-        // the internal datastructures and not from calculations based on the drawingarea's size.
-        //let w = self.da.get_allocated_width();
-        //let h = self.da.get_allocated_height();
-        //let cols = (w / ctx.cell_metrics.width as i32) as u64;
-        //let rows = (h / ctx.cell_metrics.height as i32) as u64;
-
         let row = ctx.rows.get(0).unwrap();
 
+        let rows = ctx.rows.len() as f64;
+        let cols = row.len() as f64;
+        let cell_width = ctx.cell_metrics.width;
+        let cell_height = ctx.cell_metrics.height;
+
         GridMetrics {
-            rows: ctx.rows.len() as f64,
-            cols: row.len() as f64,
-            cell_width: ctx.cell_metrics.width,
-            cell_height: ctx.cell_metrics.height,
+            rows,
+            cols,
+            cell_width,
+            cell_height,
+            width: cols * cell_width,
+            height: rows * cell_height,
         }
     }
 
