@@ -132,7 +132,7 @@ impl Context {
         let prev_cols = self.rows.get(0).map(|r| r.len()).unwrap_or(0);
 
         if self.rows.len() != rows {
-            self.rows.resize_with(rows, || Row::new(rows));
+            self.rows.resize_with(rows, || Row::new(cols));
         }
 
         if self.rows.get(0).unwrap().len() != cols {
