@@ -375,8 +375,6 @@ impl UIState {
                 );
             }
 
-            // TODO(ville): Use the root container to get the main grid's size and make
-            // sure that it (the root contianer widget) has proper size.
             let grid = self.grids.get(&1).unwrap();
             let (cols, rows) = grid.calc_size();
 
@@ -391,7 +389,7 @@ impl UIState {
                 if let Err(err) =
                     nvim.ui_try_resize(cols as i64, rows as i64).await
                 {
-                    error!("Error: failed to resize nvim on line space change ({:?})", err);
+                    error!("Error: failed to resize nvim ({:?})", err);
                 }
             });
 

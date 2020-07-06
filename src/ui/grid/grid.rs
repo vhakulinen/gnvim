@@ -387,11 +387,11 @@ impl Grid {
         }
     }
 
-    /// Calcualtes the current size of the grid.
+    /// Calcualtes the size of a grid that can fit in the current drawingarea
+    /// with current cell metrics.
     pub fn calc_size(&self) -> (i64, i64) {
         let ctx = self.context.borrow();
 
-        // TODO(ville): Dont relay on the drawingarea's size.
         let w = self.da.get_allocated_width();
         let h = self.da.get_allocated_height();
         let cols = (w / ctx.cell_metrics.width as i32) as i64;
