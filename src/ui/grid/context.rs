@@ -120,16 +120,27 @@ impl Context {
     }
 
     /// Updates internals that are dependant on the drawing area.
-    pub fn update(
+    pub fn resize(
         &mut self,
         da: &DrawingArea,
         win: &gdk::Window,
         cols: usize,
         rows: usize,
         hl_defs: &HlDefs,
-        prev_cols: usize,
-        prev_rows: usize,
     ) {
+        let prev_rows = self.rows.len();
+        let prev_cols = self.rows.get(0).map(|r| r.len()).unwrap_or(0);
+
+        if self.rows.len() != rows {
+            self.rows.resize_with(rows, || Row::new(rows));
+        }
+
+        if self.rows.get(0).unwrap().len() != cols {
+            for row in self.rows.iter_mut() {
+                row.resize(cols);
+            }
+        }
+
         let pctx = da.get_pango_context().unwrap();
         pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 

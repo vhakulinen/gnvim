@@ -16,7 +16,6 @@ use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
 use crate::ui::grid::context::Context;
 use crate::ui::grid::render;
-use crate::ui::grid::row::Row;
 
 pub struct GridMetrics {
     // Row count in the grid.
@@ -406,48 +405,17 @@ impl Grid {
     pub fn resize(
         &self,
         win: &gdk::Window,
-        width: u64,
-        height: u64,
+        cols: u64,
+        rows: u64,
         hl_defs: &HlDefs,
     ) {
         let mut ctx = self.context.borrow_mut();
-
-        let width = width as usize;
-        let height = height as usize;
-
-        let prev_height = ctx.rows.len();
-        let prev_width = if let Some(row) = ctx.rows.get(0) {
-            row.len()
-        } else {
-            0
-        };
-
-        if ctx.rows.len() > height {
-            ctx.rows.truncate(height);
-        } else if ctx.rows.len() < height {
-            for _ in ctx.rows.len()..height {
-                ctx.rows.push(Row::new(width));
-            }
-        }
-
-        if ctx.rows.get(0).unwrap().len() < width {
-            for row in ctx.rows.iter_mut() {
-                row.grow(width);
-            }
-        } else {
-            for row in ctx.rows.iter_mut() {
-                row.truncate(width);
-            }
-        }
-
-        ctx.update(
+        ctx.resize(
             &self.da,
             win,
-            width,
-            height,
+            cols as usize,
+            rows as usize,
             hl_defs,
-            prev_width,
-            prev_height,
         );
     }
 

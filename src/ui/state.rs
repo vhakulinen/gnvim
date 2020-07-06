@@ -1073,6 +1073,8 @@ mod tests {
                         cell_width: row.cell_width,
                         rows: 0.0,
                         cols: 0.0,
+                        width: 0.0,
+                        height: 0.0,
                     },
                     (row.width, row.height),
                     (row.x_offset, row.y_offset),

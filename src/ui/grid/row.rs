@@ -67,7 +67,7 @@ impl Row {
         self.cells = Row::create_empty_cells(self.len).into_boxed_slice();
     }
 
-    pub fn grow(&mut self, new_size: usize) {
+    pub fn resize(&mut self, new_size: usize) {
         let mut n = self.cells.clone().into_vec();
         n.resize_with(new_size, || Cell {
             text: String::from(" "),
@@ -77,10 +77,6 @@ impl Row {
 
         self.cells = n.into_boxed_slice();
         self.len = self.cells.len();
-    }
-
-    pub fn truncate(&mut self, new_size: usize) {
-        self.grow(new_size);
     }
 
     /// Clears range from `from` to `to`.
@@ -931,7 +927,7 @@ mod tests {
     #[test]
     fn test_row_grow() {
         let mut row = Row::new(10);
-        row.grow(15);
+        row.resize(15);
 
         assert_eq!(row.len, 15);
         assert_eq!(
@@ -943,7 +939,7 @@ mod tests {
     #[test]
     fn test_row_truncate() {
         let mut row = Row::new(10);
-        row.truncate(5);
+        row.resize(5);
 
         assert_eq!(row.len, 5);
         assert_eq!(
