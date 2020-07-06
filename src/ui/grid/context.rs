@@ -172,7 +172,11 @@ impl Context {
         ctx.set_source_surface(&s, 0.0, 0.0);
         ctx.set_operator(cairo::Operator::Source);
         // Make sure we only paint the area that _was_ visible before this update
-        // so we don't undo the bg color paint we did earlier.
+        // so we don't undo the bg color paint we did earlier. Note that we're
+        // calculating the used area based on the current cell metrics. This is
+        // becuase if font changes that might reduce the area we "have available".
+        // Otherwise, when changing to smaller font, we might draw our "old" surface
+        // on a area that wont be cleared by nvim (e.g. over "fresh" whitespace).
         ctx.rectangle(
             0.0,
             0.0,
