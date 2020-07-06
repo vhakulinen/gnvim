@@ -122,28 +122,26 @@ impl Grid {
     pub fn flush(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
 
-        // If cursor isn't blinking, drawn the inverted cell into the cursor's
-        // cairo context.
-        if ctx.cursor_blink_on == 0 {
-            if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
-                if let Some(cell) = row.cell_at(ctx.cursor.1 as usize) {
-                    render::cursor_cell(
-                        &ctx.cursor_context,
-                        &self.da.get_pango_context().unwrap(),
-                        &cell,
-                        &ctx.cell_metrics,
-                        hl_defs,
-                    );
-                }
+        if let Some(Some(cell)) = ctx
+            .rows
+            .get(ctx.cursor.0 as usize)
+            .map(|row| row.cell_at(ctx.cursor.1 as usize))
+        {
+            // If cursor isn't blinking, drawn the inverted cell into
+            // the cursor's cairo context.
+            if ctx.cursor_blink_on == 0 {
+                render::cursor_cell(
+                    &ctx.cursor_context,
+                    &self.da.get_pango_context().unwrap(),
+                    &cell,
+                    &ctx.cell_metrics,
+                    hl_defs,
+                );
             }
-        }
 
-        // Update cursor color.
-        if let Some(row) = ctx.rows.get(ctx.cursor.0 as usize) {
-            if let Some(cell) = row.cell_at(ctx.cursor.1 as usize) {
-                let hl = hl_defs.get(&cell.hl_id).unwrap();
-                ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
-            }
+            // Update cursor color.
+            let hl = hl_defs.get(&cell.hl_id).unwrap();
+            ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
         }
 
         while let Some(area) = ctx.queue_draw_area.pop() {
@@ -410,13 +408,7 @@ impl Grid {
         hl_defs: &HlDefs,
     ) {
         let mut ctx = self.context.borrow_mut();
-        ctx.resize(
-            &self.da,
-            win,
-            cols as usize,
-            rows as usize,
-            hl_defs,
-        );
+        ctx.resize(&self.da, win, cols as usize, rows as usize, hl_defs);
     }
 
     pub fn clear(&self, hl_defs: &HlDefs) {
