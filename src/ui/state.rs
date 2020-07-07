@@ -203,7 +203,6 @@ impl UIState {
     }
 
     fn grid_destroy(&mut self, grid: &i64) {
-        // TODO(ville): Make sure all grid resources are freed.
         self.grids.remove(grid).unwrap(); // Drop grid.
         if self.windows.contains_key(grid) {
             self.windows.remove(grid).unwrap(); // Drop window that the grid belongs to.

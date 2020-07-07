@@ -520,13 +520,6 @@ impl Grid {
     }
 }
 
-impl Drop for Grid {
-    fn drop(&mut self) {
-        // TODO(ville): Test that we release all resources.
-        self.eb.destroy();
-    }
-}
-
 /// Handler for grid's drawingarea's draw event. Draws the internal cairo
 /// context (`ctx`) surface to the `cr`.
 fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {

@@ -163,17 +163,16 @@ impl Window {
 
 impl Drop for Window {
     fn drop(&mut self) {
-        // TODO(ville): Test that we release all resources.
         if let Some(child) = self.frame.get_child() {
             // We don't want to destroy the child widget, so just remove the child from our
             // container.
             self.frame.remove(&child);
         }
 
-        self.frame.destroy();
+        self.fixed.remove(&self.frame);
 
         if let Some(ref win) = self.external_win {
-            win.destroy();
+            win.close();
         }
     }
 }
