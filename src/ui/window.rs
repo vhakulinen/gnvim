@@ -101,6 +101,14 @@ impl Window {
         }
     }
 
+    pub fn set_parent(&mut self, fixed: gtk::Fixed) {
+        if self.fixed != fixed {
+            self.fixed.remove(&self.frame);
+            self.fixed = fixed;
+            self.fixed.put(&self.frame, 0, 0);
+        }
+    }
+
     pub fn resize(&self, size: (i32, i32)) {
         self.frame.set_size_request(size.0, size.1);
     }

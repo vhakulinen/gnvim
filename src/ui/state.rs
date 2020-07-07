@@ -528,14 +528,21 @@ impl UIState {
 
         let grid = self.grids.get(&evt.grid).unwrap();
         let css_provider = self.css_provider.clone();
-        let window = self.windows.entry(evt.grid).or_insert_with(|| {
-            Window::new(
-                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                windows_container,
-                &grid,
-                Some(css_provider),
-            )
-        });
+        let window = self
+            .windows
+            .entry(evt.grid)
+            .and_modify(clone!(windows_container => move |w| {
+                // Set the parent window's to the windows container if needed.
+                w.set_parent(windows_container.upcast());
+            }))
+            .or_insert_with(|| {
+                Window::new(
+                    NvimWindow::new(evt.win.clone(), nvim.clone()),
+                    windows_container,
+                    &grid,
+                    Some(css_provider),
+                )
+            });
 
         let grid_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
         let x = evt.start_col as f64 * grid_metrics.cell_width;
@@ -549,37 +556,43 @@ impl UIState {
         grid.resize(&win, evt.width, evt.height, &self.hl_defs);
     }
 
+    fn get_float_anchor_pos(&self, evt: &WindowFloatPos) -> (f64, f64) {
+        if evt.anchor_grid == evt.grid {
+            warn!("Can't use a grid as its own float anchor. Defaulting to base grid.");
+        }
+
+        if evt.anchor_grid == 1 || evt.anchor_grid == evt.grid {
+            (0.0, 0.0)
+        } else {
+            let anchor_window = self.windows.get(&evt.anchor_grid).unwrap();
+            (anchor_window.x, anchor_window.y)
+        }
+    }
+
     fn window_float_pos(&mut self, evt: WindowFloatPos, nvim: &GioNeovim) {
         let anchor_grid = self.grids.get(&evt.anchor_grid).unwrap();
 
-        let (x_offset, y_offset) = {
-            if evt.anchor_grid == 1 {
-                (0.0, 0.0)
-            } else {
-                if evt.anchor_grid == evt.grid {
-                    warn!("Can't use a grid as its own float anchor. Defaulting to (0, 0)");
-                    (0.0, 0.0)
-                } else {
-                    let anchor_window =
-                        self.windows.get(&evt.anchor_grid).unwrap();
-                    (anchor_window.x, anchor_window.y)
-                }
-            }
-        };
+        let (x_offset, y_offset) = self.get_float_anchor_pos(&evt);
 
         let grid = self.grids.get(&evt.grid).unwrap();
         let windows_float_container = self.windows_float_container.clone();
         let css_provider = self.css_provider.clone();
-        let window = self.windows.entry(evt.grid).or_insert_with(|| {
-            Window::new(
-                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                windows_float_container,
-                &grid,
-                Some(css_provider),
-            )
-        });
 
-        // TODO(ville): Move window from possible container to float container.
+        let window = self
+            .windows
+            .entry(evt.grid)
+            .and_modify(clone!(windows_float_container => move |w| {
+                // Set the parent window's to the float container if needed.
+                w.set_parent(windows_float_container.upcast());
+            }))
+            .or_insert_with(|| {
+                Window::new(
+                    NvimWindow::new(evt.win.clone(), nvim.clone()),
+                    windows_float_container,
+                    &grid,
+                    Some(css_provider),
+                )
+            });
 
         let anchor_metrics = anchor_grid.get_grid_metrics();
         let grid_metrics = grid.get_grid_metrics();
