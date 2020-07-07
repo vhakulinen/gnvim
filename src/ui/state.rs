@@ -6,7 +6,7 @@ use glib;
 use gtk;
 use gtk::prelude::*;
 
-use log::{debug, error};
+use log::{debug, error, warn};
 use nvim_rs::{Tabpage, Window as NvimWindow};
 
 use crate::nvim_bridge::{
@@ -556,8 +556,14 @@ impl UIState {
             if evt.anchor_grid == 1 {
                 (0.0, 0.0)
             } else {
-                let anchor_window = self.windows.get(&evt.anchor_grid).unwrap();
-                (anchor_window.x, anchor_window.y)
+                if evt.anchor_grid == evt.grid {
+                    warn!("Can't use a grid as its own float anchor. Defaulting to (0, 0)");
+                    (0.0, 0.0)
+                } else {
+                    let anchor_window =
+                        self.windows.get(&evt.anchor_grid).unwrap();
+                    (anchor_window.x, anchor_window.y)
+                }
             }
         };
 
