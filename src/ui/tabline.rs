@@ -8,11 +8,20 @@ use pango;
 
 use nvim_rs::Tabpage;
 
-use crate::nvim_bridge;
 use crate::nvim_gio::{GioNeovim, GioWriter};
-use crate::ui::color::HlDefs;
+use crate::ui::color::{Color, HlDefs, HlGroup};
 use crate::ui::common::{calc_line_space, spawn_local};
 use crate::ui::font::{Font, FontUnit};
+
+#[derive(Default)]
+pub struct TablineColors {
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
+    pub fill_fg: Option<Color>,
+    pub fill_bg: Option<Color>,
+    pub sel_bg: Option<Color>,
+    pub sel_fg: Option<Color>,
+}
 
 pub struct Tabline {
     notebook: gtk::Notebook,
@@ -22,7 +31,7 @@ pub struct Tabline {
     tabpage_data: Rc<RefCell<Box<Vec<Tabpage<GioWriter>>>>>,
 
     /// Our colors.
-    colors: nvim_bridge::TablineColors,
+    colors: TablineColors,
     /// Our font.
     font: Font,
 
@@ -60,7 +69,7 @@ impl Tabline {
             css_provider,
             switch_tab_signal,
             tabpage_data,
-            colors: nvim_bridge::TablineColors::default(),
+            colors: TablineColors::default(),
             font: Font::default(),
             line_space: 0,
         }
@@ -125,12 +134,39 @@ impl Tabline {
         self.set_styles(hl_defs);
     }
 
-    pub fn set_colors(
-        &mut self,
-        colors: nvim_bridge::TablineColors,
-        hl_defs: &HlDefs,
-    ) {
-        self.colors = colors;
+    pub fn set_colors(&mut self, hl_defs: &HlDefs) {
+        self.colors = TablineColors {
+            bg: hl_defs
+                .get_hl_group(&HlGroup::Tabline)
+                .cloned()
+                .unwrap_or_default()
+                .background,
+            fg: hl_defs
+                .get_hl_group(&HlGroup::Tabline)
+                .cloned()
+                .unwrap_or_default()
+                .foreground,
+            fill_bg: hl_defs
+                .get_hl_group(&HlGroup::TablineFill)
+                .cloned()
+                .unwrap_or_default()
+                .background,
+            fill_fg: hl_defs
+                .get_hl_group(&HlGroup::TablineFill)
+                .cloned()
+                .unwrap_or_default()
+                .foreground,
+            sel_bg: hl_defs
+                .get_hl_group(&HlGroup::TablineSel)
+                .cloned()
+                .unwrap_or_default()
+                .background,
+            sel_fg: hl_defs
+                .get_hl_group(&HlGroup::TablineSel)
+                .cloned()
+                .unwrap_or_default()
+                .foreground,
+        };
         self.set_styles(hl_defs);
     }
 

@@ -244,6 +244,7 @@ impl UI {
                 resize_source_id: source_id,
                 hl_defs,
                 resize_on_flush: None,
+                hl_groups_changed: false,
             })),
             nvim,
         }

@@ -2,9 +2,27 @@ use std::collections::HashMap;
 
 use glib;
 
+#[derive(Hash, PartialEq, Eq)]
+pub enum HlGroup {
+    Pmenu,
+    PmenuSel,
+
+    Tabline,
+    TablineSel,
+    TablineFill,
+
+    Cmdline,
+    CmdlineBorder,
+
+    Wildmenu,
+    WildmenuSel,
+}
+
 #[derive(Default)]
 pub struct HlDefs {
     hl_defs: HashMap<u64, Highlight>,
+
+    hl_groups: HashMap<HlGroup, u64>,
 
     pub default_fg: Color,
     pub default_bg: Color,
@@ -22,6 +40,18 @@ impl HlDefs {
 
     pub fn insert(&mut self, id: u64, hl: Highlight) -> Option<Highlight> {
         self.hl_defs.insert(id, hl)
+    }
+
+    pub fn set_hl_group(&mut self, group: HlGroup, id: u64) -> Option<u64> {
+        self.hl_groups.insert(group, id)
+    }
+
+    pub fn get_hl_group(&self, group: &HlGroup) -> Option<&Highlight> {
+        if let Some(id) = self.hl_groups.get(group) {
+            return self.hl_defs.get(id);
+        }
+
+        None
     }
 }
 

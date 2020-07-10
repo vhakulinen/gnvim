@@ -12,13 +12,13 @@ use nvim_rs::Tabpage;
 use crate::nvim_bridge::{
     CmdlineBlockAppend, CmdlineBlockShow, CmdlinePos, CmdlineShow,
     CmdlineSpecialChar, DefaultColorsSet, GnvimEvent, GridCursorGoto,
-    GridLineSegment, GridResize, GridScroll, HlAttrDefine, ModeChange,
-    ModeInfo, ModeInfoSet, Notify, OptionSet, PopupmenuShow, RedrawEvent,
-    TablineUpdate, WildmenuShow,
+    GridLineSegment, GridResize, GridScroll, HlAttrDefine, HlGroupSet,
+    ModeChange, ModeInfo, ModeInfoSet, Notify, OptionSet, PopupmenuShow,
+    RedrawEvent, TablineUpdate, WildmenuShow,
 };
 use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
-use crate::ui::color::HlDefs;
+use crate::ui::color::{HlDefs, HlGroup};
 use crate::ui::common::spawn_local;
 #[cfg(feature = "libwebkit2gtk")]
 use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
@@ -60,6 +60,10 @@ pub(crate) struct UIState {
     pub resize_source_id: Rc<RefCell<Option<glib::SourceId>>>,
     /// Resize options that is some if a resize should be send to nvim on flush.
     pub resize_on_flush: Option<ResizeOptions>,
+
+    /// Flag for flush to update GUI colors on components that depend on
+    /// hl gruops.
+    pub hl_groups_changed: bool,
 }
 
 impl UIState {
@@ -185,6 +189,31 @@ impl UIState {
         self.hl_defs.insert(id, hl);
     }
 
+    fn hl_group_set(&mut self, evt: HlGroupSet) {
+        match evt.name.as_str() {
+            "Pmenu" => {
+                self.hl_defs.set_hl_group(HlGroup::Pmenu, evt.hl_id);
+                self.hl_defs.set_hl_group(HlGroup::Wildmenu, evt.hl_id)
+            }
+            "PmenuSel" => {
+                self.hl_defs.set_hl_group(HlGroup::PmenuSel, evt.hl_id);
+                self.hl_defs.set_hl_group(HlGroup::WildmenuSel, evt.hl_id)
+            }
+            "TabLine" => self.hl_defs.set_hl_group(HlGroup::Tabline, evt.hl_id),
+            "TabLineSel" => {
+                self.hl_defs.set_hl_group(HlGroup::TablineSel, evt.hl_id);
+                self.hl_defs.set_hl_group(HlGroup::CmdlineBorder, evt.hl_id)
+            }
+            "TabLineFill" => {
+                self.hl_defs.set_hl_group(HlGroup::TablineFill, evt.hl_id)
+            }
+            "Normal" => self.hl_defs.set_hl_group(HlGroup::Cmdline, evt.hl_id),
+            _ => None,
+        };
+
+        self.hl_groups_changed = true;
+    }
+
     fn option_set(&mut self, opt: OptionSet) {
         match opt {
             OptionSet::GuiFont(font) => {
@@ -281,6 +310,15 @@ impl UIState {
             self.popupmenu
                 .set_line_space(opts.line_space, &self.hl_defs);
             self.tabline.set_line_space(opts.line_space, &self.hl_defs);
+        }
+
+        if self.hl_groups_changed {
+            self.popupmenu.set_colors(&self.hl_defs);
+            self.tabline.set_colors(&self.hl_defs);
+            self.cmdline.set_colors(&self.hl_defs);
+            self.cmdline.wildmenu_set_colors(&self.hl_defs);
+
+            self.hl_groups_changed = false;
         }
     }
 
@@ -413,6 +451,9 @@ impl UIState {
             RedrawEvent::HlAttrDefine(evt) => {
                 evt.into_iter().for_each(|e| self.hl_attr_define(e))
             }
+            RedrawEvent::HlGroupSet(evt) => {
+                evt.into_iter().for_each(|e| self.hl_group_set(e))
+            }
             RedrawEvent::OptionSet(evt) => {
                 evt.into_iter().for_each(|e| self.option_set(e));
             }
@@ -467,13 +508,6 @@ impl UIState {
 
     fn handle_gnvim_event(&mut self, event: &GnvimEvent, nvim: &GioNeovim) {
         match event {
-            GnvimEvent::SetGuiColors(colors) => {
-                self.popupmenu.set_colors(colors.pmenu, &self.hl_defs);
-                self.tabline.set_colors(colors.tabline, &self.hl_defs);
-                self.cmdline.set_colors(colors.cmdline, &self.hl_defs);
-                self.cmdline
-                    .wildmenu_set_colors(&colors.wildmenu, &self.hl_defs);
-            }
             GnvimEvent::CompletionMenuToggleInfo => {
                 self.popupmenu.toggle_show_info()
             }

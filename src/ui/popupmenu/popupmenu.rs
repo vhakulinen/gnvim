@@ -6,9 +6,9 @@ use gtk;
 use gtk::prelude::*;
 use pango;
 
-use crate::nvim_bridge::{CompletionItem, PmenuColors};
+use crate::nvim_bridge::CompletionItem;
 use crate::nvim_gio::GioNeovim;
-use crate::ui::color::HlDefs;
+use crate::ui::color::{Color, HlDefs, HlGroup};
 use crate::ui::common::{
     calc_line_space, get_preferred_horizontal_position,
     get_preferred_vertical_position, spawn_local,
@@ -22,6 +22,14 @@ const MAX_HEIGHT: i32 = 500;
 /// Fixed width of completion menu.
 const DEFAULT_WIDTH_NO_DETAILS: i32 = 430;
 const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
+
+#[derive(Default)]
+pub struct PmenuColors {
+    pub bg: Option<Color>,
+    pub fg: Option<Color>,
+    pub sel_bg: Option<Color>,
+    pub sel_fg: Option<Color>,
+}
 
 struct State {
     selected: i32,
@@ -491,8 +499,29 @@ impl Popupmenu {
         });
     }
 
-    pub fn set_colors(&mut self, colors: PmenuColors, hl_defs: &HlDefs) {
-        self.colors = colors;
+    pub fn set_colors(&mut self, hl_defs: &HlDefs) {
+        self.colors = PmenuColors {
+            bg: hl_defs
+                .get_hl_group(&HlGroup::Pmenu)
+                .cloned()
+                .unwrap_or_default()
+                .background,
+            fg: hl_defs
+                .get_hl_group(&HlGroup::Pmenu)
+                .cloned()
+                .unwrap_or_default()
+                .foreground,
+            sel_bg: hl_defs
+                .get_hl_group(&HlGroup::PmenuSel)
+                .cloned()
+                .unwrap_or_default()
+                .background,
+            sel_fg: hl_defs
+                .get_hl_group(&HlGroup::PmenuSel)
+                .cloned()
+                .unwrap_or_default()
+                .foreground,
+        };
         self.set_styles(hl_defs);
     }
 

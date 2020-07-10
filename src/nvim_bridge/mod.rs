@@ -67,13 +67,6 @@ macro_rules! try_u64 {
     };
 }
 
-macro_rules! try_map {
-    ($val:expr, $msg:expr) => {
-        $val.as_map()
-            .ok_or(format!("Value is not an map: {}", $msg))?
-    };
-}
-
 impl Highlight {
     fn from_map_val(map: &Vec<(Value, Value)>) -> Self {
         let mut hl = Highlight::default();
@@ -569,6 +562,22 @@ impl From<Value> for HlAttrDefine {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct HlGroupSet {
+    pub name: String,
+    pub hl_id: u64,
+}
+
+impl From<Value> for HlGroupSet {
+    fn from(args: Value) -> Self {
+        let args = unwrap_array!(args);
+        let name = unwrap_str!(args[0]).to_string();
+        let hl_id = unwrap_u64!(args[1]);
+
+        HlGroupSet { name, hl_id }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct ModeInfoSet {
     pub cursor_shape_enabled: bool,
     pub mode_info: Vec<ModeInfo>,
@@ -748,6 +757,7 @@ pub enum RedrawEvent {
 
     DefaultColorsSet(Vec<DefaultColorsSet>),
     HlAttrDefine(Vec<HlAttrDefine>),
+    HlGroupSet(Vec<HlGroupSet>),
     OptionSet(Vec<OptionSet>),
     ModeInfoSet(Vec<ModeInfoSet>),
     ModeChange(Vec<ModeChange>),
@@ -789,6 +799,7 @@ impl fmt::Display for RedrawEvent {
                 write!(fmt, "DefaultColorsSet")
             }
             RedrawEvent::HlAttrDefine(..) => write!(fmt, "HlAttrDefine"),
+            RedrawEvent::HlGroupSet(..) => write!(fmt, "HlGroupSet"),
             RedrawEvent::OptionSet(..) => write!(fmt, "OptionSet"),
             RedrawEvent::ModeInfoSet(..) => write!(fmt, "ModeInfoSet"),
             RedrawEvent::ModeChange(..) => write!(fmt, "ModeChange"),
@@ -824,7 +835,6 @@ impl fmt::Display for RedrawEvent {
 
 #[derive(Debug, PartialEq)]
 pub enum GnvimEvent {
-    SetGuiColors(SetGuiColors),
     CompletionMenuToggleInfo,
 
     CursorTooltipLoadStyle(String),
@@ -837,47 +847,6 @@ pub enum GnvimEvent {
     PopupmenuShowMenuOnAllItems(bool),
 
     Unknown(String),
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct WildmenuColors {
-    pub bg: Option<Color>,
-    pub fg: Option<Color>,
-    pub sel_bg: Option<Color>,
-    pub sel_fg: Option<Color>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct PmenuColors {
-    pub bg: Option<Color>,
-    pub fg: Option<Color>,
-    pub sel_bg: Option<Color>,
-    pub sel_fg: Option<Color>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct TablineColors {
-    pub fg: Option<Color>,
-    pub bg: Option<Color>,
-    pub fill_fg: Option<Color>,
-    pub fill_bg: Option<Color>,
-    pub sel_bg: Option<Color>,
-    pub sel_fg: Option<Color>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct CmdlineColors {
-    pub fg: Option<Color>,
-    pub bg: Option<Color>,
-    pub border: Option<Color>,
-}
-
-#[derive(Debug, Default, PartialEq)]
-pub struct SetGuiColors {
-    pub pmenu: PmenuColors,
-    pub tabline: TablineColors,
-    pub cmdline: CmdlineColors,
-    pub wildmenu: WildmenuColors,
 }
 
 pub enum Request {
@@ -1042,6 +1011,9 @@ fn parse_single_redraw_event(cmd: &str, args: Vec<Value>) -> RedrawEvent {
         "hl_attr_define" => RedrawEvent::HlAttrDefine(
             args.into_iter().map(HlAttrDefine::from).collect(),
         ),
+        "hl_group_set" => RedrawEvent::HlGroupSet(
+            args.into_iter().map(HlGroupSet::from).collect(),
+        ),
         "option_set" => RedrawEvent::OptionSet(
             args.into_iter().map(OptionSet::from).collect(),
         ),
@@ -1109,50 +1081,6 @@ pub(crate) fn parse_gnvim_event(
 ) -> Result<GnvimEvent, String> {
     let cmd = try_str!(args.get(0).ok_or("No command given")?, "cmd");
     let res = match cmd {
-        "SetGuiColors" => {
-            let mut colors = SetGuiColors::default();
-
-            for e in try_map!(
-                args.get(1).ok_or("No data for SetGuiColors")?,
-                "colors"
-            ) {
-                let color = Color::from_hex_string(String::from(try_str!(
-                    e.1,
-                    "color hex value"
-                )))
-                .ok();
-                match try_str!(e.0, "color name") {
-                    "pmenu_bg" => colors.pmenu.bg = color,
-                    "pmenu_fg" => colors.pmenu.fg = color,
-                    "pmenusel_bg" => colors.pmenu.sel_bg = color,
-                    "pmenusel_fg" => colors.pmenu.sel_fg = color,
-
-                    "tabline_fg" => colors.tabline.fg = color,
-                    "tabline_bg" => colors.tabline.bg = color,
-                    "tablinefill_fg" => colors.tabline.fill_fg = color,
-                    "tablinefill_bg" => colors.tabline.fill_bg = color,
-                    "tablinesel_fg" => colors.tabline.sel_fg = color,
-                    "tablinesel_bg" => colors.tabline.sel_bg = color,
-
-                    "cmdline_fg" => colors.cmdline.fg = color,
-                    "cmdline_bg" => colors.cmdline.bg = color,
-                    "cmdline_border" => colors.cmdline.border = color,
-
-                    "wildmenu_bg" => colors.wildmenu.bg = color,
-                    "wildmenu_fg" => colors.wildmenu.fg = color,
-                    "wildmenusel_bg" => colors.wildmenu.sel_bg = color,
-                    "wildmenusel_fg" => colors.wildmenu.sel_fg = color,
-                    _ => {
-                        error!(
-                            "Unknown SetGuiColor: {}",
-                            try_str!(e.0, "color name")
-                        );
-                    }
-                }
-            }
-
-            GnvimEvent::SetGuiColors(colors)
-        }
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
         "CursorTooltipLoadStyle" => {
             let path =

@@ -3,9 +3,8 @@ use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::nvim_bridge;
 use crate::nvim_gio::GioNeovim;
-use crate::ui::color::HlDefs;
+use crate::ui::color::{Color, HlDefs, HlGroup};
 use crate::ui::common::spawn_local;
 
 const MAX_HEIGHT: i32 = 500;
@@ -143,22 +142,35 @@ impl Wildmenu {
         }
     }
 
-    pub fn set_colors(
-        &self,
-        colors: &nvim_bridge::WildmenuColors,
-        hl_defs: &HlDefs,
-    ) {
+    pub fn set_colors(&self, hl_defs: &HlDefs) {
+        let color = hl_defs.get_hl_group(&HlGroup::Wildmenu);
+        let color_sel = hl_defs.get_hl_group(&HlGroup::WildmenuSel);
+        let fg = color
+            .and_then(|hl| hl.foreground)
+            .unwrap_or(hl_defs.default_fg);
+        let bg = color
+            .and_then(|hl| hl.background)
+            .unwrap_or(hl_defs.default_bg);
+        let sel_fg = color_sel
+            .and_then(|hl| hl.foreground)
+            .unwrap_or(hl_defs.default_fg);
+        let sel_bg = color_sel
+            .and_then(|hl| hl.background)
+            .unwrap_or(hl_defs.default_bg);
+
         if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors, hl_defs);
+            self.set_colors_pre20(fg, bg, sel_fg, sel_bg);
         } else {
-            self.set_colors_post20(colors, hl_defs);
+            self.set_colors_post20(fg, bg, sel_fg, sel_bg);
         }
     }
 
     fn set_colors_pre20(
         &self,
-        colors: &nvim_bridge::WildmenuColors,
-        hl_defs: &HlDefs,
+        fg: Color,
+        bg: Color,
+        sel_fg: Color,
+        sel_bg: Color,
     ) {
         let css = format!(
             "GtkFrame {{
@@ -176,10 +188,10 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            sel_fg = colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            sel_bg = colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            fg = fg.to_hex(),
+            bg = bg.to_hex(),
+            sel_fg = sel_fg.to_hex(),
+            sel_bg = sel_bg.to_hex(),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -187,8 +199,10 @@ impl Wildmenu {
 
     fn set_colors_post20(
         &self,
-        colors: &nvim_bridge::WildmenuColors,
-        hl_defs: &HlDefs,
+        fg: Color,
+        bg: Color,
+        sel_fg: Color,
+        sel_bg: Color,
     ) {
         let css = format!(
             "frame > border {{
@@ -206,10 +220,10 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            sel_fg = colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            sel_bg = colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            fg = fg.to_hex(),
+            bg = bg.to_hex(),
+            sel_fg = sel_fg.to_hex(),
+            sel_bg = sel_bg.to_hex(),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
