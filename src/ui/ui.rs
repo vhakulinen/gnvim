@@ -88,6 +88,8 @@ impl UI {
             30,
             &hl_defs,
         );
+        // Mark the default grid as active at the beginning.
+        grid.set_active(true);
         overlay.add(&grid.widget());
 
         let windows_container = gtk::Fixed::new();
