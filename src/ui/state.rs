@@ -203,7 +203,13 @@ impl UIState {
     }
 
     fn grid_destroy(&mut self, grid: &i64) {
-        self.grids.remove(grid).unwrap(); // Drop grid.
+        // Drop grid.
+        if self.grids.remove(grid).is_none() {
+            warn!(
+                "Nvim instructed to close a grid that we don't have (grid: {})",
+                grid
+            );
+        }
         if self.windows.contains_key(grid) {
             self.windows.remove(grid).unwrap(); // Drop window that the grid belongs to.
         }
@@ -672,8 +678,10 @@ impl UIState {
     }
 
     fn window_close(&mut self, grid_id: i64) {
-        // TODO(ville): Make sure all resources are dropped from the window.
-        self.windows.remove(&grid_id).unwrap(); // Drop window.
+        // Drop window.
+        if self.windows.remove(&grid_id).is_none() {
+            warn!("Nvim instructed to close a window that we don't have (grid: {})", grid_id);
+        }
     }
 
     fn msg_set_pos(&mut self, e: MsgSetPos) {
