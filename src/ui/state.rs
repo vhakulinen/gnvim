@@ -79,8 +79,8 @@ pub(crate) struct UIState {
     pub resize_on_flush: Option<ResizeOptions>,
 
     /// Flag for flush to update GUI colors on components that depend on
-    /// hl gruops.
-    pub hl_groups_changed: bool,
+    /// highlight defs and groups.
+    pub hl_changed: bool,
 
     pub font: Font,
     pub line_space: i64,
@@ -258,22 +258,7 @@ impl UIState {
         #[cfg(feature = "libwebkit2gtk")]
         self.cursor_tooltip.set_colors(fg, bg);
 
-        // Set the background for our main window.
-        CssProviderExt::load_from_data(
-            &self.css_provider,
-            format!(
-                "* {{
-                    background: #{bg};
-                }}
-
-                frame > border {{
-                    border: none;
-                }}",
-                bg = bg.to_hex()
-            )
-            .as_bytes(),
-        )
-        .unwrap();
+        self.hl_changed = true;
     }
 
     fn hl_attr_define(&mut self, HlAttrDefine { id, hl }: HlAttrDefine) {
@@ -299,10 +284,13 @@ impl UIState {
                 self.hl_defs.set_hl_group(HlGroup::TablineFill, evt.hl_id)
             }
             "Normal" => self.hl_defs.set_hl_group(HlGroup::Cmdline, evt.hl_id),
+            "MsgSeparator" => {
+                self.hl_defs.set_hl_group(HlGroup::MsgSeparator, evt.hl_id)
+            }
             _ => None,
         };
 
-        self.hl_groups_changed = true;
+        self.hl_changed = true;
     }
 
     fn option_set(&mut self, opt: OptionSet) {
@@ -412,13 +400,43 @@ impl UIState {
             self.tabline.set_line_space(opts.line_space, &self.hl_defs);
         }
 
-        if self.hl_groups_changed {
+        if self.hl_changed {
             self.popupmenu.set_colors(&self.hl_defs);
             self.tabline.set_colors(&self.hl_defs);
             self.cmdline.set_colors(&self.hl_defs);
             self.cmdline.wildmenu_set_colors(&self.hl_defs);
 
-            self.hl_groups_changed = false;
+            let msgsep = self
+                .hl_defs
+                .get_hl_group(&HlGroup::MsgSeparator)
+                .cloned()
+                .unwrap_or_default()
+                .foreground;
+
+            // Set the styles for our main window.
+            CssProviderExt::load_from_data(
+                &self.css_provider,
+                format!(
+                    "* {{
+                        background: #{bg};
+                    }}
+
+                    frame > border {{
+                        border: none;
+                    }}
+
+                    #message-grid-contianer frame.scrolled {{
+                        border-top: 1px solid #{msgsep}
+                    }}
+                    ",
+                    bg = self.hl_defs.default_bg.to_hex(),
+                    msgsep = msgsep.unwrap_or(self.hl_defs.default_fg).to_hex(),
+                )
+                .as_bytes(),
+            )
+            .unwrap();
+
+            self.hl_changed = false;
         }
     }
 
@@ -692,7 +710,7 @@ impl UIState {
         let base_metrics = base_grid.get_grid_metrics();
         let grid = self.grids.get(&e.grid).unwrap();
         let h = base_metrics.height - e.row as f64 * base_metrics.cell_height;
-        self.msg_window.set_pos(&grid, e.row as f64, h);
+        self.msg_window.set_pos(&grid, e.row as f64, h, e.scrolled);
     }
 
     fn handle_redraw_event(

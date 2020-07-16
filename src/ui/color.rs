@@ -16,6 +16,8 @@ pub enum HlGroup {
 
     Wildmenu,
     WildmenuSel,
+
+    MsgSeparator,
 }
 
 #[derive(Default)]

@@ -30,7 +30,7 @@ impl MsgWindow {
     ///         on the `grid` and `row`, we can't calculate the height automatically.
     ///         The height is mainly needed so we don't show any artifacts that
     ///         will likely be visible on the `grid`'s drawingarea from earlier renders.
-    pub fn set_pos(&self, grid: &Grid, row: f64, h: f64) {
+    pub fn set_pos(&self, grid: &Grid, row: f64, h: f64, scrolled: bool) {
         let w = grid.widget();
 
         // Only add/change the child widget if its different
@@ -43,6 +43,13 @@ impl MsgWindow {
             }
         } else {
             self.frame.add(&w);
+        }
+
+        let c = self.frame.get_style_context();
+        if scrolled {
+            c.add_class("scrolled");
+        } else {
+            c.remove_class("scrolled");
         }
 
         let metrics = grid.get_grid_metrics();

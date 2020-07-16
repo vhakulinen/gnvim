@@ -93,11 +93,11 @@ impl UI {
         overlay.add(&grid.widget());
 
         let windows_container = gtk::Fixed::new();
-        windows_container.set_widget_name("Windows contianer");
+        windows_container.set_widget_name("windows-contianer");
         let windows_float_container = gtk::Fixed::new();
-        windows_float_container.set_widget_name("Floating windows contianer");
+        windows_float_container.set_widget_name("windows-contianer-float");
         let msg_window_container = gtk::Fixed::new();
-        msg_window_container.set_widget_name("Message grid contianer");
+        msg_window_container.set_widget_name("message-grid-contianer");
         overlay.add_overlay(&windows_container);
         overlay.add_overlay(&msg_window_container);
         overlay.add_overlay(&windows_float_container);
@@ -238,7 +238,7 @@ impl UI {
                 resize_source_id: source_id,
                 hl_defs,
                 resize_on_flush: None,
-                hl_groups_changed: false,
+                hl_changed: false,
                 font,
                 line_space,
                 current_mode: None,
