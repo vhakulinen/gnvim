@@ -20,7 +20,7 @@ mod parse_redraw_event_tests {
         CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
         GridCursorGoto, GridLineSegment, GridResize, GridScroll, HlAttrDefine,
         ModeChange, ModeInfo, ModeInfoSet, OptionSet, PopupmenuShow,
-        RedrawEvent, TablineUpdate, WildmenuShow,
+        RedrawEvent, TablineUpdate,
     };
     use crate::ui::color::{Color, Highlight};
     use rmpv::Value;
@@ -624,46 +624,6 @@ mod parse_redraw_event_tests {
 
         let res =
             nvim_bridge::parse_redraw_event(args!("cmdline_block_hide".into()));
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
-    fn wildmenu_show() {
-        let expected =
-            vec![RedrawEvent::WildmenuShow(vec![WildmenuShow(vec![
-                "foo".to_owned(),
-                "bar".to_owned(),
-            ])])];
-
-        let res = nvim_bridge::parse_redraw_event(args!(
-            "wildmenu_show".into(),
-            Value::Array(
-                vec!(Value::Array(vec!("foo".into(), "bar".into(),)),)
-            )
-        ));
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
-    fn wildmenu_hide() {
-        let expected = vec![RedrawEvent::WildmenuHide()];
-
-        let res =
-            nvim_bridge::parse_redraw_event(args!("wildmenu_hide".into()));
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
-    fn wildmenu_select() {
-        let expected = vec![RedrawEvent::WildmenuSelect(vec![32])];
-
-        let res = nvim_bridge::parse_redraw_event(args!(
-            "wildmenu_select".into(),
-            Value::Array(vec!(32.into(),))
-        ));
 
         assert_eq!(expected, res);
     }
