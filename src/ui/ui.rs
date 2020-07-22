@@ -257,19 +257,6 @@ impl UI {
             nvim,
         } = self;
 
-        gtk::timeout_add(
-            33,
-            clone!(state => move || {
-                let state = state.borrow();
-                // Tick the current active grid.
-                let grid =
-                    state.grids.get(&state.current_grid).unwrap();
-                grid.tick();
-
-                glib::Continue(true)
-            }),
-        );
-
         rx.attach(None, move |message| {
             match message {
                 // Handle a notify.

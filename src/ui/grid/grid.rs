@@ -105,10 +105,16 @@ impl Grid {
         eb.add_events(EventMask::SCROLL_MASK);
         eb.add(&da);
 
+        da.add_tick_callback(clone!(ctx => move |da, clock| {
+            let mut ctx = ctx.borrow_mut();
+            ctx.tick(da, clock);
+            glib::Continue(true)
+        }));
+
         Grid {
             id,
-            da: da,
-            eb: eb,
+            da,
+            eb,
             context: ctx,
             drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
@@ -124,12 +130,12 @@ impl Grid {
 
         if let Some(Some(cell)) = ctx
             .rows
-            .get(ctx.cursor.0 as usize)
-            .map(|row| row.cell_at(ctx.cursor.1 as usize))
+            .get(ctx.cursor.pos.0 as usize)
+            .map(|row| row.cell_at(ctx.cursor.pos.1 as usize))
         {
             // If cursor isn't blinking, drawn the inverted cell into
             // the cursor's cairo context.
-            if ctx.cursor_blink_on == 0 {
+            if ctx.cursor.blink_on == 0 {
                 render::cursor_cell(
                     &ctx.cursor_context,
                     &self.da.get_pango_context().unwrap(),
@@ -141,7 +147,7 @@ impl Grid {
 
             // Update cursor color.
             let hl = hl_defs.get(&cell.hl_id).unwrap();
-            ctx.cursor_color = hl.foreground.unwrap_or(hl_defs.default_fg);
+            ctx.cursor.color = hl.foreground.unwrap_or(hl_defs.default_fg);
         }
 
         while let Some(area) = ctx.queue_draw_area.pop() {
@@ -334,34 +340,17 @@ impl Grid {
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
+        let clock = self.da.get_frame_clock().unwrap();
         let mut ctx = self.context.borrow_mut();
+        ctx.cursor_goto(row, col, &clock);
 
-        // Clear old cursor position.
-        let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area.push((
-            f64::from(x),
-            f64::from(y),
-            f64::from(w),
-            f64::from(h),
-        ));
-        ctx.cursor.0 = row;
-        ctx.cursor.1 = col;
-
-        // Mark the new cursor position to be drawn.
-        let (x, y, w, h) = ctx.get_cursor_rect();
-        ctx.queue_draw_area.push((
-            f64::from(x),
-            f64::from(y),
-            f64::from(w),
-            f64::from(h),
-        ));
-
+        let (x, y, width, height) = ctx.get_cursor_rect();
         if let Some(ref im_context) = self.im_context {
             let rect = gdk::Rectangle {
-                x: x,
-                y: y,
-                width: w,
-                height: h,
+                x,
+                y,
+                width,
+                height,
             };
             im_context.set_cursor_location(&rect);
         }
@@ -440,48 +429,6 @@ impl Grid {
         ctx.active = active;
     }
 
-    pub fn tick(&self) {
-        let mut ctx = self.context.borrow_mut();
-
-        // If we dont need to blink, return. Otherwise, handle the cursor
-        // blining.
-        if ctx.cursor_blink_on == 0 {
-            return;
-        }
-
-        // Assuming a 60hz framerate
-        ctx.cursor_alpha += 100.0 / (6.0 * ctx.cursor_blink_on as f64);
-
-        if ctx.cursor_alpha > 2.0 {
-            ctx.cursor_alpha = 0.0;
-        }
-
-        let (x, y, w, h) = ctx.get_cursor_rect();
-
-        let mut alpha = ctx.cursor_alpha;
-        if alpha > 1.0 {
-            alpha = 2.0 - alpha;
-        }
-
-        let cr = &ctx.cursor_context;
-        cr.save();
-        cr.rectangle(0.0, 0.0, 100.0, 100.0);
-        cr.set_operator(cairo::Operator::Source);
-        cr.set_source_rgba(
-            ctx.cursor_color.r,
-            ctx.cursor_color.g,
-            ctx.cursor_color.b,
-            alpha,
-        );
-        cr.fill();
-        cr.restore();
-
-        // Don't use the ctx.queue_draw_area, because those draws will only
-        // happen once nvim sends 'flush' event. This draw needs to happen
-        // on each tick so the cursor blinks.
-        self.da.queue_draw_area(x, y, w, h);
-    }
-
     /// Set a new font and line space. This will likely change the cell metrics.
     /// Use `calc_size` to receive the updated size (cols and rows) of the grid.
     pub fn update_cell_metrics(
@@ -509,8 +456,8 @@ impl Grid {
     pub fn set_mode(&self, mode: &ModeInfo) {
         let mut ctx = self.context.borrow_mut();
 
-        ctx.cursor_blink_on = mode.blink_on;
-        ctx.cursor_cell_percentage = mode.cell_percentage;
+        ctx.cursor.blink_on = mode.blink_on;
+        ctx.cursor.cell_percentage = mode.cell_percentage;
     }
 
     pub fn set_busy(&self, busy: bool) {
@@ -539,7 +486,7 @@ fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
         cr.rectangle(
             f64::from(x),
             f64::from(y),
-            f64::from(w) * ctx.cursor_cell_percentage,
+            f64::from(w) * ctx.cursor.cell_percentage,
             f64::from(h),
         );
         let surface = ctx.cursor_context.get_target();

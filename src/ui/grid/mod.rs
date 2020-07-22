@@ -1,4 +1,5 @@
 mod context;
+mod cursor;
 mod grid;
 mod render;
 mod row;

@@ -3,8 +3,9 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use pango;
 
-use crate::ui::color::{Color, Highlight, HlDefs};
+use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
+use crate::ui::grid::cursor::Cursor;
 use crate::ui::grid::render;
 use crate::ui::grid::row::Row;
 
@@ -20,24 +21,14 @@ pub struct Context {
     /// Internal grid.
     pub rows: Vec<Row>,
 
-    /// Cursor, (row, col):
-    pub cursor: (u64, u64),
-    /// Cursor alpha color. Used to make the cursor blink.
-    pub cursor_alpha: f64,
-    /// The duration of the cursor blink
-    pub cursor_blink_on: u64,
-    /// Width of the cursor.
-    pub cursor_cell_percentage: f64,
-    /// Color of the cursor.
-    pub cursor_color: Color,
-    /// If the current status is busy or not. When busy, the cursor is not
-    /// drawn (like when in terminal mode in inserting text).
-    pub busy: bool,
+    pub cursor: Cursor,
     /// Cairo context for cursor.
     pub cursor_context: cairo::Context,
 
-    /// Current highlight.
-    pub current_hl: Highlight,
+    /// If the current status is busy or not. When busy, the cursor is not
+    /// drawn (like when in terminal mode in inserting text).
+    pub busy: bool,
+
     /// If the grid that this context belongs to is active or not.
     pub active: bool,
 
@@ -104,15 +95,10 @@ impl Context {
             cell_metrics_update: None,
             rows: vec![],
 
-            cursor: (0, 0),
-            cursor_alpha: 1.0,
-            cursor_blink_on: 0,
-            cursor_cell_percentage: 1.0,
-            cursor_color: Color::from_u64(0),
-            busy: false,
+            cursor: Cursor::default(),
             cursor_context,
 
-            current_hl: Highlight::default(),
+            busy: false,
             active: false,
 
             queue_draw_area: vec![],
@@ -223,10 +209,10 @@ impl Context {
     pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
             .rows
-            .get(self.cursor.0 as usize)
+            .get(self.cursor.pos.0 as usize)
             .and_then(|row| {
                 Some(
-                    row.cell_at(self.cursor.1 as usize)
+                    row.cell_at(self.cursor.pos.1 as usize)
                         .map(|c| c.double_width)
                         .unwrap_or(false),
                 )
@@ -237,8 +223,8 @@ impl Context {
         let (x, y) = render::get_coords(
             cm.height,
             cm.width,
-            self.cursor.0 as f64,
-            self.cursor.1 as f64,
+            self.cursor.pos.0,
+            self.cursor.pos.1,
         );
         (
             x.floor() as i32,
@@ -250,6 +236,59 @@ impl Context {
             },
             cm.height.ceil() as i32,
         )
+    }
+
+    pub fn cursor_goto(&mut self, row: u64, col: u64, clock: &gdk::FrameClock) {
+        // Clear old cursor position.
+        let (x, y, w, h) = self.get_cursor_rect();
+        self.queue_draw_area.push((
+            f64::from(x),
+            f64::from(y),
+            f64::from(w),
+            f64::from(h),
+        ));
+        self.cursor.goto(row as f64, col as f64, clock);
+
+        // Mark the new cursor position to be drawn.
+        let (x, y, w, h) = self.get_cursor_rect();
+        self.queue_draw_area.push((
+            f64::from(x),
+            f64::from(y),
+            f64::from(w),
+            f64::from(h),
+        ));
+    }
+
+    pub fn tick(&mut self, da: &DrawingArea, clock: &gdk::FrameClock) {
+        let (x, y, w, h) = self.get_cursor_rect();
+        da.queue_draw_area(x, y, w, h);
+
+        self.cursor.tick(clock);
+
+        let (x, y, w, h) = self.get_cursor_rect();
+
+        let mut alpha = self.cursor.alpha;
+        if alpha > 1.0 {
+            alpha = 2.0 - alpha;
+        }
+
+        let cr = &self.cursor_context;
+        cr.save();
+        cr.rectangle(0.0, 0.0, 100.0, 100.0);
+        cr.set_operator(cairo::Operator::Source);
+        cr.set_source_rgba(
+            self.cursor.color.r,
+            self.cursor.color.g,
+            self.cursor.color.b,
+            alpha,
+        );
+        cr.fill();
+        cr.restore();
+
+        // Don't use the queue_draw_area, because those draws will only
+        // happen once nvim sends 'flush' event. This draw needs to happen
+        // on each tick so the cursor blinks.
+        da.queue_draw_area(x, y, w, h);
     }
 }
 

@@ -137,7 +137,7 @@ impl UIState {
             let grid = self.grids.get(&self.current_grid).unwrap();
 
             grid.set_active(false);
-            grid.tick(); // Trick the grid to invalide the cursor's rect.
+            //grid.tick(); // Trick the grid to invalide the cursor's rect.
 
             self.current_grid = grid_id;
 
