@@ -128,11 +128,7 @@ impl Grid {
     pub fn flush(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
 
-        if let Some(Some(cell)) = ctx
-            .rows
-            .get(ctx.cursor.pos.0 as usize)
-            .map(|row| row.cell_at(ctx.cursor.pos.1 as usize))
-        {
+        if let Some(cell) = ctx.cell_at_cursor() {
             // If cursor isn't blinking, drawn the inverted cell into
             // the cursor's cairo context.
             if ctx.cursor.blink_on == 0 {

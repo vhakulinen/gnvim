@@ -7,7 +7,7 @@ use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
 use crate::ui::grid::cursor::Cursor;
 use crate::ui::grid::render;
-use crate::ui::grid::row::Row;
+use crate::ui::grid::row::{Cell, Row};
 
 /// Context is manipulated by Grid.
 pub struct Context {
@@ -208,24 +208,13 @@ impl Context {
     /// Returns x, y, width and height for current cursor location.
     pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
-            .rows
-            .get(self.cursor.pos.0 as usize)
-            .and_then(|row| {
-                Some(
-                    row.cell_at(self.cursor.pos.1 as usize)
-                        .map(|c| c.double_width)
-                        .unwrap_or(false),
-                )
-            })
+            .cell_at_cursor()
+            .and_then(|cell| Some(cell.double_width))
             .unwrap_or(false);
 
+        let pos = self.cursor.pos.unwrap_or((0.0, 0.0));
         let cm = &self.cell_metrics;
-        let (x, y) = render::get_coords(
-            cm.height,
-            cm.width,
-            self.cursor.pos.0,
-            self.cursor.pos.1,
-        );
+        let (x, y) = render::get_coords(cm.height, cm.width, pos.0, pos.1);
         (
             x.floor() as i32,
             y.floor() as i32,
@@ -247,7 +236,8 @@ impl Context {
             f64::from(w),
             f64::from(h),
         ));
-        self.cursor.goto(row as f64, col as f64, clock);
+        self.cursor
+            .goto(row as f64, col as f64, clock.get_frame_time());
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = self.get_cursor_rect();
@@ -263,7 +253,7 @@ impl Context {
         let (x, y, w, h) = self.get_cursor_rect();
         da.queue_draw_area(x, y, w, h);
 
-        self.cursor.tick(clock);
+        self.cursor.tick(clock.get_frame_time());
 
         let (x, y, w, h) = self.get_cursor_rect();
 
@@ -289,6 +279,14 @@ impl Context {
         // happen once nvim sends 'flush' event. This draw needs to happen
         // on each tick so the cursor blinks.
         da.queue_draw_area(x, y, w, h);
+    }
+
+    pub fn cell_at_cursor(&self) -> Option<&Cell> {
+        self.cursor.pos.and_then(|pos| {
+            self.rows
+                .get(pos.0.ceil() as usize)
+                .and_then(|row| row.cell_at(pos.1.ceil() as usize))
+        })
     }
 }
 
