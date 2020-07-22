@@ -480,6 +480,7 @@ impl UIState {
     fn popupmenu_hide(&mut self) {
         if self.wildmenu_shown {
             self.cmdline.wildmenu_hide();
+            self.wildmenu_shown = false;
         } else {
             self.popupmenu.hide();
 
