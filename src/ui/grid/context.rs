@@ -288,9 +288,7 @@ impl Context {
     }
 
     pub fn cell_at_cursor(&self) -> Option<&Cell> {
-        // TODO(ville): In some (all?) cases we want to get animation's target position if it
-        // differs from the current position.
-        self.cursor.pos.and_then(|pos| {
+        self.cursor.get_position().and_then(|pos| {
             self.rows
                 .get(pos.0.ceil() as usize)
                 .and_then(|row| row.cell_at(pos.1.ceil() as usize))

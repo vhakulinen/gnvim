@@ -91,6 +91,17 @@ impl Cursor {
             }
         }
     }
+
+    /// Gets the position of the cursor.
+    pub fn get_position(&self) -> Option<(f64, f64)> {
+        if let Some(ref a) = self.animation {
+            // The end position of our animation is the "real" position where
+            // the cursor is.
+            Some(a.end)
+        } else {
+            self.pos
+        }
+    }
 }
 
 /// From clutter-easing.c, based on Robert Penner's
@@ -166,5 +177,19 @@ mod tests {
         assert_eq!(cursor.pos, Some((10.0, 10.0)));
         cursor.tick(25000);
         assert_eq!(cursor.pos, Some((10.0, 10.0)));
+    }
+
+    #[test]
+    fn test_get_position() {
+        let mut cursor = Cursor::default();
+
+        assert_eq!(cursor.get_position(), None);
+        cursor.pos = Some((10.0, 10.0));
+        assert_eq!(cursor.get_position(), Some((10.0, 10.0)));
+        cursor.animation = Some(Animation {
+            end: (15.0, 15.0),
+            ..Animation::default()
+        });
+        assert_eq!(cursor.get_position(), Some((15.0, 15.0)));
     }
 }
