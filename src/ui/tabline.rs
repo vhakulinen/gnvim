@@ -1,10 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use glib;
-use gtk;
 use gtk::prelude::*;
-use pango;
 
 use nvim_rs::Tabpage;
 
@@ -28,7 +25,7 @@ pub struct Tabline {
     css_provider: gtk::CssProvider,
     switch_tab_signal: glib::SignalHandlerId,
 
-    tabpage_data: Rc<RefCell<Box<Vec<Tabpage<GioWriter>>>>>,
+    tabpage_data: Rc<RefCell<Vec<Tabpage<GioWriter>>>>,
 
     /// Our colors.
     colors: TablineColors,
@@ -46,7 +43,7 @@ impl Tabline {
         let css_provider = gtk::CssProvider::new();
         add_css_provider!(&css_provider, notebook);
 
-        let tabpage_data = Rc::new(RefCell::new(Box::new(vec![])));
+        let tabpage_data = Rc::new(RefCell::new(vec![]));
         let switch_tab_signal = notebook.connect_switch_page(
             clone!(tabpage_data, nvim => move |_, _, page_num| {
                 let tabpage_data = tabpage_data.clone();
@@ -119,7 +116,7 @@ impl Tabline {
         self.notebook.set_current_page(Some(page as u32));
 
         self.tabpage_data
-            .replace(Box::new(tabs.into_iter().map(|t| t.0).collect()));
+            .replace(tabs.into_iter().map(|t| t.0).collect());
 
         glib::signal_handler_unblock(&self.notebook, &self.switch_tab_signal);
     }

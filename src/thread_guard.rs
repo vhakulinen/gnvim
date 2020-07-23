@@ -23,7 +23,7 @@ impl<T> ThreadGuard<T> {
     pub fn borrow(&self) -> Ref<T> {
         match self.check_thread() {
             Ok(_) => self.data.borrow(),
-            Err(_) => {
+            Err(()) => {
                 panic!(
                     "Data is only accessible on thread {:?} (current is {:?})",
                     self.thread_id,
@@ -36,7 +36,7 @@ impl<T> ThreadGuard<T> {
     pub fn borrow_mut(&self) -> RefMut<T> {
         match self.check_thread() {
             Ok(_) => self.data.borrow_mut(),
-            Err(_) => {
+            Err(()) => {
                 panic!(
                     "Data is only accessible on thread {:?} (current is {:?})",
                     self.thread_id,

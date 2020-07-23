@@ -1,9 +1,6 @@
-use cairo;
 use gtk::prelude::*;
 use gtk::DrawingArea;
-use pango;
 use pango::Attribute;
-use pangocairo;
 
 use crate::nvim_bridge::GridLineSegment;
 use crate::ui::color::Highlight;
@@ -119,7 +116,7 @@ pub fn cursor_cell(
     cm: &CellMetrics,
     hl_defs: &HlDefs,
 ) {
-    let mut hl = hl_defs.get(&cell.hl_id).unwrap().clone();
+    let mut hl = *hl_defs.get(&cell.hl_id).unwrap();
 
     hl.reverse = !hl.reverse;
 
@@ -194,7 +191,7 @@ pub fn put_line(
     let mut affected_segments = context
         .rows
         .get_mut(row)
-        .expect(&format!("Failed to get row {}", line.row))
+        .unwrap_or_else(|| panic!("Failed to get row {}", line.row))
         .update(line);
 
     // NOTE(ville): I haven't noticed any cases where a character is overflowing

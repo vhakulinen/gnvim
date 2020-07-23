@@ -108,7 +108,7 @@ impl Cursor {
 /// infamous easing equations, MIT license.
 fn ease_out_cubic(t: f64) -> f64 {
     let p = t - 1f64;
-    return p * p * p + 1f64;
+    p * p * p + 1f64
 }
 
 #[cfg(test)]

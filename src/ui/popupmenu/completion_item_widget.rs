@@ -1,4 +1,3 @@
-use gtk;
 use gtk::prelude::*;
 
 use crate::nvim_bridge::{CompletionItem, CompletionItemKind};
@@ -103,8 +102,8 @@ impl CompletionItemWidgetWrap {
 }
 
 /// Returns first line of `info`.
-fn shorten_info(info: &String) -> String {
-    let lines = info.split("\n").collect::<Vec<&str>>();
+fn shorten_info(info: &str) -> String {
+    let lines = info.split('\n').collect::<Vec<&str>>();
     let first_line = lines.get(0).unwrap();
     first_line.to_string()
 }
@@ -118,11 +117,9 @@ pub fn get_icon_pixbuf(
     let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
-    let buf =
-        gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>)
-            .unwrap();
 
-    buf
+    gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>)
+        .unwrap()
 }
 
 fn get_icon_name_for_kind(

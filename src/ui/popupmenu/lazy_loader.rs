@@ -1,13 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use glib;
-use gtk;
 use gtk::prelude::*;
 
 use crate::nvim_bridge::CompletionItem;
 use crate::ui::color::Color;
 use crate::ui::popupmenu::CompletionItemWidgetWrap;
+
+type OnceLoaded =
+    Option<(Option<i32>, Box<dyn Fn(&Vec<CompletionItemWidgetWrap>)>)>;
 
 struct State {
     items: Vec<CompletionItemWidgetWrap>,
@@ -19,8 +20,7 @@ struct State {
     /// Once we're loaded some (or all) data, this closure gets called if
     /// one exists. The first value in the tuple can is indication on the
     /// number of items needed before calling the closure.
-    once_loaded:
-        Option<(Option<i32>, Box<dyn Fn(&Vec<CompletionItemWidgetWrap>)>)>,
+    once_loaded: OnceLoaded,
 
     list: gtk::ListBox,
     css_provider: gtk::CssProvider,
@@ -85,7 +85,7 @@ impl LazyLoader {
             // Load the rows in patches so we avoid renders of "half height"
             // completion menus.
             for _ in 0..40 {
-                if state.items_to_load.len() == 0 {
+                if state.items_to_load.is_empty() {
                     state.source_id = None;
 
                     if let Some((_, cb)) = state.once_loaded.take() {

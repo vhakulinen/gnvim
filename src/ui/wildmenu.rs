@@ -1,4 +1,3 @@
-use gtk;
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -112,7 +111,7 @@ impl Wildmenu {
         }
     }
 
-    pub fn set_items(&mut self, items: &Vec<nvim_bridge::CompletionItem>) {
+    pub fn set_items(&mut self, items: &[nvim_bridge::CompletionItem]) {
         self.clear();
 
         for item in items {
@@ -135,11 +134,9 @@ impl Wildmenu {
 
         if item_num < 0 {
             self.list.unselect_all();
-        } else {
-            if let Some(row) = self.list.get_row_at_index(item_num) {
-                self.list.select_row(Some(&row));
-                row.grab_focus();
-            }
+        } else if let Some(row) = self.list.get_row_at_index(item_num) {
+            self.list.select_row(Some(&row));
+            row.grab_focus();
         }
     }
 

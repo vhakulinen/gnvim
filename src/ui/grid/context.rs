@@ -1,7 +1,5 @@
-use cairo;
 use gtk::prelude::*;
 use gtk::DrawingArea;
-use pango;
 
 use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
@@ -216,7 +214,7 @@ impl Context {
     pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
             .cell_at_cursor()
-            .and_then(|cell| Some(cell.double_width))
+            .map(|cell| cell.double_width)
             .unwrap_or(false);
 
         // Dont use cursor.get_position here, because we want to use the position on the screen.

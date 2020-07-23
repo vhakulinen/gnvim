@@ -1,4 +1,3 @@
-use gtk;
 use gtk::prelude::*;
 
 use crate::nvim_bridge;
@@ -432,7 +431,7 @@ impl Cmdline {
         let frame = gtk::Frame::new(None);
         frame.add(&inner_box);
 
-        let wildmenu = Wildmenu::new(nvim.clone());
+        let wildmenu = Wildmenu::new(nvim);
 
         // box_ is the actual container for cmdline and wildmenu.
         let box_ = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -624,7 +623,7 @@ impl Cmdline {
         self.block.append(line, &hl_defs);
     }
 
-    pub fn wildmenu_show(&mut self, items: &Vec<nvim_bridge::CompletionItem>) {
+    pub fn wildmenu_show(&mut self, items: &[nvim_bridge::CompletionItem]) {
         self.show_wildmenu = true;
         self.wildmenu.set_items(items);
         self.wildmenu.show();

@@ -1,10 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use gdk;
-use gtk;
 use gtk::prelude::*;
-use pango;
 
 use crate::nvim_bridge::CompletionItem;
 use crate::nvim_gio::GioNeovim;
@@ -313,7 +310,7 @@ impl Popupmenu {
                     item.info.set_visible(!info_shown);
                     item.menu.set_visible(!info_shown);
 
-                    if item.item.info.len() == 0 {
+                    if item.item.info.is_empty() {
                         item.info.set_visible(false);
                     }
 
@@ -398,8 +395,8 @@ impl Popupmenu {
     pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
         let state = self.state.clone();
         let scrolled_list = self.scrolled_list.clone();
-        let fg = self.colors.fg.unwrap_or(hl_defs.default_fg).clone();
-        let fg_sel = self.colors.sel_fg.unwrap_or(hl_defs.default_fg).clone();
+        let fg = self.colors.fg.unwrap_or(hl_defs.default_fg);
+        let fg_sel = self.colors.sel_fg.unwrap_or(hl_defs.default_fg);
         let font_height = self.font.height as f64;
         let list = self.list.clone();
         let info_label = self.info_label.clone();
@@ -444,7 +441,7 @@ impl Popupmenu {
                 item.info.set_visible(!info_shown);
                 item.menu.set_visible(!info_shown);
 
-                if item.item.info.len() == 0 {
+                if item.item.info.is_empty() {
                     item.info.set_visible(false);
                 }
 
@@ -480,12 +477,13 @@ impl Popupmenu {
                     item.image.set_from_pixbuf(Some(&buf));
                 }
 
-                let newline =
-                    if item.item.menu.len() > 0 && item.item.info.len() > 0 {
-                        "\n"
-                    } else {
-                        ""
-                    };
+                let newline = if !item.item.menu.is_empty()
+                    && !item.item.info.is_empty()
+                {
+                    "\n"
+                } else {
+                    ""
+                };
 
                 info_label.set_text(&format!(
                     "{}{}{}",

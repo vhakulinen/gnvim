@@ -2,8 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use glib;
-use gtk;
 use gtk::prelude::*;
 
 use log::{debug, error, warn};
@@ -296,7 +294,7 @@ impl UIState {
     fn option_set(&mut self, opt: OptionSet) {
         match opt {
             OptionSet::GuiFont(font) => {
-                let font = Font::from_guifont(&font).unwrap_or(Font::default());
+                let font = Font::from_guifont(&font).unwrap_or_default();
 
                 self.font = font.clone();
 
@@ -335,7 +333,7 @@ impl UIState {
     }
 
     fn mode_info_set(&mut self, ModeInfoSet { mode_info, .. }: ModeInfoSet) {
-        self.mode_infos = mode_info.clone();
+        self.mode_infos = mode_info;
     }
 
     fn mode_change(&mut self, ModeChange { index, .. }: ModeChange) {

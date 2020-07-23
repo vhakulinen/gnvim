@@ -2,9 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gdk;
-use glib;
-use gtk;
 use gtk::prelude::*;
 
 use log::{debug, error};
@@ -124,9 +121,8 @@ impl UI {
             let new = gtk::timeout_add(30, clone!(nvim, source_id => move || {
                 let nvim = nvim.clone();
                 spawn_local(async move {
-                    match nvim.ui_try_resize(cols as i64, rows as i64).await {
-                        Err(err) => error!("Error: failed to resize nvim when grid size changed ({:?})", err),
-                        Ok(_) => {},
+                    if let Err(err) = nvim.ui_try_resize(cols as i64, rows as i64).await {
+                        error!("Error: failed to resize nvim when grid size changed ({:?})", err);
                     }
                 });
 

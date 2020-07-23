@@ -1,6 +1,4 @@
-use gio;
 use gio::prelude::*;
-use glib;
 
 use log::error;
 

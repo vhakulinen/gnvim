@@ -59,7 +59,7 @@ pub fn get_preferred_vertical_position(
         }
     }
 
-    return (y, height);
+    (y, height)
 }
 
 #[cfg(test)]

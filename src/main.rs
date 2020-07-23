@@ -37,7 +37,7 @@ mod thread_guard;
 mod ui;
 
 fn parse_geometry(input: &str) -> Result<(i32, i32), String> {
-    let ret_tuple: Vec<&str> = input.split("x").collect();
+    let ret_tuple: Vec<&str> = input.split('x').collect();
     if ret_tuple.len() != 2 {
         Err(String::from("must be of form 'width'x'height'"))
     } else {
@@ -228,5 +228,5 @@ fn main() {
         });
     });
 
-    app.run(&vec![]);
+    app.run(&[]);
 }

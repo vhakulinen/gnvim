@@ -3,10 +3,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
 
-use cairo;
-use gdk;
 use gdk::{EventMask, ModifierType};
-use gtk;
 use gtk::{DrawingArea, EventBox};
 
 use gtk::prelude::*;

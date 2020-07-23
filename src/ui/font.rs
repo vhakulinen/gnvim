@@ -28,11 +28,11 @@ impl Font {
     ///
     /// If invalid height is specified, defaults to `DEFAULT_HEIGHT`.
     pub fn from_guifont(guifont: &str) -> Result<Self, ()> {
-        let mut parts = guifont.split(":").into_iter();
+        let mut parts = guifont.split(':');
 
         let name = parts.next().ok_or(())?;
 
-        if name.len() == 0 {
+        if name.is_empty() {
             return Err(());
         }
 
@@ -41,8 +41,8 @@ impl Font {
             height: DEFAULT_HEIGHT,
         };
 
-        while let Some(part) = parts.next() {
-            let mut chars = part.chars().into_iter();
+        for part in parts {
+            let mut chars = part.chars();
             if let Some(ch) = chars.next() {
                 match ch {
                     'h' => {

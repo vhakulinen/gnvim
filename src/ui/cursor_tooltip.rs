@@ -4,13 +4,11 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 
-use gtk;
 use gtk::prelude::*;
 
 use webkit2gtk as webkit;
 use webkit2gtk::{SettingsExt, WebViewExt};
 
-use ammonia;
 use pulldown_cmark as md;
 
 use syntect::dumps::from_binary;
@@ -514,8 +512,8 @@ fn attribute_filter<'u>(
 
             let mut new = String::new();
 
-            for attrs in value.split(";") {
-                if let [prop, val] = attrs.split(":").collect::<Vec<&str>>()[..]
+            for attrs in value.split(';') {
+                if let [prop, val] = attrs.split(':').collect::<Vec<&str>>()[..]
                 {
                     if let Some(vals) = allowed_fixed.get(&prop) {
                         if vals.contains(&val) {

@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use glib;
-
 #[derive(Hash, PartialEq, Eq)]
 pub enum HlGroup {
     Pmenu,
@@ -131,13 +129,13 @@ impl Color {
         let res = u64::from_str_radix(hex.as_str(), 16);
 
         if let Ok(res) = res {
-            return Ok(Color::from_u64(res));
+            Ok(Color::from_u64(res))
         } else {
-            return Err(format!(
+            Err(format!(
                 "Failed to parse hex string '{}': {:?}",
                 hex,
                 res.err()
-            ));
+            ))
         }
     }
 

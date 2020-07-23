@@ -168,7 +168,7 @@ impl Row {
             segs.push(Segment {
                 text: cell.text.clone(),
                 hl_id: cell.hl_id,
-                start: start,
+                start,
                 len: 1,
             });
 

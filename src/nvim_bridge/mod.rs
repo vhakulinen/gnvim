@@ -74,7 +74,7 @@ macro_rules! try_u64 {
 }
 
 impl Highlight {
-    fn from_map_val(map: &Vec<(Value, Value)>) -> Self {
+    fn from_map_val(map: &[(Value, Value)]) -> Self {
         let mut hl = Highlight::default();
         for (prop, val) in map {
             hl.set(unwrap_str!(prop), val.clone());
@@ -386,7 +386,7 @@ impl From<Value> for CmdlineShow {
     fn from(args: Value) -> Self {
         let args = unwrap_array!(args);
         let content: Vec<(u64, String)> = unwrap_array!(args[0])
-            .into_iter()
+            .iter()
             .map(|v| {
                 let hl_id = unwrap_u64!(v[0]);
                 let text = unwrap_str!(v[1]);
@@ -520,8 +520,7 @@ pub struct GridScroll {
 impl From<Value> for GridScroll {
     fn from(args: Value) -> Self {
         let args = unwrap_array!(args);
-        let reg: Vec<u64> =
-            args[1..5].into_iter().map(|v| unwrap_u64!(v)).collect();
+        let reg: Vec<u64> = args[1..5].iter().map(|v| unwrap_u64!(v)).collect();
         let reg = [reg[0], reg[1], reg[2], reg[3]];
         GridScroll {
             grid: unwrap_i64!(args[0]),
@@ -598,7 +597,7 @@ impl From<Value> for ModeInfoSet {
         let cursor_shape_enabled = unwrap_bool!(args[0]);
 
         let mut mode_info = vec![];
-        for info in unwrap_array!(args[1]).into_iter() {
+        for info in unwrap_array!(args[1]).iter() {
             let map = unwrap_map!(info);
 
             let mut mode = ModeInfo::default();
@@ -722,10 +721,10 @@ pub struct CmdlineBlockShow {
 impl From<Value> for CmdlineBlockShow {
     fn from(args: Value) -> Self {
         let lines = unwrap_array!(args)
-            .into_iter()
+            .iter()
             .map(|line| {
                 unwrap_array!(line[0])
-                    .into_iter()
+                    .iter()
                     .map(|v| {
                         let hl_id = unwrap_u64!(v[0]);
                         let text = unwrap_str!(v[1]);
@@ -1076,8 +1075,6 @@ impl Spawner for NvimBridge {
         let c = glib::MainContext::default();
 
         c.spawn(future);
-
-        ()
     }
 }
 
