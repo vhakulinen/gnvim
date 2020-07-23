@@ -55,6 +55,9 @@ Gnvim's cursor can be set to blink with `guicursor`.
 Make cursor blink: `set guicursor+=a:blinkon333`
 Make cursor not to blink: `set guicursor+=a:blinkon0`
 
+The cursor also has animated position movement, which is on by default. To
+disable it, use `GnvimCursorEnableAnimations 0` .
+
 ================================================================================
 Commands                                                       *gnvim-commands*
 

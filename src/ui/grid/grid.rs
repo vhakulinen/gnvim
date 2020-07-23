@@ -89,10 +89,18 @@ impl Grid {
         cols: usize,
         rows: usize,
         hl_defs: &HlDefs,
+        enable_cursor_animations: bool,
     ) -> Self {
         let da = DrawingArea::new();
         let ctx = Rc::new(RefCell::new(Context::new(
-            &da, win, font, line_space, cols, rows, hl_defs,
+            &da,
+            win,
+            font,
+            line_space,
+            cols,
+            rows,
+            hl_defs,
+            enable_cursor_animations,
         )));
 
         da.connect_draw(clone!(ctx => move |_, cr| {
@@ -460,6 +468,11 @@ impl Grid {
         let mut ctx = self.context.borrow_mut();
 
         ctx.busy = busy;
+    }
+
+    pub fn enable_cursor_animations(&self, enable: bool) {
+        let mut ctx = self.context.borrow_mut();
+        ctx.cursor.disable_animation = !enable;
     }
 }
 

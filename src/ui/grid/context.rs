@@ -45,6 +45,7 @@ impl Context {
         cols: usize,
         rows: usize,
         hl_defs: &HlDefs,
+        enable_cursor_animations: bool,
     ) -> Self {
         let pango_context = da.get_pango_context().unwrap();
 
@@ -89,13 +90,18 @@ impl Context {
             cairo::Context::new(&surface)
         };
 
+        let cursor = Cursor {
+            disable_animation: !enable_cursor_animations,
+            ..Cursor::default()
+        };
+
         Context {
             cairo_context,
             cell_metrics,
             cell_metrics_update: None,
             rows: vec![],
 
-            cursor: Cursor::default(),
+            cursor,
             cursor_context,
 
             busy: false,
@@ -282,6 +288,8 @@ impl Context {
     }
 
     pub fn cell_at_cursor(&self) -> Option<&Cell> {
+        // TODO(ville): In some (all?) cases we want to get animation's target position if it
+        // differs from the current position.
         self.cursor.pos.and_then(|pos| {
             self.rows
                 .get(pos.0.ceil() as usize)

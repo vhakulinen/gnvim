@@ -1,7 +1,7 @@
 use crate::ui::color::Color;
 
 #[derive(Default)]
-struct Animation {
+pub struct Animation {
     start: (f64, f64),
     end: (f64, f64),
     start_time: i64,
@@ -12,7 +12,9 @@ struct Animation {
 pub struct Cursor {
     /// Position, (row, col).
     pub pos: Option<(f64, f64)>,
-    animation: Animation,
+    /// Flag for disabling the movement animation.
+    pub disable_animation: bool,
+    pub animation: Option<Animation>,
 
     /// Alpha color. Used to make the cursor blink.
     pub alpha: f64,
@@ -26,17 +28,24 @@ pub struct Cursor {
 
 impl Cursor {
     pub fn goto(&mut self, row: f64, col: f64, frame_time: i64) {
+        // When we get our first cursor_goto, set the position directly.
         if self.pos.is_none() {
             self.pos = Some((row, col));
         }
 
-        let duration = 200;
-        self.animation = Animation {
-            start: self.pos.unwrap(),
-            end: (row, col),
-            start_time: frame_time,
-            end_time: frame_time + 1000 * duration,
-        };
+        // If cursor animation is disabled, set the position directly. Otherwise, set the animation
+        // so that we can animate cursor position change.
+        if self.disable_animation {
+            self.pos = Some((row, col));
+        } else {
+            let duration = 200;
+            self.animation = Some(Animation {
+                start: self.pos.unwrap(),
+                end: (row, col),
+                start_time: frame_time,
+                end_time: frame_time + 1000 * duration,
+            });
+        }
     }
 
     pub fn tick(&mut self, frame_time: i64) {
@@ -59,25 +68,27 @@ impl Cursor {
     }
 
     fn animate_position(&mut self, frame_time: i64) {
-        let Animation {
+        if let Some(Animation {
             start,
             end,
             start_time,
             end_time,
-        } = self.animation;
+        }) = self.animation
+        {
+            let mut pos = self.pos.unwrap_or((0.0, 0.0));
 
-        let mut pos = self.pos.unwrap_or((0.0, 0.0));
+            if frame_time < end_time && pos != end {
+                let mut t = (frame_time - start_time) as f64
+                    / (end_time - start_time) as f64;
+                t = ease_out_cubic(t);
+                pos.0 = start.0 + t * (end.0 - start.0);
+                pos.1 = start.1 + t * (end.1 - start.1);
 
-        if frame_time < end_time && pos != end {
-            let mut t = (frame_time - start_time) as f64
-                / (end_time - start_time) as f64;
-            t = ease_out_cubic(t);
-            pos.0 = start.0 + t * (end.0 - start.0);
-            pos.1 = start.1 + t * (end.1 - start.1);
-
-            self.pos = Some(pos);
-        } else if pos != end {
-            self.pos = Some(end);
+                self.pos = Some(pos);
+            } else {
+                self.pos = Some(end);
+                self.animation = None;
+            }
         }
     }
 }
@@ -138,5 +149,22 @@ mod tests {
         cursor.goto(10.0, 10.0, 1);
         cursor.tick(25000);
         assert_eq!(cursor.pos, Some((13.349666797203126, 13.349666797203126)));
+    }
+
+    #[test]
+    fn test_animate_position_animation_disabled() {
+        let mut cursor = Cursor::default();
+        cursor.disable_animation = true;
+
+        // When we first set the position, it should be set immediately.
+        cursor.goto(15.0, 15.0, 1);
+        assert_eq!(cursor.pos, Some((15.0, 15.0)));
+
+        // Position animation is disabled, goto should change the position directly and tick
+        // shouldn't affect the position value at all.
+        cursor.goto(10.0, 10.0, 1);
+        assert_eq!(cursor.pos, Some((10.0, 10.0)));
+        cursor.tick(25000);
+        assert_eq!(cursor.pos, Some((10.0, 10.0)));
     }
 }

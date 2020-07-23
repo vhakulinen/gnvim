@@ -976,6 +976,8 @@ pub enum GnvimEvent {
     PopupmenuWidthDetails(u64),
     PopupmenuShowMenuOnAllItems(bool),
 
+    EnableCursorAnimations(bool),
+
     Unknown(String),
 }
 
@@ -1261,6 +1263,12 @@ pub(crate) fn parse_gnvim_event(
 
             GnvimEvent::PopupmenuShowMenuOnAllItems(b != 0)
         }
+        "EnableCursorAnimations" => GnvimEvent::EnableCursorAnimations(
+            try_u64!(
+                args.get(1).ok_or("argument missing")?,
+                "failed to parse enable cursor animations argument"
+            ) == 1,
+        ),
         _ => GnvimEvent::Unknown(String::from(cmd)),
     };
 

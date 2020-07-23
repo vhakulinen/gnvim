@@ -84,6 +84,8 @@ pub(crate) struct UIState {
 
     pub font: Font,
     pub line_space: i64,
+
+    pub enable_cursor_animations: bool,
 }
 
 impl UIState {
@@ -102,6 +104,7 @@ impl UIState {
             Notify::GnvimEvent(event) => match event {
                 Ok(event) => self.handle_gnvim_event(&event, nvim),
                 Err(err) => {
+                    error!("Failed to parse notify: {}", err);
                     let nvim = nvim.clone();
                     let msg = format!(
                         "echom \"Failed to parse gnvim notify: '{}'\"",
@@ -183,6 +186,7 @@ impl UIState {
                 e.width as usize,
                 e.height as usize,
                 &self.hl_defs,
+                self.enable_cursor_animations,
             );
 
             if let Some(ref mode) = self.current_mode {
@@ -714,6 +718,13 @@ impl UIState {
         self.msg_window.set_pos(&grid, e.row as f64, h, e.scrolled);
     }
 
+    fn enable_cursor_animations(&mut self, enable: bool) {
+        self.enable_cursor_animations = enable;
+        self.grids
+            .values()
+            .for_each(|g| g.enable_cursor_animations(enable));
+    }
+
     fn handle_redraw_event(
         &mut self,
         window: &gtk::ApplicationWindow,
@@ -829,6 +840,9 @@ impl UIState {
             }
             GnvimEvent::PopupmenuShowMenuOnAllItems(should_show) => {
                 self.popupmenu.set_show_menu_on_all_items(*should_show);
+            }
+            GnvimEvent::EnableCursorAnimations(enable) => {
+                self.enable_cursor_animations(*enable);
             }
             GnvimEvent::Unknown(msg) => {
                 debug!("Received unknown GnvimEvent: {}", msg);

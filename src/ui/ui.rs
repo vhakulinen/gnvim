@@ -87,6 +87,7 @@ impl UI {
             80,
             30,
             &hl_defs,
+            true,
         );
         // Mark the default grid as active at the beginning.
         grid.set_active(true);
@@ -242,6 +243,7 @@ impl UI {
                 font,
                 line_space,
                 current_mode: None,
+                enable_cursor_animations: true,
             })),
             nvim,
         }
