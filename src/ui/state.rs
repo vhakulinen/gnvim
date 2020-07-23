@@ -104,7 +104,6 @@ impl UIState {
             Notify::GnvimEvent(event) => match event {
                 Ok(event) => self.handle_gnvim_event(&event, nvim),
                 Err(err) => {
-                    error!("Failed to parse notify: {}", err);
                     let nvim = nvim.clone();
                     let msg = format!(
                         "echom \"Failed to parse gnvim notify: '{}'\"",
@@ -138,10 +137,7 @@ impl UIState {
             // ...so if the grid_id is not same as the self tells us,
             // set the previous current grid to inactive self.
             let grid = self.grids.get(&self.current_grid).unwrap();
-
             grid.set_active(false);
-            //grid.tick(); // Trick the grid to invalide the cursor's rect.
-
             self.current_grid = grid_id;
 
             // And set the new current grid to active.
