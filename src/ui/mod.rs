@@ -57,6 +57,7 @@ mod grid;
 mod popupmenu;
 mod state;
 mod tabline;
+#[allow(clippy::module_inception)]
 mod ui;
 mod wildmenu;
 mod window;

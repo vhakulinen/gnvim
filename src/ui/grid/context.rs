@@ -35,6 +35,7 @@ pub struct Context {
 }
 
 impl Context {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         da: &DrawingArea,
         win: &gdk::Window,

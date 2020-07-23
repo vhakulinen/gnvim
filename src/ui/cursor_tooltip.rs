@@ -116,8 +116,8 @@ impl CursorTooltip {
         let frame_weak = frame.downgrade();
         let fixed_weak = fixed.downgrade();
         webview.connect_load_changed(
-            clone!(frame_weak, fixed_weak, state => move |webview, e| match e {
-                webkit::LoadEvent::Finished => {
+            clone!(frame_weak, fixed_weak, state => move |webview, e| {
+                if let webkit::LoadEvent::Finished = e {
                     webview_load_finished(
                         webview,
                         frame_weak.clone(),
@@ -125,7 +125,6 @@ impl CursorTooltip {
                         state.clone(),
                     );
                 }
-                _ => {}
             }),
         );
 
@@ -145,7 +144,7 @@ impl CursorTooltip {
                 state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
                 webview.set_zoom_level(state.scale);
 
-                state.available_area = alloc.clone();
+                state.available_area = *alloc;
             }),
         );
 
@@ -254,9 +253,9 @@ impl CursorTooltip {
                                         .contains(&lang.to_string())
                                 })
                                 // And if not still found, use the plain text one.
-                                .unwrap_or(
-                                    self.syntax_set.find_syntax_plain_text(),
-                                )
+                                .unwrap_or_else(|| {
+                                    self.syntax_set.find_syntax_plain_text()
+                                })
                         });
 
                     in_code_block = true;
@@ -363,7 +362,7 @@ impl CursorTooltip {
 
     pub fn move_to(&mut self, rect: &gdk::Rectangle) {
         let mut state = self.state.borrow_mut();
-        state.anchor = rect.clone();
+        state.anchor = *rect;
     }
 
     /// Forces the gravity of the tooltip to be above or below of current
@@ -396,7 +395,7 @@ fn set_position(
     width: i32,
     height: i32,
 ) {
-    let mut available_area = state.available_area.clone();
+    let mut available_area = state.available_area;
 
     match state.force_gravity {
         Some(Gravity::Up) => {

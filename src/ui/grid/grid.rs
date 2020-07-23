@@ -78,6 +78,7 @@ pub struct Grid {
 }
 
 impl Grid {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: i64,
         win: &gdk::Window,

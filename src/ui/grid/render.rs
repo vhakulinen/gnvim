@@ -20,6 +20,7 @@ use crate::ui::grid::row::{Cell, Segment};
 /// * `y` - Target y coordinate for `cr`.
 /// * `w` - Target width for `cr`.
 /// * `h` - Target height for `cr`.
+#[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
 fn render_text(
     cr: &cairo::Context,
     pango_context: &pango::Context,
