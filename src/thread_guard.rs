@@ -20,6 +20,7 @@ impl<T> ThreadGuard<T> {
         }
     }
 
+    #[allow(unused)]
     pub fn borrow(&self) -> Ref<T> {
         match self.check_thread() {
             Ok(_) => self.data.borrow(),

@@ -281,6 +281,7 @@ impl UI {
     }
 }
 
+#[cfg_attr(not(feature = "libwebkit2gtk"), allow(unused_variables))] // Silence clippy
 fn handle_request(
     request: &Request,
     state: &mut UIState,

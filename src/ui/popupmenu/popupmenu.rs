@@ -292,6 +292,7 @@ impl Popupmenu {
         self.show_menu_on_all_items = b;
     }
 
+    #[allow(unused)]
     pub fn is_above_anchor(&self) -> bool {
         self.scrolled_list.get_child().unwrap().get_valign() == gtk::Align::End
     }

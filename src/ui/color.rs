@@ -118,6 +118,7 @@ pub struct Color {
 }
 
 impl Color {
+    #[allow(unused)]
     pub fn from_hex_string(mut hex: String) -> Result<Color, String> {
         let l = hex.chars().count();
         if l == 7 {
