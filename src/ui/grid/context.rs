@@ -211,14 +211,17 @@ impl Context {
         };
     }
 
-    /// Returns x, y, width and height for current cursor location.
+    /// Returns x, y, width and height for cursor position on the screen (e.g. might be in middle
+    /// of an animation).
     pub fn get_cursor_rect(&self) -> (i32, i32, i32, i32) {
         let double_width = self
             .cell_at_cursor()
             .and_then(|cell| Some(cell.double_width))
             .unwrap_or(false);
 
+        // Dont use cursor.get_position here, because we want to use the position on the screen.
         let pos = self.cursor.pos.unwrap_or((0.0, 0.0));
+
         let cm = &self.cell_metrics;
         let (x, y) = render::get_coords(cm.height, cm.width, pos.0, pos.1);
         (
