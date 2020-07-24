@@ -304,8 +304,9 @@ fn handle_request(
 }
 
 fn keyname_to_nvim_key(s: &str) -> Option<&str> {
-    // Sourced from python-gui.
+    // Originally sourced from python-gui.
     match s {
+        "asciicircum" => Some("^"), // fix #137
         "slash" => Some("/"),
         "backslash" => Some("\\"),
         "dead_circumflex" => Some("^"),
