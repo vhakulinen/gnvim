@@ -159,7 +159,7 @@ mod tests {
 
         cursor.goto(10.0, 10.0, 1);
         cursor.tick(25000);
-        assert_eq!(cursor.pos, Some((13.349666797203126, 13.349666797203126)));
+        assert_eq!(cursor.pos, Some((12.109459376125006, 12.109459376125006)));
     }
 
     #[test]
