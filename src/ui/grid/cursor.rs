@@ -38,7 +38,7 @@ impl Cursor {
         if self.disable_animation {
             self.pos = Some((row, col));
         } else {
-            let duration = 200;
+            let duration = 100;
             self.animation = Some(Animation {
                 start: self.pos.unwrap(),
                 end: (row, col),
