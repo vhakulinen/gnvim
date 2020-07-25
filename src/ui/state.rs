@@ -553,7 +553,7 @@ impl UIState {
             evt.grid,
             self.windows_container.clone().upcast(),
             nvim,
-            evt.win.clone(),
+            evt.win,
         );
 
         window.set_position(x, y, width, height);
