@@ -542,11 +542,7 @@ impl UIState {
         self.cmdline.hide_block();
     }
 
-    fn window_pos(
-        &mut self,
-        evt: WindowPos,
-        nvim: &GioNeovim,
-    ) {
+    fn window_pos(&mut self, evt: WindowPos, nvim: &GioNeovim) {
         let base_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
         let x = evt.start_col as f64 * base_metrics.cell_width;
         let y = evt.start_row as f64 * base_metrics.cell_height;
@@ -680,7 +676,7 @@ impl UIState {
             evt.grid,
             self.windows_float_container.clone().upcast(),
             nvim,
-            evt.win.clone(),
+            evt.win,
         );
 
         window.set_external(
@@ -794,8 +790,7 @@ impl UIState {
             }
             RedrawEvent::CmdlineBlockHide() => self.cmdline_block_hide(),
             RedrawEvent::WindowPos(evt) => {
-                evt.into_iter()
-                    .for_each(|e| self.window_pos(e, nvim));
+                evt.into_iter().for_each(|e| self.window_pos(e, nvim));
             }
             RedrawEvent::WindowFloatPos(evt) => {
                 evt.into_iter().for_each(|e| self.window_float_pos(e, nvim));
