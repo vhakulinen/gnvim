@@ -107,7 +107,7 @@ impl Wildmenu {
     pub fn clear(&mut self) {
         let mut children = self.list.get_children();
         while let Some(item) = children.pop() {
-            item.destroy();
+            self.list.remove(&item);
         }
     }
 

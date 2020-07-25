@@ -191,6 +191,11 @@ async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
 fn main() {
     env_logger::init();
 
+    if let Err(err) = gtk::init() {
+        error!("Failed to initialize gtk: {}", err);
+        return;
+    }
+
     let opts = Options::clap();
     let opts = Options::from_clap(&opts.get_matches_safe().unwrap_or_else(
         |mut err| {

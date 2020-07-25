@@ -114,12 +114,11 @@ pub fn get_icon_pixbuf(
     size: f64,
 ) -> gdk_pixbuf::Pixbuf {
     let contents = get_icon_name_for_kind(kind, &color, size);
-    let stream = gio::MemoryInputStream::new_from_bytes(&glib::Bytes::from(
+    let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(
         contents.as_bytes(),
     ));
 
-    gdk_pixbuf::Pixbuf::new_from_stream(&stream, None::<&gio::Cancellable>)
-        .unwrap()
+    gdk_pixbuf::Pixbuf::from_stream(&stream, None::<&gio::Cancellable>).unwrap()
 }
 
 fn get_icon_name_for_kind(

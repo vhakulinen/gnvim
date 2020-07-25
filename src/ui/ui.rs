@@ -367,7 +367,7 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     let mut input = String::from("");
 
     let keyval = e.get_keyval();
-    let keyname = gdk::keyval_name(keyval)?;
+    let keyname = keyval.name()?;
 
     let state = e.get_state();
 
@@ -385,7 +385,7 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
         let n = keyname_to_nvim_key(keyname.as_str())?;
         input.push_str(n);
     } else {
-        input.push(gdk::keyval_to_unicode(keyval)?);
+        input.push(keyval.to_unicode()?);
     }
 
     Some(format!("<{}>", input))

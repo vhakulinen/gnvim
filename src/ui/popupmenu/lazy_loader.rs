@@ -33,7 +33,7 @@ impl State {
         }
 
         while let Some(item) = self.items.pop() {
-            item.row.destroy();
+            self.list.remove(&item.row);
         }
     }
 

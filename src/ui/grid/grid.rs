@@ -140,7 +140,7 @@ impl Grid {
             if ctx.cursor.blink_on == 0 {
                 render::cursor_cell(
                     &ctx.cursor_context,
-                    &self.da.get_pango_context().unwrap(),
+                    &self.da.get_pango_context(),
                     &cell,
                     &ctx.cell_metrics,
                     hl_defs,
@@ -324,21 +324,12 @@ impl Grid {
     pub fn put_line(&self, line: GridLineSegment, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
 
-        render::put_line(
-            &mut ctx,
-            &self.da.get_pango_context().unwrap(),
-            line,
-            hl_defs,
-        );
+        render::put_line(&mut ctx, &self.da.get_pango_context(), line, hl_defs);
     }
 
     pub fn redraw(&self, hl_defs: &HlDefs) {
         let mut ctx = self.context.borrow_mut();
-        render::redraw(
-            &mut ctx,
-            &self.da.get_pango_context().unwrap(),
-            hl_defs,
-        );
+        render::redraw(&mut ctx, &self.da.get_pango_context(), hl_defs);
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {

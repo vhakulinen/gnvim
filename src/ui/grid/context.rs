@@ -46,7 +46,7 @@ impl Context {
         hl_defs: &HlDefs,
         enable_cursor_animations: bool,
     ) -> Self {
-        let pango_context = da.get_pango_context().unwrap();
+        let pango_context = da.get_pango_context();
 
         let font_desc = font.as_pango_font();
         pango_context.set_font_description(&font_desc);
@@ -132,7 +132,7 @@ impl Context {
             }
         }
 
-        let pctx = da.get_pango_context().unwrap();
+        let pctx = da.get_pango_context();
         pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 
         self.cell_metrics.update(&pctx);
@@ -190,7 +190,7 @@ impl Context {
         da: &gtk::DrawingArea,
         win: &gdk::Window,
     ) {
-        let pango_context = da.get_pango_context().unwrap();
+        let pango_context = da.get_pango_context();
         pango_context.set_font_description(&font.as_pango_font());
 
         self.cell_metrics.font = font;

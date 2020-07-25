@@ -101,7 +101,7 @@ impl CursorTooltip {
         let css_provider = gtk::CssProvider::new();
 
         let context = webkit::WebContext::get_default().unwrap();
-        let webview = webkit::WebView::new_with_context(&context);
+        let webview = webkit::WebView::with_context(&context);
 
         let frame = gtk::Frame::new(None);
         frame.add(&webview);
@@ -139,7 +139,7 @@ impl CursorTooltip {
         fixed.connect_size_allocate(
             clone!(state, webview => move |fixed, alloc| {
                 let mut state = state.borrow_mut();
-                let ctx = fixed.get_pango_context().unwrap();
+                let ctx = fixed.get_pango_context();
                 let res = pangocairo::functions::context_get_resolution(&ctx);
                 state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
                 webview.set_zoom_level(state.scale);
