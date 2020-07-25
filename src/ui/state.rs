@@ -545,40 +545,23 @@ impl UIState {
     fn window_pos(
         &mut self,
         evt: WindowPos,
-        window: &gtk::ApplicationWindow,
         nvim: &GioNeovim,
     ) {
-        let win = window.get_window().unwrap();
-        let windows_container = self.windows_container.clone();
+        let base_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
+        let x = evt.start_col as f64 * base_metrics.cell_width;
+        let y = evt.start_row as f64 * base_metrics.cell_height;
+        let width = evt.width as f64 * base_metrics.cell_width;
+        let height = evt.height as f64 * base_metrics.cell_height;
 
-        let grid = self.grids.get(&evt.grid).unwrap();
-        let css_provider = self.css_provider.clone();
-        let window = self
-            .windows
-            .entry(evt.grid)
-            .and_modify(clone!(windows_container => move |w| {
-                // Set the parent window's to the windows container if needed.
-                w.set_parent(windows_container.upcast());
-            }))
-            .or_insert_with(|| {
-                Window::new(
-                    NvimWindow::new(evt.win.clone(), nvim.clone()),
-                    windows_container,
-                    &grid,
-                    Some(css_provider),
-                )
-            });
-
-        let grid_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
-        let x = evt.start_col as f64 * grid_metrics.cell_width;
-        let y = evt.start_row as f64 * grid_metrics.cell_height;
-        let width = evt.width as f64 * grid_metrics.cell_width;
-        let height = evt.height as f64 * grid_metrics.cell_height;
+        let window = self.get_or_create_window(
+            evt.grid,
+            self.windows_container.clone().upcast(),
+            nvim,
+            evt.win.clone(),
+        );
 
         window.set_position(x, y, width, height);
         window.show();
-
-        grid.resize(&win, evt.width, evt.height, &self.hl_defs);
     }
 
     fn get_float_anchor_pos(&self, evt: &WindowFloatPos) -> (f64, f64) {
@@ -594,33 +577,52 @@ impl UIState {
         }
     }
 
-    fn window_float_pos(&mut self, evt: WindowFloatPos, nvim: &GioNeovim) {
-        let anchor_grid = self.grids.get(&evt.anchor_grid).unwrap();
-
-        let (x_offset, y_offset) = self.get_float_anchor_pos(&evt);
-
-        let grid = self.grids.get(&evt.grid).unwrap();
-        let windows_float_container = self.windows_float_container.clone();
+    /// Get or create a new window.
+    ///
+    /// * `grid` - The id of the grid for which to get the window for
+    /// * `container` - The continer where to put the window (both existing window or a new one).
+    /// * `nvim` - Copy if nvim
+    /// * `win` - Value of the window.
+    fn get_or_create_window(
+        &mut self,
+        grid: i64,
+        container: gtk::Fixed,
+        nvim: &GioNeovim,
+        win: nvim_rs::Value,
+    ) -> &mut Window {
+        let grid = self.grids.get(&grid).unwrap();
         let css_provider = self.css_provider.clone();
-
-        let window = self
-            .windows
-            .entry(evt.grid)
-            .and_modify(clone!(windows_float_container => move |w| {
+        self.windows
+            .entry(grid.id)
+            .and_modify(clone!(container => move |w| {
                 // Set the parent window's to the float container if needed.
-                w.set_parent(windows_float_container.upcast());
+                w.set_parent(container.upcast());
             }))
             .or_insert_with(|| {
                 Window::new(
-                    NvimWindow::new(evt.win.clone(), nvim.clone()),
-                    windows_float_container,
+                    NvimWindow::new(win, nvim.clone()),
+                    container,
                     &grid,
                     Some(css_provider),
                 )
-            });
+            })
+    }
 
-        let anchor_metrics = anchor_grid.get_grid_metrics();
-        let grid_metrics = grid.get_grid_metrics();
+    fn window_float_pos(&mut self, evt: WindowFloatPos, nvim: &GioNeovim) {
+        let (x_offset, y_offset) = self.get_float_anchor_pos(&evt);
+
+        let anchor_metrics =
+            self.grids.get(&evt.anchor_grid).unwrap().get_grid_metrics();
+        let grid_metrics =
+            self.grids.get(&evt.grid).unwrap().get_grid_metrics();
+        let base_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
+
+        let window = self.get_or_create_window(
+            evt.grid,
+            self.windows_float_container.clone().upcast(),
+            nvim,
+            evt.win.clone(),
+        );
 
         let (x, y) = win_float_anchor_pos(
             &evt,
@@ -628,9 +630,6 @@ impl UIState {
             (grid_metrics.width, grid_metrics.height),
             (x_offset, y_offset),
         );
-
-        let base_grid = self.grids.get(&1).unwrap();
-        let base_metrics = base_grid.get_grid_metrics();
 
         let new_size =
             win_float_adjust_size(&grid_metrics, &base_metrics, (x, y));
@@ -660,19 +659,29 @@ impl UIState {
         nvim: &GioNeovim,
     ) {
         let parent_win = window.clone().upcast::<gtk::Window>();
-        let css_provider = self.css_provider.clone();
-        let grid = self.grids.get(&evt.grid).unwrap();
-        let windows_float_container = self.windows_float_container.clone();
-        let window = self.windows.entry(evt.grid).or_insert_with(|| {
-            Window::new(
-                NvimWindow::new(evt.win.clone(), nvim.clone()),
-                windows_float_container,
-                &grid,
-                Some(css_provider),
-            )
-        });
+        let grid_metrics = {
+            let grid = self.grids.get(&evt.grid).unwrap();
+            let grid_metrics = grid.get_grid_metrics();
 
-        let grid_metrics = grid.get_grid_metrics();
+            // NOTE(ville): Without this, "new" grids (e.g. once added to a external
+            // window without appearing in the main grid first) won't get proper
+            // font/linespace values.
+            grid.resize(
+                &parent_win.get_window().unwrap(),
+                grid_metrics.cols as u64,
+                grid_metrics.rows as u64,
+                &self.hl_defs,
+            );
+
+            grid_metrics
+        };
+
+        let window = self.get_or_create_window(
+            evt.grid,
+            self.windows_float_container.clone().upcast(),
+            nvim,
+            evt.win.clone(),
+        );
 
         window.set_external(
             &parent_win,
@@ -680,16 +689,6 @@ impl UIState {
                 grid_metrics.width.ceil() as i32,
                 grid_metrics.height.ceil() as i32,
             ),
-        );
-
-        // NOTE(ville): Without this, "new" grids (e.g. once added to a external
-        // window without appearing in the main grid first) won't get proper
-        // font/linespace values.
-        grid.resize(
-            &parent_win.get_window().unwrap(),
-            grid_metrics.cols as u64,
-            grid_metrics.rows as u64,
-            &self.hl_defs,
         );
     }
 
@@ -796,7 +795,7 @@ impl UIState {
             RedrawEvent::CmdlineBlockHide() => self.cmdline_block_hide(),
             RedrawEvent::WindowPos(evt) => {
                 evt.into_iter()
-                    .for_each(|e| self.window_pos(e, window, nvim));
+                    .for_each(|e| self.window_pos(ewindow, nvim));
             }
             RedrawEvent::WindowFloatPos(evt) => {
                 evt.into_iter().for_each(|e| self.window_float_pos(e, nvim));
