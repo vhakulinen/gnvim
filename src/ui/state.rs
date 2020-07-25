@@ -795,7 +795,7 @@ impl UIState {
             RedrawEvent::CmdlineBlockHide() => self.cmdline_block_hide(),
             RedrawEvent::WindowPos(evt) => {
                 evt.into_iter()
-                    .for_each(|e| self.window_pos(ewindow, nvim));
+                    .for_each(|e| self.window_pos(e, nvim));
             }
             RedrawEvent::WindowFloatPos(evt) => {
                 evt.into_iter().for_each(|e| self.window_float_pos(e, nvim));
