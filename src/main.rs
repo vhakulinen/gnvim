@@ -94,6 +94,10 @@ struct Options {
     #[structopt(long = "disable-ext-tabline")]
     disable_ext_tabline: bool,
 
+	/// Enables dark theme
+	#[structopt(long = "prefer-dark-theme")]
+	prefer_dark_theme: bool,
+
     /// Geometry of the window in widthxheight form
     #[structopt(long = "geometry", parse(try_from_str = parse_geometry), default_value = "1280x720")]
     geometry: (i32, i32),
@@ -222,6 +226,14 @@ fn main() {
     gdk::set_program_class("GNvim");
     glib::set_application_name("GNvim");
     gtk::Window::set_default_icon_name("gnvim");
+
+	if opts.prefer_dark_theme {
+		if let Some(settings) = gtk::Settings::get_default() {
+			if let Err(err) = settings.set_property("gtk-application-prefer-dark-theme", &true.to_value()) {
+				error!("Failed to set dark theme setting: {}", err);
+			}
+		}
+	}
 
     app.connect_activate(move |app| {
         let opts = &opts;
