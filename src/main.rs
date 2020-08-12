@@ -94,8 +94,8 @@ struct Options {
     #[structopt(long = "disable-ext-tabline")]
     disable_ext_tabline: bool,
 
-    /// Enables dark theme
-    #[structopt(long = "prefer-dark-theme")]
+    /// Instruct GTK to prefer dark theme
+    #[structopt(long = "gtk-prefer-dark-theme")]
     prefer_dark_theme: bool,
 
     /// Geometry of the window in widthxheight form
@@ -233,7 +233,7 @@ fn main() {
                 "gtk-application-prefer-dark-theme",
                 &true.to_value(),
             ) {
-                error!("Failed to set dark theme setting: {}", err);
+                error!("Failed to set gtk-application-prefer-dark-theme setting: {}", err);
             }
         }
     }
