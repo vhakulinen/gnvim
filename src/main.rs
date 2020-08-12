@@ -24,6 +24,7 @@ extern crate pangocairo;
 extern crate webkit2gtk;
 
 use gio::prelude::*;
+use gtk::SettingsExt;
 
 use log::error;
 
@@ -229,12 +230,7 @@ fn main() {
 
     if opts.prefer_dark_theme {
         if let Some(settings) = gtk::Settings::get_default() {
-            if let Err(err) = settings.set_property(
-                "gtk-application-prefer-dark-theme",
-                &true.to_value(),
-            ) {
-                error!("Failed to set gtk-application-prefer-dark-theme setting: {}", err);
-            }
+            settings.set_property_gtk_application_prefer_dark_theme(true);
         }
     }
 
