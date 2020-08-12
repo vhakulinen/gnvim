@@ -613,28 +613,40 @@ impl UIState {
             self.grids.get(&evt.grid).unwrap().get_grid_metrics();
         let base_metrics = self.grids.get(&1).unwrap().get_grid_metrics();
 
-        let window = self.get_or_create_window(
-            evt.grid,
-            self.windows_float_container.clone().upcast(),
-            nvim,
-            evt.win.clone(),
-        );
-
-        let (x, y) = win_float_anchor_pos(
+        let (mut x, y) = win_float_anchor_pos(
             &evt,
             &anchor_metrics,
             (grid_metrics.width, grid_metrics.height),
             (x_offset, y_offset),
         );
 
-        let new_size =
-            win_float_adjust_size(&grid_metrics, &base_metrics, (x, y));
+        let available_width = base_metrics.width;
+        let mut width = grid_metrics.width;
+        let right = x + width;
+        if right > available_width {
+            // If we're overflowing to the right, adjust the float's x pos and if needed, truncate
+            // the width.
+            let overflow = right - available_width;
+            x = (x - overflow).max(0.0);
+            width = width.min(available_width);
+        }
 
-        if new_size.0.is_some() || new_size.1.is_some() {
+        let available_height = base_metrics.height;
+        let mut height = grid_metrics.height;
+        let bottom = y + height;
+        if bottom > available_height {
+            // If we're overflowing through the bottom of the screen, truncate the height.
+            let overflow = bottom - available_height;
+            height -= overflow;
+        }
+
+        if (width - grid_metrics.width).abs() > f64::EPSILON
+            || (height - grid_metrics.height).abs() > f64::EPSILON
+        {
             let nvim = nvim.clone();
             let grid = evt.grid;
-            let cols = new_size.0.unwrap_or_else(|| grid_metrics.cols) as i64;
-            let rows = new_size.1.unwrap_or_else(|| grid_metrics.rows) as i64;
+            let cols = (width / grid_metrics.cell_width).floor() as i64;
+            let rows = (height / grid_metrics.cell_height).floor() as i64;
             spawn_local(async move {
                 if let Err(err) =
                     nvim.ui_try_resize_grid(grid, cols, rows).await
@@ -644,7 +656,14 @@ impl UIState {
             });
         }
 
-        window.set_position(x, y, grid_metrics.width, grid_metrics.height);
+        let window = self.get_or_create_window(
+            evt.grid,
+            self.windows_float_container.clone().upcast(),
+            nvim,
+            evt.win,
+        );
+
+        window.set_position(x, y, width, height);
         window.show();
     }
 
@@ -940,25 +959,6 @@ pub fn attach_grid_events(grid: &Grid, nvim: GioNeovim) {
 
         Inhibit(false)
     }));
-}
-
-fn win_float_adjust_size(
-    grid_metrics: &GridMetrics,
-    base_metrics: &GridMetrics,
-    (x, y): (f64, f64),
-) -> (Option<f64>, Option<f64>) {
-    let mut new_size = (None, None);
-    if grid_metrics.rows + y / base_metrics.cell_height > base_metrics.rows {
-        let rows = base_metrics.rows - y / base_metrics.cell_height - 1.0;
-        new_size.1 = Some(rows);
-    }
-
-    if grid_metrics.cols + x / base_metrics.cell_width > base_metrics.cols {
-        let cols = base_metrics.cols - x / base_metrics.cell_width;
-        new_size.0 = Some(cols);
-    }
-
-    new_size
 }
 
 fn win_float_anchor_pos(
