@@ -263,6 +263,11 @@ impl Context {
 
         self.cursor.tick(clock.get_frame_time());
 
+        // We're not blinking, so skip the blink animation phase.
+        if self.cursor.blink_on == 0 {
+            return;
+        }
+
         let (x, y, w, h) = self.get_cursor_rect();
 
         let mut alpha = self.cursor.alpha;
