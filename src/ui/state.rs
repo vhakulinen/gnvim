@@ -892,7 +892,11 @@ impl UIState {
                 self.set_ui_option("ext_cmdline".into(), *enable, nvim.clone());
             }
             GnvimEvent::EnableExtPopupmenu(enable) => {
-                self.set_ui_option("ext_popupmenu".into(), *enable, nvim.clone());
+                self.set_ui_option(
+                    "ext_popupmenu".into(),
+                    *enable,
+                    nvim.clone(),
+                );
             }
             GnvimEvent::Unknown(msg) => {
                 debug!("Received unknown GnvimEvent: {}", msg);
