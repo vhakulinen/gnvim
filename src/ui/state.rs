@@ -858,6 +858,16 @@ impl UIState {
         }
     }
 
+    fn set_ui_option(&self, opt: String, enable: bool, nvim: GioNeovim) {
+        spawn_local(async move {
+            if let Err(err) =
+                nvim.ui_set_option(&opt, rmpv::Value::Boolean(enable)).await
+            {
+                error!("Failed to set '{}' option: {}", opt, err);
+            }
+        });
+    }
+
     fn handle_gnvim_event(&mut self, event: &GnvimEvent, nvim: &GioNeovim) {
         match event {
             GnvimEvent::CompletionMenuToggleInfo => {
@@ -876,49 +886,13 @@ impl UIState {
                 self.enable_cursor_animations(*enable);
             }
             GnvimEvent::EnableExtTabline(enable) => {
-                let nvim = nvim.clone();
-                let enable = *enable;
-                spawn_local(async move {
-                    if let Err(err) = nvim
-                        .ui_set_option(
-                            "ext_tabline",
-                            rmpv::Value::Boolean(enable),
-                        )
-                        .await
-                    {
-                        error!("Failed to set ext_tabline option: {}", err);
-                    }
-                });
+                self.set_ui_option("ext_tabline".into(), *enable, nvim.clone());
             }
             GnvimEvent::EnableExtCmdline(enable) => {
-                let nvim = nvim.clone();
-                let enable = *enable;
-                spawn_local(async move {
-                    if let Err(err) = nvim
-                        .ui_set_option(
-                            "ext_cmdline",
-                            rmpv::Value::Boolean(enable),
-                        )
-                        .await
-                    {
-                        error!("Failed to set ext_cmdline option: {}", err);
-                    }
-                });
+                self.set_ui_option("ext_cmdline".into(), *enable, nvim.clone());
             }
             GnvimEvent::EnableExtPopupmenu(enable) => {
-                let nvim = nvim.clone();
-                let enable = *enable;
-                spawn_local(async move {
-                    if let Err(err) = nvim
-                        .ui_set_option(
-                            "ext_popupmenu",
-                            rmpv::Value::Boolean(enable),
-                        )
-                        .await
-                    {
-                        error!("Failed to set ext_popupmenu option: {}", err);
-                    }
-                });
+                self.set_ui_option("ext_popupmenu".into(), *enable, nvim.clone());
             }
             GnvimEvent::Unknown(msg) => {
                 debug!("Received unknown GnvimEvent: {}", msg);
