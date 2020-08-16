@@ -326,6 +326,27 @@ impl UIState {
 
                 self.resize_on_flush = Some(opts);
             }
+            OptionSet::ExtTabline(enable) => {
+                let widget = self.tabline.get_widget();
+                widget_show(&widget, enable);
+            }
+            OptionSet::ExtCmdline(enable) => {
+                if !enable {
+                    self.cmdline.hide();
+                }
+
+                // NOTE(ville): If the wildmenu is active at this point,
+                // nvim will not "resend" the original wildmenu (popupmenu)
+                // events, this gnvim will incorrectly try to show the cmdline's
+                // custom wildmenu. To "fix" this, the user needs to reopen the
+                // wildmenu/cmdline.
+            }
+            OptionSet::ExtPopupmenu(_enable) => {
+                // Nothing to do... If the popupmenu is active at this point,
+                // nvim seems continue send the ext popupmenu messages until
+                // the popupmenu is closed. At least this is the case at the
+                // time of writing this feature.
+            }
             OptionSet::NotSupported(name) => {
                 debug!("Not supported option set: {}", name);
             }
@@ -448,9 +469,12 @@ impl UIState {
             let grid = self.grids.get(&self.current_grid).unwrap();
             let mut rect = grid.get_rect_for_cell(popupmenu.row, popupmenu.col);
 
-            let window = self.windows.get(&popupmenu.grid).unwrap();
-            rect.x += window.x as i32;
-            rect.y += window.y as i32;
+            if let Some(window) = self.windows.get(&popupmenu.grid) {
+                rect.x += window.x as i32;
+                rect.y += window.y as i32;
+            } else if popupmenu.grid != 1 {
+                error!("No window for non-default grid ({})", popupmenu.grid);
+            }
 
             self.popupmenu.set_anchor(rect);
             self.popupmenu
@@ -851,6 +875,51 @@ impl UIState {
             GnvimEvent::EnableCursorAnimations(enable) => {
                 self.enable_cursor_animations(*enable);
             }
+            GnvimEvent::EnableExtTabline(enable) => {
+                let nvim = nvim.clone();
+                let enable = *enable;
+                spawn_local(async move {
+                    if let Err(err) = nvim
+                        .ui_set_option(
+                            "ext_tabline",
+                            rmpv::Value::Boolean(enable),
+                        )
+                        .await
+                    {
+                        error!("Failed to set ext_tabline option: {}", err);
+                    }
+                });
+            }
+            GnvimEvent::EnableExtCmdline(enable) => {
+                let nvim = nvim.clone();
+                let enable = *enable;
+                spawn_local(async move {
+                    if let Err(err) = nvim
+                        .ui_set_option(
+                            "ext_cmdline",
+                            rmpv::Value::Boolean(enable),
+                        )
+                        .await
+                    {
+                        error!("Failed to set ext_cmdline option: {}", err);
+                    }
+                });
+            }
+            GnvimEvent::EnableExtPopupmenu(enable) => {
+                let nvim = nvim.clone();
+                let enable = *enable;
+                spawn_local(async move {
+                    if let Err(err) = nvim
+                        .ui_set_option(
+                            "ext_popupmenu",
+                            rmpv::Value::Boolean(enable),
+                        )
+                        .await
+                    {
+                        error!("Failed to set ext_popupmenu option: {}", err);
+                    }
+                });
+            }
             GnvimEvent::Unknown(msg) => {
                 debug!("Received unknown GnvimEvent: {}", msg);
             }
@@ -959,6 +1028,14 @@ pub fn attach_grid_events(grid: &Grid, nvim: GioNeovim) {
 
         Inhibit(false)
     }));
+}
+
+fn widget_show(widget: &gtk::Widget, show: bool) {
+    if show {
+        widget.show();
+    } else {
+        widget.hide();
+    }
 }
 
 fn win_float_anchor_pos(

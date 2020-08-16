@@ -212,6 +212,9 @@ pub enum OptionSet {
     GuiFont(String),
     /// Space between lines.
     LineSpace(i64),
+    ExtTabline(bool),
+    ExtCmdline(bool),
+    ExtPopupmenu(bool),
     /// Event name.
     NotSupported(String),
 }
@@ -229,6 +232,9 @@ impl From<Value> for OptionSet {
                 let val = unwrap_i64!(args[1]);
                 OptionSet::LineSpace(val)
             }
+            "ext_tabline" => OptionSet::ExtTabline(unwrap_bool!(args[1])),
+            "ext_cmdline" => OptionSet::ExtCmdline(unwrap_bool!(args[1])),
+            "ext_popupmenu" => OptionSet::ExtPopupmenu(unwrap_bool!(args[1])),
             _ => OptionSet::NotSupported(String::from(name)),
         }
     }
@@ -977,6 +983,10 @@ pub enum GnvimEvent {
 
     EnableCursorAnimations(bool),
 
+    EnableExtTabline(bool),
+    EnableExtCmdline(bool),
+    EnableExtPopupmenu(bool),
+
     Unknown(String),
 }
 
@@ -1264,6 +1274,24 @@ pub(crate) fn parse_gnvim_event(
             try_u64!(
                 args.get(1).ok_or("argument missing")?,
                 "failed to parse enable cursor animations argument"
+            ) == 1,
+        ),
+        "EnableExtTabline" => GnvimEvent::EnableExtTabline(
+            try_u64!(
+                args.get(1).ok_or("argument missing")?,
+                "failed to parse enable ext tabline argument"
+            ) == 1,
+        ),
+        "EnableExtCmdline" => GnvimEvent::EnableExtCmdline(
+            try_u64!(
+                args.get(1).ok_or("argument missing")?,
+                "failed to parse enable ext cmdline argument"
+            ) == 1,
+        ),
+        "EnableExtPopupmenu" => GnvimEvent::EnableExtPopupmenu(
+            try_u64!(
+                args.get(1).ok_or("argument missing")?,
+                "failed to parse enable ext popupmenu argument"
             ) == 1,
         ),
         _ => GnvimEvent::Unknown(String::from(cmd)),

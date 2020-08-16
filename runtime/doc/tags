@@ -4,6 +4,9 @@ gnvim#cursor_tooltip#get_styles	gnvim.txt	/*gnvim#cursor_tooltip#get_styles*
 gnvim#cursor_tooltip#hide	gnvim.txt	/*gnvim#cursor_tooltip#hide*
 gnvim#cursor_tooltip#load_style	gnvim.txt	/*gnvim#cursor_tooltip#load_style*
 gnvim#cursor_tooltip#show	gnvim.txt	/*gnvim#cursor_tooltip#show*
+gnvim#enable_ext_cmdline	gnvim.txt	/*gnvim#enable_ext_cmdline*
+gnvim#enable_ext_popupmeu	gnvim.txt	/*gnvim#enable_ext_popupmeu*
+gnvim#enable_ext_tabline	gnvim.txt	/*gnvim#enable_ext_tabline*
 gnvim#popupmenu#set_width	gnvim.txt	/*gnvim#popupmenu#set_width*
 gnvim#popupmenu#set_width_details	gnvim.txt	/*gnvim#popupmenu#set_width_details*
 gnvim#popupmenu#show_menu_on_all_items	gnvim.txt	/*gnvim#popupmenu#show_menu_on_all_items*
@@ -14,5 +17,6 @@ gnvim-contents	gnvim.txt	/*gnvim-contents*
 gnvim-cursor	gnvim.txt	/*gnvim-cursor*
 gnvim-cursor-blinking	gnvim.txt	/*gnvim-cursor-blinking*
 gnvim-cursor-tooltip	gnvim.txt	/*gnvim-cursor-tooltip*
+gnvim-ext-options	gnvim.txt	/*gnvim-ext-options*
 gnvim-functions	gnvim.txt	/*gnvim-functions*
 gnvim-popupmenu	gnvim.txt	/*gnvim-popupmenu*

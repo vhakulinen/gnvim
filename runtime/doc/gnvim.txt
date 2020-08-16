@@ -12,7 +12,8 @@ CONTENTS                                                       *gnvim-contents*
 
             1. Cursor Tooltip.......................|gnvim-cursor-tooltip|
             2. Popupmenu............................|gnvim-popupmenu|
-            2. Cursor...............................|gnvim-cursor|
+            3. Cursor...............................|gnvim-cursor|
+            4. Ext options..........................|gnvim-ext-opts|
 
 ================================================================================
 Cursor Tooltip                                           *gnvim-cursor-tooltip*
@@ -59,6 +60,14 @@ The cursor also has animated position movement, which is on by default. To
 disable it, use `GnvimCursorEnableAnimations 0` .
 
 ================================================================================
+Ext options                                                 *gnvim-ext-options*
+
+Gnvim utilizes many of the externalized UI options nvim offers. Some of these
+changes the visual representation of some nvim features and thus users might
+want to revert back to the "default" (e.g. TUI) functionality. This can be
+done either through cli flags or `gnvim#enable_ext_*` functions.
+
+================================================================================
 Commands                                                       *gnvim-commands*
 
 CursorTooltipStyle                                         *CursorTooltipStyle*
@@ -67,6 +76,19 @@ CursorTooltipStyle                                         *CursorTooltipStyle*
 
 ================================================================================
 Functions                                                     *gnvim-functions*
+
+gnvim#enable_ext_tabline                             *gnvim#enable_ext_tabline*
+gnvim#enable_ext_cmdline                             *gnvim#enable_ext_cmdline*
+gnvim#enable_ext_popupmenu                          *gnvim#enable_ext_popupmeu*
+
+    Enable or disable the externalized tabline/cmdline/popupmenu.
+
+    Example: >
+        " disable:
+        call gnivm#enable_ext_tabline(0)
+        " enable:
+        call gnivm#enable_ext_tabline(1)
+<
 
 gnvim#cursor_tooltip#load_style               *gnvim#cursor_tooltip#load_style*
 
