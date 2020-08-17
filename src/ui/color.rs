@@ -66,6 +66,9 @@ pub struct Highlight {
     pub bold: bool,
     pub underline: bool,
     pub undercurl: bool,
+
+    /// The blend value in range of 0..1.
+    pub blend: f64,
 }
 
 impl Highlight {
@@ -107,6 +110,12 @@ impl Highlight {
             underline = underline,
             text = glib::markup_escape_text(text)
         )
+    }
+
+    /// Apply the highlight's blend value to color. Returns the color
+    /// in `rgba()` format.
+    pub fn apply_blend(&self, color: &Color) -> String {
+        color.to_rgba(self.blend)
     }
 }
 
@@ -155,5 +164,33 @@ impl Color {
             (self.g * 255.0) as u8,
             (self.b * 255.0) as u8
         )
+    }
+
+    /// Apply the blend value to color. Returns the color in `rgba()` format.
+    /// Note that the blend value is inverted.
+    pub fn to_rgba(&self, blend: f64) -> String {
+        format!(
+            "rgba({}, {}, {}, {})",
+            (self.r * 255.0) as u8,
+            (self.g * 255.0) as u8,
+            (self.b * 255.0) as u8,
+            1.0 - blend
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_color_to_rgba() {
+        let c = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 1.0,
+        };
+
+        assert_eq!(c.to_rgba(0.4), "rgba(255, 0, 255, 0.6)");
     }
 }

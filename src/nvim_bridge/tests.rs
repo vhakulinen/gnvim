@@ -243,6 +243,7 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: true,
                     undercurl: false,
+                    blend: 0.0,
                 },
             },
             HlAttrDefine {
@@ -256,6 +257,7 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: false,
                     undercurl: true,
+                    blend: 0.0,
                 },
             },
             HlAttrDefine {
@@ -269,6 +271,7 @@ mod parse_redraw_event_tests {
                     bold: true,
                     underline: false,
                     undercurl: true,
+                    blend: 0.3,
                 },
             },
             HlAttrDefine {
@@ -282,6 +285,7 @@ mod parse_redraw_event_tests {
                     bold: false,
                     underline: false,
                     undercurl: false,
+                    blend: 0.0,
                 },
             },
         ])];
@@ -320,6 +324,7 @@ mod parse_redraw_event_tests {
                     ("italic".into(), true.into()),
                     ("bold".into(), true.into()),
                     ("undercurl".into(), true.into()),
+                    ("blend".into(), 30.into()),
                 )),
             )),
             Value::Array(vec!(3.into(), Value::Map(vec!()),))

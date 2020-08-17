@@ -5,7 +5,7 @@ use gtk::prelude::*;
 
 use crate::nvim_bridge::CompletionItem;
 use crate::nvim_gio::GioNeovim;
-use crate::ui::color::{Color, HlDefs, HlGroup};
+use crate::ui::color::{Highlight, HlDefs, HlGroup};
 use crate::ui::common::{
     calc_line_space, get_preferred_horizontal_position,
     get_preferred_vertical_position, spawn_local,
@@ -22,10 +22,8 @@ const DEFAULT_WIDTH_WITH_DETAILS: i32 = 660;
 
 #[derive(Default)]
 pub struct PmenuColors {
-    pub bg: Option<Color>,
-    pub fg: Option<Color>,
-    pub sel_bg: Option<Color>,
-    pub sel_fg: Option<Color>,
+    pub hl: Highlight,
+    pub hl_sel: Highlight,
 }
 
 struct State {
@@ -385,7 +383,7 @@ impl Popupmenu {
     pub fn set_items(&mut self, items: Vec<CompletionItem>, hl_defs: &HlDefs) {
         self.items.set_items(
             items,
-            self.colors.fg.unwrap_or(hl_defs.default_fg),
+            self.colors.hl.foreground.unwrap_or(hl_defs.default_fg),
             self.font.height as f64,
             self.show_menu_on_all_items,
         );
@@ -396,8 +394,9 @@ impl Popupmenu {
     pub fn select(&mut self, item_num: i32, hl_defs: &HlDefs) {
         let state = self.state.clone();
         let scrolled_list = self.scrolled_list.clone();
-        let fg = self.colors.fg.unwrap_or(hl_defs.default_fg);
-        let fg_sel = self.colors.sel_fg.unwrap_or(hl_defs.default_fg);
+        let fg = self.colors.hl.foreground.unwrap_or(hl_defs.default_fg);
+        let fg_sel =
+            self.colors.hl_sel.foreground.unwrap_or(hl_defs.default_fg);
         let font_height = self.font.height as f64;
         let list = self.list.clone();
         let info_label = self.info_label.clone();
@@ -500,26 +499,14 @@ impl Popupmenu {
 
     pub fn set_colors(&mut self, hl_defs: &HlDefs) {
         self.colors = PmenuColors {
-            bg: hl_defs
+            hl: hl_defs
                 .get_hl_group(&HlGroup::Pmenu)
                 .cloned()
-                .unwrap_or_default()
-                .background,
-            fg: hl_defs
-                .get_hl_group(&HlGroup::Pmenu)
-                .cloned()
-                .unwrap_or_default()
-                .foreground,
-            sel_bg: hl_defs
+                .unwrap_or_default(),
+            hl_sel: hl_defs
                 .get_hl_group(&HlGroup::PmenuSel)
                 .cloned()
-                .unwrap_or_default()
-                .background,
-            sel_fg: hl_defs
-                .get_hl_group(&HlGroup::PmenuSel)
-                .cloned()
-                .unwrap_or_default()
-                .foreground,
+                .unwrap_or_default(),
         };
         self.set_styles(hl_defs);
     }
@@ -553,7 +540,7 @@ impl Popupmenu {
 
             grid, list, row, label {{
                 color: #{normal_fg};
-                background-color: #{normal_bg};
+                background-color: {normal_bg};
                 outline: none;
             }}
 
@@ -568,19 +555,31 @@ impl Popupmenu {
 
             row:selected, row:selected > grid, row:selected > grid > label {{
                 color: #{selected_fg};
-                background-color: #{selected_bg};
+                background-color: {selected_bg};
             }}
 
             box {{
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_bg =
-                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_fg = self
+                .colors
+                .hl
+                .foreground
+                .unwrap_or(hl_defs.default_fg)
+                .to_hex(),
+            normal_bg = self.colors.hl.apply_blend(
+                &self.colors.hl.background.unwrap_or(hl_defs.default_bg)
+            ),
+            selected_bg = self.colors.hl_sel.apply_blend(
+                &self.colors.hl_sel.background.unwrap_or(hl_defs.default_bg)
+            ),
+            selected_fg = self
+                .colors
+                .hl_sel
+                .foreground
+                .unwrap_or(hl_defs.default_fg)
+                .to_hex(),
             above = above.max(0),
             below = below.max(0),
         );
@@ -617,16 +616,28 @@ impl Popupmenu {
             GtkListBoxRow:selected > GtkGrid,
             GtkListBoxRow:selected > GtkGrid > GtkLabel {{
                 color: #{selected_fg};
-                background-color: #{selected_bg};
+                background-color: {selected_bg};
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Pixel),
-            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_bg =
-                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+            normal_fg = self
+                .colors
+                .hl
+                .foreground
+                .unwrap_or(hl_defs.default_fg)
+                .to_hex(),
+            normal_bg = self.colors.hl.apply_blend(
+                &self.colors.hl.background.unwrap_or(hl_defs.default_bg)
+            ),
+            selected_bg = self.colors.hl_sel.apply_blend(
+                &self.colors.hl_sel.background.unwrap_or(hl_defs.default_bg)
+            ),
+            selected_fg = self
+                .colors
+                .hl_sel
+                .foreground
+                .unwrap_or(hl_defs.default_fg)
+                .to_hex(),
             above = above.max(0),
             below = below.max(0),
         );

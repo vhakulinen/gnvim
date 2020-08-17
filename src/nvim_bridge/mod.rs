@@ -120,6 +120,9 @@ impl Highlight {
             "undercurl" => {
                 self.undercurl = unwrap_bool!(val);
             }
+            "blend" => {
+                self.blend = unwrap_f64!(val) / 100.0;
+            }
             "cterm_fg" => {}
             "cterm_bg" => {}
             _ => {
