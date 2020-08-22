@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use log::error;
 
 use crate::nvim_bridge::CompletionItem;
 use crate::nvim_gio::GioNeovim;
@@ -11,6 +12,7 @@ use crate::ui::common::{
     get_preferred_vertical_position, spawn_local,
 };
 use crate::ui::font::{Font, FontUnit};
+use crate::ui::grid::GridMetrics;
 use crate::ui::popupmenu::get_icon_pixbuf;
 use crate::ui::popupmenu::LazyLoader;
 
@@ -33,6 +35,8 @@ struct State {
     available_size: Option<gdk::Rectangle>,
     /// Our anchor position where the popupmenu should be "pointing" to.
     anchor: gdk::Rectangle,
+    /// Metrics of the base grid. Used when reporting pum bounds to nvim.
+    base_metrics: Option<GridMetrics>,
 
     current_width: i32,
 
@@ -45,6 +49,7 @@ impl State {
         State {
             selected: -1,
             available_size: None,
+            base_metrics: None,
             anchor: gdk::Rectangle {
                 x: 0,
                 y: 0,
@@ -213,7 +218,7 @@ impl Popupmenu {
         }));
 
         let layout_weak = layout.downgrade();
-        box_.connect_size_allocate(clone!(state, layout_weak, scrolled_info, scrolled_list => move |box_, alloc| {
+        box_.connect_size_allocate(clone!(state, nvim, layout_weak, scrolled_info, scrolled_list => move |box_, alloc| {
             let layout = upgrade_weak!(layout_weak);
             let state = state.borrow();
 
@@ -234,6 +239,20 @@ impl Popupmenu {
                 layout.move_(box_, x, y);
 
                 box_.set_size_request(width, height);
+
+                if let Some(ref base_metrics) = state.base_metrics {
+                    let width = width as f64 / base_metrics.cell_width as f64;
+                    let height = height as f64 / base_metrics.cell_height as f64;
+                    let col = x as f64 / base_metrics.cell_width as f64;
+                    let row = y as f64 / base_metrics.cell_height as f64;
+
+                    let nvim = nvim.clone();
+                    spawn_local(async move {
+                        if let Err(err) = nvim.ui_pum_set_bounds(width, height, row, col).await {
+                            error!("Failed to set pum bounds: {}", err);
+                        }
+                    });
+                }
 
                 // If we moved the popupmenu above the achor position, make
                 // sure our contents are aligned to the bottom so there is not
@@ -293,6 +312,11 @@ impl Popupmenu {
     #[allow(unused)]
     pub fn is_above_anchor(&self) -> bool {
         self.scrolled_list.get_child().unwrap().get_valign() == gtk::Align::End
+    }
+
+    pub fn set_base_metrics(&self, metrics: GridMetrics) {
+        let mut state = self.state.borrow_mut();
+        state.base_metrics = Some(metrics);
     }
 
     pub fn toggle_show_info(&mut self) {

@@ -171,6 +171,12 @@ impl UIState {
                     grid_metrics.height.ceil() as i32,
                 ));
             }
+
+            // If the update is on the base grid, update the metrics to the
+            // popupmenu too.
+            if e.grid == 1 {
+                self.popupmenu.set_base_metrics(grid.get_grid_metrics());
+            }
         } else {
             let grid = Grid::new(
                 e.grid,
