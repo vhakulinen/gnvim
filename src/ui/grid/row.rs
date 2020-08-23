@@ -11,6 +11,7 @@ pub struct Cell {
 }
 
 /// Wrapper for a leaf, that tells the leaf's position.
+#[derive(Debug, PartialEq)]
 pub struct Segment {
     //pub cell: &'a Cell,
     pub text: String,
@@ -110,6 +111,17 @@ impl Row {
     pub fn update(&mut self, line: GridLineSegment) -> Vec<Segment> {
         let col_start = line.col_start as usize;
 
+        // Check where the segment at col_start starts and use that when checking
+        // for affected segments. This is so that if col_start is in middle of a
+        // ligature, we'll render the whole segment where the ligature might have
+        // gotten broken up.
+        let range_start =
+            if let Some(seg) = self.as_segments(col_start, col_start).first() {
+                seg.start
+            } else {
+                0
+            };
+
         let mut offset = col_start;
         for cell in line.cells.iter() {
             for r in 0..cell.repeat as usize {
@@ -126,7 +138,7 @@ impl Row {
 
         assert_eq!(self.cells.len(), self.len);
 
-        self.as_segments(col_start, offset)
+        self.as_segments(range_start, offset)
     }
 
     pub fn as_segments(&self, cell_start: usize, end: usize) -> Vec<Segment> {
@@ -189,7 +201,6 @@ mod benches {
     #[bench]
     fn bench_row_update(b: &mut Bencher) {
         let mut row = Row::new(10);
-        //row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
         row.insert_at(
             0,
             vec![
@@ -247,7 +258,7 @@ mod benches {
         );
 
         b.iter(move || {
-            row.clone().update(&GridLineSegment {
+            row.clone().update(GridLineSegment {
                 grid: 0,
                 row: 0,
                 col_start: 3,
@@ -329,7 +340,7 @@ mod benches {
         );
 
         b.iter(move || {
-            row.update(&GridLineSegment {
+            row.update(GridLineSegment {
                 grid: 0,
                 row: 0,
                 col_start: 3,
@@ -459,7 +470,6 @@ mod tests {
     #[test]
     fn test_row_update() {
         let mut row = Row::new(10);
-        //row.insert_rope_at(0, Rope::new(String::from("1234567890"), 0));
         row.insert_at(
             0,
             vec![
@@ -540,6 +550,76 @@ mod tests {
             row.cells.iter().map(|c| c.text.clone()).collect::<String>(),
             "0121112229"
         )
+    }
+
+    #[test]
+    fn test_row_update2() {
+        let mut row = Row::new(5);
+        row.insert_at(
+            0,
+            vec![
+                Cell {
+                    text: " ".to_string(),
+                    hl_id: 0,
+                    double_width: false,
+                },
+                Cell {
+                    text: " ".to_string(),
+                    hl_id: 0,
+                    double_width: false,
+                },
+                Cell {
+                    text: "=".to_string(),
+                    hl_id: 1,
+                    double_width: false,
+                },
+                Cell {
+                    text: "=".to_string(),
+                    hl_id: 1,
+                    double_width: false,
+                },
+                Cell {
+                    text: "=".to_string(),
+                    hl_id: 1,
+                    double_width: false,
+                },
+            ],
+        );
+
+        let segments = row.update(GridLineSegment {
+            grid: 0,
+            row: 0,
+            col_start: 4,
+            cells: vec![nvim_bridge::Cell {
+                text: String::from(" "),
+                hl_id: 2,
+                repeat: 1,
+                double_width: false,
+            }],
+        });
+
+        assert_eq!(
+            row.cells.iter().map(|c| c.text.clone()).collect::<String>(),
+            "  == "
+        );
+
+        assert_eq!(
+            segments,
+            vec![
+                Segment {
+                    text: "==".to_string(),
+                    hl_id: 1,
+                    start: 2,
+                    len: 2,
+                },
+                Segment {
+                    text: " ".to_string(),
+                    hl_id: 2,
+                    start: 4,
+                    len: 1,
+                }
+            ],
+        );
     }
 
     /*
@@ -884,7 +964,7 @@ mod tests {
                     double_width: false,
                 },
                 Cell {
-                    text: "2".to_string(),
+                    text: " ".to_string(),
                     hl_id: 2,
                     double_width: false,
                 },
@@ -914,7 +994,7 @@ mod tests {
         let segments = row.as_segments(5, row.len);
 
         let first = &segments[0];
-        assert_eq!(first.text, "2222");
+        assert_eq!(first.text, "222 ");
         assert_eq!(first.start, 2);
         assert_eq!(first.len, 4);
 
