@@ -21,6 +21,19 @@ use crate::ui::state::{attach_grid_events, UIState, Windows};
 use crate::ui::tabline::Tabline;
 use crate::ui::window::MsgWindow;
 
+enum DropTargetType {
+    Utf8String,
+    TargetString,
+    TextUriList,
+    TextPlain,
+}
+
+macro_rules! create_target {
+    ($name: expr, $id: expr) => {
+        gtk::TargetEntry::new($name, gtk::TargetFlags::OTHER_APP, $id)
+    };
+}
+
 /// Main UI structure.
 pub struct UI {
     /// Main window.
@@ -193,6 +206,36 @@ impl UI {
         window.connect_focus_out_event(clone!(im_context => move |_, _| {
             im_context.focus_out();
             Inhibit(false)
+        }));
+
+        // Note: Order matters, preferred types should come first.
+        let targets = &[
+            create_target!("text/uri-list", DropTargetType::TextUriList as u32),
+            create_target!("UTF8_STRING", DropTargetType::Utf8String as u32),
+            create_target!("STRING", DropTargetType::TargetString as u32),
+            create_target!("text/plain", DropTargetType::TextPlain as u32),
+        ];
+
+        // clear drag_dest configs
+        window.drag_dest_unset();
+        window.drag_dest_set(
+            gtk::DestDefaults::ALL,
+            targets,
+            gdk::DragAction::COPY | gdk::DragAction::MOVE,
+        );
+
+        window.connect_drag_data_received(clone!(nvim =>
+        move |_, _, _x, _y, data, info, _| {
+            if info == DropTargetType::TextUriList as u32 {
+                handle_drop_uri_list(nvim.clone(), data);
+            } else if let Some(text) = data.get_text() {
+                let nvim = nvim.clone();
+                spawn_local(async move {
+                    // the result from paste command is ignored
+                    nvim.paste(&text, true, -1).await
+                        .expect("nvim_paste command did not return the correct type");
+                });
+            }
         }));
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
@@ -389,4 +432,34 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     }
 
     Some(format!("<{}>", input))
+}
+
+fn handle_drop_uri_list(nvim: GioNeovim, data: &gtk::SelectionData) {
+    let filenames = data.get_uris();
+
+    spawn_local(async move {
+        for filename in filenames {
+            if let Ok(filename) = urlencoding::decode(filename.as_str()) {
+                // errors from `command` are nvim command errors and will be
+                // shown to the user except for E37, so we ignore handling them here
+                //
+                // first try to edit the file, if failed due to the current buffer
+                // is modified, edit the file in a new split
+                if let Err(e) = nvim.command(&format!("e {}", filename)).await {
+                    if let nvim_rs::error::CallError::NeovimError(_, s) =
+                        e.as_ref()
+                    {
+                        // only respond to
+                        // "Vim(edit):E37: No write since last change (add ! to override)"
+                        if s.starts_with("Vim(edit):E37") {
+                            // ignore errors
+                            nvim.command(&format!("sp {}", filename))
+                                .await
+                                .ok();
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

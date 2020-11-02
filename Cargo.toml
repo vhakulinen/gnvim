@@ -43,6 +43,8 @@ futures = "0.3"
 async-trait = "0.1"
 rmpv = "0.4"
 
+urlencoding = "1.0.0"
+
 [dependencies.gtk]
 version = "0.9"
 features = ["v3_18"]
