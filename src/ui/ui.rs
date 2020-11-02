@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::Path;
 use std::rc::Rc;
 
 use gtk::prelude::*;
@@ -435,28 +436,40 @@ fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
 }
 
 fn handle_drop_uri_list(nvim: GioNeovim, data: &gtk::SelectionData) {
-    let filenames = data.get_uris();
+    // for path shortening filenames
+    let current_dir =
+        std::env::current_dir().expect("could not get current dir");
+
+    let filenames = data
+        .get_uris()
+        .iter()
+        .map(|uri| uri.trim_start_matches("file://"))
+        .filter_map(|uri| urlencoding::decode(uri).ok())
+        .map(|f| {
+            let filepath = Path::new(&f);
+            filepath
+                .strip_prefix(&current_dir)
+                .unwrap_or(filepath)
+                .to_string_lossy()
+                .to_string()
+        })
+        .collect::<Vec<String>>();
 
     spawn_local(async move {
         for filename in filenames {
-            if let Ok(filename) = urlencoding::decode(filename.as_str()) {
-                // errors from `command` are nvim command errors and will be
-                // shown to the user except for E37, so we ignore handling them here
-                //
-                // first try to edit the file, if failed due to the current buffer
-                // is modified, edit the file in a new split
-                if let Err(e) = nvim.command(&format!("e {}", filename)).await {
-                    if let nvim_rs::error::CallError::NeovimError(_, s) =
-                        e.as_ref()
-                    {
-                        // only respond to
-                        // "Vim(edit):E37: No write since last change (add ! to override)"
-                        if s.starts_with("Vim(edit):E37") {
-                            // ignore errors
-                            nvim.command(&format!("sp {}", filename))
-                                .await
-                                .ok();
-                        }
+            // errors from `command` are nvim command errors and will be
+            // shown to the user except for E37, so we ignore handling them here
+            //
+            // first try to edit the file, if failed due to the current buffer
+            // is modified, edit the file in a new split
+            if let Err(e) = nvim.command(&format!("e {}", filename)).await {
+                if let nvim_rs::error::CallError::NeovimError(_, s) = e.as_ref()
+                {
+                    // only respond to
+                    // "Vim(edit):E37: No write since last change (add ! to override)"
+                    if s.starts_with("Vim(edit):E37") {
+                        // ignore errors
+                        nvim.command(&format!("sp {}", filename)).await.ok();
                     }
                 }
             }
