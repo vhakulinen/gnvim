@@ -18,7 +18,7 @@ syntect-pack:
 
 install:
 	install -d "$(DESTDIR)$(PREFIX)/bin"
-	install -t "$(DESTDIR)$(PREFIX)/bin" ./target/release/gnvim
+	install ./target/release/gnvim "$(DESTDIR)$(PREFIX)/bin" 
 	install -d "$(DESTDIR)$(PREFIX)/share/gnvim"
 	cp -r ./runtime "$(DESTDIR)$(PREFIX)/share/gnvim"
 	install -d "$(DESTDIR)$(PREFIX)/share/applications"
