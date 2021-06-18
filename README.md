@@ -38,7 +38,7 @@ To install all dependencies and build without webkit2gtk (`gtk+3` required for
 building, `librsvg` is a runtime dependency for showing LSP icons in completion):
 
 ```bash
-$ brew install gtk+3 librsvg
+$ brew install rust gtk+3 librsvg
 $ make NOWEBKIT2GTK=1
 $ # or with cargo
 $ cargo build --no-default-features
