@@ -45,7 +45,7 @@ rmpv = "0.4"
 
 [dependencies.gtk]
 version = "0.9"
-features = ["v3_18"]
+features = ["v3_24"]
 
 [dependencies.webkit2gtk]
 version = "0.10"

@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::rc::Rc;
 
 use gdk::{EventMask, ModifierType};
-use gtk::{DrawingArea, EventBox};
+use gtk::{DrawingArea, EventBox, EventControllerScroll, EventControllerScrollFlags};
 
 use gtk::prelude::*;
 
@@ -68,11 +68,17 @@ pub struct Grid {
     da: DrawingArea,
     /// EventBox to get mouse events for this grid.
     eb: EventBox,
+    /// EventControllerScroll to catch the scroll start signal.
+    esc: EventControllerScroll,
     /// Internal context that is manipulated and used when handling events.
     context: Rc<RefCell<Context>>,
     /// Pointer position for dragging if we should call callback from
     /// `connect_motion_events_for_drag`.
     drag_position: Rc<RefCell<(u64, u64)>>,
+
+    /// Vertical scrolling indicator.
+    scroll_dy: Rc<RefCell<f64>>,
+
     /// Input context that need to be updated for the cursor position
     im_context: Option<gtk::IMMulticontext>,
 }
@@ -108,8 +114,11 @@ impl Grid {
         }));
 
         let eb = EventBox::new();
-        eb.add_events(EventMask::SCROLL_MASK);
+        eb.add_events(EventMask::SCROLL_MASK | EventMask::SMOOTH_SCROLL_MASK);
         eb.add(&da);
+
+        let esc = EventControllerScroll::new(&eb,  EventControllerScrollFlags::VERTICAL);
+
 
         da.add_tick_callback(clone!(ctx => move |da, clock| {
             let mut ctx = ctx.borrow_mut();
@@ -121,9 +130,11 @@ impl Grid {
             id,
             da,
             eb,
+            esc,
             context: ctx,
             drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
+            scroll_dy: Rc::new(RefCell::new(0.0)),
         }
     }
 
@@ -204,12 +215,40 @@ impl Grid {
     {
         let ctx = self.context.clone();
 
+        // When the scrolling starts, reset the internal vertical scroll counter
+        // to zero.
+        let scroll_dy_reset = self.scroll_dy.clone();
+        self.esc.connect_scroll_begin(move |_| {
+            *scroll_dy_reset.borrow_mut() = 0.0;
+        });
+
+        let scroll_dy = self.scroll_dy.clone();
         self.eb.connect_scroll_event(move |_, e| {
             let ctx = ctx.borrow();
-
             let dir = match e.get_direction() {
                 gdk::ScrollDirection::Up => ScrollDirection::Up,
-                _ => ScrollDirection::Down,
+                gdk::ScrollDirection::Down => ScrollDirection::Down,
+                gdk::ScrollDirection::Smooth => {
+                    // Smooth scrolling. During scroll, many little deltas are
+                    // accumulated in scroll_dy. Once it reaches -1.0 (scroll up)
+                    // or +1.0 (scroll down), scroll_dy is reset and the scroll
+                    // operation is made effective.
+                    let (_, smooth_dy) = e.get_scroll_deltas().unwrap();
+                    let prev_dy = *scroll_dy.borrow();
+                    let dy = prev_dy + smooth_dy;
+                    if dy <= -1.0 {
+                        *scroll_dy.borrow_mut() = 0.0;
+                        ScrollDirection::Up
+                    } else if dy >= 1.0 {
+                        *scroll_dy.borrow_mut() = 0.0;
+                        ScrollDirection::Down
+                    } else {
+                        // Don't scroll yet.
+                        *scroll_dy.borrow_mut() = dy;
+                        return Inhibit(false);
+                    }
+                },
+                _ => { return Inhibit(false); },
             };
 
             let pos = e.get_position();
