@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::rc::Rc;
 
 use gdk::{EventMask, ModifierType};
-use gtk::{DrawingArea, EventBox, EventControllerScroll, EventControllerScrollFlags};
+use gtk::{DrawingArea, EventBox};
 
 use gtk::prelude::*;
 
@@ -68,8 +68,6 @@ pub struct Grid {
     da: DrawingArea,
     /// EventBox to get mouse events for this grid.
     eb: EventBox,
-    /// EventControllerScroll to catch the scroll start signal.
-    esc: EventControllerScroll,
     /// Internal context that is manipulated and used when handling events.
     context: Rc<RefCell<Context>>,
     /// Pointer position for dragging if we should call callback from
@@ -117,9 +115,6 @@ impl Grid {
         eb.add_events(EventMask::SCROLL_MASK | EventMask::SMOOTH_SCROLL_MASK);
         eb.add(&da);
 
-        let esc = EventControllerScroll::new(&eb,  EventControllerScrollFlags::VERTICAL);
-
-
         da.add_tick_callback(clone!(ctx => move |da, clock| {
             let mut ctx = ctx.borrow_mut();
             ctx.tick(da, clock);
@@ -130,7 +125,6 @@ impl Grid {
             id,
             da,
             eb,
-            esc,
             context: ctx,
             drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
@@ -214,17 +208,12 @@ impl Grid {
         F: Fn(ScrollDirection, u64, u64) -> Inhibit,
     {
         let ctx = self.context.clone();
-
-        // When the scrolling starts, reset the internal vertical scroll counter
-        // to zero.
-        let scroll_dy_reset = self.scroll_dy.clone();
-        self.esc.connect_scroll_begin(move |_| {
-            *scroll_dy_reset.borrow_mut() = 0.0;
-        });
-
         let scroll_dy = self.scroll_dy.clone();
-        self.eb.connect_scroll_event(move |_, e| {
-            let ctx = ctx.borrow();
+
+        // NOTE(ville): Once we bump gtk from 3.18 to 3.24, use GtkEventControllerScroll
+        // to improve smooth scrolling (ref #175).
+        self.eb.connect_scroll_event(clone!(ctx, scroll_dy => move |_, e| {
+            let ctx = ctx.borrow_mut();
             let dir = match e.get_direction() {
                 gdk::ScrollDirection::Up => ScrollDirection::Up,
                 gdk::ScrollDirection::Down => ScrollDirection::Down,
@@ -256,7 +245,7 @@ impl Grid {
             let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
             f(dir, row, col)
-        });
+        }));
     }
 
     /// Connects `f` to internal widget's motion events. `f` params are button,
