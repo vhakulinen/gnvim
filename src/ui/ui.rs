@@ -331,6 +331,7 @@ fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "greater" => Some(">"),
         "comma" => Some(","),
         "period" => Some("."),
+        "space" => Some("Space"),
         "BackSpace" => Some("BS"),
         "Insert" => Some("Insert"),
         "Return" => Some("CR"),
