@@ -67,7 +67,7 @@ GNvim requires
 
 * Stable rust to compile
 * Latest nvim release or master
-* Gtk version 3.18 or higher
+* Gtk version 3.20 or higher
 
 On some systems, Gtk packages doesn't include development files. On Ubuntu
 18.04, you'll need the following ones:

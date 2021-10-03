@@ -4,6 +4,7 @@ use std::{
     task::{Context, Poll},
 };
 
+use gtk::gio;
 use pin_project::pin_project;
 
 use crate::thread_guard::ThreadGuard;

@@ -3,11 +3,13 @@ use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
 
-use gdk::{EventMask, ModifierType};
+use gtk::gdk::{EventMask, ModifierType};
+use gtk::{cairo, gdk, glib};
 use gtk::{DrawingArea, EventBox};
 
 use gtk::prelude::*;
 
+use crate::error::Error;
 use crate::nvim_bridge::{GridLineSegment, ModeInfo};
 use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
@@ -92,7 +94,7 @@ impl Grid {
         rows: usize,
         hl_defs: &HlDefs,
         enable_cursor_animations: bool,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let da = DrawingArea::new();
         let ctx = Rc::new(RefCell::new(Context::new(
             &da,
@@ -103,11 +105,11 @@ impl Grid {
             rows,
             hl_defs,
             enable_cursor_animations,
-        )));
+        )?));
 
         da.connect_draw(clone!(ctx => move |_, cr| {
             let mut ctx = ctx.borrow_mut();
-            drawingarea_draw(cr, &mut ctx);
+            drawingarea_draw(cr, &mut ctx).expect("failed to draw");
             Inhibit(false)
         }));
 
@@ -117,11 +119,11 @@ impl Grid {
 
         da.add_tick_callback(clone!(ctx => move |da, clock| {
             let mut ctx = ctx.borrow_mut();
-            ctx.tick(da, clock);
+            ctx.tick(da, clock).expect("context tick failed");
             glib::Continue(true)
         }));
 
-        Grid {
+        Ok(Grid {
             id,
             da,
             eb,
@@ -129,14 +131,14 @@ impl Grid {
             drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
             scroll_dy: Rc::new(RefCell::new(0.0)),
-        }
+        })
     }
 
     pub fn widget(&self) -> gtk::Widget {
         self.eb.clone().upcast()
     }
 
-    pub fn flush(&self, hl_defs: &HlDefs) {
+    pub fn flush(&self, hl_defs: &HlDefs) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
         if let Some(cell) = ctx.cell_at_cursor() {
@@ -145,11 +147,11 @@ impl Grid {
             if ctx.cursor.blink_on == 0 {
                 render::cursor_cell(
                     &ctx.cursor_context,
-                    &self.da.get_pango_context(),
+                    &self.da.pango_context(),
                     &cell,
                     &ctx.cell_metrics,
                     hl_defs,
-                );
+                )?;
             }
 
             // Update cursor color.
@@ -165,10 +167,12 @@ impl Grid {
                 area.3.ceil() as i32,
             );
         }
+
+        Ok(())
     }
 
     pub fn set_im_context(&mut self, im_context: &gtk::IMMulticontext) {
-        im_context.set_client_window(self.da.get_window().as_ref());
+        im_context.set_client_window(self.da.window().as_ref());
         self.im_context = Some(im_context.clone());
     }
 
@@ -187,7 +191,7 @@ impl Grid {
         let (x, y) = self
             .eb
             .translate_coordinates(
-                &self.eb.get_parent().unwrap(),
+                &self.eb.parent().unwrap(),
                 x as i32,
                 y as i32,
             )
@@ -210,12 +214,12 @@ impl Grid {
         let ctx = self.context.clone();
         let scroll_dy = self.scroll_dy.clone();
 
-        // NOTE(ville): Once we bump gtk from 3.18 to 3.24, use GtkEventControllerScroll
+        // NOTE(ville): Once we bump gtk from 3.20 to 3.24, use GtkEventControllerScroll
         // to improve smooth scrolling (ref #175).
         self.eb
             .connect_scroll_event(clone!(ctx, scroll_dy => move |_, e| {
                 let ctx = ctx.borrow_mut();
-                let dir = match e.get_direction() {
+                let dir = match e.direction() {
                     gdk::ScrollDirection::Up => ScrollDirection::Up,
                     gdk::ScrollDirection::Down => ScrollDirection::Down,
                     gdk::ScrollDirection::Smooth => {
@@ -223,7 +227,7 @@ impl Grid {
                         // accumulated in scroll_dy. Once it reaches -1.0 (scroll up)
                         // or +1.0 (scroll down), scroll_dy is reset and the scroll
                         // operation is made effective.
-                        let (_, smooth_dy) = e.get_scroll_deltas().unwrap();
+                        let (_, smooth_dy) = e.scroll_deltas().unwrap();
                         let prev_dy = *scroll_dy.borrow();
                         let dy = prev_dy + smooth_dy;
                         if dy <= -1.0 {
@@ -241,7 +245,7 @@ impl Grid {
                     _ => { return Inhibit(false); },
                 };
 
-                let pos = e.get_position();
+                let pos = e.position();
                 let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
                 let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
@@ -262,13 +266,13 @@ impl Grid {
             let ctx = ctx.borrow();
             let mut drag_position = drag_position.borrow_mut();
 
-            let button = match e.get_state() {
+            let button = match e.state() {
                 ModifierType::BUTTON3_MASK => MouseButton::Right,
                 ModifierType::BUTTON2_MASK => MouseButton::Middle,
                 _ => MouseButton::Left,
             };
 
-            let pos = e.get_position();
+            let pos = e.position();
             let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
             let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
@@ -292,13 +296,13 @@ impl Grid {
         self.eb.connect_button_press_event(move |_, e| {
             let ctx = ctx.borrow();
 
-            let button = match e.get_button() {
+            let button = match e.button() {
                 3 => MouseButton::Right,
                 2 => MouseButton::Middle,
                 _ => MouseButton::Left,
             };
 
-            let pos = e.get_position();
+            let pos = e.position();
             let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
             let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
@@ -317,13 +321,13 @@ impl Grid {
         self.eb.connect_button_release_event(move |_, e| {
             let ctx = ctx.borrow();
 
-            let button = match e.get_button() {
+            let button = match e.button() {
                 3 => MouseButton::Right,
                 2 => MouseButton::Middle,
                 _ => MouseButton::Left,
             };
 
-            let pos = e.get_position();
+            let pos = e.position();
             let col = (pos.0 / ctx.cell_metrics.width).floor() as u64;
             let row = (pos.1 / ctx.cell_metrics.height).floor() as u64;
 
@@ -341,8 +345,8 @@ impl Grid {
         self.da.connect_configure_event(move |da, _| {
             let ctx = ctx.borrow();
 
-            let w = f64::from(da.get_allocated_width());
-            let h = f64::from(da.get_allocated_height());
+            let w = f64::from(da.allocated_width());
+            let h = f64::from(da.allocated_height());
             let cols = (w / ctx.cell_metrics.width).floor() as u64;
             let rows = (h / ctx.cell_metrics.height).floor() as u64;
 
@@ -350,19 +354,23 @@ impl Grid {
         });
     }
 
-    pub fn put_line(&self, line: GridLineSegment, hl_defs: &HlDefs) {
+    pub fn put_line(
+        &self,
+        line: GridLineSegment,
+        hl_defs: &HlDefs,
+    ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
-        render::put_line(&mut ctx, &self.da.get_pango_context(), line, hl_defs);
+        render::put_line(&mut ctx, &self.da.pango_context(), line, hl_defs)
     }
 
-    pub fn redraw(&self, hl_defs: &HlDefs) {
+    pub fn redraw(&self, hl_defs: &HlDefs) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
-        render::redraw(&mut ctx, &self.da.get_pango_context(), hl_defs);
+        render::redraw(&mut ctx, &self.da.pango_context(), hl_defs)
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
-        let clock = self.da.get_frame_clock().unwrap();
+        let clock = self.da.frame_clock().unwrap();
         let mut ctx = self.context.borrow_mut();
         ctx.cursor_goto(row, col, &clock);
 
@@ -403,8 +411,8 @@ impl Grid {
     pub fn calc_size(&self) -> (i64, i64) {
         let ctx = self.context.borrow();
 
-        let w = self.da.get_allocated_width();
-        let h = self.da.get_allocated_height();
+        let w = self.da.allocated_width();
+        let h = self.da.allocated_height();
         let cols = (w / ctx.cell_metrics.width as i32) as i64;
         let rows = (h / ctx.cell_metrics.height as i32) as i64;
 
@@ -417,12 +425,12 @@ impl Grid {
         cols: u64,
         rows: u64,
         hl_defs: &HlDefs,
-    ) {
+    ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
-        ctx.resize(&self.da, win, cols as usize, rows as usize, hl_defs);
+        ctx.resize(&self.da, win, cols as usize, rows as usize, hl_defs)
     }
 
-    pub fn clear(&self, hl_defs: &HlDefs) {
+    pub fn clear(&self, hl_defs: &HlDefs) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
         // Clear internal grid (rows).
@@ -439,10 +447,10 @@ impl Grid {
         rows: i64,
         _cols: i64,
         hl_defs: &HlDefs,
-    ) {
+    ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
-        render::scroll(&mut ctx, hl_defs, reg, rows);
+        render::scroll(&mut ctx, hl_defs, reg, rows)
     }
 
     pub fn set_active(&self, active: bool) {
@@ -458,9 +466,9 @@ impl Grid {
         font: Font,
         line_space: i64,
         win: &gdk::Window,
-    ) {
+    ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
-        ctx.update_metrics(font, line_space, &self.da, win);
+        ctx.update_metrics(font, line_space, &self.da, win)
     }
 
     /// Get the current line space value.
@@ -496,30 +504,35 @@ impl Grid {
 
 /// Handler for grid's drawingarea's draw event. Draws the internal cairo
 /// context (`ctx`) surface to the `cr`.
-fn drawingarea_draw(cr: &cairo::Context, ctx: &mut Context) {
-    let surface = ctx.cairo_context.get_target();
+fn drawingarea_draw(
+    cr: &cairo::Context,
+    ctx: &mut Context,
+) -> Result<(), Error> {
+    let surface = ctx.cairo_context.target();
     surface.flush();
 
-    cr.save();
-    cr.set_source_surface(&surface, 0.0, 0.0);
-    cr.paint();
-    cr.restore();
+    cr.save()?;
+    cr.set_source_surface(&surface, 0.0, 0.0)?;
+    cr.paint()?;
+    cr.restore()?;
 
     // If we're not "busy", draw the cursor.
     if !ctx.busy && ctx.active {
         let (x, y, w, h) = ctx.get_cursor_rect();
 
-        cr.save();
+        cr.save()?;
         cr.rectangle(
             f64::from(x),
             f64::from(y),
             f64::from(w) * ctx.cursor.cell_percentage,
             f64::from(h),
         );
-        let surface = ctx.cursor_context.get_target();
+        let surface = ctx.cursor_context.target();
         surface.flush();
-        cr.set_source_surface(&surface, x.into(), y.into());
-        cr.fill();
-        cr.restore();
+        cr.set_source_surface(&surface, x.into(), y.into())?;
+        cr.fill()?;
+        cr.restore()?;
     }
+
+    Ok(())
 }

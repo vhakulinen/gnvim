@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use gtk::{gdk, glib, pango};
 use log::error;
 
 use crate::nvim_bridge::CompletionItem;
@@ -159,7 +160,7 @@ impl Popupmenu {
             // so we'll have to add the border to its parent (which is the
             // viewport that scorlled window adds). This aint perfect,
             // but I didn't any find better solutions.
-            scrolled_list.get_child().unwrap()
+            scrolled_list.child().unwrap()
         );
 
         let state = Rc::new(RefCell::new(State::new()));
@@ -168,7 +169,7 @@ impl Popupmenu {
         // the selection to the activated row.
         list.connect_row_activated(clone!(nvim, state => move |_, row| {
             let state = state.borrow_mut();
-            let new = row.get_index();
+            let new = row.index();
 
             let selected = state.selected;
 
@@ -190,7 +191,7 @@ impl Popupmenu {
         // On (mouse) button press...
         list.connect_button_press_event(clone!(nvim => move |_, e| {
             // ...check if the button press is double click.
-            if e.get_event_type() == gdk::EventType::DoubleButtonPress {
+            if e.event_type() == gdk::EventType::DoubleButtonPress {
                 // And if so, tell neovim to select the current completion item.
                 let nvim = nvim.clone();
                 spawn_local(async move {
@@ -262,20 +263,20 @@ impl Popupmenu {
                     // the scrolled window and the actual widget that is
                     // inside it.
                     scrolled_list
-                        .get_child()
+                        .child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
                     scrolled_info
-                        .get_child()
+                        .child()
                         .unwrap()
                         .set_valign(gtk::Align::End);
                 } else {
                     scrolled_list
-                        .get_child()
+                        .child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
                     scrolled_info
-                        .get_child()
+                        .child()
                         .unwrap()
                         .set_valign(gtk::Align::Start);
                 }
@@ -311,7 +312,7 @@ impl Popupmenu {
 
     #[allow(unused)]
     pub fn is_above_anchor(&self) -> bool {
-        self.scrolled_list.get_child().unwrap().get_valign() == gtk::Align::End
+        self.scrolled_list.child().unwrap().valign() == gtk::Align::End
     }
 
     pub fn set_base_metrics(&self, metrics: GridMetrics) {
@@ -345,7 +346,7 @@ impl Popupmenu {
             });
 
             if !self.info_shown {
-                let adj = self.scrolled_info.get_vadjustment().unwrap();
+                let adj = self.scrolled_info.vadjustment();
                 adj.set_value(0.0);
                 // TODO(ville): There is a bug in GTK+ and some adjustment animations,
                 //              where the adjustment's value is set back to upper - page-size
@@ -452,8 +453,8 @@ impl Popupmenu {
                 info_label.hide();
 
                 // If selection is removed, move the scrolled window to the top.
-                let adj = scrolled_list.get_vadjustment().unwrap();
-                gtk::idle_add(move || {
+                let adj = scrolled_list.vadjustment();
+                glib::idle_add_local(move || {
                     adj.set_value(0.0);
                     Continue(false)
                 });
@@ -542,21 +543,12 @@ impl Popupmenu {
         // Set line space to the info_label with pango attrs.
         let attrs = pango::AttrList::new();
         let attr =
-            pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE)
-                .unwrap();
+            pango::Attribute::new_rise(self.line_space as i32 * pango::SCALE);
         attrs.insert(attr);
         self.info_label.set_attributes(Some(&attrs));
     }
 
     fn set_styles(&self, hl_defs: &HlDefs) {
-        if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20(hl_defs);
-        } else {
-            self.set_styles_post20(hl_defs);
-        }
-    }
-
-    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let (above, below) = calc_line_space(self.line_space);
 
         let css = format!(
@@ -611,64 +603,6 @@ impl Popupmenu {
             .unwrap();
     }
 
-    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
-        let (above, below) = calc_line_space(self.line_space);
-
-        let css = format!(
-            "{font_wild}
-
-            GtkGrid, GtkListBox, GtkListBoxRow, GtkLabel {{
-                color: #{normal_fg};
-                background-color: #{normal_bg};
-                outline: none;
-            }}
-
-            GtkViewport {{
-                border-radius: 0px;
-            }}
-
-            #info-label, GtkViewport {{
-                border: 1px solid #{normal_fg};
-            }}
-
-            GtkListBoxRow {{
-                padding-top: {above}px;
-                padding-bottom: {below}px;
-            }}
-
-            GtkListBoxRow:selected,
-            GtkListBoxRow:selected > GtkGrid,
-            GtkListBoxRow:selected > GtkGrid > GtkLabel {{
-                color: #{selected_fg};
-                background-color: {selected_bg};
-            }}
-            ",
-            font_wild = self.font.as_wild_css(FontUnit::Pixel),
-            normal_fg = self
-                .colors
-                .hl
-                .foreground
-                .unwrap_or(hl_defs.default_fg)
-                .to_hex(),
-            normal_bg = self.colors.hl.apply_blend(
-                &self.colors.hl.background.unwrap_or(hl_defs.default_bg)
-            ),
-            selected_bg = self.colors.hl_sel.apply_blend(
-                &self.colors.hl_sel.background.unwrap_or(hl_defs.default_bg)
-            ),
-            selected_fg = self
-                .colors
-                .hl_sel
-                .foreground
-                .unwrap_or(hl_defs.default_fg)
-                .to_hex(),
-            above = above.max(0),
-            below = below.max(0),
-        );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
     pub fn set_font(&mut self, font: Font, hl_defs: &HlDefs) {
         self.font = font;
         self.set_styles(hl_defs);
@@ -676,8 +610,8 @@ impl Popupmenu {
 }
 
 fn ensure_row_visible(list: &gtk::ListBox, row: &gtk::ListBoxRow) {
-    if let Some(adj) = list.get_adjustment() {
-        let alloc = row.get_allocation();
+    if let Some(adj) = list.adjustment() {
+        let alloc = row.allocation();
         let y = alloc.y;
         let height = alloc.height;
 

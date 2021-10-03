@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use gtk::{glib, pango};
 
 use nvim_rs::Tabpage;
 
@@ -82,7 +83,7 @@ impl Tabline {
         tabs: Vec<(Tabpage<GioWriter>, String)>,
     ) {
         glib::signal_handler_block(&self.notebook, &self.switch_tab_signal);
-        for child in self.notebook.get_children() {
+        for child in self.notebook.children() {
             self.notebook.remove(&child);
         }
         glib::signal_handler_unblock(&self.notebook, &self.switch_tab_signal);
@@ -168,14 +169,6 @@ impl Tabline {
     }
 
     fn set_styles(&self, hl_defs: &HlDefs) {
-        if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20(hl_defs);
-        } else {
-            self.set_styles_post20(hl_defs);
-        }
-    }
-
-    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let (above, below) = calc_line_space(self.line_space);
         let css = format!(
             "{font_wild}
@@ -211,62 +204,6 @@ impl Tabline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            selected_bg =
-                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
-            above = above.max(0),
-            below = below.max(0),
-        );
-
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
-    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
-        let (above, below) = calc_line_space(self.line_space);
-        let css = format!(
-            "{font_wild}
-
-            GtkNotebook {{
-                padding: 0px;
-                background-color: #{normal_bg};
-
-                -GtkNotebook-initial-gap: 0;
-                -GtkNotebook-tab-overlap: 1;
-                -GtkNotebook-has-tab-gap: false;
-            }}
-            GtkLabel {{
-                color: #{normal_fg};
-                background: transparent;
-                font-weight: normal;
-                border: none;
-
-                padding-top: {above}px;
-                padding-bottom: {below}px;
-            }}
-            tab {{
-                padding: 5px;
-                outline: none;
-                background-color: #{normal_bg};
-                border: none;
-                box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
-            }}
-            tab:active {{
-                border: none;
-                box-shadow: inset 73px 0px 0px -70px #{selected_fg};
-            }}
-            tab:active, tab:active > GtkLabel {{
-                color: #{selected_fg};
-                background-color: #{selected_bg};
-            }}
-            tab:hover {{
-                box-shadow: inset 73px 0px 0px -70px #{selected_fg};
-            }}
-            ",
-            font_wild = self.font.as_wild_css(FontUnit::Pixel),
             normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
             normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
             selected_fg =

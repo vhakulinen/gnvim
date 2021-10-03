@@ -35,7 +35,7 @@ impl MsgWindow {
 
         // Only add/change the child widget if its different
         // from the previous one.
-        if let Some(child) = self.frame.get_child() {
+        if let Some(child) = self.frame.child() {
             if w != child {
                 self.frame.remove(&child);
                 w.unparent(); // Unparent the grid.
@@ -45,7 +45,7 @@ impl MsgWindow {
             self.frame.add(&w);
         }
 
-        let c = self.frame.get_style_context();
+        let c = self.frame.style_context();
         if scrolled {
             c.add_class("scrolled");
         } else {
@@ -170,7 +170,7 @@ impl Window {
 
 impl Drop for Window {
     fn drop(&mut self) {
-        if let Some(child) = self.frame.get_child() {
+        if let Some(child) = self.frame.child() {
             // We don't want to destroy the child widget, so just remove the child from our
             // container.
             self.frame.remove(&child);

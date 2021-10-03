@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use gtk::glib;
 use gtk::prelude::*;
 
 use crate::nvim_bridge::CompletionItem;
@@ -79,7 +80,7 @@ impl LazyLoader {
         state.items_to_load = items;
 
         let state_ref = self.state.clone();
-        let source_id = gtk::idle_add(move || {
+        let source_id = glib::idle_add_local(move || {
             let mut state = state_ref.borrow_mut();
 
             // Load the rows in patches so we avoid renders of "half height"

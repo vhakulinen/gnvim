@@ -1,4 +1,5 @@
 use gtk::prelude::*;
+use gtk::{gdk_pixbuf, gio, glib, pango};
 
 use crate::nvim_bridge::{CompletionItem, CompletionItemKind};
 use crate::ui::color::Color;

@@ -6,8 +6,9 @@ use std::sync::Arc;
 
 use gtk::prelude::*;
 
+use gtk::{gdk, gio, glib};
 use webkit2gtk as webkit;
-use webkit2gtk::{SettingsExt, WebViewExt};
+use webkit2gtk::traits::{SettingsExt, WebViewExt};
 
 use pulldown_cmark as md;
 
@@ -100,7 +101,7 @@ impl CursorTooltip {
     pub fn new(parent: &gtk::Overlay) -> Self {
         let css_provider = gtk::CssProvider::new();
 
-        let context = webkit::WebContext::get_default().unwrap();
+        let context = webkit::WebContext::default().unwrap();
         let webview = webkit::WebView::with_context(&context);
 
         let frame = gtk::Frame::new(None);
@@ -128,7 +129,7 @@ impl CursorTooltip {
             }),
         );
 
-        let settings = WebViewExt::get_settings(&webview).unwrap();
+        let settings = WebViewExt::settings(&webview).unwrap();
         settings.set_enable_javascript(true);
 
         parent.add_overlay(&fixed);
@@ -139,7 +140,7 @@ impl CursorTooltip {
         fixed.connect_size_allocate(
             clone!(state, webview => move |fixed, alloc| {
                 let mut state = state.borrow_mut();
-                let ctx = fixed.get_pango_context();
+                let ctx = fixed.pango_context();
                 let res = pangocairo::functions::context_get_resolution(&ctx);
                 state.scale = res / 96.0; // 96.0 picked from GTK's own source code.
                 webview.set_zoom_level(state.scale);
@@ -374,7 +375,7 @@ impl CursorTooltip {
 
     /// Refreshes the position of the tooltip element.
     pub fn refresh_position(&self) {
-        let alloc = self.frame.get_allocation();
+        let alloc = self.frame.allocation();
         let state = self.state.borrow_mut();
 
         set_position(
@@ -435,7 +436,7 @@ fn webview_load_finished(
         move |width: Option<f64>,
               res: Result<webkit::JavascriptResult, webkit::Error>| {
             let res = res.unwrap();
-            let height = match (res.get_value(), res.get_global_context()) {
+            let height = match (res.value(), res.global_context()) {
                 (Some(val), Some(ctx)) => val.to_number(&ctx),
                 _ => None,
             };
@@ -474,7 +475,7 @@ fn webview_load_finished(
         move |res: Result<webkit::JavascriptResult, webkit::Error>| {
 
             let res = res.unwrap();
-            let width = match (res.get_value(), res.get_global_context()) {
+            let width = match (res.value(), res.global_context()) {
                 (Some(val), Some(ctx)) => val.to_number(&ctx),
                 _ => None,
             };

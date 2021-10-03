@@ -1,3 +1,4 @@
+use gtk::glib;
 use gtk::prelude::*;
 
 use crate::nvim_bridge;
@@ -47,10 +48,10 @@ impl CmdlineBlock {
         textview.connect_size_allocate(
             clone!(scrolledwindow_weak => move |tv, _| {
                 let scrolledwindow = upgrade_weak!(scrolledwindow_weak);
-                let h = tv.get_preferred_height();
+                let h = tv.preferred_height();
 
                 if h.1 > 250 {
-                    if scrolledwindow.get_size_request().1 == -1 {
+                    if scrolledwindow.size_request().1 == -1 {
                         scrolledwindow.set_size_request(-1, h.1);
                         scrolledwindow.set_policy(
                             gtk::PolicyType::Automatic,
@@ -58,8 +59,8 @@ impl CmdlineBlock {
                         );
                     }
 
-                    let adj = scrolledwindow.get_vadjustment().unwrap();
-                    adj.set_value(adj.get_upper());
+                    let adj = scrolledwindow.vadjustment();
+                    adj.set_value(adj.upper());
                 }
             }),
         );
@@ -86,8 +87,8 @@ impl CmdlineBlock {
 
     fn show(&mut self, show: &nvim_bridge::CmdlineBlockShow, hl_defs: &HlDefs) {
         self.frame.show();
-        let buffer = self.textview.get_buffer().unwrap();
-        let mut iter = buffer.get_iter_at_offset(0);
+        let buffer = self.textview.buffer().unwrap();
+        let mut iter = buffer.iter_at_offset(0);
 
         for (i, line) in show.lines.iter().enumerate() {
             let mut markup = String::new();
@@ -115,9 +116,9 @@ impl CmdlineBlock {
         append: nvim_bridge::CmdlineBlockAppend,
         hl_defs: &HlDefs,
     ) {
-        let buffer = self.textview.get_buffer().unwrap();
+        let buffer = self.textview.buffer().unwrap();
 
-        let mut iter = buffer.get_end_iter();
+        let mut iter = buffer.end_iter();
 
         let markup: String = append
             .line
@@ -152,39 +153,11 @@ impl CmdlineBlock {
         self.scrolledwindow
             .set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Never);
 
-        let buffer = self.textview.get_buffer().unwrap();
+        let buffer = self.textview.buffer().unwrap();
         buffer.set_text("");
     }
 
     fn set_colors(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
-        if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors, hl_defs);
-        } else {
-            self.set_colors_post20(colors, hl_defs);
-        }
-    }
-
-    fn set_colors_pre20(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
-        let css = format!(
-            "GtkFrame {{
-                border: none;
-                padding: 5px;
-                background: #{bg};
-                border-radius: 0;
-            }}
-
-            GtkTextView {{
-                color: #{fg};
-                background: #{bg};
-            }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
-        );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
-    fn set_colors_post20(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "frame {{
                 padding: 5px;
@@ -268,12 +241,12 @@ impl CmdlineInput {
         content: nvim_bridge::CmdlineShow,
         hl_defs: &HlDefs,
     ) {
-        let buffer = self.textview.get_buffer().unwrap();
+        let buffer = self.textview.buffer().unwrap();
 
         // Reset the buffer.
         buffer.set_text("");
         // Get iter from the beginning.
-        let mut iter = buffer.get_iter_at_offset(0);
+        let mut iter = buffer.iter_at_offset(0);
         // Write the prompt.
         let prompt = format!(
             "{}{}{}",
@@ -308,42 +281,14 @@ impl CmdlineInput {
 
     fn show_special_char(&mut self, ch: String, _shift: bool, _level: u64) {
         // TODO(ville): What to do with `_shift` and `_level`?
-        let buffer = self.textview.get_buffer().unwrap();
+        let buffer = self.textview.buffer().unwrap();
         let mark_insert = buffer.get_insert().unwrap();
-        let mut iter = buffer.get_iter_at_mark(&mark_insert);
+        let mut iter = buffer.iter_at_mark(&mark_insert);
         buffer.insert(&mut iter, &ch);
         iter.backward_char();
     }
 
     fn set_colors(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
-        if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(colors, hl_defs);
-        } else {
-            self.set_colors_post20(colors, hl_defs);
-        }
-    }
-
-    fn set_colors_pre20(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
-        let css = format!(
-            "GtkFrame {{
-                border: none;
-                padding: 5px;
-                background: #{bg};
-                border-radius: 0;
-            }}
-
-            GtkTextView {{
-                color: #{fg};
-                background: #{bg};
-            }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
-        );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
-    fn set_colors_post20(&self, colors: &CmdlineColors, hl_defs: &HlDefs) {
         let css = format!(
             "frame {{
                 padding: 5px;
@@ -376,8 +321,8 @@ impl CmdlineInput {
     }
 
     fn ensure_cursor_pos(&self) {
-        let buffer = self.textview.get_buffer().unwrap();
-        let mut iter = buffer.get_start_iter();
+        let buffer = self.textview.buffer().unwrap();
+        let mut iter = buffer.start_iter();
 
         let pos = self.content.split_at(self.cursor_pos).0.chars().count();
 
@@ -493,14 +438,6 @@ impl Cmdline {
     }
 
     fn set_styles(&self, hl_defs: &HlDefs) {
-        if gtk::get_minor_version() < 20 {
-            self.set_styles_pre20(hl_defs);
-        } else {
-            self.set_styles_post20(hl_defs);
-        }
-    }
-
-    fn set_styles_post20(&self, hl_defs: &HlDefs) {
         let css = format!(
             "{font_wild}
 
@@ -522,31 +459,6 @@ impl Cmdline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
-        );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
-    fn set_styles_pre20(&self, hl_defs: &HlDefs) {
-        let css = format!(
-            "{font_wild}
-
-            GtkBox {{
-                box-shadow: 0px 5px 5px 0px rgba(0, 0, 0, 0.75);
-            }}
-
-            GtkFrame > GtkBox {{
-                box-shadow: none;
-            }}
-
-            GtkFrame {{
-                background: #{bg};
-                padding: 6px;
-                border: none;
-                border-radius: 0;
-            }}",
-            font_wild = self.font.as_wild_css(FontUnit::Pixel),
             bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
@@ -591,7 +503,7 @@ impl Cmdline {
         // font change.
         self.fixed.show();
         let f = self.fixed.clone();
-        gtk::idle_add(move || {
+        glib::idle_add_local(move || {
             f.hide();
             Continue(false)
         });

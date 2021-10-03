@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use gtk::glib;
+
 #[derive(Hash, PartialEq, Eq)]
 pub enum HlGroup {
     Pmenu,

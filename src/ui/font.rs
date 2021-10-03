@@ -1,6 +1,8 @@
 use std::fmt;
 use std::fmt::Display;
 
+use gtk::pango;
+
 const DEFAULT_HEIGHT: f32 = 14.0;
 
 pub enum FontUnit {
@@ -89,7 +91,7 @@ impl Font {
 
         // Make sure we dont have a font with size of 0, otherwise we'll
         // have problems later.
-        if font_desc.get_size() == 0 {
+        if font_desc.size() == 0 {
             font_desc.set_size(DEFAULT_HEIGHT as i32 * pango::SCALE);
         }
 

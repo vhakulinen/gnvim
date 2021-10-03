@@ -1,6 +1,8 @@
 use gtk::prelude::*;
 use gtk::DrawingArea;
+use gtk::{cairo, gdk, pango};
 
+use crate::error::Error;
 use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
 use crate::ui::grid::cursor::Cursor;
@@ -45,8 +47,8 @@ impl Context {
         rows: usize,
         hl_defs: &HlDefs,
         enable_cursor_animations: bool,
-    ) -> Self {
-        let pango_context = da.get_pango_context();
+    ) -> Result<Self, Error> {
+        let pango_context = da.pango_context();
 
         let font_desc = font.as_pango_font();
         pango_context.set_font_description(&font_desc);
@@ -54,7 +56,7 @@ impl Context {
         let mut cell_metrics = CellMetrics::default();
         cell_metrics.font = font;
         cell_metrics.line_space = line_space;
-        cell_metrics.update(&pango_context);
+        cell_metrics.update(&pango_context)?;
 
         let w = cell_metrics.width * cols as f64;
         let h = cell_metrics.height * rows as f64;
@@ -64,19 +66,19 @@ impl Context {
                 w.ceil() as i32,
                 h.ceil() as i32,
             )
-            .unwrap();
+            .ok_or(Error::FailedToCreateSurface())?;
 
-        let cairo_context = cairo::Context::new(&surface);
+        let cairo_context = cairo::Context::new(&surface)?;
 
         // Fill the context with default bg color.
-        cairo_context.save();
+        cairo_context.save()?;
         cairo_context.set_source_rgb(
             hl_defs.default_bg.r,
             hl_defs.default_bg.g,
             hl_defs.default_bg.b,
         );
-        cairo_context.paint();
-        cairo_context.restore();
+        cairo_context.paint()?;
+        cairo_context.restore()?;
 
         let cursor_context = {
             let surface = win
@@ -85,8 +87,8 @@ impl Context {
                     (cell_metrics.width * 2.0) as i32, // times two for double width chars.
                     (cell_metrics.height + cell_metrics.ascent).ceil() as i32,
                 )
-                .unwrap();
-            cairo::Context::new(&surface)
+                .ok_or(Error::FailedToCreateSurface())?;
+            cairo::Context::new(&surface)?
         };
 
         let cursor = Cursor {
@@ -94,7 +96,7 @@ impl Context {
             ..Cursor::default()
         };
 
-        Context {
+        Ok(Context {
             cairo_context,
             cell_metrics,
             cell_metrics_update: None,
@@ -107,7 +109,7 @@ impl Context {
             active: false,
 
             queue_draw_area: vec![],
-        }
+        })
     }
 
     /// Updates internals that are dependant on the drawing area.
@@ -118,7 +120,7 @@ impl Context {
         cols: usize,
         rows: usize,
         hl_defs: &HlDefs,
-    ) {
+    ) -> Result<(), Error> {
         let prev_rows = self.rows.len();
         let prev_cols = self.rows.get(0).map(|r| r.len()).unwrap_or(0);
 
@@ -132,10 +134,10 @@ impl Context {
             }
         }
 
-        let pctx = da.get_pango_context();
+        let pctx = da.pango_context();
         pctx.set_font_description(&self.cell_metrics.font.as_pango_font());
 
-        self.cell_metrics.update(&pctx);
+        self.cell_metrics.update(&pctx)?;
 
         let w = self.cell_metrics.width * cols as f64;
         let h = self.cell_metrics.height * rows as f64;
@@ -145,22 +147,22 @@ impl Context {
                 w.ceil() as i32,
                 h.ceil() as i32,
             )
-            .unwrap();
-        let ctx = cairo::Context::new(&surface);
+            .ok_or(Error::FailedToCreateSurface())?;
+        let ctx = cairo::Context::new(&surface)?;
 
         // Fill the context with default bg color.
-        ctx.save();
+        ctx.save()?;
         ctx.set_source_rgb(
             hl_defs.default_bg.r,
             hl_defs.default_bg.g,
             hl_defs.default_bg.b,
         );
-        ctx.paint();
-        ctx.restore();
+        ctx.paint()?;
+        ctx.restore()?;
 
-        let s = self.cairo_context.get_target();
-        self.cairo_context.save();
-        ctx.set_source_surface(&s, 0.0, 0.0);
+        let s = self.cairo_context.target();
+        self.cairo_context.save()?;
+        ctx.set_source_surface(&s, 0.0, 0.0)?;
         ctx.set_operator(cairo::Operator::Source);
         // Make sure we only paint the area that _was_ visible before this update
         // so we don't undo the bg color paint we did earlier. Note that we're
@@ -174,10 +176,12 @@ impl Context {
             self.cell_metrics.width * prev_cols as f64,
             self.cell_metrics.height * prev_rows as f64,
         );
-        ctx.fill();
-        self.cairo_context.restore();
+        ctx.fill()?;
+        self.cairo_context.restore()?;
 
         self.cairo_context = ctx;
+
+        Ok(())
     }
 
     /// Sets the cell metrics to be updated. If font or line_space is None,
@@ -189,13 +193,13 @@ impl Context {
         line_space: i64,
         da: &gtk::DrawingArea,
         win: &gdk::Window,
-    ) {
-        let pango_context = da.get_pango_context();
+    ) -> Result<(), Error> {
+        let pango_context = da.pango_context();
         pango_context.set_font_description(&font.as_pango_font());
 
         self.cell_metrics.font = font;
         self.cell_metrics.line_space = line_space;
-        self.cell_metrics.update(&pango_context);
+        self.cell_metrics.update(&pango_context)?;
 
         self.cursor_context = {
             let surface = win
@@ -205,9 +209,11 @@ impl Context {
                     (self.cell_metrics.height + self.cell_metrics.ascent).ceil()
                         as i32,
                 )
-                .unwrap();
-            cairo::Context::new(&surface)
+                .ok_or(Error::FailedToCreateSurface())?;
+            cairo::Context::new(&surface)?
         };
+
+        Ok(())
     }
 
     /// Returns x, y, width and height for cursor position on the screen (e.g. might be in middle
@@ -244,8 +250,7 @@ impl Context {
             f64::from(w),
             f64::from(h),
         ));
-        self.cursor
-            .goto(row as f64, col as f64, clock.get_frame_time());
+        self.cursor.goto(row as f64, col as f64, clock.frame_time());
 
         // Mark the new cursor position to be drawn.
         let (x, y, w, h) = self.get_cursor_rect();
@@ -257,15 +262,19 @@ impl Context {
         ));
     }
 
-    pub fn tick(&mut self, da: &DrawingArea, clock: &gdk::FrameClock) {
+    pub fn tick(
+        &mut self,
+        da: &DrawingArea,
+        clock: &gdk::FrameClock,
+    ) -> Result<(), Error> {
         let (x, y, w, h) = self.get_cursor_rect();
         da.queue_draw_area(x, y, w, h);
 
-        self.cursor.tick(clock.get_frame_time());
+        self.cursor.tick(clock.frame_time());
 
         // We're not blinking, so skip the blink animation phase.
         if self.cursor.blink_on == 0 {
-            return;
+            return Ok(());
         }
 
         let (x, y, w, h) = self.get_cursor_rect();
@@ -276,7 +285,7 @@ impl Context {
         }
 
         let cr = &self.cursor_context;
-        cr.save();
+        cr.save()?;
         cr.rectangle(0.0, 0.0, 100.0, 100.0);
         cr.set_operator(cairo::Operator::Source);
         cr.set_source_rgba(
@@ -285,13 +294,15 @@ impl Context {
             self.cursor.color.b,
             alpha,
         );
-        cr.fill();
-        cr.restore();
+        cr.fill()?;
+        cr.restore()?;
 
         // Don't use the queue_draw_area, because those draws will only
         // happen once nvim sends 'flush' event. This draw needs to happen
         // on each tick so the cursor blinks.
         da.queue_draw_area(x, y, w, h);
+
+        Ok(())
     }
 
     pub fn cell_at_cursor(&self) -> Option<&Cell> {
@@ -318,21 +329,23 @@ pub struct CellMetrics {
 }
 
 impl CellMetrics {
-    pub fn update(&mut self, ctx: &pango::Context) {
+    pub fn update(&mut self, ctx: &pango::Context) -> Result<(), Error> {
         let fm = ctx
-            .get_metrics(Some(&self.font.as_pango_font()), None)
-            .unwrap();
+            .metrics(Some(&self.font.as_pango_font()), None)
+            .ok_or(Error::GetPangoMetrics())?;
         let extra = self.line_space as f64 / 2.0;
         let scale = f64::from(pango::SCALE);
-        self.ascent = (f64::from(fm.get_ascent()) / scale + extra).ceil();
-        self.decent = (f64::from(fm.get_descent()) / scale + extra).ceil();
+        self.ascent = (f64::from(fm.ascent()) / scale + extra).ceil();
+        self.decent = (f64::from(fm.descent()) / scale + extra).ceil();
         self.height = self.ascent + self.decent;
-        self.width = f64::from(fm.get_approximate_char_width()) / scale;
+        self.width = f64::from(fm.approximate_char_width()) / scale;
 
         self.underline_position =
-            f64::from(fm.get_underline_position()) / scale - extra;
+            f64::from(fm.underline_position()) / scale - extra;
         // TODO(ville): make the underline thickness a bit thicker (one 10th of the cell height?).
         self.underline_thickness =
-            f64::from(fm.get_underline_thickness()) / scale * 2.0;
+            f64::from(fm.underline_thickness()) / scale * 2.0;
+
+        Ok(())
     }
 }

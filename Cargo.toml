@@ -25,13 +25,7 @@ env_logger = "0.7.1"
 
 structopt = "0.3"
 
-gio = "0.9"
-pango = "0.9"
-pangocairo = "0.10"
-cairo-rs = "0.9"
-glib = "0.10"
-gdk = "0.13"
-gdk-pixbuf = "0.9"
+pangocairo = "0.14"
 
 pulldown-cmark = { version = "0.2", default-features = false, optional = true }
 ammonia = { version = "2", optional = true }
@@ -44,11 +38,11 @@ async-trait = "0.1"
 rmpv = "0.4"
 
 [dependencies.gtk]
-version = "0.9"
-features = ["v3_18"]
+version = "0.14"
+features = ["v3_20"]
 
 [dependencies.webkit2gtk]
-version = "0.10"
+version = "0.14"
 features = ["v2_14"]
 optional = true
 

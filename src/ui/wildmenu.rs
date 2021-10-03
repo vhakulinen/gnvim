@@ -47,9 +47,9 @@ impl Wildmenu {
         list.connect_size_allocate(clone!(frame_weak => move |list, _| {
             let frame = upgrade_weak!(frame_weak);
             // Calculate height based on shown rows.
-            let count = list.get_children().len() as i32;
-            let row_height = if let Some(item) = list.get_children().get(0) {
-                item.get_preferred_height().0
+            let count = list.children().len() as i32;
+            let row_height = if let Some(item) = list.children().get(0) {
+                item.preferred_height().0
             } else {
                 16
             };
@@ -64,7 +64,7 @@ impl Wildmenu {
         // If user selects some row with a mouse, notify nvim about it.
         list.connect_row_activated(clone!(state => move |_, row| {
             let prev = state.borrow().selected;
-            let new = row.get_index();
+            let new = row.index();
 
             let op = if new > prev { "<Tab>" } else { "<S-Tab>" };
 
@@ -105,7 +105,7 @@ impl Wildmenu {
     }
 
     pub fn clear(&mut self) {
-        let mut children = self.list.get_children();
+        let mut children = self.list.children();
         while let Some(item) = children.pop() {
             self.list.remove(&item);
         }
@@ -134,7 +134,7 @@ impl Wildmenu {
 
         if item_num < 0 {
             self.list.unselect_all();
-        } else if let Some(row) = self.list.get_row_at_index(item_num) {
+        } else if let Some(row) = self.list.row_at_index(item_num) {
             self.list.select_row(Some(&row));
             row.grab_focus();
         }
@@ -156,52 +156,6 @@ impl Wildmenu {
             .and_then(|hl| hl.background)
             .unwrap_or(hl_defs.default_bg);
 
-        if gtk::get_minor_version() < 20 {
-            self.set_colors_pre20(fg, bg, sel_fg, sel_bg);
-        } else {
-            self.set_colors_post20(fg, bg, sel_fg, sel_bg);
-        }
-    }
-
-    fn set_colors_pre20(
-        &self,
-        fg: Color,
-        bg: Color,
-        sel_fg: Color,
-        sel_bg: Color,
-    ) {
-        let css = format!(
-            "GtkFrame {{
-                border: none;
-            }}
-
-            GtkListBoxRow {{
-                padding: 6px;
-                color: #{fg};
-                background-color: #{bg};
-                outline: none;
-            }}
-
-            GtkListBoxRow:selected, GtkListBoxRow:selected > GtkLabel {{
-                color: #{sel_fg};
-                background: #{sel_bg};
-            }}",
-            fg = fg.to_hex(),
-            bg = bg.to_hex(),
-            sel_fg = sel_fg.to_hex(),
-            sel_bg = sel_bg.to_hex(),
-        );
-        CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
-            .unwrap();
-    }
-
-    fn set_colors_post20(
-        &self,
-        fg: Color,
-        bg: Color,
-        sel_fg: Color,
-        sel_bg: Color,
-    ) {
         let css = format!(
             "frame > border {{
                 border: none;

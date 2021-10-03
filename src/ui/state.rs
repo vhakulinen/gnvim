@@ -2,11 +2,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use gtk::glib;
 use gtk::prelude::*;
 
 use log::{debug, error, warn};
 use nvim_rs::{Tabpage, Window as NvimWindow};
 
+use crate::error::Error;
 use crate::nvim_bridge::{
     CmdlineBlockAppend, CmdlineBlockShow, CmdlinePos, CmdlineShow,
     CmdlineSpecialChar, DefaultColorsSet, GnvimEvent, GridCursorGoto,
@@ -92,12 +94,12 @@ impl UIState {
         window: &gtk::ApplicationWindow,
         notify: Notify,
         nvim: &GioNeovim,
-    ) {
+    ) -> Result<(), Error> {
         match notify {
             Notify::RedrawEvent(events) => {
-                events.into_iter().for_each(|e| {
-                    self.handle_redraw_event(window, e, &nvim);
-                });
+                events.into_iter().try_for_each(|e| {
+                    self.handle_redraw_event(window, e, &nvim)
+                })?;
             }
             Notify::GnvimEvent(event) => match event {
                 Ok(event) => self.handle_gnvim_event(&event, nvim),
@@ -115,6 +117,8 @@ impl UIState {
                 }
             },
         }
+
+        Ok(())
     }
 
     fn set_title(&mut self, window: &gtk::ApplicationWindow, title: &str) {
@@ -155,10 +159,10 @@ impl UIState {
         e: GridResize,
         window: &gtk::ApplicationWindow,
         nvim: &GioNeovim,
-    ) {
-        let win = window.get_window().unwrap();
+    ) -> Result<(), Error> {
+        let win = window.window().unwrap();
         if let Some(grid) = self.grids.get(&e.grid) {
-            grid.resize(&win, e.width, e.height, &self.hl_defs);
+            grid.resize(&win, e.width, e.height, &self.hl_defs)?;
 
             // If the grid is in a window (which is likely), resize the window
             // to match the grid's size.
@@ -180,32 +184,34 @@ impl UIState {
         } else {
             let grid = Grid::new(
                 e.grid,
-                &window.get_window().unwrap(),
+                &window.window().unwrap(),
                 self.font.clone(),
                 self.line_space,
                 e.width as usize,
                 e.height as usize,
                 &self.hl_defs,
                 self.enable_cursor_animations,
-            );
+            )?;
 
             if let Some(ref mode) = self.current_mode {
                 grid.set_mode(&mode);
             }
-            grid.resize(&win, e.width, e.height, &self.hl_defs);
+            grid.resize(&win, e.width, e.height, &self.hl_defs)?;
             attach_grid_events(&grid, nvim.clone());
             self.grids.insert(e.grid, grid);
         }
+
+        Ok(())
     }
 
-    fn grid_line(&mut self, line: GridLineSegment) {
+    fn grid_line(&mut self, line: GridLineSegment) -> Result<(), Error> {
         let grid = self.grids.get(&line.grid).unwrap();
-        grid.put_line(line, &self.hl_defs);
+        grid.put_line(line, &self.hl_defs)
     }
 
-    fn grid_clear(&mut self, grid: &i64) {
+    fn grid_clear(&mut self, grid: &i64) -> Result<(), Error> {
         let grid = self.grids.get(grid).unwrap();
-        grid.clear(&self.hl_defs);
+        grid.clear(&self.hl_defs)
     }
 
     fn grid_destroy(&mut self, grid: &i64) {
@@ -225,9 +231,16 @@ impl UIState {
         self.current_grid = 1;
     }
 
-    fn grid_scroll(&mut self, info: GridScroll, nvim: &GioNeovim) {
-        let grid = self.grids.get(&info.grid).unwrap();
-        grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs);
+    fn grid_scroll(
+        &mut self,
+        info: GridScroll,
+        nvim: &GioNeovim,
+    ) -> Result<(), Error> {
+        let grid = self
+            .grids
+            .get(&info.grid)
+            .ok_or_else(|| Error::GridDoesNotExist(info.grid))?;
+        grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs)?;
 
         // Since nvim doesn't have its own 'scroll' autocmd, we'll
         // have to do it on our own. This use useful for the cursor tooltip.
@@ -237,12 +250,14 @@ impl UIState {
                 error!("GnvimScroll error: {:?}", err);
             }
         });
+
+        Ok(())
     }
 
     fn default_colors_set(
         &mut self,
         DefaultColorsSet { fg, bg, sp }: DefaultColorsSet,
-    ) {
+    ) -> Result<(), Error> {
         self.hl_defs.default_fg = fg;
         self.hl_defs.default_bg = bg;
         self.hl_defs.default_sp = sp;
@@ -256,13 +271,15 @@ impl UIState {
         }
 
         for grid in self.grids.values() {
-            grid.redraw(&self.hl_defs);
+            grid.redraw(&self.hl_defs)?;
         }
 
         #[cfg(feature = "libwebkit2gtk")]
         self.cursor_tooltip.set_colors(fg, bg);
 
         self.hl_changed = true;
+
+        Ok(())
     }
 
     fn hl_attr_define(&mut self, HlAttrDefine { id, hl }: HlAttrDefine) {
@@ -380,19 +397,23 @@ impl UIState {
         }
     }
 
-    fn flush(&mut self, nvim: &GioNeovim, window: &gtk::ApplicationWindow) {
+    fn flush(
+        &mut self,
+        nvim: &GioNeovim,
+        window: &gtk::ApplicationWindow,
+    ) -> Result<(), Error> {
         for grid in self.grids.values() {
-            grid.flush(&self.hl_defs);
+            grid.flush(&self.hl_defs)?;
         }
 
         if let Some(opts) = self.resize_on_flush.take() {
-            let win = window.get_window().unwrap();
+            let win = window.window().unwrap();
             for grid in self.grids.values() {
                 grid.update_cell_metrics(
                     opts.font.clone(),
                     opts.line_space,
                     &win,
-                );
+                )?;
             }
 
             let grid = self.grids.get(&1).unwrap();
@@ -463,6 +484,8 @@ impl UIState {
 
             self.hl_changed = false;
         }
+
+        Ok(())
     }
 
     fn popupmenu_show(&mut self, popupmenu: PopupmenuShow) {
@@ -702,7 +725,7 @@ impl UIState {
         evt: WindowExternalPos,
         window: &gtk::ApplicationWindow,
         nvim: &GioNeovim,
-    ) {
+    ) -> Result<(), Error> {
         let parent_win = window.clone().upcast::<gtk::Window>();
         let grid_metrics = {
             let grid = self.grids.get(&evt.grid).unwrap();
@@ -712,11 +735,11 @@ impl UIState {
             // window without appearing in the main grid first) won't get proper
             // font/linespace values.
             grid.resize(
-                &parent_win.get_window().unwrap(),
+                &parent_win.window().unwrap(),
                 grid_metrics.cols as u64,
                 grid_metrics.rows as u64,
                 &self.hl_defs,
-            );
+            )?;
 
             grid_metrics
         };
@@ -735,6 +758,8 @@ impl UIState {
                 grid_metrics.height.ceil() as i32,
             ),
         );
+
+        Ok(())
     }
 
     fn window_hide(&mut self, grid_id: i64) {
@@ -768,32 +793,32 @@ impl UIState {
         window: &gtk::ApplicationWindow,
         event: RedrawEvent,
         nvim: &GioNeovim,
-    ) {
+    ) -> Result<(), Error> {
         match event {
             RedrawEvent::SetTitle(evt) => {
                 evt.iter().for_each(|e| self.set_title(&window, e));
             }
             RedrawEvent::GridLine(evt) => {
-                evt.into_iter().for_each(|line| self.grid_line(line))
+                evt.into_iter().try_for_each(|line| self.grid_line(line))?
             }
             RedrawEvent::GridCursorGoto(evt) => {
                 evt.into_iter().for_each(|e| self.grid_cursor_goto(e))
             }
             RedrawEvent::GridResize(evt) => evt
                 .into_iter()
-                .for_each(|e| self.grid_resize(e, window, nvim)),
+                .try_for_each(|e| self.grid_resize(e, window, nvim))?,
             RedrawEvent::GridClear(evt) => {
-                evt.iter().for_each(|e| self.grid_clear(e))
+                evt.iter().try_for_each(|e| self.grid_clear(e))?
             }
             RedrawEvent::GridDestroy(evt) => {
                 evt.iter().for_each(|e| self.grid_destroy(e));
             }
-            RedrawEvent::GridScroll(evt) => {
-                evt.into_iter().for_each(|e| self.grid_scroll(e, nvim))
-            }
-            RedrawEvent::DefaultColorsSet(evt) => {
-                evt.into_iter().for_each(|e| self.default_colors_set(e))
-            }
+            RedrawEvent::GridScroll(evt) => evt
+                .into_iter()
+                .try_for_each(|e| self.grid_scroll(e, nvim))?,
+            RedrawEvent::DefaultColorsSet(evt) => evt
+                .into_iter()
+                .try_for_each(|e| self.default_colors_set(e))?,
             RedrawEvent::HlAttrDefine(evt) => {
                 evt.into_iter().for_each(|e| self.hl_attr_define(e))
             }
@@ -810,7 +835,7 @@ impl UIState {
                 evt.into_iter().for_each(|e| self.mode_change(e));
             }
             RedrawEvent::SetBusy(busy) => self.set_busy(busy),
-            RedrawEvent::Flush() => self.flush(nvim, window),
+            RedrawEvent::Flush() => self.flush(nvim, window)?,
             RedrawEvent::PopupmenuShow(evt) => {
                 evt.into_iter().for_each(|e| self.popupmenu_show(e));
             }
@@ -845,8 +870,9 @@ impl UIState {
                 evt.into_iter().for_each(|e| self.window_float_pos(e, nvim));
             }
             RedrawEvent::WindowExternalPos(evt) => {
-                evt.into_iter()
-                    .for_each(|e| self.window_external_pos(e, window, nvim));
+                evt.into_iter().try_for_each(|e| {
+                    self.window_external_pos(e, window, nvim)
+                })?;
             }
             RedrawEvent::WindowHide(evt) => {
                 evt.into_iter().for_each(|e| self.window_hide(e));
@@ -862,6 +888,8 @@ impl UIState {
                 debug!("Received unknown redraw event: {}", e);
             }
         }
+
+        Ok(())
     }
 
     fn set_ui_option(&self, opt: String, enable: bool, nvim: GioNeovim) {

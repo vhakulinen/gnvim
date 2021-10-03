@@ -1,12 +1,15 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time;
 
 use gtk::prelude::*;
+use gtk::{gdk, glib};
 
 use log::{debug, error};
 use rmpv::Value;
 
+use crate::error::Error;
 use crate::nvim_bridge::{Message, Request};
 use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
@@ -46,7 +49,7 @@ impl UI {
         rx: glib::Receiver<Message>,
         window_size: (i32, i32),
         nvim: GioNeovim,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
         window.set_title("Neovim");
@@ -78,14 +81,14 @@ impl UI {
         // Create default grid.
         let mut grid = Grid::new(
             1,
-            &window.get_window().unwrap(),
+            &window.window().unwrap(),
             font.clone(),
             line_space,
             80,
             30,
             &hl_defs,
             true,
-        );
+        )?;
         // Mark the default grid as active at the beginning.
         grid.set_active(true);
         overlay.add(&grid.widget());
@@ -118,7 +121,7 @@ impl UI {
         grid.connect_da_resize(clone!(nvim, source_id => move |rows, cols| {
 
             // Set timeout to notify nvim about the new size.
-            let new = gtk::timeout_add(30, clone!(nvim, source_id => move || {
+            let new = glib::timeout_add_local(time::Duration::from_millis(30), clone!(nvim, source_id => move || {
                 let nvim = nvim.clone();
                 spawn_local(async move {
                     if let Err(err) = nvim.ui_try_resize(cols as i64, rows as i64).await {
@@ -172,7 +175,7 @@ impl UI {
                 } else {
                     debug!(
                         "Failed to turn input event into nvim key (keyval: {})",
-                        e.get_keyval()
+                        e.keyval()
                     )
                 }
 
@@ -212,7 +215,7 @@ impl UI {
 
         add_css_provider!(&css_provider, window);
 
-        UI {
+        Ok(UI {
             win: window,
             rx,
             state: Rc::new(RefCell::new(UIState {
@@ -242,7 +245,7 @@ impl UI {
                 enable_cursor_animations: true,
             })),
             nvim,
-        }
+        })
     }
 
     /// Starts to listen events from `rx` (e.g. from nvim) and processing those.
@@ -261,7 +264,9 @@ impl UI {
                 Message::Notify(notify) => {
                     let mut state = state.borrow_mut();
 
-                    state.handle_notify(&win, notify, &nvim);
+                    state
+                        .handle_notify(&win, notify, &nvim)
+                        .expect("failed to handle a notify");
                 }
                 // Handle a request.
                 Message::Request(tx, request) => {
@@ -367,10 +372,10 @@ fn keyname_to_nvim_key(s: &str) -> Option<&str> {
 fn event_to_nvim_input(e: &gdk::EventKey) -> Option<String> {
     let mut input = String::from("");
 
-    let keyval = e.get_keyval();
+    let keyval = e.keyval();
     let keyname = keyval.name()?;
 
-    let state = e.get_state();
+    let state = e.state();
 
     if state.contains(gdk::ModifierType::SHIFT_MASK) {
         input.push_str("S-");

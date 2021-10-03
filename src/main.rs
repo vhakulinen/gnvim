@@ -11,20 +11,14 @@ extern crate structopt;
 #[cfg(feature = "libwebkit2gtk")]
 extern crate syntect;
 
-extern crate cairo;
-extern crate gdk;
-extern crate gdk_pixbuf;
-extern crate gio;
-extern crate glib;
 extern crate gtk;
-extern crate log;
-extern crate pango;
 extern crate pangocairo;
 #[cfg(feature = "libwebkit2gtk")]
 extern crate webkit2gtk;
 
-use gio::prelude::*;
-use gtk::SettingsExt;
+use gtk::prelude::*;
+use gtk::traits::SettingsExt;
+use gtk::{gdk, gio, glib};
 
 use log::error;
 
@@ -32,10 +26,13 @@ use structopt::{clap, StructOpt};
 
 include!(concat!(env!("OUT_DIR"), "/gnvim_version.rs"));
 
+mod error;
 mod nvim_bridge;
 mod nvim_gio;
 mod thread_guard;
 mod ui;
+
+use crate::error::Error;
 
 fn parse_geometry(input: &str) -> Result<(i32, i32), String> {
     let ret_tuple: Vec<&str> = input.split('x').collect();
@@ -104,32 +101,6 @@ struct Options {
     geometry: (i32, i32),
 }
 
-enum Error {
-    Start(nvim_gio::Error),
-    Call(Box<nvim_rs::error::CallError>),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Error::Start(e) => write!(fmt, "Failed to start nvim: {}", e),
-            Error::Call(e) => write!(fmt, "Call to nvim failed: {}", e),
-        }
-    }
-}
-
-impl From<nvim_gio::Error> for Error {
-    fn from(arg: nvim_gio::Error) -> Self {
-        Error::Start(arg)
-    }
-}
-
-impl From<Box<nvim_rs::error::CallError>> for Error {
-    fn from(arg: Box<nvim_rs::error::CallError>) -> Self {
-        Error::Call(arg)
-    }
-}
-
 async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
     let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
     let bridge = nvim_bridge::NvimBridge::new(tx.clone());
@@ -187,7 +158,8 @@ async fn build(app: &gtk::Application, opts: &Options) -> Result<(), Error> {
         .await
         .map_err(Error::from)?;
 
-    let ui = ui::UI::init(app, rx, opts.geometry, nvim);
+    let ui =
+        ui::UI::init(app, rx, opts.geometry, nvim).expect("failed to init ui");
     ui.start();
 
     Ok(())
@@ -221,16 +193,15 @@ fn main() {
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
     flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
-    let app = gtk::Application::new(Some("com.github.vhakulinen.gnvim"), flags)
-        .unwrap();
+    let app = gtk::Application::new(Some("com.github.vhakulinen.gnvim"), flags);
 
     gdk::set_program_class("GNvim");
     glib::set_application_name("GNvim");
     gtk::Window::set_default_icon_name("gnvim");
 
     if opts.prefer_dark_theme {
-        if let Some(settings) = gtk::Settings::get_default() {
-            settings.set_property_gtk_application_prefer_dark_theme(true);
+        if let Some(settings) = gtk::Settings::default() {
+            settings.set_gtk_application_prefer_dark_theme(true);
         }
     }
 
@@ -239,10 +210,10 @@ fn main() {
         let c = glib::MainContext::default();
         c.block_on(async move {
             if let Err(err) = build(app, opts).await {
-                error!("Failed to build UI: {}", err);
+                error!("Failed to build UI: {:?}", err);
             }
         });
     });
 
-    app.run(&[]);
+    app.run();
 }

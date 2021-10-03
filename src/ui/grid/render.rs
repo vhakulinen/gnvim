@@ -1,7 +1,9 @@
+use gtk::pango::Attribute;
 use gtk::prelude::*;
 use gtk::DrawingArea;
-use pango::Attribute;
+use gtk::{cairo, pango};
 
+use crate::error::Error;
 use crate::nvim_bridge::GridLineSegment;
 use crate::ui::color::Highlight;
 use crate::ui::color::HlDefs;
@@ -32,7 +34,7 @@ fn render_text(
     y: f64,
     w: f64,
     h: f64,
-) {
+) -> Result<(), Error> {
     let (fg, bg) = if hl.reverse {
         (
             hl.background.unwrap_or(hl_defs.default_bg),
@@ -45,24 +47,24 @@ fn render_text(
         )
     };
 
-    cr.save();
+    cr.save()?;
     cr.set_source_rgb(bg.r, bg.g, bg.b);
     cr.rectangle(x, y, w, h);
-    cr.fill();
-    cr.restore();
+    cr.fill()?;
+    cr.restore()?;
 
     let attrs = pango::AttrList::new();
 
     if hl.bold {
-        let attr = Attribute::new_weight(pango::Weight::Bold).unwrap();
+        let attr = Attribute::new_weight(pango::Weight::Bold);
         attrs.insert(attr);
     }
     if hl.italic {
-        let attr = Attribute::new_style(pango::Style::Italic).unwrap();
+        let attr = Attribute::new_style(pango::Style::Italic);
         attrs.insert(attr);
     }
 
-    cr.save();
+    cr.save()?;
     cr.set_source_rgb(fg.r, fg.g, fg.b);
 
     let items =
@@ -103,10 +105,12 @@ fn render_text(
     if hl.underline {
         let y = y + h + cm.underline_position;
         cr.rectangle(x, y, w, cm.underline_thickness);
-        cr.fill();
+        cr.fill()?;
     }
 
-    cr.restore();
+    cr.restore()?;
+
+    Ok(())
 }
 
 /// Draws (inverted) cell to `cr`.
@@ -116,7 +120,7 @@ pub fn cursor_cell(
     cell: &Cell,
     cm: &CellMetrics,
     hl_defs: &HlDefs,
-) {
+) -> Result<(), Error> {
     let mut hl = *hl_defs.get(&cell.hl_id).unwrap();
 
     hl.reverse = !hl.reverse;
@@ -130,7 +134,7 @@ pub fn cursor_cell(
     };
     let h = cm.height;
 
-    render_text(cr, pango_context, cm, &hl, hl_defs, &cell.text, x, y, w, h);
+    render_text(cr, pango_context, cm, &hl, hl_defs, &cell.text, x, y, w, h)
 }
 
 /// Renders `segments` to `cr`.
@@ -142,7 +146,7 @@ fn put_segments(
     hl_defs: &HlDefs,
     segments: Vec<Segment>,
     row: usize,
-) {
+) -> Result<(), Error> {
     let cw = cm.width;
     let ch = cm.height;
 
@@ -155,17 +159,19 @@ fn put_segments(
         let h = ch.ceil();
 
         let text = &seg.text;
-        render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h);
+        render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h)?;
 
         queue_draw_area.push((x, y, w, h));
     }
+
+    Ok(())
 }
 
 pub fn redraw(
     context: &mut Context,
     pango_context: &pango::Context,
     hl_defs: &HlDefs,
-) {
+) -> Result<(), Error> {
     for (i, row) in context.rows.iter_mut().enumerate() {
         let segments = row.as_segments(0, row.len);
 
@@ -177,8 +183,10 @@ pub fn redraw(
             hl_defs,
             segments,
             i,
-        );
+        )?;
     }
+
+    Ok(())
 }
 
 /// Renders `line` to `context.cairo_context`.
@@ -187,7 +195,7 @@ pub fn put_line(
     pango_context: &pango::Context,
     line: GridLineSegment,
     hl_defs: &HlDefs,
-) {
+) -> Result<(), Error> {
     let row = line.row as usize;
     let mut affected_segments = context
         .rows
@@ -209,33 +217,44 @@ pub fn put_line(
         hl_defs,
         affected_segments,
         row,
-    );
+    )
 }
 
 /// Clears whole `da` with `hl_defs.default_bg`.
-pub fn clear(da: &DrawingArea, ctx: &mut Context, hl_defs: &HlDefs) {
+pub fn clear(
+    da: &DrawingArea,
+    ctx: &mut Context,
+    hl_defs: &HlDefs,
+) -> Result<(), Error> {
     let cr = &ctx.cairo_context;
-    let w = da.get_allocated_width();
-    let h = da.get_allocated_height();
+    let w = da.allocated_width();
+    let h = da.allocated_height();
     let bg = &hl_defs.default_bg;
 
-    cr.save();
+    cr.save()?;
     cr.set_source_rgb(bg.r, bg.g, bg.b);
     cr.rectangle(0.0, 0.0, f64::from(w), f64::from(h));
-    cr.fill();
-    cr.restore();
+    cr.fill()?;
+    cr.restore()?;
 
     ctx.queue_draw_area
         .push((0.0, 0.0, f64::from(w), f64::from(h)));
+
+    Ok(())
 }
 
 /// Scrolls contents in `ctx.cairo_context` and `ctx.rows`, based on `reg`.
-pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
+pub fn scroll(
+    ctx: &mut Context,
+    hl_defs: &HlDefs,
+    reg: [u64; 4],
+    count: i64,
+) -> Result<(), Error> {
     let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
     let bg = &hl_defs.default_bg;
 
-    let s = cr.get_target();
+    let s = cr.target();
 
     let top = reg[0];
     let bot = reg[1];
@@ -276,14 +295,14 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     }
 
     // Draw move the scrolled part on the cairo surface.
-    cr.save();
+    cr.save()?;
 
     // Create pattern which we can then "safely" draw to the surface. On X11, the pattern part was
     // not needed but on wayland it is - I suppose it has something to do with the underlaying
     // backbuffer.
     cr.push_group();
     let (_, y) = get_coords(cm.height, cm.width, dst_top - src_top, 0.0);
-    cr.set_source_surface(&s, 0.0, y);
+    cr.set_source_surface(&s, 0.0, y)?;
     cr.set_operator(cairo::Operator::Source);
     let (x1, y1, x2, y2) = get_rect(
         cm.height,
@@ -296,13 +315,13 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     let w = x2 - x1;
     let h = y2 - y1;
     cr.rectangle(x1, y1, w, h);
-    cr.fill();
+    cr.fill()?;
 
     // Draw the parttern.
-    cr.pop_group_to_source();
+    cr.pop_group_to_source()?;
     cr.set_operator(cairo::Operator::Source);
     cr.rectangle(x1, y1, w, h);
-    cr.fill();
+    cr.fill()?;
     ctx.queue_draw_area.push((x1, y1, w, h));
 
     // Clear the area that is left "dirty".
@@ -318,10 +337,12 @@ pub fn scroll(ctx: &mut Context, hl_defs: &HlDefs, reg: [u64; 4], count: i64) {
     let h = y2 - y1;
     cr.rectangle(x1, y1, x2 - x1, y2 - y1);
     cr.set_source_rgb(bg.r, bg.g, bg.b);
-    cr.fill();
+    cr.fill()?;
     ctx.queue_draw_area.push((x1, y1, w, h));
 
-    cr.restore();
+    cr.restore()?;
+
+    Ok(())
 }
 
 pub fn get_rect(

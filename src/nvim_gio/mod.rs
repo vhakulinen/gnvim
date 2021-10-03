@@ -1,4 +1,5 @@
-use gio::prelude::*;
+use gtk::prelude::*;
+use gtk::{gio, glib};
 
 use log::error;
 
@@ -61,7 +62,7 @@ where
     let p = gio::Subprocess::newv(&args, flags).map_err(Error::from)?;
 
     let input = p
-        .get_stdin_pipe()
+        .stdin_pipe()
         .ok_or(Error::Pipe)?
         .dynamic_cast::<gio::PollableOutputStream>()
         .map_err(|_| Error::ToPollaple)?;
@@ -69,7 +70,7 @@ where
         Compat::new(input.into_async_write().map_err(|_| Error::ToAsync)?);
 
     let output = p
-        .get_stdout_pipe()
+        .stdout_pipe()
         .ok_or(Error::Pipe)?
         .dynamic_cast::<gio::PollableInputStream>()
         .map_err(|_| Error::ToPollaple)?;

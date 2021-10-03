@@ -4,7 +4,7 @@ macro_rules! add_css_provider {
         {
             $(
                 $widget
-                    .get_style_context()
+                    .style_context()
                     .add_provider($provider,
                                   gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
             )*
