@@ -69,8 +69,8 @@ GNvim requires
 * Latest nvim release or master
 * Gtk version 3.20 or higher
 
-On some systems, Gtk packages doesn't include development files. On Ubuntu
-18.04, you'll need the following ones:
+On some systems, Gtk packages doesn't include development files. On Ubuntu,
+you'll need the following ones:
 
 ```
 $ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
