@@ -10,17 +10,15 @@ pub struct Cell {
     pub double_width: bool,
 }
 
-/// Wrapper for a leaf, that tells the leaf's position.
 #[derive(Debug, PartialEq)]
 pub struct Segment {
-    //pub cell: &'a Cell,
     pub text: String,
     pub hl_id: u64,
     pub start: usize,
     pub len: usize,
 }
 
-/// Row, as in one row in a grid. Internally has a rope/tree structure.
+/// Row, as in one row in a grid.
 #[derive(Clone)]
 pub struct Row {
     cells: Box<[Cell]>,
@@ -52,7 +50,7 @@ impl Row {
         cells
     }
 
-    /// Returns a leaf at a position.
+    /// Returns a cell at a position.
     #[inline]
     pub fn cell_at(&self, at: usize) -> Option<&Cell> {
         self.cells.get(at)
@@ -96,8 +94,7 @@ impl Row {
         self.cells[from..to].to_vec()
     }
 
-    /// Inserts rope to `at`. What ever is between `at` and `rope.len()` is
-    /// replaced.
+    /// Inserts cells to `at`.
     pub fn insert_at(&mut self, at: usize, cells: Vec<Cell>) {
         for (i, cell) in cells.into_iter().enumerate() {
             self.cells[at + i] = cell;
@@ -425,7 +422,7 @@ mod benches {
     }
 
     #[bench]
-    fn bench_insert_rope(b: &mut Bencher) {
+    fn bench_insert_at(b: &mut Bencher) {
         b.iter(move || {
             let mut row = Row::new(30);
             row.insert_at(
@@ -622,36 +619,6 @@ mod tests {
         );
     }
 
-    /*
-    #[test]
-    fn test_rope_cell_at() {
-        let left = Rope::Leaf(Leaf::new(String::from("123"), 0, false));
-        let right = Rope::Leaf(Leaf::new(String::from("456"), 1, false));
-        let right_double_width =
-            Rope::Leaf(Leaf::new(String::from("あ"), 1, true));
-        let rope = Rope::Node(
-            Box::new(left),
-            Box::new(Rope::Node(Box::new(right), Box::new(right_double_width))),
-        );
-
-        let cell = rope.cell_at(5);
-        assert_eq!(cell.text, "5");
-        assert_eq!(cell.hl_id, 1);
-
-        let cell = rope.cell_at(1);
-        assert_eq!(cell.text, "1");
-        assert_eq!(cell.hl_id, 0);
-
-        let cell = rope.cell_at(7);
-        assert_eq!(cell.text, "あ");
-        assert_eq!(cell.hl_id, 1);
-
-        let cell = rope.cell_at(8);
-        assert_eq!(cell.text, "あ");
-        assert_eq!(cell.hl_id, 1);
-    }
-    */
-
     #[test]
     fn test_row_copy_range() {
         let mut row = Row::new(30);
@@ -724,7 +691,7 @@ mod tests {
     }
 
     #[test]
-    fn test_row_insert_rope_at() {
+    fn test_row_insert_at() {
         let mut row = Row::new(30);
         row.insert_at(
             5,
