@@ -37,6 +37,8 @@ pub struct GridMetrics {
 pub enum ScrollDirection {
     Up,
     Down,
+    Right,
+    Left,
 }
 
 impl Display for ScrollDirection {
@@ -44,6 +46,8 @@ impl Display for ScrollDirection {
         match self {
             ScrollDirection::Up => write!(fmt, "up"),
             ScrollDirection::Down => write!(fmt, "down"),
+            ScrollDirection::Right => write!(fmt, "right"),
+            ScrollDirection::Left => write!(fmt, "left"),
         }
     }
 }
@@ -78,8 +82,8 @@ pub struct Grid {
     /// `connect_motion_events_for_drag`.
     drag_position: Rc<RefCell<(u64, u64)>>,
 
-    /// Vertical scrolling indicator.
-    scroll_dy: Rc<RefCell<f64>>,
+    /// Smooth scrolling indicator.
+    scroll_delta: Rc<RefCell<(f64, f64)>>,
 
     /// Input context that need to be updated for the cursor position
     im_context: Option<gtk::IMMulticontext>,
@@ -132,7 +136,7 @@ impl Grid {
             context: ctx,
             drag_position: Rc::new(RefCell::new((0, 0))),
             im_context: None,
-            scroll_dy: Rc::new(RefCell::new(0.0)),
+            scroll_delta: Rc::new(RefCell::new((0.0, 0.0))),
         })
     }
 
@@ -214,33 +218,44 @@ impl Grid {
         F: Fn(ScrollDirection, u64, u64) -> Inhibit,
     {
         let ctx = self.context.clone();
-        let scroll_dy = self.scroll_dy.clone();
+        let scroll_delta = self.scroll_delta.clone();
 
         // NOTE(ville): Once we bump gtk from 3.20 to 3.24, use GtkEventControllerScroll
         // to improve smooth scrolling (ref #175).
         self.eb
-            .connect_scroll_event(clone!(ctx, scroll_dy => move |_, e| {
+            .connect_scroll_event(clone!(ctx, scroll_delta => move |_, e| {
                 let ctx = ctx.borrow_mut();
                 let dir = match e.direction() {
+                    gdk::ScrollDirection::Right => ScrollDirection::Right,
+                    gdk::ScrollDirection::Left => ScrollDirection::Left,
                     gdk::ScrollDirection::Up => ScrollDirection::Up,
                     gdk::ScrollDirection::Down => ScrollDirection::Down,
                     gdk::ScrollDirection::Smooth => {
-                        // Smooth scrolling. During scroll, many little deltas are
-                        // accumulated in scroll_dy. Once it reaches -1.0 (scroll up)
-                        // or +1.0 (scroll down), scroll_dy is reset and the scroll
-                        // operation is made effective.
-                        let (_, smooth_dy) = e.scroll_deltas().unwrap();
-                        let prev_dy = *scroll_dy.borrow();
+                        // Smooth scrolling. During scroll, many little deltas
+                        // are accumulated in scroll_deltas. Once a delta
+                        // reaches -1.0 or +1.0, given delta is reset and
+                        // scroll opreation is made effective.
+                        let (smooth_dx, smooth_dy) = e.scroll_deltas().unwrap();
+                        let (prev_dx, prev_dy) = *scroll_delta.borrow();
                         let dy = prev_dy + smooth_dy;
-                        if dy <= -1.0 {
-                            *scroll_dy.borrow_mut() = 0.0;
-                            ScrollDirection::Up
+                        let dx = prev_dx + smooth_dx;
+
+                        let (new_delta, dir) = if dy <= -1.0 {
+                            ((dx, 0.0), Some(ScrollDirection::Up))
                         } else if dy >= 1.0 {
-                            *scroll_dy.borrow_mut() = 0.0;
-                            ScrollDirection::Down
+                            ((dx, 0.0), Some(ScrollDirection::Down))
+                        } else if dx <= -1.0 {
+                            ((0.0, dy), Some(ScrollDirection::Left))
+                        } else if dx >= 1.0 {
+                            ((0.0, dy), Some(ScrollDirection::Right))
+                        }else {
+                            ((dx, dy), None)
+                        };
+
+                        *scroll_delta.borrow_mut() = new_delta;
+                        if let Some(dir) = dir {
+                            dir
                         } else {
-                            // Don't scroll yet.
-                            *scroll_dy.borrow_mut() = dy;
                             return Inhibit(false);
                         }
                     },
