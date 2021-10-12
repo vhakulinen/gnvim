@@ -8,6 +8,7 @@ pub enum Error {
     GridDoesNotExist(i64),
     FailedToCreateSurface(),
     GetPangoMetrics(),
+    PutLineRowNotFound(usize),
 }
 
 impl From<nvim_gio::Error> for Error {

@@ -4,7 +4,6 @@ use gtk::DrawingArea;
 use gtk::{cairo, pango};
 
 use crate::error::Error;
-use crate::nvim_bridge::GridLineSegment;
 use crate::ui::color::Highlight;
 use crate::ui::color::HlDefs;
 use crate::ui::grid::context::{CellMetrics, Context};
@@ -137,18 +136,16 @@ pub fn cursor_cell(
     render_text(cr, pango_context, cm, &hl, hl_defs, &cell.text, x, y, w, h)
 }
 
-/// Renders `segments` to `cr`.
-fn put_segments(
-    cr: &cairo::Context,
+/// Renders `segments` to ctx.cairo_context.
+pub fn put_segments(
+    ctx: &mut Context,
     pango_context: &pango::Context,
-    queue_draw_area: &mut Vec<(f64, f64, f64, f64)>,
-    cm: &CellMetrics,
     hl_defs: &HlDefs,
     segments: Vec<Segment>,
     row: usize,
 ) -> Result<(), Error> {
-    let cw = cm.width;
-    let ch = cm.height;
+    let cw = ctx.cell_metrics.width;
+    let ch = ctx.cell_metrics.height;
 
     for seg in segments {
         let hl = hl_defs.get(&seg.hl_id).unwrap();
@@ -159,65 +156,23 @@ fn put_segments(
         let h = ch.ceil();
 
         let text = &seg.text;
-        render_text(cr, pango_context, cm, &hl, hl_defs, &text, x, y, w, h)?;
-
-        queue_draw_area.push((x, y, w, h));
-    }
-
-    Ok(())
-}
-
-pub fn redraw(
-    context: &mut Context,
-    pango_context: &pango::Context,
-    hl_defs: &HlDefs,
-) -> Result<(), Error> {
-    for (i, row) in context.rows.iter_mut().enumerate() {
-        let segments = row.as_segments(0, row.len);
-
-        put_segments(
-            &context.cairo_context,
+        render_text(
+            &ctx.cairo_context,
             pango_context,
-            &mut context.queue_draw_area,
-            &context.cell_metrics,
+            &ctx.cell_metrics,
+            &hl,
             hl_defs,
-            segments,
-            i,
+            &text,
+            x,
+            y,
+            w,
+            h,
         )?;
+
+        ctx.queue_draw_area.push((x, y, w, h));
     }
 
     Ok(())
-}
-
-/// Renders `line` to `context.cairo_context`.
-pub fn put_line(
-    context: &mut Context,
-    pango_context: &pango::Context,
-    line: GridLineSegment,
-    hl_defs: &HlDefs,
-) -> Result<(), Error> {
-    let row = line.row as usize;
-    let mut affected_segments = context
-        .rows
-        .get_mut(row)
-        .unwrap_or_else(|| panic!("Failed to get row {}", line.row))
-        .update(line);
-
-    // NOTE(ville): I haven't noticed any cases where a character is overflowing
-    //              to the left. Probably doesn't apply to languages that goes
-    //              from right to left, instead of left to right.
-    // Rendering the segments in reversed order fixes issues when some character
-    // is overflowing to the right.
-    affected_segments.reverse();
-    put_segments(
-        &context.cairo_context,
-        pango_context,
-        &mut context.queue_draw_area,
-        &context.cell_metrics,
-        hl_defs,
-        affected_segments,
-        row,
-    )
 }
 
 /// Clears whole `da` with `hl_defs.default_bg`.

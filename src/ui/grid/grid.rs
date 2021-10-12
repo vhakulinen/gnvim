@@ -16,6 +16,8 @@ use crate::ui::font::Font;
 use crate::ui::grid::context::Context;
 use crate::ui::grid::render;
 
+use super::row::Segment;
+
 pub struct GridMetrics {
     // Row count in the grid.
     pub rows: f64,
@@ -361,12 +363,46 @@ impl Grid {
     ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
-        render::put_line(&mut ctx, &self.da.pango_context(), line, hl_defs)
+        let row = line.row as usize;
+        let mut affected_segments = ctx
+            .rows
+            .get_mut(row)
+            .ok_or_else(|| Error::PutLineRowNotFound(row))?
+            .update(line);
+
+        // NOTE(ville): I haven't noticed any cases where a character is overflowing
+        //              to the left. Probably doesn't apply to languages that goes
+        //              from right to left, instead of left to right.
+        // Rendering the segments in reversed order fixes issues when some character
+        // is overflowing to the right.
+        affected_segments.reverse();
+        render::put_segments(
+            &mut ctx,
+            &self.da.pango_context(),
+            hl_defs,
+            affected_segments,
+            row,
+        )
     }
 
     pub fn redraw(&self, hl_defs: &HlDefs) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
-        render::redraw(&mut ctx, &self.da.pango_context(), hl_defs)
+        let pango_context = self.da.pango_context();
+        ctx.rows
+            .iter_mut()
+            .enumerate()
+            .map(|(i, row)| (i, row.as_segments(0, row.len)))
+            .collect::<Vec<(usize, Vec<Segment>)>>()
+            .into_iter()
+            .try_for_each(|(i, segments)| {
+                render::put_segments(
+                    &mut ctx,
+                    &pango_context,
+                    hl_defs,
+                    segments,
+                    i,
+                )
+            })
     }
 
     pub fn cursor_goto(&self, row: u64, col: u64) {
