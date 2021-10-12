@@ -286,7 +286,14 @@ impl Context {
 
         let cr = &self.cursor_context;
         cr.save()?;
-        cr.rectangle(0.0, 0.0, 100.0, 100.0);
+        // Draw the cursor surface. Make it double width, so our cursor
+        // will always be wide enough (it'll get clipped if needed).
+        cr.rectangle(
+            0.0,
+            0.0,
+            self.cell_metrics.width * 2.0,
+            self.cell_metrics.height,
+        );
         cr.set_operator(cairo::Operator::Source);
         cr.set_source_rgba(
             self.cursor.color.r,
