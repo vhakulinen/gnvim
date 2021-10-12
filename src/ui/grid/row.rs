@@ -165,7 +165,19 @@ impl Row {
             }
 
             if let Some(ref mut seg) = segs.last_mut() {
-                if seg.hl_id == cell.hl_id {
+                // If the previous cell is "empty", it means that the cell that
+                // came earlier is a double width cell. In such case, we dont
+                // want to append _this_ cell into the previous segment, so
+                // we avoid rendering double width cells in combination of other
+                // cells and thus losing the actual "double width" of a double
+                // width cell.
+                let prev_is_empty = if let Some(prev) = self.cells.get(i - 1) {
+                    prev.text.len() == 0
+                } else {
+                    false
+                };
+
+                if seg.hl_id == cell.hl_id && !prev_is_empty {
                     seg.text.push_str(&cell.text);
                     seg.len += 1;
 
@@ -969,6 +981,43 @@ mod tests {
         assert_eq!(second.text, "3333");
         assert_eq!(second.start, 6);
         assert_eq!(second.len, 4);
+    }
+
+    #[test]
+    fn test_row_as_segments_double_width_cell() {
+        let mut row = Row::new(4);
+        row.insert_at(
+            0,
+            vec![
+                Cell {
+                    text: "1".to_string(),
+                    hl_id: 1,
+                    double_width: true,
+                },
+                Cell {
+                    text: "".to_string(),
+                    hl_id: 1,
+                    double_width: false,
+                },
+                Cell {
+                    text: "2".to_string(),
+                    hl_id: 1,
+                    double_width: false,
+                },
+            ],
+        );
+
+        let segments = row.as_segments(0, row.len);
+
+        let first = &segments[0];
+        assert_eq!(first.text, "1");
+        assert_eq!(first.start, 0);
+        assert_eq!(first.len, 2);
+
+        let second = &segments[1];
+        assert_eq!(second.text, "2");
+        assert_eq!(second.start, 2);
+        assert_eq!(second.len, 1);
     }
 
     #[test]
