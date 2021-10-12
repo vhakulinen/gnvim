@@ -17,11 +17,7 @@ use crate::ui::grid::row::{Cell, Segment};
 /// * `hl` - The highlighting to use.
 /// * `hl_defs` - Global hl defs. Used to get default values.
 /// * `text` - The text to render.
-/// * `x` - Target x coordinate for `cr`.
-/// * `y` - Target y coordinate for `cr`.
-/// * `w` - Target width for `cr`.
-/// * `h` - Target height for `cr`.
-#[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
+/// * `pos` - Target position for `cr`.
 fn render_text(
     cr: &cairo::Context,
     pango_context: &pango::Context,
@@ -29,11 +25,15 @@ fn render_text(
     hl: &Highlight,
     hl_defs: &HlDefs,
     text: &str,
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
+    pos: cairo::Rectangle,
 ) -> Result<(), Error> {
+    let cairo::Rectangle {
+        x,
+        y,
+        width: w,
+        height: h,
+    } = pos;
+
     let (fg, bg) = if hl.reverse {
         (
             hl.background.unwrap_or(hl_defs.default_bg),
@@ -124,16 +124,26 @@ pub fn cursor_cell(
 
     hl.reverse = !hl.reverse;
 
-    let x = 0.0;
-    let y = 0.0;
-    let w = if cell.double_width {
+    let width = if cell.double_width {
         cm.width * 2.0
     } else {
         cm.width
     };
-    let h = cm.height;
 
-    render_text(cr, pango_context, cm, &hl, hl_defs, &cell.text, x, y, w, h)
+    render_text(
+        cr,
+        pango_context,
+        cm,
+        &hl,
+        hl_defs,
+        &cell.text,
+        cairo::Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width,
+            height: cm.height,
+        },
+    )
 }
 
 /// Renders `segments` to ctx.cairo_context.
@@ -150,26 +160,25 @@ pub fn put_segments(
     for seg in segments {
         let hl = hl_defs.get(&seg.hl_id).unwrap();
 
-        let x = (seg.start as f64 * cw).floor();
-        let y = (row as f64 * ch).floor();
-        let w = (seg.len as f64 * cw).ceil();
-        let h = ch.ceil();
+        let pos = cairo::Rectangle {
+            x: (seg.start as f64 * cw).floor(),
+            y: (row as f64 * ch).floor(),
+            width: (seg.len as f64 * cw).ceil(),
+            height: ch.ceil(),
+        };
 
-        let text = &seg.text;
         render_text(
             &ctx.cairo_context,
             pango_context,
             &ctx.cell_metrics,
             &hl,
             hl_defs,
-            &text,
-            x,
-            y,
-            w,
-            h,
+            &seg.text,
+            pos,
         )?;
 
-        ctx.queue_draw_area.push((x, y, w, h));
+        ctx.queue_draw_area
+            .push((pos.x, pos.y, pos.width, pos.height));
     }
 
     Ok(())
