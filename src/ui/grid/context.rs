@@ -80,16 +80,7 @@ impl Context {
         cairo_context.paint()?;
         cairo_context.restore()?;
 
-        let cursor_context = {
-            let surface = win
-                .create_similar_surface(
-                    cairo::Content::ColorAlpha,
-                    (cell_metrics.width * 2.0) as i32, // times two for double width chars.
-                    (cell_metrics.height + cell_metrics.ascent).ceil() as i32,
-                )
-                .ok_or(Error::FailedToCreateSurface())?;
-            cairo::Context::new(&surface)?
-        };
+        let cursor_context = Cursor::new_cairo_context(win, &cell_metrics)?;
 
         let cursor = Cursor {
             disable_animation: !enable_cursor_animations,
@@ -201,17 +192,8 @@ impl Context {
         self.cell_metrics.line_space = line_space;
         self.cell_metrics.update(&pango_context)?;
 
-        self.cursor_context = {
-            let surface = win
-                .create_similar_surface(
-                    cairo::Content::ColorAlpha,
-                    (self.cell_metrics.width * 2.0).ceil() as i32, // times two for double width chars.
-                    (self.cell_metrics.height + self.cell_metrics.ascent).ceil()
-                        as i32,
-                )
-                .ok_or(Error::FailedToCreateSurface())?;
-            cairo::Context::new(&surface)?
-        };
+        self.cursor_context =
+            Cursor::new_cairo_context(win, &self.cell_metrics)?;
 
         Ok(())
     }

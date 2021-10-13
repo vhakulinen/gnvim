@@ -1,4 +1,8 @@
-use crate::ui::color::Color;
+use gtk::{cairo, gdk};
+
+use crate::{error::Error, ui::color::Color};
+
+use super::context::CellMetrics;
 
 #[derive(Default)]
 pub struct Animation {
@@ -27,6 +31,22 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    pub fn new_cairo_context(
+        win: &gdk::Window,
+        cell_metrics: &CellMetrics,
+    ) -> Result<cairo::Context, Error> {
+        let surface = win
+            .create_similar_surface(
+                cairo::Content::ColorAlpha,
+                (cell_metrics.width * 2.0) as i32, // times two for double width chars.
+                (cell_metrics.height + cell_metrics.ascent).ceil() as i32,
+            )
+            .ok_or(Error::FailedToCreateSurface())?;
+        let ctx = cairo::Context::new(&surface)?;
+
+        Ok(ctx)
+    }
+
     pub fn goto(&mut self, row: f64, col: f64, frame_time: i64) {
         // When we get our first cursor_goto, set the position directly.
         if self.pos.is_none() {
