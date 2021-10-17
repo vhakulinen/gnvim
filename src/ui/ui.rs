@@ -185,16 +185,35 @@ impl UI {
 
         window.connect_key_release_event(clone!(im_context => move |_, e| {
             im_context.filter_keypress(e);
+
             Inhibit(false)
         }));
 
-        window.connect_focus_in_event(clone!(im_context => move |_, _| {
+        window.connect_focus_in_event(clone!(im_context, nvim => move |_, _| {
             im_context.focus_in();
+
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                let res = nvim.command("if exists('#FocusGained') | doautocmd FocusGained | endif").await;
+                if let Err(err) = res {
+                    error!("Failed to issue FocusGained autocmd: {:?}", err)
+                }
+            });
+
             Inhibit(false)
         }));
 
-        window.connect_focus_out_event(clone!(im_context => move |_, _| {
+        window.connect_focus_out_event(clone!(im_context, nvim => move |_, _| {
             im_context.focus_out();
+
+            let nvim = nvim.clone();
+            spawn_local(async move {
+                let res = nvim.command("if exists('#FocusLost') | doautocmd FocusLost | endif").await;
+                if let Err(err) = res {
+                    error!("Failed to issue FocusLost autocmd: {:?}", err)
+                }
+            });
+
             Inhibit(false)
         }));
 
