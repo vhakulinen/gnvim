@@ -14,7 +14,7 @@ macro_rules! args {
 
 mod parse_redraw_event_tests {
 
-    use crate::nvim_bridge;
+    use crate::nvim_bridge::{self, GridScrollRegion};
     use crate::nvim_bridge::{
         Cell, CmdlineBlockAppend, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
         CompletionItem, CompletionItemKind, CursorShape, DefaultColorsSet,
@@ -169,7 +169,7 @@ mod parse_redraw_event_tests {
     fn grid_scroll() {
         let expected = vec![RedrawEvent::GridScroll(vec![GridScroll {
             grid: 1,
-            reg: [132, 321, 2, 51],
+            reg: GridScrollRegion([132, 321, 2, 51]),
             rows: 12,
             cols: 32,
         }])];

@@ -47,6 +47,7 @@ macro_rules! upgrade_weak {
     };
 }
 
+mod animation;
 mod cmdline;
 pub mod color;
 mod common;

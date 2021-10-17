@@ -1,16 +1,11 @@
 use gtk::{cairo, gdk};
 
-use crate::{error::Error, ui::color::Color};
+use crate::{
+    error::Error,
+    ui::{animation::Animation, color::Color},
+};
 
 use super::context::CellMetrics;
-
-#[derive(Default)]
-pub struct Animation {
-    start: (f64, f64),
-    end: (f64, f64),
-    start_time: i64,
-    end_time: i64,
-}
 
 #[derive(Default)]
 pub struct Cursor {
@@ -18,7 +13,7 @@ pub struct Cursor {
     pub pos: Option<(f64, f64)>,
     /// Flag for disabling the movement animation.
     pub disable_animation: bool,
-    pub animation: Option<Animation>,
+    pub animation: Option<Animation<(f64, f64)>>,
 
     /// Alpha color. Used to make the cursor blink.
     pub alpha: f64,
@@ -88,25 +83,18 @@ impl Cursor {
     }
 
     fn animate_position(&mut self, frame_time: i64) {
-        if let Some(Animation {
-            start,
-            end,
-            start_time,
-            end_time,
-        }) = self.animation
-        {
+        if let Some(ref anim) = self.animation {
             let mut pos = self.pos.unwrap_or((0.0, 0.0));
+            let t = anim.tick(frame_time);
 
-            if frame_time < end_time && pos != end {
-                let mut t = (frame_time - start_time) as f64
-                    / (end_time - start_time) as f64;
-                t = ease_out_cubic(t);
-                pos.0 = start.0 + t * (end.0 - start.0);
-                pos.1 = start.1 + t * (end.1 - start.1);
+            if t.is_some() && pos != anim.end {
+                let t = t.unwrap();
+                pos.0 = anim.start.0 + t * (anim.end.0 - anim.start.0);
+                pos.1 = anim.start.1 + t * (anim.end.1 - anim.start.1);
 
                 self.pos = Some(pos);
             } else {
-                self.pos = Some(end);
+                self.pos = Some(anim.end);
                 self.animation = None;
             }
         }
@@ -122,13 +110,6 @@ impl Cursor {
             self.pos
         }
     }
-}
-
-/// From clutter-easing.c, based on Robert Penner's
-/// infamous easing equations, MIT license.
-fn ease_out_cubic(t: f64) -> f64 {
-    let p = t - 1f64;
-    p * p * p + 1f64
 }
 
 #[cfg(test)]

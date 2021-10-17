@@ -10,7 +10,9 @@ use gtk::{DrawingArea, EventBox};
 use gtk::prelude::*;
 
 use crate::error::Error;
-use crate::nvim_bridge::{GridLineSegment, ModeInfo};
+use crate::nvim_bridge::{
+    GridLineSegment, GridScrollArea, GridScrollRegion, ModeInfo,
+};
 use crate::ui::color::HlDefs;
 use crate::ui::font::Font;
 use crate::ui::grid::context::Context;
@@ -494,14 +496,58 @@ impl Grid {
 
     pub fn scroll(
         &self,
-        reg: [u64; 4],
+        reg: GridScrollRegion,
         rows: i64,
         _cols: i64,
         hl_defs: &HlDefs,
     ) -> Result<(), Error> {
         let mut ctx = self.context.borrow_mut();
 
-        render::scroll(&mut ctx, hl_defs, reg, rows)
+        let left = reg.0[2];
+        let right = reg.0[3];
+        let area = reg.calc_area(rows);
+
+        let GridScrollArea {
+            src_top,
+            src_bot,
+            dst_top,
+            dst_bot,
+            clr_top,
+            clr_bot,
+        } = area;
+
+        // Modify the rows stored data of the rows.
+        let mut src = vec![];
+        for i in src_top as usize..src_bot as usize {
+            let row = ctx.rows.get(i).unwrap().clone();
+            let part = row.copy_range(left as usize, right as usize).clone();
+            src.push(part);
+        }
+        src.reverse();
+
+        for i in dst_top as usize..dst_bot as usize {
+            ctx.rows
+                .get_mut(i)
+                .unwrap()
+                .insert_at(left as usize, src.pop().unwrap());
+        }
+
+        for i in clr_top as usize..clr_bot as usize {
+            ctx.rows
+                .get_mut(i)
+                .unwrap()
+                .clear_range(left as usize, right as usize);
+        }
+
+        let clock = self.da.frame_clock().unwrap();
+        render::scroll(
+            &mut ctx,
+            hl_defs,
+            clock.frame_time(),
+            area,
+            left as f64,
+            right as f64,
+        )
     }
 
     pub fn set_active(&self, active: bool) {
@@ -559,11 +605,29 @@ fn drawingarea_draw(
     cr: &cairo::Context,
     ctx: &mut Context,
 ) -> Result<(), Error> {
-    let surface = ctx.cairo_context.target();
+    let prev = &ctx.surfaces.prev;
+
+    if let Some(ref anim) = ctx.surfaces.offset_y_anim {
+        let surface = ctx.surfaces.back.target();
+        surface.flush();
+
+        prev.save()?;
+        let back_offset = ctx.surfaces.offset_y - anim.start;
+        prev.set_source_surface(&surface, 0.0, back_offset)?;
+        prev.paint()?;
+        prev.restore()?;
+    }
+
+    let surface = ctx.surfaces.front.target();
     surface.flush();
 
+    prev.save()?;
+    prev.set_source_surface(&surface, 0.0, ctx.surfaces.offset_y)?;
+    prev.paint()?;
+    prev.restore()?;
+
     cr.save()?;
-    cr.set_source_surface(&surface, 0.0, 0.0)?;
+    cr.set_source_surface(&prev.target(), 0.0, 0.0)?;
     cr.paint()?;
     cr.restore()?;
 

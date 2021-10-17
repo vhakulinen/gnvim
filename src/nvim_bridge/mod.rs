@@ -520,9 +520,49 @@ impl From<Value> for GridCursorGoto {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct GridScrollRegion(pub [u64; 4]);
+
+pub struct GridScrollArea {
+    pub src_top: f64,
+    pub src_bot: f64,
+    pub dst_top: f64,
+    pub dst_bot: f64,
+    pub clr_top: f64,
+    pub clr_bot: f64,
+}
+
+impl GridScrollRegion {
+    pub fn calc_area(&self, count: i64) -> GridScrollArea {
+        let top = self.0[0];
+        let bot = self.0[1];
+
+        let (src_top, src_bot, dst_top, dst_bot, clr_top, clr_bot) = if count
+            > 0
+        {
+            let (src_top, src_bot) = ((top as i64 + count) as f64, bot as f64);
+            let (dst_top, dst_bot) = (top as f64, (bot as i64 - count) as f64);
+            (src_top, src_bot, dst_top, dst_bot, dst_bot, src_bot)
+        } else {
+            let (src_top, src_bot) = (top as f64, (bot as i64 + count) as f64);
+            let (dst_top, dst_bot) = ((top as i64 - count) as f64, bot as f64);
+            (src_top, src_bot, dst_top, dst_bot, src_top, dst_top)
+        };
+
+        GridScrollArea {
+            src_top,
+            src_bot,
+            dst_top,
+            dst_bot,
+            clr_top,
+            clr_bot,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct GridScroll {
     pub grid: i64,
-    pub reg: [u64; 4],
+    pub reg: GridScrollRegion,
     pub rows: i64,
     pub cols: i64,
 }
@@ -531,7 +571,7 @@ impl From<Value> for GridScroll {
     fn from(args: Value) -> Self {
         let args = unwrap_array!(args);
         let reg: Vec<u64> = args[1..5].iter().map(|v| unwrap_u64!(v)).collect();
-        let reg = [reg[0], reg[1], reg[2], reg[3]];
+        let reg = GridScrollRegion([reg[0], reg[1], reg[2], reg[3]]);
         GridScroll {
             grid: unwrap_i64!(args[0]),
             reg,

@@ -8,11 +8,11 @@ use crate::ui::font::Font;
 use crate::ui::grid::cursor::Cursor;
 use crate::ui::grid::render;
 use crate::ui::grid::row::{Cell, Row};
+use crate::ui::grid::Surfaces;
 
 /// Context is manipulated by Grid.
 pub struct Context {
-    /// Our cairo context, that is evetually drawn to the screen.
-    pub cairo_context: cairo::Context,
+    pub surfaces: Surfaces,
     /// Our cell metrics.
     pub cell_metrics: CellMetrics,
 
@@ -56,28 +56,6 @@ impl Context {
         cell_metrics.line_space = line_space;
         cell_metrics.update(&pango_context)?;
 
-        let w = cell_metrics.width * cols as f64;
-        let h = cell_metrics.height * rows as f64;
-        let surface = win
-            .create_similar_surface(
-                cairo::Content::Color,
-                w.ceil() as i32,
-                h.ceil() as i32,
-            )
-            .ok_or(Error::FailedToCreateSurface())?;
-
-        let cairo_context = cairo::Context::new(&surface)?;
-
-        // Fill the context with default bg color.
-        cairo_context.save()?;
-        cairo_context.set_source_rgb(
-            hl_defs.default_bg.r,
-            hl_defs.default_bg.g,
-            hl_defs.default_bg.b,
-        );
-        cairo_context.paint()?;
-        cairo_context.restore()?;
-
         let cursor_context = Cursor::new_cairo_context(win, &cell_metrics)?;
 
         let cursor = Cursor {
@@ -86,7 +64,13 @@ impl Context {
         };
 
         Ok(Context {
-            cairo_context,
+            surfaces: Surfaces::new(
+                win,
+                &cell_metrics,
+                rows,
+                cols,
+                &hl_defs.default_bg,
+            )?,
             cell_metrics,
             rows: vec![],
 
@@ -127,47 +111,41 @@ impl Context {
 
         self.cell_metrics.update(&pctx)?;
 
-        let w = self.cell_metrics.width * cols as f64;
-        let h = self.cell_metrics.height * rows as f64;
-        let surface = win
-            .create_similar_surface(
-                cairo::Content::Color,
-                w.ceil() as i32,
-                h.ceil() as i32,
-            )
-            .ok_or(Error::FailedToCreateSurface())?;
-        let ctx = cairo::Context::new(&surface)?;
-
-        // Fill the context with default bg color.
-        ctx.save()?;
-        ctx.set_source_rgb(
-            hl_defs.default_bg.r,
-            hl_defs.default_bg.g,
-            hl_defs.default_bg.b,
+        let old_surfaces = std::mem::replace(
+            &mut self.surfaces,
+            Surfaces::new(
+                win,
+                &self.cell_metrics,
+                rows,
+                cols,
+                &hl_defs.default_bg,
+            )?,
         );
-        ctx.paint()?;
-        ctx.restore()?;
 
-        let s = self.cairo_context.target();
-        self.cairo_context.save()?;
-        ctx.set_source_surface(&s, 0.0, 0.0)?;
-        ctx.set_operator(cairo::Operator::Source);
+        // Keep the offset and animation.
+        self.surfaces.offset_y = old_surfaces.offset_y;
+        self.surfaces.offset_y_anim = old_surfaces.offset_y_anim;
+
+        // Keep the old content.
+        self.surfaces.front.set_source_surface(
+            &old_surfaces.front.target(),
+            0.0,
+            0.0,
+        )?;
+        self.surfaces.front.set_operator(cairo::Operator::Source);
         // Make sure we only paint the area that _was_ visible before this update
         // so we don't undo the bg color paint we did earlier. Note that we're
         // calculating the used area based on the current cell metrics. This is
         // becuase if font changes that might reduce the area we "have available".
         // Otherwise, when changing to smaller font, we might draw our "old" surface
         // on a area that wont be cleared by nvim (e.g. over "fresh" whitespace).
-        ctx.rectangle(
+        self.surfaces.front.rectangle(
             0.0,
             0.0,
             self.cell_metrics.width * prev_cols as f64,
             self.cell_metrics.height * prev_rows as f64,
         );
-        ctx.fill()?;
-        self.cairo_context.restore()?;
-
-        self.cairo_context = ctx;
+        self.surfaces.front.fill()?;
 
         Ok(())
     }
@@ -246,10 +224,15 @@ impl Context {
         da: &DrawingArea,
         clock: &gdk::FrameClock,
     ) -> Result<(), Error> {
+        let ft = clock.frame_time();
+        if self.surfaces.tick(ft) {
+            da.queue_draw();
+        }
+
         let (x, y, w, h) = self.get_cursor_rect();
         da.queue_draw_area(x, y, w, h);
 
-        self.cursor.tick(clock.frame_time());
+        self.cursor.tick(ft);
 
         // We're not blinking, so skip the blink animation phase.
         if self.cursor.blink_on == 0 {

@@ -4,6 +4,7 @@ use gtk::DrawingArea;
 use gtk::{cairo, pango};
 
 use crate::error::Error;
+use crate::nvim_bridge::GridScrollArea;
 use crate::ui::color::Highlight;
 use crate::ui::color::HlDefs;
 use crate::ui::grid::context::{CellMetrics, Context};
@@ -168,7 +169,7 @@ pub fn put_segments(
         };
 
         render_text(
-            &ctx.cairo_context,
+            &ctx.surfaces.front,
             pango_context,
             &ctx.cell_metrics,
             &hl,
@@ -190,7 +191,7 @@ pub fn clear(
     ctx: &mut Context,
     hl_defs: &HlDefs,
 ) -> Result<(), Error> {
-    let cr = &ctx.cairo_context;
+    let cr = &ctx.surfaces.front;
     let w = da.allocated_width();
     let h = da.allocated_height();
     let bg = &hl_defs.default_bg;
@@ -211,63 +212,34 @@ pub fn clear(
 pub fn scroll(
     ctx: &mut Context,
     hl_defs: &HlDefs,
-    reg: [u64; 4],
-    count: i64,
+    frame_time: i64,
+    area: GridScrollArea,
+    left: f64,
+    right: f64,
 ) -> Result<(), Error> {
-    let cr = &ctx.cairo_context;
     let cm = &ctx.cell_metrics;
     let bg = &hl_defs.default_bg;
 
-    let s = cr.target();
+    let GridScrollArea {
+        src_top,
+        dst_top,
+        dst_bot,
+        ..
+    } = area;
 
-    let top = reg[0];
-    let bot = reg[1];
-    let left = reg[2];
-    let right = reg[3];
-
-    let (src_top, src_bot, dst_top, dst_bot, clr_top, clr_bot) = if count > 0 {
-        let (src_top, src_bot) = ((top as i64 + count) as f64, bot as f64);
-        let (dst_top, dst_bot) = (top as f64, (bot as i64 - count) as f64);
-        (src_top, src_bot, dst_top, dst_bot, dst_bot, src_bot)
-    } else {
-        let (src_top, src_bot) = (top as f64, (bot as i64 + count) as f64);
-        let (dst_top, dst_bot) = ((top as i64 - count) as f64, bot as f64);
-        (src_top, src_bot, dst_top, dst_bot, src_top, dst_top)
-    };
-
-    // Modify the rows stored data of the rows.
-    let mut src = vec![];
-    for i in src_top as usize..src_bot as usize {
-        let row = ctx.rows.get(i).unwrap().clone();
-        let part = row.copy_range(left as usize, right as usize).clone();
-        src.push(part);
-    }
-    src.reverse();
-
-    for i in dst_top as usize..dst_bot as usize {
-        ctx.rows
-            .get_mut(i)
-            .unwrap()
-            .insert_at(left as usize, src.pop().unwrap());
-    }
-
-    for i in clr_top as usize..clr_bot as usize {
-        ctx.rows
-            .get_mut(i)
-            .unwrap()
-            .clear_range(left as usize, right as usize);
-    }
+    let front = &ctx.surfaces.front;
+    let back = &ctx.surfaces.back;
+    let prev = &ctx.surfaces.prev;
 
     // Draw move the scrolled part on the cairo surface.
-    cr.save()?;
-
+    front.save()?;
     // Create pattern which we can then "safely" draw to the surface. On X11, the pattern part was
     // not needed but on wayland it is - I suppose it has something to do with the underlaying
     // backbuffer.
-    cr.push_group();
+    front.push_group();
     let (_, y) = get_coords(cm.height, cm.width, dst_top - src_top, 0.0);
-    cr.set_source_surface(&s, 0.0, y)?;
-    cr.set_operator(cairo::Operator::Source);
+    front.set_source_surface(&front.target(), 0.0, y)?;
+    front.set_operator(cairo::Operator::Source);
     let (x1, y1, x2, y2) = get_rect(
         cm.height,
         cm.width,
@@ -278,33 +250,29 @@ pub fn scroll(
     );
     let w = x2 - x1;
     let h = y2 - y1;
-    cr.rectangle(x1, y1, w, h);
-    cr.fill()?;
-
+    front.rectangle(x1, y1, w, h);
+    front.fill()?;
     // Draw the parttern.
-    cr.pop_group_to_source()?;
-    cr.set_operator(cairo::Operator::Source);
-    cr.rectangle(x1, y1, w, h);
-    cr.fill()?;
-    ctx.queue_draw_area.push((x1, y1, w, h));
+    front.pop_group_to_source()?;
+    front.set_operator(cairo::Operator::Source);
+    front.rectangle(x1, y1, w, h);
+    front.fill()?;
+    front.restore()?;
 
-    // Clear the area that is left "dirty".
-    let (x1, y1, x2, y2) = get_rect(
-        cm.height,
-        cm.width,
-        clr_top,
-        clr_bot,
-        left as f64,
-        right as f64,
-    );
-    let w = x2 - x1;
-    let h = y2 - y1;
-    cr.rectangle(x1, y1, x2 - x1, y2 - y1);
-    cr.set_source_rgb(bg.r, bg.g, bg.b);
-    cr.fill()?;
-    ctx.queue_draw_area.push((x1, y1, w, h));
+    // Store the prev buffer in our back buffer.
+    back.save()?;
+    back.set_source_surface(&prev.target(), 0.0, 0.0)?;
+    back.paint()?;
+    back.restore()?;
 
-    cr.restore()?;
+    // Reset our prev buffer.
+    prev.save()?;
+    prev.set_source_rgb(bg.r, bg.g, bg.b);
+    prev.paint()?;
+    prev.restore()?;
+
+    ctx.queue_draw_area.push((x1, y1, w, h));
+    ctx.surfaces.set_animation(y, 300, frame_time);
 
     Ok(())
 }
