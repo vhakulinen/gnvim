@@ -23,7 +23,7 @@ mod parse_redraw_event_tests {
         RedrawEvent, TablineUpdate,
     };
     use crate::ui::color::{Color, Highlight};
-    use rmpv::Value;
+    use nvim_rs::Value;
 
     #[test]
     fn set_title() {
@@ -656,7 +656,7 @@ mod parse_gnvim_event_tests {
 
     use crate::nvim_bridge;
     use crate::nvim_bridge::GnvimEvent;
-    use rmpv::Value;
+    use nvim_rs::Value;
 
     #[test]
     fn completion_menu_toggle_info() {
