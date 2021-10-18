@@ -18,11 +18,8 @@ pangocairo = "0.14"
 pin-project = "1"
 futures = "0.3"
 async-trait = "0.1"
-rmpv = "0.4"
+nvim-rs = "0.3.1"
 
 [dependencies.gtk]
 version = "0.14"
 features = ["v3_20"]
-
-[dependencies.nvim-rs]
-git = "https://github.com/KillTheMule/nvim-rs"

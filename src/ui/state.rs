@@ -851,8 +851,9 @@ impl UIState {
 
     fn set_ui_option(&self, opt: String, enable: bool, nvim: GioNeovim) {
         spawn_local(async move {
-            if let Err(err) =
-                nvim.ui_set_option(&opt, rmpv::Value::Boolean(enable)).await
+            if let Err(err) = nvim
+                .ui_set_option(&opt, nvim_rs::Value::Boolean(enable))
+                .await
             {
                 error!("Failed to set '{}' option: {}", opt, err);
             }
@@ -980,7 +981,7 @@ fn win_float_anchor_pos(
 mod tests {
     use super::*;
     use crate::nvim_bridge::Anchor;
-    use rmpv::Value;
+    use nvim_rs::Value;
 
     #[test]
     fn test_float_anchor_pos() {

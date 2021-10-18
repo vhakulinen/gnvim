@@ -7,7 +7,7 @@ use gtk::prelude::*;
 use gtk::{gdk, glib};
 
 use log::{debug, error};
-use rmpv::Value;
+use nvim_rs::Value;
 
 use crate::error::Error;
 use crate::nvim_bridge::{Message, Request};

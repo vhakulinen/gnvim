@@ -8,8 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use futures::future::Future;
 use gtk::glib;
-use nvim_rs::{create::Spawner, neovim::Neovim, Handler};
-use rmpv::Value;
+use nvim_rs::{create::Spawner, neovim::Neovim, Handler, Value};
 
 use crate::nvim_gio::GioWriter;
 use crate::thread_guard::ThreadGuard;
