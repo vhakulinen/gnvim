@@ -11,14 +11,14 @@ debug = true
 unstable = []
 
 [dependencies]
-log = "0.4.8"
-env_logger = "0.7.1"
+log = "0.4"
+env_logger = "0.7"
 structopt = "0.3"
 pangocairo = "0.14"
 pin-project = "1"
 futures = "0.3"
 async-trait = "0.1"
-nvim-rs = "0.3.1"
+nvim-rs = "0.3"
 
 [dependencies.gtk]
 version = "0.14"
