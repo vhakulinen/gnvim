@@ -86,6 +86,7 @@ pub(crate) struct UIState {
     pub line_space: i64,
 
     pub enable_cursor_animations: bool,
+    pub grid_scroll_speed: i64,
 }
 
 impl UIState {
@@ -191,6 +192,7 @@ impl UIState {
                 e.height as usize,
                 &self.hl_defs,
                 self.enable_cursor_animations,
+                self.grid_scroll_speed,
             )?;
 
             if let Some(ref mode) = self.current_mode {

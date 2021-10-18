@@ -272,7 +272,7 @@ pub fn scroll(
     prev.restore()?;
 
     ctx.queue_draw_area.push((x1, y1, w, h));
-    ctx.surfaces.set_animation(y, 300, frame_time);
+    ctx.surfaces.set_animation(y, ctx.scroll_speed, frame_time);
 
     Ok(())
 }

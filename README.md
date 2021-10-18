@@ -49,6 +49,7 @@ $ cargo build --no-default-features
 * No electron (!), build on GTK.
 * Ligatures
 * Animated cursor
+* Animated scrolling
 * Custom cursor tooltip feature to display markdown documents.
   Useful for implementing features like hover information or signature help
   (see [gnvim-lsp](https://github.com/vhakulinen/gnvim-lsp)).

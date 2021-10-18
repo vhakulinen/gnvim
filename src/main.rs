@@ -56,8 +56,16 @@ async fn build(app: &gtk::Application, args: &args::Args) -> Result<(), Error> {
 
     nvim.ui_attach(80, 30, &args.nvim_ui_opts()).await?;
 
-    let ui =
-        ui::UI::init(app, rx, args.geometry, nvim).expect("failed to init ui");
+    let grid_scroll_speed = nvim
+        .get_var("gnvim_grid_scroll_speed")
+        .await
+        .ok()
+        .and_then(|val| val.as_i64())
+        .unwrap_or(300)
+        .max(0);
+
+    let ui = ui::UI::init(app, rx, args.geometry, nvim, grid_scroll_speed)
+        .expect("failed to init ui");
     ui.start();
 
     Ok(())

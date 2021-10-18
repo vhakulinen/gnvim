@@ -14,6 +14,7 @@ CONTENTS                                                       *gnvim-contents*
             2. Popupmenu............................|gnvim-popupmenu|
             3. Cursor...............................|gnvim-cursor|
             4. Ext options..........................|gnvim-ext-opts|
+            5. Grid scroll..........................|gnvim-grid-scroll|
 
 ================================================================================
 Cursor Tooltip                                           *gnvim-cursor-tooltip*
@@ -66,6 +67,17 @@ Gnvim utilizes many of the externalized UI options nvim offers. Some of these
 changes the visual representation of some nvim features and thus users might
 want to revert back to the "default" (e.g. TUI) functionality. This can be
 done either through cli flags or `gnvim#enable_ext_*` functions.
+================================================================================
+Grid scroll                                                 *gnvim-grid-scroll*
+                                                            *gnvim-scroll*
+
+Gnvim animates grid scrolling. The speed of the scroll animation can be
+adjusted by `g:gnvim_grid_scroll_speed`. Setting it to zero effectively
+disables the animation.
+
+Current limitations:
+    * Big jumps (e.g. from beginning of the file to the end) aren't animated
+    * Empty background will be shown if the animation jumps to far
 
 ================================================================================
 Commands                                                       *gnvim-commands*
@@ -132,5 +144,10 @@ gnvim#popupmenu#show_menu_on_all_items *gnvim#popupmenu#show_menu_on_all_items*
 
     Instructs the popupmenu to show the `menu` item for all (e.g. inactive)
     completion items. Accepts one parameter, 0 or 1.
+
+g:gnvim_grid_scroll_speed                           *g:gnvim_grid_scroll_speed*
+
+    Control the grid scroll animation speed. Zero effectively disables the
+    animation.
 
  vim:tw=78:ts=8:ft=help:norl:

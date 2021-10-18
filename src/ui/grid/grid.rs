@@ -102,6 +102,7 @@ impl Grid {
         rows: usize,
         hl_defs: &HlDefs,
         enable_cursor_animations: bool,
+        scroll_speed: i64,
     ) -> Result<Self, Error> {
         let da = DrawingArea::new();
         let ctx = Rc::new(RefCell::new(Context::new(
@@ -113,6 +114,7 @@ impl Grid {
             rows,
             hl_defs,
             enable_cursor_animations,
+            scroll_speed,
         )?));
 
         da.connect_draw(clone!(ctx => move |_, cr| {

@@ -1,4 +1,5 @@
 CursorTooltipStyle	gnvim.txt	/*CursorTooltipStyle*
+g:gnvim_grid_scroll_speed	gnvim.txt	/*g:gnvim_grid_scroll_speed*
 gnvim	gnvim.txt	/*gnvim*
 gnvim#cursor_tooltip#get_styles	gnvim.txt	/*gnvim#cursor_tooltip#get_styles*
 gnvim#cursor_tooltip#hide	gnvim.txt	/*gnvim#cursor_tooltip#hide*
@@ -19,4 +20,6 @@ gnvim-cursor-blinking	gnvim.txt	/*gnvim-cursor-blinking*
 gnvim-cursor-tooltip	gnvim.txt	/*gnvim-cursor-tooltip*
 gnvim-ext-options	gnvim.txt	/*gnvim-ext-options*
 gnvim-functions	gnvim.txt	/*gnvim-functions*
+gnvim-grid-scroll	gnvim.txt	/*gnvim-grid-scroll*
 gnvim-popupmenu	gnvim.txt	/*gnvim-popupmenu*
+gnvim-scroll	gnvim.txt	/*gnvim-scroll*

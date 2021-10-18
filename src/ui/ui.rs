@@ -49,6 +49,7 @@ impl UI {
         rx: glib::Receiver<Message>,
         window_size: (i32, i32),
         nvim: GioNeovim,
+        grid_scroll_speed: i64,
     ) -> Result<Self, Error> {
         // Create the main window.
         let window = gtk::ApplicationWindow::new(app);
@@ -88,6 +89,7 @@ impl UI {
             30,
             &hl_defs,
             true,
+            grid_scroll_speed,
         )?;
         // Mark the default grid as active at the beginning.
         grid.set_active(true);
@@ -262,6 +264,7 @@ impl UI {
                 line_space,
                 current_mode: None,
                 enable_cursor_animations: true,
+                grid_scroll_speed,
             })),
             nvim,
         })

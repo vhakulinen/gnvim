@@ -29,6 +29,8 @@ pub struct Context {
 
     /// If the grid that this context belongs to is active or not.
     pub active: bool,
+    /// Grid scroll speed, in ms.
+    pub scroll_speed: i64,
 
     /// Areas to call queue_draw_area on the drawing area on flush.
     pub queue_draw_area: Vec<(f64, f64, f64, f64)>,
@@ -45,6 +47,7 @@ impl Context {
         rows: usize,
         hl_defs: &HlDefs,
         enable_cursor_animations: bool,
+        scroll_speed: i64,
     ) -> Result<Self, Error> {
         let pango_context = da.pango_context();
 
@@ -79,6 +82,7 @@ impl Context {
 
             busy: false,
             active: false,
+            scroll_speed,
 
             queue_draw_area: vec![],
         })
