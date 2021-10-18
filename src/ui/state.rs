@@ -229,25 +229,12 @@ impl UIState {
         self.current_grid = 1;
     }
 
-    fn grid_scroll(
-        &mut self,
-        info: GridScroll,
-        nvim: &GioNeovim,
-    ) -> Result<(), Error> {
+    fn grid_scroll(&mut self, info: GridScroll) -> Result<(), Error> {
         let grid = self
             .grids
             .get(&info.grid)
             .ok_or_else(|| Error::GridDoesNotExist(info.grid))?;
         grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs)?;
-
-        // Since nvim doesn't have its own 'scroll' autocmd, we'll
-        // have to do it on our own.
-        let nvim = nvim.clone();
-        spawn_local(async move {
-            if let Err(err) = nvim.command("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif").await {
-                error!("GnvimScroll error: {:?}", err);
-            }
-        });
 
         Ok(())
     }
@@ -783,9 +770,9 @@ impl UIState {
             RedrawEvent::GridDestroy(evt) => {
                 evt.iter().for_each(|e| self.grid_destroy(e));
             }
-            RedrawEvent::GridScroll(evt) => evt
-                .into_iter()
-                .try_for_each(|e| self.grid_scroll(e, nvim))?,
+            RedrawEvent::GridScroll(evt) => {
+                evt.into_iter().try_for_each(|e| self.grid_scroll(e))?
+            }
             RedrawEvent::DefaultColorsSet(evt) => evt
                 .into_iter()
                 .try_for_each(|e| self.default_colors_set(e))?,
