@@ -15,8 +15,6 @@ pub struct Context {
     pub cairo_context: cairo::Context,
     /// Our cell metrics.
     pub cell_metrics: CellMetrics,
-    /// Cell metrics to be updated.
-    pub cell_metrics_update: Option<CellMetrics>,
 
     /// Internal grid.
     pub rows: Vec<Row>,
@@ -90,7 +88,6 @@ impl Context {
         Ok(Context {
             cairo_context,
             cell_metrics,
-            cell_metrics_update: None,
             rows: vec![],
 
             cursor,
