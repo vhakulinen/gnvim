@@ -8,30 +8,13 @@ edition = "2018"
 debug = true
 
 [features]
-default = ["libwebkit2gtk"]
-
 unstable = []
-libwebkit2gtk = [
-    "webkit2gtk",
-    "pulldown-cmark",
-    "ammonia",
-    "syntect",
-    "lazy_static",
-]
 
 [dependencies]
 log = "0.4.8"
 env_logger = "0.7.1"
-
 structopt = "0.3"
-
 pangocairo = "0.14"
-
-pulldown-cmark = { version = "0.2", default-features = false, optional = true }
-ammonia = { version = "2", optional = true }
-syntect = { version = "4", optional = true }
-lazy_static = {version = "1.4", optional = true }
-
 pin-project = "1"
 futures = "0.3"
 async-trait = "0.1"
@@ -40,11 +23,6 @@ rmpv = "0.4"
 [dependencies.gtk]
 version = "0.14"
 features = ["v3_20"]
-
-[dependencies.webkit2gtk]
-version = "0.14"
-features = ["v2_14"]
-optional = true
 
 [dependencies.nvim-rs]
 git = "https://github.com/KillTheMule/nvim-rs"

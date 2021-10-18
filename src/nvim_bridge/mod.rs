@@ -1016,11 +1016,6 @@ impl fmt::Display for RedrawEvent {
 pub enum GnvimEvent {
     CompletionMenuToggleInfo,
 
-    CursorTooltipLoadStyle(String),
-    CursorTooltipShow(String, u64, u64),
-    CursorTooltipHide,
-    CursorTooltipSetStyle(String),
-
     PopupmenuWidth(u64),
     PopupmenuWidthDetails(u64),
     PopupmenuShowMenuOnAllItems(bool),
@@ -1034,9 +1029,7 @@ pub enum GnvimEvent {
     Unknown(String),
 }
 
-pub enum Request {
-    CursorTooltipStyles,
-}
+pub enum Request {}
 
 /// Message type that we are sending to the UI.
 pub enum Message {
@@ -1136,7 +1129,6 @@ fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
     let cmd = unwrap_str!(args[0]);
 
     match cmd {
-        "CursorTooltipGetStyles" => Ok(Request::CursorTooltipStyles),
         _ => Err(()),
     }
 }
@@ -1272,30 +1264,6 @@ pub(crate) fn parse_gnvim_event(
     let cmd = try_str!(args.get(0).ok_or("No command given")?, "cmd");
     let res = match cmd {
         "CompletionMenuToggleInfo" => GnvimEvent::CompletionMenuToggleInfo,
-        "CursorTooltipLoadStyle" => {
-            let path =
-                try_str!(args.get(1).ok_or("path missing")?, "style file path");
-            GnvimEvent::CursorTooltipLoadStyle(path.to_string())
-        }
-        "CursorTooltipShow" => {
-            let content = try_str!(
-                args.get(1).ok_or("content missing")?,
-                "tooltip content"
-            );
-            let row =
-                try_u64!(args.get(2).ok_or("row missing")?, "tooltip row");
-            let col =
-                try_u64!(args.get(3).ok_or("col missing")?, "tooltip col");
-            GnvimEvent::CursorTooltipShow(content.to_string(), row, col)
-        }
-        "CursorTooltipHide" => GnvimEvent::CursorTooltipHide,
-        "CursorTooltipSetStyle" => {
-            let style = try_str!(
-                args.get(1).ok_or("path missing")?,
-                "tooltip style path"
-            );
-            GnvimEvent::CursorTooltipSetStyle(style.to_string())
-        }
         "PopupmenuSetWidth" => {
             let w =
                 try_u64!(args.get(1).ok_or("width missing")?, "pmenu width");

@@ -1,20 +1,8 @@
 #![cfg_attr(feature = "unstable", feature(test))]
 
-#[cfg(feature = "libwebkit2gtk")]
-#[macro_use]
-extern crate lazy_static;
-#[cfg(feature = "libwebkit2gtk")]
-extern crate ammonia;
-#[cfg(feature = "libwebkit2gtk")]
-extern crate pulldown_cmark;
-extern crate structopt;
-#[cfg(feature = "libwebkit2gtk")]
-extern crate syntect;
-
 extern crate gtk;
 extern crate pangocairo;
-#[cfg(feature = "libwebkit2gtk")]
-extern crate webkit2gtk;
+extern crate structopt;
 
 use gtk::prelude::*;
 use gtk::traits::SettingsExt;

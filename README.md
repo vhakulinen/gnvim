@@ -22,26 +22,19 @@ TL;DR to get started on Ubuntu 18.04 after cloning this repo and assuming
 you have [rust tool chain](https://rustup.rs/) installed:
 
 ```
-$ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
+$ sudo apt install libgtk-3-dev
 $ # Run (unoptimized version) without installing
 $ GNVIM_RUNTIME_PATH=/path/to/gnvim/runtime cargo run
 $ # Install
 $ make && sudo make install
 ```
 
-## macOS (without webkit2gtk)
-
-Webkit2gtk isn't really available for macOS. GNvim is available without said
-dependency, but such builds won't have the cursor tooltip feature. 
-
-To install all dependencies and build without webkit2gtk (`gtk+3` required for 
-building, `librsvg` is a runtime dependency for showing LSP icons in completion):
+## macOS
 
 ```bash
 $ brew install rust gtk+3 librsvg
-$ make NOWEBKIT2GTK=1
-$ # or with cargo
-$ cargo build --no-default-features
+$ # Install
+$ make && sudo make install
 ```
 
 ## Features
@@ -50,9 +43,6 @@ $ cargo build --no-default-features
 * Ligatures
 * Animated cursor
 * Animated scrolling
-* Custom cursor tooltip feature to display markdown documents.
-  Useful for implementing features like hover information or signature help
-  (see [gnvim-lsp](https://github.com/vhakulinen/gnvim-lsp)).
 * A lot of the nvim external features implemented
     - Popupmenu
         * Own view for `preview` (`:h completeopt`).
@@ -74,11 +64,10 @@ On some systems, Gtk packages doesn't include development files. On Ubuntu,
 you'll need the following ones:
 
 ```
-$ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev
+$ sudo apt install libgtk-3-dev
 ```
 
 For other systems, see requirements listed by gtk-rs project [here](https://gtk-rs.org/docs-src/requirements.html).
-Note that you'll need the `libwebkit2gtk-4.0-dev` package too.
 
 There are some benchmarks for internal data structures, but to run those you'll
 need nightly rust. To run those benchmarks, use `cargo bench --features=unstable`

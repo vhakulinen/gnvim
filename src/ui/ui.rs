@@ -15,8 +15,6 @@ use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
 use crate::ui::color::{Highlight, HlDefs};
 use crate::ui::common::spawn_local;
-#[cfg(feature = "libwebkit2gtk")]
-use crate::ui::cursor_tooltip::CursorTooltip;
 use crate::ui::font::Font;
 use crate::ui::grid::Grid;
 use crate::ui::popupmenu::Popupmenu;
@@ -220,16 +218,12 @@ impl UI {
         }));
 
         let cmdline = Cmdline::new(&overlay, nvim.clone());
-        #[cfg(feature = "libwebkit2gtk")]
-        let cursor_tooltip = CursorTooltip::new(&overlay);
 
         window.show_all();
 
         grid.set_im_context(&im_context);
 
         cmdline.hide();
-        #[cfg(feature = "libwebkit2gtk")]
-        cursor_tooltip.hide();
 
         let mut grids = HashMap::new();
         grids.insert(1, grid);
@@ -254,8 +248,6 @@ impl UI {
                 cmdline,
                 overlay,
                 tabline,
-                #[cfg(feature = "libwebkit2gtk")]
-                cursor_tooltip,
                 resize_source_id: source_id,
                 hl_defs,
                 resize_on_flush: None,
@@ -308,26 +300,12 @@ impl UI {
     }
 }
 
-#[cfg_attr(not(feature = "libwebkit2gtk"), allow(unused_variables))] // Silence clippy
 fn handle_request(
-    request: &Request,
-    state: &mut UIState,
+    _request: &Request,
+    _state: &mut UIState,
 ) -> Result<Value, Value> {
-    match request {
-        #[cfg(feature = "libwebkit2gtk")]
-        Request::CursorTooltipStyles => {
-            let styles = state.cursor_tooltip.get_styles();
-
-            let res: Vec<Value> =
-                styles.into_iter().map(|s| s.into()).collect();
-
-            Ok(res.into())
-        }
-        #[cfg(not(feature = "libwebkit2gtk"))]
-        Request::CursorTooltipStyles => {
-            Err("Cursor tooltip is not supported in this build".into())
-        }
-    }
+    // NOTE(ville): Leftovers from old code.
+    Err("Unknown request".into())
 }
 
 fn keyname_to_nvim_key(s: &str) -> Option<&str> {

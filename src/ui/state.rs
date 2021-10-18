@@ -21,8 +21,6 @@ use crate::nvim_gio::GioNeovim;
 use crate::ui::cmdline::Cmdline;
 use crate::ui::color::{HlDefs, HlGroup};
 use crate::ui::common::spawn_local;
-#[cfg(feature = "libwebkit2gtk")]
-use crate::ui::cursor_tooltip::{CursorTooltip, Gravity};
 use crate::ui::font::Font;
 use crate::ui::grid::{Grid, GridMetrics};
 use crate::ui::popupmenu::Popupmenu;
@@ -64,8 +62,6 @@ pub(crate) struct UIState {
     pub popupmenu: Popupmenu,
     pub cmdline: Cmdline,
     pub tabline: Tabline,
-    #[cfg(feature = "libwebkit2gtk")]
-    pub cursor_tooltip: CursorTooltip,
 
     pub wildmenu_shown: bool,
 
@@ -245,7 +241,7 @@ impl UIState {
         grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs)?;
 
         // Since nvim doesn't have its own 'scroll' autocmd, we'll
-        // have to do it on our own. This use useful for the cursor tooltip.
+        // have to do it on our own.
         let nvim = nvim.clone();
         spawn_local(async move {
             if let Err(err) = nvim.command("if exists('#User#GnvimScroll') | doautocmd User GnvimScroll | endif").await {
@@ -275,9 +271,6 @@ impl UIState {
         for grid in self.grids.values() {
             grid.redraw(&self.hl_defs)?;
         }
-
-        #[cfg(feature = "libwebkit2gtk")]
-        self.cursor_tooltip.set_colors(fg, bg);
 
         self.hl_changed = true;
 
@@ -439,8 +432,6 @@ impl UIState {
             self.popupmenu.set_font(opts.font.clone(), &self.hl_defs);
             self.cmdline.set_font(opts.font.clone(), &self.hl_defs);
             self.tabline.set_font(opts.font.clone(), &self.hl_defs);
-            #[cfg(feature = "libwebkit2gtk")]
-            self.cursor_tooltip.set_font(opts.font.clone());
 
             self.cmdline.set_line_space(opts.line_space);
             self.popupmenu
@@ -512,21 +503,6 @@ impl UIState {
                 .select(popupmenu.selected as i32, &self.hl_defs);
 
             self.popupmenu.show();
-
-            // If the cursor tooltip is visible at the same time, move
-            // it out of our way.
-            #[cfg(feature = "libwebkit2gtk")]
-            {
-                if self.cursor_tooltip.is_visible() {
-                    if self.popupmenu.is_above_anchor() {
-                        self.cursor_tooltip.force_gravity(Some(Gravity::Down));
-                    } else {
-                        self.cursor_tooltip.force_gravity(Some(Gravity::Up));
-                    }
-
-                    self.cursor_tooltip.refresh_position();
-                }
-            }
         }
     }
 
@@ -536,14 +512,6 @@ impl UIState {
             self.wildmenu_shown = false;
         } else {
             self.popupmenu.hide();
-
-            // Undo any force positioning of cursor tool tip that might
-            // have occured on popupmenu show.
-            #[cfg(feature = "libwebkit2gtk")]
-            {
-                self.cursor_tooltip.force_gravity(None);
-                self.cursor_tooltip.refresh_position();
-            }
         }
     }
 
@@ -937,60 +905,6 @@ impl UIState {
             GnvimEvent::Unknown(msg) => {
                 debug!("Received unknown GnvimEvent: {}", msg);
             }
-
-            #[cfg(not(feature = "libwebkit2gtk"))]
-            GnvimEvent::CursorTooltipLoadStyle(..)
-            | GnvimEvent::CursorTooltipShow(..)
-            | GnvimEvent::CursorTooltipHide
-            | GnvimEvent::CursorTooltipSetStyle(..) => {
-                let nvim = nvim.clone();
-                let msg =
-                    "echom \"Cursor tooltip not supported in this build\"";
-                spawn_local(async move {
-                    if let Err(err) = nvim.command(&msg).await {
-                        error!("Failed to execute nvim command: {}", err)
-                    }
-                });
-            }
-
-            #[cfg(feature = "libwebkit2gtk")]
-            GnvimEvent::CursorTooltipLoadStyle(..)
-            | GnvimEvent::CursorTooltipShow(..)
-            | GnvimEvent::CursorTooltipHide
-            | GnvimEvent::CursorTooltipSetStyle(..) => match event {
-                GnvimEvent::CursorTooltipLoadStyle(path) => {
-                    if let Err(err) =
-                        self.cursor_tooltip.load_style(path.clone())
-                    {
-                        let msg = format!(
-                            "echom \"Cursor tooltip load style failed: '{}'\"",
-                            err
-                        );
-                        let nvim = nvim.clone();
-                        spawn_local(async move {
-                            if let Err(err) = nvim.command(&msg).await {
-                                error!(
-                                    "Failed to execute nvim command: {}",
-                                    err
-                                )
-                            }
-                        });
-                    }
-                }
-                GnvimEvent::CursorTooltipShow(content, row, col) => {
-                    self.cursor_tooltip.show(content.clone());
-
-                    let grid = self.grids.get(&self.current_grid).unwrap();
-                    let rect = grid.get_rect_for_cell(*row, *col);
-
-                    self.cursor_tooltip.move_to(&rect);
-                }
-                GnvimEvent::CursorTooltipHide => self.cursor_tooltip.hide(),
-                GnvimEvent::CursorTooltipSetStyle(style) => {
-                    self.cursor_tooltip.set_style(style)
-                }
-                _ => unreachable!(),
-            },
         }
     }
 }

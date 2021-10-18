@@ -671,45 +671,6 @@ mod parse_gnvim_event_tests {
     }
 
     #[test]
-    fn cursor_tooltip_load_style() {
-        let expected: Result<GnvimEvent, String> =
-            Ok(GnvimEvent::CursorTooltipLoadStyle("foobar".to_owned()));
-
-        let res = nvim_bridge::parse_gnvim_event(vec![
-            "CursorTooltipLoadStyle".into(),
-            "foobar".into(),
-        ]);
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
-    fn cursor_tooltip_show() {
-        let expected: Result<GnvimEvent, String> =
-            Ok(GnvimEvent::CursorTooltipShow("foobar".to_owned(), 3, 6));
-
-        let res = nvim_bridge::parse_gnvim_event(vec![
-            "CursorTooltipShow".into(),
-            "foobar".into(),
-            3.into(),
-            6.into(),
-        ]);
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
-    fn cursor_tooltip_hide() {
-        let expected: Result<GnvimEvent, String> =
-            Ok(GnvimEvent::CursorTooltipHide);
-
-        let res =
-            nvim_bridge::parse_gnvim_event(vec!["CursorTooltipHide".into()]);
-
-        assert_eq!(expected, res);
-    }
-
-    #[test]
     fn popupmenu_set_width() {
         let expected: Result<GnvimEvent, String> =
             Ok(GnvimEvent::PopupmenuWidth(432));
