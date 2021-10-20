@@ -85,25 +85,13 @@ impl Highlight {
     fn set(&mut self, prop: &str, val: Value) {
         match prop {
             "foreground" => {
-                self.foreground = if let Some(val) = val.as_u64() {
-                    Some(Color::from_u64(val))
-                } else {
-                    None
-                }
+                self.foreground = val.as_u64().map(Color::from_u64);
             }
             "background" => {
-                self.background = if let Some(val) = val.as_u64() {
-                    Some(Color::from_u64(val))
-                } else {
-                    None
-                }
+                self.background = val.as_u64().map(Color::from_u64);
             }
             "special" => {
-                self.special = if let Some(val) = val.as_u64() {
-                    Some(Color::from_u64(val))
-                } else {
-                    None
-                }
+                self.special = val.as_u64().map(Color::from_u64);
             }
             "reverse" => {
                 self.reverse = unwrap_bool!(val);
@@ -318,10 +306,7 @@ impl From<&str> for CompletionItemKind {
 
 impl CompletionItemKind {
     pub fn is_unknown(&self) -> bool {
-        match self {
-            CompletionItemKind::Unknown => true,
-            _ => false,
-        }
+        matches!(self, CompletionItemKind::Unknown)
     }
 }
 
@@ -459,7 +444,7 @@ impl From<Value> for GridLineSegment {
                 cells.last().unwrap().hl_id
             };
 
-            if text == "" {
+            if text.is_empty() {
                 if let Some(prev) = cells.last_mut() {
                     prev.double_width = true;
                 }
@@ -750,7 +735,7 @@ impl From<Value> for TablineUpdate {
         let tabs = unwrap_array!(args[1])
             .iter()
             .map(|item| {
-                let m = map_to_hash(&item);
+                let m = map_to_hash(item);
                 (
                     (*m.get("tab").unwrap()).clone(),
                     unwrap_str!(m.get("name").unwrap()).to_string(),
@@ -822,17 +807,11 @@ pub enum Anchor {
 
 impl Anchor {
     pub fn is_west(&self) -> bool {
-        match self {
-            Self::NW | Self::SW => true,
-            _ => false,
-        }
+        matches!(self, Self::NW | Self::SW)
     }
 
     pub fn is_north(&self) -> bool {
-        match self {
-            Self::NW | Self::NE => true,
-            _ => false,
-        }
+        matches!(self, Self::NW | Self::NE)
     }
 }
 
@@ -1124,12 +1103,13 @@ impl Spawner for NvimBridge {
     }
 }
 
-fn parse_request(args: Vec<Value>) -> Result<Request, ()> {
-    let cmd = unwrap_str!(args[0]);
+fn parse_request(_args: Vec<Value>) -> Result<Request, ()> {
+    //let cmd = unwrap_str!(args[0]);
 
-    match cmd {
-        _ => Err(()),
-    }
+    //match cmd {
+    //_ => Err(()),
+    //}
+    Err(())
 }
 
 fn parse_notify(name: &str, args: Vec<Value>) -> Option<Notify> {
@@ -1311,7 +1291,7 @@ pub(crate) fn parse_gnvim_event(
     Ok(res)
 }
 
-fn map_to_hash<'a>(val: &'a Value) -> HashMap<&'a str, &'a Value> {
+fn map_to_hash(val: &Value) -> HashMap<&str, &Value> {
     let mut h = HashMap::new();
     for (prop, val) in unwrap_map!(val) {
         h.insert(unwrap_str!(prop), val);

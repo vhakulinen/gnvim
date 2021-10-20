@@ -6,6 +6,7 @@ use gtk::pango;
 const DEFAULT_HEIGHT: f32 = 14.0;
 
 pub enum FontUnit {
+    #[allow(dead_code)]
     Pixel,
     Point,
 }

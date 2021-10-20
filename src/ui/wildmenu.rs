@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::nvim_bridge;
 use crate::nvim_gio::GioNeovim;
-use crate::ui::color::{Color, HlDefs, HlGroup};
+use crate::ui::color::{HlDefs, HlGroup};
 use crate::ui::common::spawn_local;
 
 const MAX_HEIGHT: i32 = 500;
@@ -74,7 +74,7 @@ impl Wildmenu {
                 //              individually.
                 let nvim = nvim.clone();
                 spawn_local(async move {
-                    nvim.input(&op)
+                    nvim.input(op)
                         .await
                         .unwrap();
                 })
@@ -172,10 +172,10 @@ impl Wildmenu {
                 color: #{sel_fg};
                 background: #{sel_bg};
             }}",
-            fg = fg.to_hex(),
-            bg = bg.to_hex(),
-            sel_fg = sel_fg.to_hex(),
-            sel_bg = sel_bg.to_hex(),
+            fg = fg.as_hex(),
+            bg = bg.as_hex(),
+            sel_fg = sel_fg.as_hex(),
+            sel_bg = sel_bg.as_hex(),
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();

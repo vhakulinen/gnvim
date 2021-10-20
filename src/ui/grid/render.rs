@@ -79,12 +79,12 @@ fn render_text(
 
         pango::shape(
             &text[item_offset..item_offset + item.length() as usize],
-            &a,
+            a,
             &mut glyphs,
         );
 
         cr.move_to(x + x_offset, y + cm.ascent);
-        pangocairo::functions::show_glyph_string(&cr, &a.font(), &mut glyphs);
+        pangocairo::functions::show_glyph_string(cr, &a.font(), &mut glyphs);
 
         x_offset += f64::from(glyphs.width()) / scale;
     }
@@ -172,7 +172,7 @@ pub fn put_segments(
             &ctx.surfaces.front,
             pango_context,
             &ctx.cell_metrics,
-            &hl,
+            hl,
             hl_defs,
             &seg.text,
             pos,

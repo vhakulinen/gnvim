@@ -486,7 +486,7 @@ impl Popupmenu {
                     let sig_id = item.row.connect_size_allocate(
                         clone!(id, list_weak => move |row, _| {
                             let list = upgrade_weak!(list_weak);
-                            ensure_row_visible(&list, &row);
+                            ensure_row_visible(&list, row);
 
                             let id = id.borrow_mut().take().unwrap();
                             row.disconnect(id);
@@ -583,7 +583,7 @@ impl Popupmenu {
                 .hl
                 .foreground
                 .unwrap_or(hl_defs.default_fg)
-                .to_hex(),
+                .as_hex(),
             normal_bg = self.colors.hl.apply_blend(
                 &self.colors.hl.background.unwrap_or(hl_defs.default_bg)
             ),
@@ -595,7 +595,7 @@ impl Popupmenu {
                 .hl_sel
                 .foreground
                 .unwrap_or(hl_defs.default_fg)
-                .to_hex(),
+                .as_hex(),
             above = above.max(0),
             below = below.max(0),
         );

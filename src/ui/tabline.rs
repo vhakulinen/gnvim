@@ -51,8 +51,8 @@ impl Tabline {
                 let nvim = nvim.clone();
                 spawn_local(async move {
                     let pages = tabpage_data.borrow();
-                    if let Some(ref page) = pages.get(page_num as usize) {
-                        nvim.set_current_tabpage(&page)
+                    if let Some(page) = pages.get(page_num as usize) {
+                        nvim.set_current_tabpage(page)
                             .await
                             .unwrap();
                     } else {
@@ -204,12 +204,12 @@ impl Tabline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).to_hex(),
+            normal_fg = self.colors.fg.unwrap_or(hl_defs.default_fg).as_hex(),
+            normal_bg = self.colors.bg.unwrap_or(hl_defs.default_bg).as_hex(),
             selected_fg =
-                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).to_hex(),
+                self.colors.sel_fg.unwrap_or(hl_defs.default_fg).as_hex(),
             selected_bg =
-                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).to_hex(),
+                self.colors.sel_bg.unwrap_or(hl_defs.default_bg).as_hex(),
             above = above.max(0),
             below = below.max(0),
         );

@@ -54,9 +54,11 @@ impl Context {
         let font_desc = font.as_pango_font();
         pango_context.set_font_description(&font_desc);
 
-        let mut cell_metrics = CellMetrics::default();
-        cell_metrics.font = font;
-        cell_metrics.line_space = line_space;
+        let mut cell_metrics = CellMetrics {
+            font,
+            line_space,
+            ..CellMetrics::default()
+        };
         cell_metrics.update(&pango_context)?;
 
         let cursor_context = Cursor::new_cairo_context(win, &cell_metrics)?;

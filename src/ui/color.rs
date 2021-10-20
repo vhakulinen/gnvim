@@ -104,9 +104,9 @@ impl Highlight {
             weight=\"{weight}\"
             font_style=\"{fontstyle}\"
             underline=\"{underline}\">{text}</span>",
-            fg = fg.to_hex(),
-            bg = bg.to_hex(),
-            sp = sp.to_hex(),
+            fg = fg.as_hex(),
+            bg = bg.as_hex(),
+            sp = sp.as_hex(),
             weight = weight,
             fontstyle = fontstyle,
             underline = underline,
@@ -117,7 +117,7 @@ impl Highlight {
     /// Apply the highlight's blend value to color. Returns the color
     /// in `rgba()` format.
     pub fn apply_blend(&self, color: &Color) -> String {
-        color.to_rgba(self.blend)
+        color.as_rgba(self.blend)
     }
 }
 
@@ -159,7 +159,7 @@ impl Color {
         }
     }
 
-    pub fn to_hex(&self) -> String {
+    pub fn as_hex(&self) -> String {
         format!(
             "{:02x}{:02x}{:02x}",
             (self.r * 255.0) as u8,
@@ -170,7 +170,7 @@ impl Color {
 
     /// Apply the blend value to color. Returns the color in `rgba()` format.
     /// Note that the blend value is inverted.
-    pub fn to_rgba(&self, blend: f64) -> String {
+    pub fn as_rgba(&self, blend: f64) -> String {
         format!(
             "rgba({}, {}, {}, {})",
             (self.r * 255.0) as u8,
@@ -193,6 +193,6 @@ mod tests {
             b: 1.0,
         };
 
-        assert_eq!(c.to_rgba(0.4), "rgba(255, 0, 255, 0.6)");
+        assert_eq!(c.as_rgba(0.4), "rgba(255, 0, 255, 0.6)");
     }
 }

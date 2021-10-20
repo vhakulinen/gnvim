@@ -237,7 +237,7 @@ impl UI {
                 css_provider,
                 windows: Windows::new(),
                 windows_container,
-                msg_window_container,
+                _msg_window_container: msg_window_container,
                 msg_window,
                 windows_float_container,
                 grids,

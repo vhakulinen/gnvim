@@ -172,7 +172,7 @@ impl Row {
                 // cells and thus losing the actual "double width" of a double
                 // width cell.
                 let prev_is_empty = if let Some(prev) = self.cells.get(i - 1) {
-                    prev.text.len() == 0
+                    prev.text.is_empty()
                 } else {
                     false
                 };

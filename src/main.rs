@@ -30,7 +30,7 @@ async fn build(app: &gtk::Application, args: &args::Args) -> Result<(), Error> {
         println!("nvim cmd: {:?}", cmd_args);
     }
 
-    let mut nvim = nvim_gio::new_child(
+    let nvim = nvim_gio::new_child(
         bridge,
         cmd_args.iter().map(|a| std::ffi::OsStr::new(a)).collect(),
         tx,

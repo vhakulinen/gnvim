@@ -18,7 +18,7 @@ pub enum Error {
     Pipe,
     ToPollaple,
     ToAsync,
-    GlibError(glib::Error),
+    Glib(glib::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -31,7 +31,7 @@ impl std::fmt::Display for Error {
             Error::ToAsync => {
                 write!(fmt, "Failed to turn pollable stream into async")
             }
-            Error::GlibError(e) => {
+            Error::Glib(e) => {
                 write!(fmt, "Failed to open nvim subprocess: {}", e)
             }
         }
@@ -40,7 +40,7 @@ impl std::fmt::Display for Error {
 
 impl From<glib::Error> for Error {
     fn from(arg: glib::Error) -> Self {
-        Error::GlibError(arg)
+        Error::Glib(arg)
     }
 }
 

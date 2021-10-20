@@ -172,8 +172,8 @@ impl CmdlineBlock {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).as_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).as_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -304,8 +304,8 @@ impl CmdlineInput {
                 color: #{fg};
                 background: #{bg};
             }}",
-            fg = colors.fg.unwrap_or(hl_defs.default_fg).to_hex(),
-            bg = colors.bg.unwrap_or(hl_defs.default_bg).to_hex()
+            fg = colors.fg.unwrap_or(hl_defs.default_fg).as_hex(),
+            bg = colors.bg.unwrap_or(hl_defs.default_bg).as_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -459,7 +459,7 @@ impl Cmdline {
             }}
             ",
             font_wild = self.font.as_wild_css(FontUnit::Point),
-            bg = self.colors.border.unwrap_or(hl_defs.default_bg).to_hex()
+            bg = self.colors.border.unwrap_or(hl_defs.default_bg).as_hex()
         );
         CssProviderExt::load_from_data(&self.css_provider, css.as_bytes())
             .unwrap();
@@ -532,7 +532,7 @@ impl Cmdline {
         line: nvim_bridge::CmdlineBlockAppend,
         hl_defs: &HlDefs,
     ) {
-        self.block.append(line, &hl_defs);
+        self.block.append(line, hl_defs);
     }
 
     pub fn wildmenu_show(&mut self, items: &[nvim_bridge::CompletionItem]) {

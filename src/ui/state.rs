@@ -44,7 +44,7 @@ pub(crate) struct UIState {
     /// Container for floating windows.
     pub windows_float_container: gtk::Fixed,
     /// Container for the msg window/grid.
-    pub msg_window_container: gtk::Fixed,
+    pub _msg_window_container: gtk::Fixed,
     /// Window for our messages grid.
     pub msg_window: MsgWindow,
     /// All grids currently in the UI.
@@ -95,7 +95,7 @@ impl UIState {
         match notify {
             Notify::RedrawEvent(events) => {
                 events.into_iter().try_for_each(|e| {
-                    self.handle_redraw_event(window, e, &nvim)
+                    self.handle_redraw_event(window, e, nvim)
                 })?;
             }
             Notify::GnvimEvent(event) => match event {
@@ -163,7 +163,7 @@ impl UIState {
 
             // If the grid is in a window (which is likely), resize the window
             // to match the grid's size.
-            if let Some(ref w) =
+            if let Some(w) =
                 self.windows.values().find(|w| w.grid_id == grid.id)
             {
                 let grid_metrics = grid.get_grid_metrics();
@@ -192,7 +192,7 @@ impl UIState {
             )?;
 
             if let Some(ref mode) = self.current_mode {
-                grid.set_mode(&mode);
+                grid.set_mode(mode);
             }
             grid.resize(&win, e.width, e.height, &self.hl_defs)?;
             attach_grid_events(&grid, nvim.clone());
@@ -233,7 +233,7 @@ impl UIState {
         let grid = self
             .grids
             .get(&info.grid)
-            .ok_or_else(|| Error::GridDoesNotExist(info.grid))?;
+            .ok_or(Error::GridDoesNotExist(info.grid))?;
         grid.scroll(info.reg, info.rows, info.cols, &self.hl_defs)?;
 
         Ok(())
@@ -455,8 +455,8 @@ impl UIState {
                         border-top: 1px solid #{msgsep}
                     }}
                     ",
-                    bg = self.hl_defs.default_bg.to_hex(),
-                    msgsep = msgsep.unwrap_or(self.hl_defs.default_fg).to_hex(),
+                    bg = self.hl_defs.default_bg.as_hex(),
+                    msgsep = msgsep.unwrap_or(self.hl_defs.default_fg).as_hex(),
                 )
                 .as_bytes(),
             )
@@ -608,7 +608,7 @@ impl UIState {
                 Window::new(
                     NvimWindow::new(win, nvim.clone()),
                     container,
-                    &grid,
+                    grid,
                     Some(css_provider),
                 )
             })
@@ -735,7 +735,7 @@ impl UIState {
         let base_metrics = base_grid.get_grid_metrics();
         let grid = self.grids.get(&e.grid).unwrap();
         let h = base_metrics.height - e.row as f64 * base_metrics.cell_height;
-        self.msg_window.set_pos(&grid, e.row as f64, h, e.scrolled);
+        self.msg_window.set_pos(grid, e.row as f64, h, e.scrolled);
     }
 
     fn enable_cursor_animations(&mut self, enable: bool) {
@@ -753,7 +753,7 @@ impl UIState {
     ) -> Result<(), Error> {
         match event {
             RedrawEvent::SetTitle(evt) => {
-                evt.iter().for_each(|e| self.set_title(&window, e));
+                evt.iter().for_each(|e| self.set_title(window, e));
             }
             RedrawEvent::GridLine(evt) => {
                 evt.into_iter().try_for_each(|line| self.grid_line(line))?

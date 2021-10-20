@@ -158,7 +158,7 @@ impl Grid {
                 render::cursor_cell(
                     &ctx.cursor_context,
                     &self.da.pango_context(),
-                    &cell,
+                    cell,
                     &ctx.cell_metrics,
                     hl_defs,
                 )?;
@@ -386,7 +386,7 @@ impl Grid {
         let mut affected_segments = ctx
             .rows
             .get_mut(row)
-            .ok_or_else(|| Error::PutLineRowNotFound(row))?
+            .ok_or(Error::PutLineRowNotFound(row))?
             .update(line);
 
         // NOTE(ville): I haven't noticed any cases where a character is overflowing

@@ -87,15 +87,16 @@ impl Cursor {
             let mut pos = self.pos.unwrap_or((0.0, 0.0));
             let t = anim.tick(frame_time);
 
-            if t.is_some() && pos != anim.end {
-                let t = t.unwrap();
-                pos.0 = anim.start.0 + t * (anim.end.0 - anim.start.0);
-                pos.1 = anim.start.1 + t * (anim.end.1 - anim.start.1);
-
-                self.pos = Some(pos);
-            } else {
-                self.pos = Some(anim.end);
-                self.animation = None;
+            match (t, pos != anim.end) {
+                (Some(t), true) => {
+                    pos.0 = anim.start.0 + t * (anim.end.0 - anim.start.0);
+                    pos.1 = anim.start.1 + t * (anim.end.1 - anim.start.1);
+                    self.pos = Some(pos);
+                }
+                _ => {
+                    self.pos = Some(anim.end);
+                    self.animation = None;
+                }
             }
         }
     }
