@@ -419,7 +419,7 @@ dependencies = [
 
 [[package]]
 name = "gnvim"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "env_logger",
