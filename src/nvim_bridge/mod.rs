@@ -19,43 +19,43 @@ mod tests;
 
 macro_rules! unwrap_str {
     ($val:expr) => {
-        $val.as_str().unwrap();
+        $val.as_str().unwrap()
     };
 }
 
 macro_rules! unwrap_u64 {
     ($val:expr) => {
-        $val.as_u64().unwrap();
+        $val.as_u64().unwrap()
     };
 }
 
 macro_rules! unwrap_i64 {
     ($val:expr) => {
-        $val.as_i64().unwrap();
+        $val.as_i64().unwrap()
     };
 }
 
 macro_rules! unwrap_f64 {
     ($val:expr) => {
-        $val.as_f64().unwrap();
+        $val.as_f64().unwrap()
     };
 }
 
 macro_rules! unwrap_array {
     ($val:expr) => {
-        $val.as_array().unwrap();
+        $val.as_array().unwrap()
     };
 }
 
 macro_rules! unwrap_map {
     ($val:expr) => {
-        $val.as_map().unwrap();
+        $val.as_map().unwrap()
     };
 }
 
 macro_rules! unwrap_bool {
     ($val:expr) => {
-        $val.as_bool().unwrap();
+        $val.as_bool().unwrap()
     };
 }
 
