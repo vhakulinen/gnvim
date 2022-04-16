@@ -23,16 +23,16 @@ impl From<io::Error> for WriteError {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait RpcWriter {
     async fn write_rpc_request(&mut self, req: &Request) -> Result<(), WriteError>;
     async fn write_rpc_response(&mut self, res: &Response) -> Result<(), WriteError>;
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl<T> RpcWriter for T
 where
-    T: AsyncWrite + Unpin + Send,
+    T: AsyncWrite + Unpin,
 {
     async fn write_rpc_request(&mut self, req: &Request) -> Result<(), WriteError> {
         write_rpc(self, req).await
@@ -43,7 +43,7 @@ where
     }
 }
 
-async fn write_rpc<W: AsyncWrite + Unpin + Send, D: Serialize>(
+async fn write_rpc<W: AsyncWrite + Unpin, D: Serialize>(
     w: &mut W,
     data: &D,
 ) -> Result<(), WriteError> {

@@ -6,3 +6,4 @@ pub mod rpc;
 pub mod types;
 
 pub use client::{CallError, CallResponse, Client, HandleError};
+pub use rpc::RpcWriter;

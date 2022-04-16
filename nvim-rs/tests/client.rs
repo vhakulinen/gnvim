@@ -8,49 +8,55 @@ use nvim_rs::{args, Client};
 async fn void_response_decodes_correctly() {
     let (client, server) = tokio::io::duplex(1024 * 64);
 
-    let server_handle = tokio::spawn(async move {
-        let (reader, writer) = tokio::io::split(server);
-        let mut writer = writer.compat_write();
-        let mut reader: RpcReader<_> = reader.compat().into();
+    let local = tokio::task::LocalSet::new();
 
-        let got = reader.recv().await.unwrap();
-        let req = match got {
-            Message::Request(req) => req,
-            _ => return assert!(false, "Unexpected message: {:?}", got),
-        };
+    local
+        .run_until(async move {
+            let server_handle = tokio::task::spawn_local(async move {
+                let (reader, writer) = tokio::io::split(server);
+                let mut writer = writer.compat_write();
+                let mut reader: RpcReader<_> = reader.compat().into();
 
-        assert_eq!(req.method, "get_nil");
-        assert_eq!(req.params, vec![]);
+                let got = reader.recv().await.unwrap();
+                let req = match got {
+                    Message::Request(req) => req,
+                    _ => panic!("Unexpected message: {:?}", got),
+                };
 
-        writer
-            .write_rpc_response(&Response::new(req.msgid, None, None))
-            .await
-            .unwrap();
-    });
+                assert_eq!(req.method, "get_nil");
+                assert_eq!(req.params, vec![]);
 
-    let client_handle = tokio::spawn(async move {
-        let (reader, writer) = tokio::io::split(client);
-        let writer = writer.compat_write();
-        let mut reader: RpcReader<_> = reader.compat().into();
+                writer
+                    .write_rpc_response(&Response::new(req.msgid, None, None))
+                    .await
+                    .unwrap();
+            });
 
-        let mut client = Client::new(writer);
+            let client_handle = tokio::task::spawn_local(async move {
+                let (reader, writer) = tokio::io::split(client);
+                let writer = writer.compat_write();
+                let mut reader: RpcReader<_> = reader.compat().into();
 
-        let res = client.call::<(), _, _>("get_nil", vec![]).await.unwrap();
+                let mut client = Client::new(writer);
 
-        let handle = tokio::task::spawn(async move {
-            let v = reader.recv().await.unwrap();
-            match v {
-                Message::Response(response) => client.handle_response(response).unwrap(),
-                v => assert!(false, "unexpected message: {:?}", v),
-            }
-        });
+                let res = client.call::<(), _, _>("get_nil", vec![]).await.unwrap();
 
-        assert_eq!(res.await, Ok(()));
+                let handle = tokio::task::spawn(async move {
+                    let v = reader.recv().await.unwrap();
+                    match v {
+                        Message::Response(response) => client.handle_response(response).unwrap(),
+                        v => panic!("unexpected message: {:?}", v),
+                    }
+                });
 
-        handle.await.unwrap();
-    });
+                assert_eq!(res.await, Ok(()));
 
-    tokio::try_join!(server_handle, client_handle).unwrap();
+                handle.await.unwrap();
+            });
+
+            tokio::try_join!(server_handle, client_handle).unwrap();
+        })
+        .await;
 }
 
 #[test]
