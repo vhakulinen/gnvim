@@ -15,4 +15,4 @@ features = ["v4_4"]
 
 [dependencies.nvim]
 package = "nvim-rs"
-path = "../../nvim-rs"
+path = "../nvim-rs"

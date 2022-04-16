@@ -1,6 +1,0 @@
-[submodule "sublime-syntaxes/sources/slimsag-packages"]
-	path = sublime-syntaxes/sources/slimsag-packages
-	url = https://github.com/slimsag/Packages
-[submodule "sublime-syntaxes/sources/zola"]
-	path = sublime-syntaxes/sources/zola
-	url = https://github.com/getzola/zola

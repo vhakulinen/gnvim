@@ -1,0 +1,30 @@
+use super::manual::*;
+
+{structs}
+
+#[derive(Debug)]
+pub enum UiEvent {{
+    {members}
+}}
+
+impl<'de> serde::Deserialize<'de> for UiEvent {{
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {{
+        let redraw = rmpv::Value::deserialize(d)?;
+
+        let name = redraw[0].as_str();
+        // TODO(ville): Would be nice if this was possible to do with the derilization it self...
+        let params = redraw.as_array().and_then(|v| {{
+            if v[1].as_array().map(|v| v.is_empty()) == Some(true) {{
+                None
+            }} else {{
+                Some(v[1..].to_vec())
+            }}
+        }});
+
+        // TODO(ville): Error handling.
+        Ok(match (name, params) {{
+            {decode_matches}
+            v => panic!("failed to decode message {{:?}}", v),
+        }})
+    }}
+}}

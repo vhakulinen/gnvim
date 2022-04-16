@@ -1,0 +1,6 @@
+use crate::rpc::{{RpcWriter, WriteError}};
+use crate::{{args, Client, CallResponse}};
+
+impl<W: RpcWriter> Client<W> {{
+    {functions}
+}}
