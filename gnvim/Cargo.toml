@@ -1,0 +1,18 @@
+[package]
+name = "gnvim"
+version = "0.1.0"
+authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dependencies.gtk]
+package = "gtk4"
+version = "0.4"
+features = ["v4_4"]
+
+[dependencies.nvim]
+package = "nvim-rs"
+path = "../../nvim-rs"
