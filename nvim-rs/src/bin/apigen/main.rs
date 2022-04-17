@@ -33,7 +33,7 @@ fn main() {
                     }
 
                     Some(format!(
-                        include_str!("./function.rs.txt"),
+                        include_str!("./templates/function.rs.txt"),
                         name = function.name,
                         method = function.name,
                         args_in = function
@@ -54,7 +54,7 @@ fn main() {
                 .collect();
 
             println!(
-                include_str!("./api.rs.txt"),
+                include_str!("./templates/api.rs.txt"),
                 functions = functions.join("\n\n"),
             );
         }
@@ -141,7 +141,7 @@ fn main() {
                 .join("\n");
 
             println!(
-                include_str!("./uievents.rs.txt"),
+                include_str!("./templates/uievents.rs.txt"),
                 structs = structs,
                 members = members,
                 decode_matches = decode_matches,
