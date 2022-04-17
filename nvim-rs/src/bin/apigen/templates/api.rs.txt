@@ -1,5 +1,5 @@
 use crate::rpc::{{RpcWriter, WriteError}};
-use crate::{{args, Client, CallResponse}};
+use crate::{{args, Client, CallResponse, types::uievents::UiOptions}};
 
 impl<W: RpcWriter> Client<W> {{
     {functions}

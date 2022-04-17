@@ -1,6 +1,7 @@
 use std::process::Stdio;
 use std::time::Duration;
 
+use nvim_rs::types::uievents::UiOptions;
 use tokio::process::Command;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -69,10 +70,12 @@ async fn smoke_test_ui_attach() {
 
     let mut client = Client::new(writer);
 
-    let _result = client
-        .nvim_ui_attach(10, 10, rmpv::Value::Map(vec![]))
+    let res = client
+        .nvim_ui_attach(10, 10, UiOptions::default())
         .await
         .unwrap();
+
+    let handle = tokio::spawn(async move { res.await.unwrap() });
 
     // Read what ever messages we manage get in a reasonalbe time and deserialize them.
     loop {
@@ -97,4 +100,6 @@ async fn smoke_test_ui_attach() {
             },
         }
     }
+
+    handle.await.unwrap();
 }

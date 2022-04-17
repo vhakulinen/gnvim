@@ -1,5 +1,5 @@
 use crate::rpc::{RpcWriter, WriteError};
-use crate::{args, CallResponse, Client};
+use crate::{args, types::uievents::UiOptions, CallResponse, Client};
 
 impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_autocmds(
@@ -493,7 +493,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         width: i64,
         height: i64,
-        options: rmpv::Value, /* Dictionary */
+        options: UiOptions,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_ui_attach", args![width, height, options])
             .await

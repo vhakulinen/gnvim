@@ -83,6 +83,18 @@ pub struct Function {
     pub method: bool,
 }
 
+impl Function {
+    pub fn rust_type_for_param(&self, param: &Parameter) -> String {
+        //println!("{} {}", self.name, param.name);
+        let t = match (self.name.as_ref(), param.name.as_ref()) {
+            ("nvim_ui_attach", "options") => "UiOptions",
+            _ => return param.r#type.as_rust_type(),
+        };
+
+        t.into()
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct ExtType {
     pub id: i64,

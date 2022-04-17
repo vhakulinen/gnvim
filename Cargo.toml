@@ -2,4 +2,5 @@
 members = [
     "gnvim",
     "nvim-rs",
+    "into-value-proc",
 ]

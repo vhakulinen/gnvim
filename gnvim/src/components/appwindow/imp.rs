@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use futures::lock::Mutex;
+use nvim::types::uievents::UiOptions;
 use nvim::types::UiEvent;
 use once_cell::unsync::OnceCell;
 
@@ -149,7 +150,11 @@ impl ObjectImpl for AppWindow {
                     .unwrap()
                     .lock()
                     .await
-                    .nvim_ui_attach(10, 10, rmpv::Value::Map(vec![]))
+                    .nvim_ui_attach(10, 10, UiOptions{
+                        rgb: true,
+                        ext_multigrid: true,
+                        ..Default::default()
+                    })
                     .await
                     .unwrap();
             println!("response: {:?}", res.await);

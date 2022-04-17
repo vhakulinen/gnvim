@@ -39,7 +39,11 @@ fn main() {
                         args_in = function
                             .parameters
                             .iter()
-                            .map(|p| format!("{}: {}", p.rust_name(), p.r#type.as_rust_type()))
+                            .map(|p| format!(
+                                "{}: {}",
+                                p.rust_name(),
+                                function.rust_type_for_param(p)
+                            ))
                             .collect::<Vec<String>>()
                             .join(", "),
                         args_out = function
