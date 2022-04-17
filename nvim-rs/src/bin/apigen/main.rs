@@ -125,13 +125,7 @@ fn main() {
                         )
                     } else {
                         format!(
-                            r#"
-                                (Some("{name}"), Some(params)) => UiEvent::{member}({{
-                                    params.into_iter().map({member}::deserialize)
-                                    .collect::<Result<Vec<_>, _>>()
-                                    .map_err(serde::de::Error::custom)?
-                                }}),
-                            "#,
+                            include_str!("./templates/uievent-arm.rs.txt"),
                             name = event.name,
                             member = event.name.as_pascal_case(),
                         )
