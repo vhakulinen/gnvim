@@ -24,6 +24,7 @@ macro_rules! args {
     }};
 }
 
+#[derive(Debug)]
 pub struct Client<W: RpcWriter> {
     writer: W,
     msgid_counter: u32,

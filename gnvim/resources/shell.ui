@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Shell" parent="GtkWidget">
+        <child>
+            <object class="GtkOverlay" id="overlay">
+                <child>
+                    <object class="Grid" id="root-grid">
+                    </object>
+                </child>
+                <child type="overlay">
+                    <object class="GtkFixed" id="fixed">
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>
+

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="AppWindow" parent="GtkApplicationWindow">
+        <property name="title">Gnvim</property>
+        <property name="default-width">1280</property>
+        <property name="default-height">720</property>
+        <child>
+            <object class="Shell" id="shell">
+            </object>
+        </child>
+    </template>
+</interface>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/com/github/vhakulinen/gnvim/">
+        <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
+    </gresource>
+</gresources>
