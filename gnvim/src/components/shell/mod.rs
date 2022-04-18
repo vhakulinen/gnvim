@@ -3,7 +3,7 @@ mod imp;
 use gtk::{glib, subclass::prelude::*};
 use nvim::types::uievents::{GridLine, GridResize};
 
-use crate::colors::Colors;
+use crate::{colors::Colors, font::Font};
 
 glib::wrapper! {
     pub struct Shell(ObjectSubclass<imp::Shell>)
@@ -13,7 +13,7 @@ glib::wrapper! {
 
 impl Shell {
     pub fn new() -> Self {
-        glib::Object::new(&[]).expect("Failed to create Window")
+        glib::Object::new(&[]).expect("Failed to create Shell")
     }
 
     pub fn handle_grid_line(&self, event: GridLine) {
@@ -34,8 +34,8 @@ impl Shell {
         self.imp().root_grid.resize(event);
     }
 
-    pub fn handle_flush(&self, colors: &Colors) {
-        self.imp().root_grid.flush(colors);
+    pub fn handle_flush(&self, colors: &Colors, font: &Font) {
+        self.imp().root_grid.flush(colors, font);
     }
 }
 

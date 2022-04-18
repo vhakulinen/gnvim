@@ -3,7 +3,7 @@ use gtk::{glib, prelude::*, subclass::prelude::*};
 
 use nvim::types::uievents::{GridLine, GridResize};
 
-use crate::colors::Colors;
+use crate::{colors::Colors, font::Font};
 
 mod buffer;
 mod imp;
@@ -35,10 +35,10 @@ impl Grid {
             .resize(event.width as usize, event.height as usize);
     }
 
-    pub fn flush(&self, colors: &Colors) {
-        let h = 22.0;
+    pub fn flush(&self, colors: &Colors, font: &Font) {
+        let h = font.height();
         for (i, row) in self.imp().buffer.borrow_mut().rows.iter_mut().enumerate() {
-            row.generate_nodes(&self.pango_context(), colors, i as f32 * h, h);
+            row.generate_nodes(&self.pango_context(), colors, font, i as f32 * h, h);
         }
 
         self.queue_draw();

@@ -21,6 +21,7 @@ use nvim::rpc::RpcReader;
 
 use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
+use crate::font::Font;
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -33,6 +34,7 @@ pub struct AppWindow {
     nvim: Rc<OnceCell<Mutex<nvim::Client<CompatWrite>>>>,
 
     colors: Rc<RefCell<Colors>>,
+    font: Rc<RefCell<Font>>,
 }
 
 impl AppWindow {
@@ -136,7 +138,8 @@ impl AppWindow {
             UiEvent::ModeInfoSet(_) => {}
             UiEvent::ModeChange(_) => {}
             UiEvent::Flush => {
-                self.shell.handle_flush(&self.colors.borrow());
+                self.shell
+                    .handle_flush(&self.colors.borrow(), &self.font.borrow());
             }
             UiEvent::SetIcon(_) => {}
             UiEvent::SetTitle(_) => {}
@@ -187,7 +190,7 @@ impl ObjectImpl for AppWindow {
                     .lock()
                     .await
                     // TODO(ville): Calculate correct size.
-                    .nvim_ui_attach(80, 80, UiOptions{
+                    .nvim_ui_attach(80, 30, UiOptions{
                         rgb: true,
                         ext_linegrid: true,
                         //ext_multigrid: true,
@@ -197,8 +200,7 @@ impl ObjectImpl for AppWindow {
                     .unwrap();
             // TODO(ville): For some reason, if await'ing on the above chain,
             // things just hang. Figure out why.
-            let res = res.await;
-            println!("response: {:?}", res);
+            res.await.expect("nvim_ui_attach failed");
         }));
 
         // TODO(ville): Figure out if we should use preedit or not.

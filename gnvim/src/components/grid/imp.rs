@@ -1,8 +1,7 @@
 use std::cell::{Cell, RefCell};
 
+use gtk::glib;
 use gtk::subclass::prelude::*;
-use gtk::traits::WidgetExt;
-use gtk::{glib, pango};
 
 use super::buffer::Buffer;
 
@@ -25,10 +24,6 @@ impl ObjectSubclass for Grid {
 impl ObjectImpl for Grid {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
-
-        // TODO(ville): Better way to get default font.
-        obj.pango_context()
-            .set_font_description(&pango::FontDescription::from_string("Monospace 12"))
     }
 
     fn properties() -> &'static [glib::ParamSpec] {

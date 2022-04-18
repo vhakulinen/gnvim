@@ -4,6 +4,8 @@ use gtk::Application;
 
 mod colors;
 mod components;
+mod font;
+
 use components::appwindow::AppWindow;
 
 fn main() {

@@ -2,7 +2,7 @@ use gtk::{gdk, graphene, gsk, pango, prelude::*};
 
 use nvim::types::uievents::GridLine;
 
-use crate::colors::Colors;
+use crate::{colors::Colors, font::Font};
 
 #[derive(Default, Debug, Clone)]
 pub struct Cell {
@@ -63,6 +63,7 @@ impl Row {
         &mut self,
         ctx: &pango::Context,
         colors: &Colors,
+        font: &Font,
         y_offset: f32,
         height: f32,
     ) {
@@ -73,30 +74,30 @@ impl Row {
         self.fg_nodes.clear(); // Make sure the glyphs are cleared.
         self.bg_nodes.clear(); // Make sure the glyphs are cleared.
 
+        // Gather cells into continous segments based on hl ids.
         let segments = self
             .cells
             .iter()
             .fold(Vec::<LineSegment>::new(), |mut acc, cell| {
-                let next = match acc.last_mut() {
+                match acc.last_mut() {
                     Some(prev) if prev.hl_id == cell.hl_id => {
                         prev.text.push_str(cell.text.as_ref());
-                        None
                     }
-                    _ => Some(LineSegment {
+                    _ => acc.push(LineSegment {
                         text: cell.text.clone(),
                         hl_id: cell.hl_id,
                     }),
                 };
 
-                if let Some(next) = next {
-                    acc.push(next);
-                }
-
                 acc
             });
 
         let attrs = pango::AttrList::new();
+        attrs.insert(pango::AttrFontDesc::new(&font.font_desc()));
+        // TODO(ville): Add bold, italics etc. attrs.
+
         let scale = pango::SCALE as f32;
+        let ascent = font.ascent();
 
         let mut x_offset = 0.0_f32;
         for segment in segments.iter() {
@@ -115,23 +116,24 @@ impl Row {
             let mut width = 0.0_f32;
             for item in items {
                 let a = item.analysis();
-                let item_offset = item.offset() as usize;
+                let offset = item.offset() as usize;
+                let len = item.length() as usize;
                 let mut glyphs = pango::GlyphString::new();
-                let text = &segment.text[item_offset..item_offset + item.length() as usize];
+                let text = &segment.text[offset..offset + len];
 
                 pango::shape(text, a, &mut glyphs);
 
-                let mut node = gsk::TextNode::new(
+                let node = gsk::TextNode::new(
                     &a.font(),
                     &mut glyphs,
                     &gdk::RGBA::new(fg.r as f32, fg.g as f32, fg.b as f32, 1.0),
-                    &graphene::Point::new(x_offset + width, y_offset + height),
+                    // TODO(ville): Double check that the x and y values are correct.
+                    &graphene::Point::new(x_offset + width, y_offset + ascent),
                 );
 
-                if let Some(node) = node.take() {
+                // Empty glyphs (e.g. whitespace) won't get any nodes.
+                if let Some(node) = node {
                     self.fg_nodes.push(node.upcast());
-                } else {
-                    println!("Failed to create text node for text '{}'", text);
                 }
 
                 width += glyphs.width() as f32 / scale;
