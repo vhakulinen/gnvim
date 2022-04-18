@@ -1,4 +1,4 @@
-/// IntoValue provides proxy to `rmpv::Value::from`. This is required because
+/// IntoValue provides proxu to `rmpv::Value::from`. This is required because
 /// `rmpv` doesn't provide from method for `Vec<T: Into<Value>>`.
 pub trait IntoValue {
     fn into_value(self) -> rmpv::Value;

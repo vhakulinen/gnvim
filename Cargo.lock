@@ -474,6 +474,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "into-value"
+version = "0.1.0"
+dependencies = [
+ "rmpv",
+]
+
+[[package]]
 name = "into-value-proc"
 version = "0.1.0"
 dependencies = [
@@ -583,6 +590,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "futures",
+ "into-value",
  "into-value-proc",
  "rmp-serde",
  "rmpv",

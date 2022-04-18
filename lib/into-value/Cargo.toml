@@ -1,0 +1,7 @@
+[package]
+name = "into-value"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rmpv = { version = "1.0.0", features = ["with-serde"] }

@@ -2,6 +2,7 @@
 members = [
     "ui",
     "lib/nvim-rs",
+    "lib/into-value",
     "lib/into-value-proc",
     "lib/gio-compat",
 ]
