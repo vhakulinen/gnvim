@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
+
+use gtk::gdk;
 
 use nvim::types::uievents::HlAttr;
 
@@ -45,19 +47,39 @@ impl Colors {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Color {
-    pub r: f64,
-    pub g: f64,
-    pub b: f64,
+#[derive(Debug, Clone, Copy)]
+pub struct Color(gdk::RGBA);
+
+impl Default for Color {
+    fn default() -> Self {
+        Self(gdk::RGBA::new(0.0, 0.0, 0.0, 1.0))
+    }
 }
 
 impl Color {
     pub fn from_i64(v: i64) -> Self {
-        Self {
-            r: ((v >> 16) & 255) as f64 / 255f64,
-            g: ((v >> 8) & 255) as f64 / 255f64,
-            b: (v & 255) as f64 / 255f64,
-        }
+        Self(gdk::RGBA::new(
+            ((v >> 16) & 255) as f32 / 255f32,
+            ((v >> 8) & 255) as f32 / 255f32,
+            (v & 255) as f32 / 255f32,
+            1.0,
+        ))
+    }
+
+    pub fn as_hex(&self) -> String {
+        format!(
+            "{:02x}{:02x}{:02x}",
+            (self.red() * 255.0) as u8,
+            (self.green() * 255.0) as u8,
+            (self.blue() * 255.0) as u8
+        )
+    }
+}
+
+impl Deref for Color {
+    type Target = gdk::RGBA;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

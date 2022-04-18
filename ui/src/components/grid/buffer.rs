@@ -131,7 +131,7 @@ impl Row {
                 let node = gsk::TextNode::new(
                     &a.font(),
                     &mut glyphs,
-                    &gdk::RGBA::new(fg.r as f32, fg.g as f32, fg.b as f32, 1.0),
+                    &fg,
                     // TODO(ville): Double check that the x and y values are correct.
                     &graphene::Point::new(x_offset + width, y_offset + ascent),
                 );
@@ -145,11 +145,8 @@ impl Row {
             }
 
             self.bg_nodes.push(
-                gsk::ColorNode::new(
-                    &gdk::RGBA::new(bg.r as f32, bg.g as f32, bg.b as f32, 1.0),
-                    &graphene::Rect::new(x_offset, y_offset, width, height),
-                )
-                .upcast(),
+                gsk::ColorNode::new(&bg, &graphene::Rect::new(x_offset, y_offset, width, height))
+                    .upcast(),
             );
 
             x_offset += width;

@@ -11,7 +11,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::CompositeTemplate;
 use gtk::{
-    gio,
+    gdk, gio,
     glib::{self, clone},
 };
 
@@ -30,6 +30,8 @@ pub struct AppWindow {
     event_controller_key: gtk::EventControllerKey,
     #[template_child(id = "shell")]
     shell: TemplateChild<Shell>,
+
+    css_provider: gtk::CssProvider,
 
     nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
 
@@ -122,6 +124,18 @@ impl AppWindow {
                 colors.fg = Color::from_i64(event.rgb_fg);
                 colors.bg = Color::from_i64(event.rgb_bg);
                 colors.sp = Color::from_i64(event.rgb_sp);
+
+                self.css_provider.load_from_data(
+                    format!(
+                        r#"
+                            .app-window {{
+                                background-color: #{bg};
+                            }}
+                        "#,
+                        bg = colors.bg.as_hex(),
+                    )
+                    .as_bytes(),
+                );
             }),
             UiEvent::HlAttrDefine(events) => events.into_iter().for_each(|event| {
                 let mut colors = self.colors.borrow_mut();
@@ -175,6 +189,12 @@ impl ObjectSubclass for AppWindow {
 impl ObjectImpl for AppWindow {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
+
+        gtk::StyleContext::add_provider_for_display(
+            &gdk::Display::default().expect("couldn't get display"),
+            &self.css_provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
 
         let (client, reader) = self.open_nvim();
 

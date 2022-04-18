@@ -1,5 +1,5 @@
 use glib::Object;
-use gtk::{gdk, glib, graphene, gsk, prelude::*, subclass::prelude::*};
+use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
 use nvim::types::uievents::{GridLine, GridResize};
 
@@ -49,12 +49,7 @@ impl Grid {
         nodes.clear();
         nodes.push(
             gsk::ColorNode::new(
-                &gdk::RGBA::new(
-                    colors.bg.r as f32,
-                    colors.bg.g as f32,
-                    colors.bg.b as f32,
-                    1.0,
-                ),
+                &colors.bg,
                 &graphene::Rect::new(0.0, 0.0, alloc.width() as f32, alloc.height() as f32),
             )
             .upcast(),

@@ -4,6 +4,9 @@
         <property name="title">Gnvim</property>
         <property name="default-width">1280</property>
         <property name="default-height">720</property>
+        <style>
+            <class name="app-window" />
+        </style>
         <child>
             <object class="Shell" id="shell">
             </object>
