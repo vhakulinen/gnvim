@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "gnvim",
-    "nvim-rs",
-    "into-value-proc",
+    "ui",
+    "lib/nvim-rs",
+    "lib/into-value-proc",
+    "lib/gio-compat",
 ]

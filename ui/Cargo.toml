@@ -18,10 +18,10 @@ features = ["v4_4"]
 
 [dependencies.nvim]
 package = "nvim-rs"
-path = "../nvim-rs"
+path = "../lib/nvim-rs"
 
 [dependencies.gio-compat]
-path = "../gio-compat"
+path = "../lib/gio-compat"
 
 [build-dependencies.gtk]
 package = "gtk4"
