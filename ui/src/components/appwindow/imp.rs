@@ -1,4 +1,4 @@
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -230,7 +230,10 @@ impl WidgetImpl for AppWindow {
     fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
         self.parent_size_allocate(widget, width, height, baseline);
 
-        let (cols, rows) = self.font.borrow().grid_size_for_allocation(&self.shell.allocation());
+        let (cols, rows) = self
+            .font
+            .borrow()
+            .grid_size_for_allocation(&self.shell.allocation());
 
         let id = glib::timeout_add_local(
             Duration::from_millis(10),

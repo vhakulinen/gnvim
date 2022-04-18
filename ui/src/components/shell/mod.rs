@@ -1,5 +1,5 @@
 use gtk::{glib, subclass::prelude::*};
-use nvim::types::uievents::{GridLine, GridResize, GridClear};
+use nvim::types::uievents::{GridClear, GridLine, GridResize};
 
 use crate::{colors::Colors, font::Font};
 

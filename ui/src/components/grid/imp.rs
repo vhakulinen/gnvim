@@ -1,7 +1,7 @@
 use std::cell::{Cell, RefCell};
 
-use gtk::{glib, gsk};
 use gtk::subclass::prelude::*;
+use gtk::{glib, gsk};
 
 use super::buffer::Buffer;
 
