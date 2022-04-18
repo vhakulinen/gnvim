@@ -1,12 +1,18 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
-use gtk::glib;
 use gtk::subclass::prelude::*;
+use gtk::traits::WidgetExt;
+use gtk::{glib, pango};
+
+use super::buffer::Buffer;
 
 #[derive(Default)]
 pub struct Grid {
     /// The grid id.
-    id: Cell<i64>,
+    pub id: Cell<i64>,
+
+    pub buffer: RefCell<Buffer>,
+    pub foreground: gtk::Snapshot,
 }
 
 #[glib::object_subclass]
@@ -19,6 +25,10 @@ impl ObjectSubclass for Grid {
 impl ObjectImpl for Grid {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
+
+        // TODO(ville): Better way to get default font.
+        obj.pango_context()
+            .set_font_description(&pango::FontDescription::from_string("Monospace 12"))
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
@@ -56,4 +66,16 @@ impl ObjectImpl for Grid {
     }
 }
 
-impl WidgetImpl for Grid {}
+impl WidgetImpl for Grid {
+    fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
+        for row in self.buffer.borrow().rows.iter() {
+            for node in row.bg_nodes.iter() {
+                snapshot.append_node(node);
+            }
+
+            for node in row.fg_nodes.iter() {
+                snapshot.append_node(node);
+            }
+        }
+    }
+}

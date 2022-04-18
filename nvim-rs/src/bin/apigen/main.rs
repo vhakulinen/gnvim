@@ -115,6 +115,21 @@ fn main() {
                 .collect::<Vec<String>>()
                 .join(",\n");
 
+            let display_members = res
+                .ui_events
+                .iter()
+                .map(|event| {
+                    let name = event.name.as_pascal_case();
+
+                    if event.parameters.is_empty() {
+                        format!("Self::{} => write!(f, \"{}\")", name, event.name)
+                    } else {
+                        format!("Self::{}(_) => write!(f, \"{}\")", name, event.name)
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join(",\n");
+
             let decode_matches = res
                 .ui_events
                 .iter()
@@ -143,6 +158,7 @@ fn main() {
                 structs = structs,
                 members = members,
                 decode_matches = decode_matches,
+                display_members = display_members,
             );
         }
         _ => usage_exit(),

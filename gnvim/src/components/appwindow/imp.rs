@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use futures::lock::Mutex;
@@ -18,6 +19,7 @@ use gio_compat::CompatRead;
 use gio_compat::CompatWrite;
 use nvim::rpc::RpcReader;
 
+use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
 
 #[derive(CompositeTemplate, Default)]
@@ -29,6 +31,8 @@ pub struct AppWindow {
     shell: TemplateChild<Shell>,
 
     nvim: Rc<OnceCell<Mutex<nvim::Client<CompatWrite>>>>,
+
+    colors: Rc<RefCell<Colors>>,
 }
 
 impl AppWindow {
@@ -91,6 +95,7 @@ impl AppWindow {
                         "redraw" => {
                             let events = nvim::decode_redraw_params(params)
                                 .expect("failed to decode redraw notification");
+
                             events
                                 .into_iter()
                                 .for_each(|event| self.handle_ui_event(event))
@@ -106,7 +111,38 @@ impl AppWindow {
 
     fn handle_ui_event(&self, event: UiEvent) {
         match event {
-            event => println!("Unhandled ui event: {:?}", event),
+            UiEvent::OptionSet(_) => {}
+            UiEvent::DefaultColorsSet(events) => events.into_iter().for_each(|event| {
+                let mut colors = self.colors.borrow_mut();
+                colors.fg = Color::from_i64(event.rgb_fg);
+                colors.bg = Color::from_i64(event.rgb_bg);
+                colors.sp = Color::from_i64(event.rgb_sp);
+            }),
+            UiEvent::HlAttrDefine(events) => events.into_iter().for_each(|event| {
+                let mut colors = self.colors.borrow_mut();
+                colors.hls.insert(event.id, event.rgb_attrs);
+            }),
+            UiEvent::HlGroupSet(_) => {}
+            UiEvent::GridResize(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_resize(event);
+            }),
+            UiEvent::GridClear(_) => {}
+            UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_line(event);
+            }),
+            UiEvent::UpdateMenu => {}
+            UiEvent::WinViewport(_) => {}
+            UiEvent::GridCursorGoto(_) => {}
+            UiEvent::ModeInfoSet(_) => {}
+            UiEvent::ModeChange(_) => {}
+            UiEvent::Flush => {
+                self.shell.handle_flush(&self.colors.borrow());
+            }
+            UiEvent::SetIcon(_) => {}
+            UiEvent::SetTitle(_) => {}
+            UiEvent::MouseOn => {}
+            UiEvent::MouseOff => {}
+            event => panic!("Unhandled ui event: {}", event),
         }
     }
 }
@@ -150,14 +186,19 @@ impl ObjectImpl for AppWindow {
                     .unwrap()
                     .lock()
                     .await
-                    .nvim_ui_attach(10, 10, UiOptions{
+                    // TODO(ville): Calculate correct size.
+                    .nvim_ui_attach(80, 80, UiOptions{
                         rgb: true,
-                        ext_multigrid: true,
+                        ext_linegrid: true,
+                        //ext_multigrid: true,
                         ..Default::default()
                     })
                     .await
                     .unwrap();
-            println!("response: {:?}", res.await);
+            // TODO(ville): For some reason, if await'ing on the above chain,
+            // things just hang. Figure out why.
+            let res = res.await;
+            println!("response: {:?}", res);
         }));
 
         // TODO(ville): Figure out if we should use preedit or not.

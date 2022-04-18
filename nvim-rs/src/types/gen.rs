@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::manual::*;
 
 #[derive(Debug, serde::Deserialize)]
@@ -95,9 +97,9 @@ pub struct DefaultColorsSet {
 #[derive(Debug, serde::Deserialize)]
 pub struct HlAttrDefine {
     pub id: i64,
-    pub rgb_attrs: rmpv::Value,   /* Dictionary */
-    pub cterm_attrs: rmpv::Value, /* Dictionary */
-    pub info: rmpv::Value,        /* Array */
+    pub rgb_attrs: HlAttr,
+    pub cterm_attrs: HlAttr,
+    pub info: rmpv::Value, /* Array */
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -130,7 +132,7 @@ pub struct GridLine {
     pub grid: i64,
     pub row: i64,
     pub col_start: i64,
-    pub data: rmpv::Value, /* Array */
+    pub data: Vec<GridLineData>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -367,6 +369,75 @@ pub enum UiEvent {
     MsgShowmode(Vec<MsgShowmode>),
     MsgRuler(Vec<MsgRuler>),
     MsgHistoryShow(Vec<MsgHistoryShow>),
+}
+
+impl Display for UiEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ModeInfoSet(_) => write!(f, "mode_info_set"),
+            Self::UpdateMenu => write!(f, "update_menu"),
+            Self::BusyStart => write!(f, "busy_start"),
+            Self::BusyStop => write!(f, "busy_stop"),
+            Self::MouseOn => write!(f, "mouse_on"),
+            Self::MouseOff => write!(f, "mouse_off"),
+            Self::ModeChange(_) => write!(f, "mode_change"),
+            Self::Bell => write!(f, "bell"),
+            Self::VisualBell => write!(f, "visual_bell"),
+            Self::Flush => write!(f, "flush"),
+            Self::Suspend => write!(f, "suspend"),
+            Self::SetTitle(_) => write!(f, "set_title"),
+            Self::SetIcon(_) => write!(f, "set_icon"),
+            Self::Screenshot(_) => write!(f, "screenshot"),
+            Self::OptionSet(_) => write!(f, "option_set"),
+            Self::UpdateFg(_) => write!(f, "update_fg"),
+            Self::UpdateBg(_) => write!(f, "update_bg"),
+            Self::UpdateSp(_) => write!(f, "update_sp"),
+            Self::Resize(_) => write!(f, "resize"),
+            Self::Clear => write!(f, "clear"),
+            Self::EolClear => write!(f, "eol_clear"),
+            Self::CursorGoto(_) => write!(f, "cursor_goto"),
+            Self::HighlightSet(_) => write!(f, "highlight_set"),
+            Self::Put(_) => write!(f, "put"),
+            Self::SetScrollRegion(_) => write!(f, "set_scroll_region"),
+            Self::Scroll(_) => write!(f, "scroll"),
+            Self::DefaultColorsSet(_) => write!(f, "default_colors_set"),
+            Self::HlAttrDefine(_) => write!(f, "hl_attr_define"),
+            Self::HlGroupSet(_) => write!(f, "hl_group_set"),
+            Self::GridResize(_) => write!(f, "grid_resize"),
+            Self::GridClear(_) => write!(f, "grid_clear"),
+            Self::GridCursorGoto(_) => write!(f, "grid_cursor_goto"),
+            Self::GridLine(_) => write!(f, "grid_line"),
+            Self::GridScroll(_) => write!(f, "grid_scroll"),
+            Self::GridDestroy(_) => write!(f, "grid_destroy"),
+            Self::WinPos(_) => write!(f, "win_pos"),
+            Self::WinFloatPos(_) => write!(f, "win_float_pos"),
+            Self::WinExternalPos(_) => write!(f, "win_external_pos"),
+            Self::WinHide(_) => write!(f, "win_hide"),
+            Self::WinClose(_) => write!(f, "win_close"),
+            Self::MsgSetPos(_) => write!(f, "msg_set_pos"),
+            Self::WinViewport(_) => write!(f, "win_viewport"),
+            Self::PopupmenuShow(_) => write!(f, "popupmenu_show"),
+            Self::PopupmenuHide => write!(f, "popupmenu_hide"),
+            Self::PopupmenuSelect(_) => write!(f, "popupmenu_select"),
+            Self::TablineUpdate(_) => write!(f, "tabline_update"),
+            Self::CmdlineShow(_) => write!(f, "cmdline_show"),
+            Self::CmdlinePos(_) => write!(f, "cmdline_pos"),
+            Self::CmdlineSpecialChar(_) => write!(f, "cmdline_special_char"),
+            Self::CmdlineHide(_) => write!(f, "cmdline_hide"),
+            Self::CmdlineBlockShow(_) => write!(f, "cmdline_block_show"),
+            Self::CmdlineBlockAppend(_) => write!(f, "cmdline_block_append"),
+            Self::CmdlineBlockHide => write!(f, "cmdline_block_hide"),
+            Self::WildmenuShow(_) => write!(f, "wildmenu_show"),
+            Self::WildmenuSelect(_) => write!(f, "wildmenu_select"),
+            Self::WildmenuHide => write!(f, "wildmenu_hide"),
+            Self::MsgShow(_) => write!(f, "msg_show"),
+            Self::MsgClear => write!(f, "msg_clear"),
+            Self::MsgShowcmd(_) => write!(f, "msg_showcmd"),
+            Self::MsgShowmode(_) => write!(f, "msg_showmode"),
+            Self::MsgRuler(_) => write!(f, "msg_ruler"),
+            Self::MsgHistoryShow(_) => write!(f, "msg_history_show"),
+        }
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for UiEvent {

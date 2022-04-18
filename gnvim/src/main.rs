@@ -2,6 +2,7 @@ use gtk::gio;
 use gtk::prelude::*;
 use gtk::Application;
 
+mod colors;
 mod components;
 use components::appwindow::AppWindow;
 

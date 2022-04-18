@@ -85,7 +85,6 @@ pub struct Function {
 
 impl Function {
     pub fn rust_type_for_param(&self, param: &Parameter) -> String {
-        //println!("{} {}", self.name, param.name);
         let t = match (self.name.as_ref(), param.name.as_ref()) {
             ("nvim_ui_attach", "options") => "UiOptions",
             _ => return param.r#type.as_rust_type(),
@@ -134,6 +133,9 @@ pub struct UiEvent {
 impl UiEvent {
     pub fn parameter_type_for<S: AsRef<str>>(evt: S, param: S, _type: S) -> String {
         let s: &str = match (evt.as_ref(), param.as_ref()) {
+            ("grid_line", "data") => "Vec<GridLineData>",
+            ("hl_attr_define", "rgb_attrs") => "HlAttr",
+            ("hl_attr_define", "cterm_attrs") => "HlAttr",
             _ => return _type.as_rust_type(),
         };
 

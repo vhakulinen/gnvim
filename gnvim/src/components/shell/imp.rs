@@ -13,7 +13,7 @@ pub struct Shell {
     #[template_child(id = "fixed")]
     fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "root-grid")]
-    root_grid: TemplateChild<Grid>,
+    pub root_grid: TemplateChild<Grid>,
 }
 
 #[glib::object_subclass]
@@ -39,12 +39,6 @@ impl ObjectSubclass for Shell {
 impl ObjectImpl for Shell {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
-
-        let label = gtk::Label::new(Some("First label in shell"));
-        self.fixed.put(&label, 10.0, 15.0);
-
-        let label = gtk::Label::new(Some("Second label in shell"));
-        self.fixed.put(&label, 30.0, 50.0);
     }
 
     fn dispose(&self, _obj: &Self::Type) {
