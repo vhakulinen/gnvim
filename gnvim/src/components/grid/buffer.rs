@@ -26,6 +26,11 @@ pub struct Row {
 }
 
 impl Row {
+    pub fn clear(&mut self) {
+        self.cells = vec![Cell::default(); self.cells.len()];
+        self.dirty = true;
+    }
+
     pub fn update(&mut self, event: &GridLine) {
         self.dirty = true;
 
@@ -167,6 +172,12 @@ impl Buffer {
 
         for row in self.rows.iter_mut() {
             row.cells.resize(width, Cell::default())
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for row in self.rows.iter_mut() {
+            row.clear();
         }
     }
 }

@@ -1,9 +1,9 @@
-mod imp;
-
 use gtk::{glib, subclass::prelude::*};
-use nvim::types::uievents::{GridLine, GridResize};
+use nvim::types::uievents::{GridLine, GridResize, GridClear};
 
 use crate::{colors::Colors, font::Font};
+
+mod imp;
 
 glib::wrapper! {
     pub struct Shell(ObjectSubclass<imp::Shell>)
@@ -36,6 +36,15 @@ impl Shell {
 
     pub fn handle_flush(&self, colors: &Colors, font: &Font) {
         self.imp().root_grid.flush(colors, font);
+    }
+
+    pub fn handle_grid_clear(&self, event: GridClear) {
+        assert_eq!(
+            event.grid, 1,
+            "without ext_multigrid, all events should be on grid 1"
+        );
+
+        self.imp().root_grid.clear();
     }
 }
 

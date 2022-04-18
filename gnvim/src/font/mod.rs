@@ -26,6 +26,17 @@ impl Font {
     pub fn height(&self) -> f32 {
         self.imp().height.get()
     }
+
+    pub fn char_width(&self) -> f32 {
+        self.imp().char_width.get()
+    }
+
+    pub fn grid_size_for_allocation(&self, alloc: &gtk::Allocation) -> (usize, usize) {
+        let rows = (alloc.height() as f32 / self.height()).floor() as usize;
+        let cols = (alloc.width() as f32 / self.char_width()).floor() as usize;
+
+        (cols, rows)
+    }
 }
 
 impl Default for Font {

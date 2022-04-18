@@ -1,10 +1,10 @@
-use std::cell::RefCell;
+use std::cell::{RefCell, Cell};
 use std::rc::Rc;
+use std::time::Duration;
 
 use futures::lock::Mutex;
 use nvim::types::uievents::UiOptions;
 use nvim::types::UiEvent;
-use once_cell::unsync::OnceCell;
 
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
@@ -31,10 +31,13 @@ pub struct AppWindow {
     #[template_child(id = "shell")]
     shell: TemplateChild<Shell>,
 
-    nvim: Rc<OnceCell<Mutex<nvim::Client<CompatWrite>>>>,
+    nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
 
     colors: Rc<RefCell<Colors>>,
     font: Rc<RefCell<Font>>,
+
+    /// Source id for debouncing nvim resizing.
+    resize_id: Rc<Cell<Option<glib::SourceId>>>,
 }
 
 impl AppWindow {
@@ -82,10 +85,10 @@ impl AppWindow {
             match msg {
                 Message::Response(res) => {
                     self.nvim
-                        .get()
-                        .expect("nvim client no set")
                         .lock()
                         .await
+                        .as_mut()
+                        .expect("nvim not set")
                         .handle_response(res)
                         .expect("failed to handle nvim response");
                 }
@@ -128,7 +131,9 @@ impl AppWindow {
             UiEvent::GridResize(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_resize(event);
             }),
-            UiEvent::GridClear(_) => {}
+            UiEvent::GridClear(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_clear(event);
+            }),
             UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_line(event);
             }),
@@ -173,9 +178,7 @@ impl ObjectImpl for AppWindow {
 
         let (client, reader) = self.open_nvim();
 
-        self.nvim
-            .set(Mutex::new(client))
-            .expect("failed to set nvim");
+        *self.nvim.try_lock().expect("can't get lock") = Some(client);
 
         let ctx = glib::MainContext::default();
         // Start io loop.
@@ -185,10 +188,11 @@ impl ObjectImpl for AppWindow {
 
         // Call nvim_ui_attach.
         ctx.spawn_local(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim.get()
-                    .unwrap()
+            let res = nvim
                     .lock()
                     .await
+                    .as_mut()
+                    .expect("nvim not set")
                     // TODO(ville): Calculate correct size.
                     .nvim_ui_attach(80, 30, UiOptions{
                         rgb: true,
@@ -222,7 +226,42 @@ impl ObjectImpl for AppWindow {
     }
 }
 
-impl WidgetImpl for AppWindow {}
+impl WidgetImpl for AppWindow {
+    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(widget, width, height, baseline);
+
+        let (cols, rows) = self.font.borrow().grid_size_for_allocation(&self.shell.allocation());
+
+        let id = glib::timeout_add_local(
+            Duration::from_millis(10),
+            clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
+                glib::MainContext::default().spawn_local(clone!(@weak nvim => async move {
+                    let res = nvim
+                        .lock()
+                        .await
+                        .as_mut()
+                        .expect("nvim not set")
+                        .nvim_ui_try_resize(cols as i64, rows as i64)
+                        .await
+                        .unwrap();
+
+                    res.await.expect("nvim_ui_try_resize failed");
+                }));
+
+                // Clear after our selves, so we don't try to remove
+                // our id once we're already done.
+                resize_id.replace(None);
+
+                return Continue(false)
+            }),
+        );
+
+        // Cancel the earlier timeout if it exists.
+        if let Some(id) = self.resize_id.replace(Some(id)).take() {
+            id.remove();
+        }
+    }
+}
 
 impl WindowImpl for AppWindow {}
 

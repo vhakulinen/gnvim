@@ -1,17 +1,18 @@
 use std::cell::{Cell, RefCell};
 
-use gtk::glib;
+use gtk::{glib, gsk};
 use gtk::subclass::prelude::*;
 
 use super::buffer::Buffer;
 
 #[derive(Default)]
 pub struct Grid {
-    /// The grid id.
+    /// The grid id from neovim.
     pub id: Cell<i64>,
-
+    /// The content.
     pub buffer: RefCell<Buffer>,
-    pub foreground: gtk::Snapshot,
+    /// Background nodes.
+    pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
 }
 
 #[glib::object_subclass]
@@ -63,6 +64,10 @@ impl ObjectImpl for Grid {
 
 impl WidgetImpl for Grid {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
+        for node in self.background_nodes.borrow().iter() {
+            snapshot.append_node(node);
+        }
+
         for row in self.buffer.borrow().rows.iter() {
             for node in row.bg_nodes.iter() {
                 snapshot.append_node(node);

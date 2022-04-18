@@ -1,5 +1,5 @@
-use gtk::glib;
 use gtk::glib::subclass::InitializingObject;
+use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
@@ -48,4 +48,4 @@ impl ObjectImpl for Shell {
     }
 }
 
-impl WidgetImpl for Shell {}
+impl WidgetImpl for Shell { }

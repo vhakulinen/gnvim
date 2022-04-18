@@ -1,5 +1,6 @@
+
 use glib::Object;
-use gtk::{glib, prelude::*, subclass::prelude::*};
+use gtk::{glib, prelude::*, subclass::prelude::*, gsk, gdk, graphene};
 
 use nvim::types::uievents::{GridLine, GridResize};
 
@@ -36,12 +37,37 @@ impl Grid {
     }
 
     pub fn flush(&self, colors: &Colors, font: &Font) {
+        let imp = self.imp();
+
         let h = font.height();
-        for (i, row) in self.imp().buffer.borrow_mut().rows.iter_mut().enumerate() {
+        for (i, row) in imp.buffer.borrow_mut().rows.iter_mut().enumerate() {
             row.generate_nodes(&self.pango_context(), colors, font, i as f32 * h, h);
         }
 
+        let alloc = self.allocation();
+        let mut nodes = imp.background_nodes.borrow_mut();
+
+        nodes.clear();
+        nodes.push(gsk::ColorNode::new(
+                &gdk::RGBA::new(
+                    colors.bg.r as f32,
+                    colors.bg.g as f32,
+                    colors.bg.b as f32,
+                    1.0,
+                ),
+                &graphene::Rect::new(
+                    0.0,
+                    0.0,
+                    alloc.width() as f32,
+                    alloc.height() as f32,
+                ),
+        ).upcast());
+
         self.queue_draw();
+    }
+
+    pub fn clear(&self) {
+        self.imp().buffer.borrow_mut().clear();
     }
 }
 
