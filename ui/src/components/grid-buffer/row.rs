@@ -1,14 +1,25 @@
-use gtk::{gdk, graphene, gsk, pango, prelude::*};
+use gtk::{graphene, gsk, pango, prelude::*};
 
 use nvim::types::uievents::GridLine;
 
 use crate::{colors::Colors, font::Font};
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Cell {
+    // TODO(ville): Use Cow for text.
     pub text: String,
     pub hl_id: i64,
     pub double_width: bool,
+}
+
+impl Default for Cell {
+    fn default() -> Self {
+        Self {
+            text: String::from(" "),
+            hl_id: Default::default(),
+            double_width: Default::default(),
+        }
+    }
 }
 
 struct LineSegment {

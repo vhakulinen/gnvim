@@ -5,6 +5,7 @@ use gtk::Application;
 mod colors;
 mod components;
 mod font;
+mod macros;
 
 use components::appwindow::AppWindow;
 

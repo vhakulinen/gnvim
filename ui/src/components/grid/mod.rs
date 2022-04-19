@@ -19,6 +19,8 @@ impl Grid {
     }
 
     pub fn put(&self, event: GridLine) {
+        // TODO(ville): This function should be proxied to the buffer.
+
         let mut rows = self.imp().buffer.get_rows_mut();
         let row = rows.get_mut(event.row as usize).expect("invalid row");
 
@@ -41,6 +43,9 @@ impl Grid {
 
     pub fn cursor_goto(&self, font: &Font, colors: &Colors, col: i64, row: i64) {
         let imp = self.imp();
+
+        // TODO(ville): Getting hl_id (or copy ) of a cell should probably
+        // happen in the buffer instead of here.
         let hl_id = imp
             .buffer
             .get_rows()

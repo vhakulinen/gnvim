@@ -22,6 +22,7 @@ use nvim::rpc::RpcReader;
 use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
 use crate::font::Font;
+use crate::{nvim_unlock, spawn_local};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -173,6 +174,54 @@ impl AppWindow {
             event => panic!("Unhandled ui event: {}", event),
         }
     }
+
+    fn send_nvim_input(&self, input: String) {
+        spawn_local!(clone!(@weak self.nvim as nvim => async move {
+            let res = nvim_unlock!(nvim)
+                .nvim_input(input)
+                .await
+                .expect("call to nvim failed");
+
+            // TODO(ville): nvim_input handle the returned bytes written value.
+            res.await.expect("nvim_input failed");
+        }));
+    }
+
+    fn im_commit(&self, input: &str) {
+        // NOTE(ville): "<" needs to be escaped for nvim_input (see `:h nvim_input`)
+        let input = input.replace("<", "<lt>");
+        self.send_nvim_input(input);
+    }
+
+    fn key_pressed(
+        &self,
+        eck: &gtk::EventControllerKey,
+        keyval: gdk::Key,
+        _keycode: u32,
+        state: gdk::ModifierType,
+    ) -> gtk::Inhibit {
+        let evt = eck.current_event().expect("failed to get event");
+        if self.im_context.filter_keypress(&evt) {
+            gtk::Inhibit(true)
+        } else {
+            if let Some(input) = event_to_nvim_input(keyval, state) {
+                self.send_nvim_input(input);
+                return gtk::Inhibit(true);
+            } else {
+                println!(
+                    "Failed to turn input event into nvim key (keyval: {})",
+                    keyval,
+                )
+            }
+
+            gtk::Inhibit(false)
+        }
+    }
+
+    fn key_released(&self, eck: &gtk::EventControllerKey) {
+        let evt = eck.current_event().expect("failed to get event");
+        self.im_context.filter_keypress(&evt);
+    }
 }
 
 #[glib::object_subclass]
@@ -206,30 +255,22 @@ impl ObjectImpl for AppWindow {
 
         *self.nvim.try_lock().expect("can't get lock") = Some(client);
 
-        let ctx = glib::MainContext::default();
         // Start io loop.
-        glib::MainContext::default().spawn_local(clone!(@strong obj as app => async move {
+        spawn_local!(clone!(@strong obj as app => async move {
             app.imp().io_loop(reader).await;
         }));
 
         // Call nvim_ui_attach.
-        ctx.spawn_local(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim
-                    .lock()
-                    .await
-                    .as_mut()
-                    .expect("nvim not set")
-                    // TODO(ville): Calculate correct size.
-                    .nvim_ui_attach(80, 30, UiOptions{
-                        rgb: true,
-                        ext_linegrid: true,
-                        //ext_multigrid: true,
-                        ..Default::default()
-                    })
-                    .await
-                    .unwrap();
-            // TODO(ville): For some reason, if await'ing on the above chain,
-            // things just hang. Figure out why.
+        spawn_local!(clone!(@weak self.nvim as nvim => async move {
+            let res = nvim_unlock!(nvim).nvim_ui_attach(80, 30,
+                UiOptions{
+                    rgb: true,
+                    ext_linegrid: true,
+                    //ext_multigrid: true,
+                    ..Default::default()
+                }
+            ).await.expect("call to nvim failed");
+
             res.await.expect("nvim_ui_attach failed");
         }));
 
@@ -238,15 +279,22 @@ impl ObjectImpl for AppWindow {
         self.event_controller_key
             .set_im_context(Some(&self.im_context));
 
-        self.im_context.connect_commit(|_, input| {
-            println!("input: {}", input);
-        });
+        self.im_context
+            .connect_commit(clone!(@weak obj => move |_, input| {
+                obj.imp().im_commit(input)
+            }));
+
+        self.event_controller_key.connect_key_pressed(clone!(
+        @weak obj,
+        => @default-return gtk::Inhibit(false),
+        move |eck, keyval, keycode, state| {
+            obj.imp().key_pressed(eck, keyval, keycode, state)
+        }));
 
         self.event_controller_key
-            .connect_key_pressed(|_, keyval, keycode, state| {
-                println!("key pressed: {} {} {}", keyval, keycode, state);
-                gtk::Inhibit(false)
-            });
+            .connect_key_released(clone!(@weak obj => move |eck, _, _, _| {
+                obj.imp().key_released(eck)
+            }));
 
         obj.add_controller(&self.event_controller_key);
     }
@@ -264,12 +312,8 @@ impl WidgetImpl for AppWindow {
         let id = glib::timeout_add_local(
             Duration::from_millis(10),
             clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
-                glib::MainContext::default().spawn_local(clone!(@weak nvim => async move {
-                    let res = nvim
-                        .lock()
-                        .await
-                        .as_mut()
-                        .expect("nvim not set")
+                spawn_local!(clone!(@weak nvim => async move {
+                    let res = nvim_unlock!(nvim)
                         .nvim_ui_try_resize(cols as i64, rows as i64)
                         .await
                         .unwrap();
@@ -295,3 +339,89 @@ impl WidgetImpl for AppWindow {
 impl WindowImpl for AppWindow {}
 
 impl ApplicationWindowImpl for AppWindow {}
+
+fn keyname_to_nvim_key(s: &str) -> Option<&str> {
+    // Originally sourced from python-gui.
+    match s {
+        "asciicircum" => Some("^"), // fix #137
+        "slash" => Some("/"),
+        "backslash" => Some("\\"),
+        "dead_circumflex" => Some("^"),
+        "at" => Some("@"),
+        "numbersign" => Some("#"),
+        "dollar" => Some("$"),
+        "percent" => Some("%"),
+        "ampersand" => Some("&"),
+        "asterisk" => Some("*"),
+        "parenleft" => Some("("),
+        "parenright" => Some(")"),
+        "underscore" => Some("_"),
+        "plus" => Some("+"),
+        "minus" => Some("-"),
+        "bracketleft" => Some("["),
+        "bracketright" => Some("]"),
+        "braceleft" => Some("{"),
+        "braceright" => Some("}"),
+        "dead_diaeresis" => Some("\""),
+        "dead_acute" => Some("\'"),
+        "less" => Some("<"),
+        "greater" => Some(">"),
+        "comma" => Some(","),
+        "period" => Some("."),
+        "space" => Some("Space"),
+        "BackSpace" => Some("BS"),
+        "Insert" => Some("Insert"),
+        "Return" => Some("CR"),
+        "Escape" => Some("Esc"),
+        "Delete" => Some("Del"),
+        "Page_Up" => Some("PageUp"),
+        "Page_Down" => Some("PageDown"),
+        "Enter" => Some("CR"),
+        "ISO_Left_Tab" => Some("Tab"),
+        "Tab" => Some("Tab"),
+        "Up" => Some("Up"),
+        "Down" => Some("Down"),
+        "Left" => Some("Left"),
+        "Right" => Some("Right"),
+        "Home" => Some("Home"),
+        "End" => Some("End"),
+        "F1" => Some("F1"),
+        "F2" => Some("F2"),
+        "F3" => Some("F3"),
+        "F4" => Some("F4"),
+        "F5" => Some("F5"),
+        "F6" => Some("F6"),
+        "F7" => Some("F7"),
+        "F8" => Some("F8"),
+        "F9" => Some("F9"),
+        "F10" => Some("F10"),
+        "F11" => Some("F11"),
+        "F12" => Some("F12"),
+        _ => None,
+    }
+}
+
+fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option<String> {
+    let mut input = String::from("");
+
+    let keyname = keyval.name()?;
+
+    if state.contains(gdk::ModifierType::SHIFT_MASK) {
+        input.push_str("S-");
+    }
+    if state.contains(gdk::ModifierType::CONTROL_MASK) {
+        input.push_str("C-");
+    }
+    if state.contains(gdk::ModifierType::ALT_MASK) {
+        input.push_str("A-");
+    }
+
+    if keyname.chars().count() > 1 {
+        let n = keyname_to_nvim_key(keyname.as_str())?;
+        input.push_str(n);
+    } else {
+        input.push(keyval.to_unicode()?);
+    }
+
+    Some(format!("<{}>", input))
+}
