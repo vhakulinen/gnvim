@@ -151,9 +151,15 @@ impl AppWindow {
             UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_line(event);
             }),
+            UiEvent::GridCursorGoto(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_cursor_goto(
+                    event,
+                    &self.font.borrow(),
+                    &self.colors.borrow(),
+                );
+            }),
             UiEvent::UpdateMenu => {}
             UiEvent::WinViewport(_) => {}
-            UiEvent::GridCursorGoto(_) => {}
             UiEvent::ModeInfoSet(_) => {}
             UiEvent::ModeChange(_) => {}
             UiEvent::Flush => {

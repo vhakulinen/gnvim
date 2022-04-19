@@ -1,18 +1,19 @@
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 
+use gtk::glib;
 use gtk::subclass::prelude::*;
-use gtk::{glib, gsk};
+use gtk::traits::WidgetExt;
 
-use super::buffer::Buffer;
+use crate::components::{Cursor, GridBuffer};
 
 #[derive(Default)]
 pub struct Grid {
     /// The grid id from neovim.
     pub id: Cell<i64>,
+    /// Our cursor on the screen.
+    pub cursor: Cursor,
     /// The content.
-    pub buffer: RefCell<Buffer>,
-    /// Background nodes.
-    pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
+    pub buffer: GridBuffer,
 }
 
 #[glib::object_subclass]
@@ -25,6 +26,17 @@ impl ObjectSubclass for Grid {
 impl ObjectImpl for Grid {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
+
+        let layout = gtk::BinLayout::new();
+        obj.set_layout_manager(Some(&layout));
+
+        self.buffer.set_parent(obj);
+        self.cursor.set_parent(obj);
+    }
+
+    fn dispose(&self, _obj: &Self::Type) {
+        self.buffer.unparent();
+        self.cursor.unparent();
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
@@ -62,20 +74,4 @@ impl ObjectImpl for Grid {
     }
 }
 
-impl WidgetImpl for Grid {
-    fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
-        for node in self.background_nodes.borrow().iter() {
-            snapshot.append_node(node);
-        }
-
-        for row in self.buffer.borrow().rows.iter() {
-            for node in row.bg_nodes.iter() {
-                snapshot.append_node(node);
-            }
-
-            for node in row.fg_nodes.iter() {
-                snapshot.append_node(node);
-            }
-        }
-    }
-}
+impl WidgetImpl for Grid {}

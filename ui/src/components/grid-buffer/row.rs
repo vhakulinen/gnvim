@@ -153,28 +153,3 @@ impl Row {
         }
     }
 }
-
-#[derive(Default, Debug)]
-pub struct Buffer {
-    pub rows: Vec<Row>,
-}
-
-impl Buffer {
-    pub fn get_row(&mut self, idx: usize) -> Option<&mut Row> {
-        self.rows.get_mut(idx)
-    }
-
-    pub fn resize(&mut self, width: usize, height: usize) {
-        self.rows.resize_with(height, Default::default);
-
-        for row in self.rows.iter_mut() {
-            row.cells.resize(width, Cell::default())
-        }
-    }
-
-    pub fn clear(&mut self) {
-        for row in self.rows.iter_mut() {
-            row.clear();
-        }
-    }
-}

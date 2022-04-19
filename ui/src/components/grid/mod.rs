@@ -1,11 +1,10 @@
 use glib::Object;
-use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
+use gtk::{glib, subclass::prelude::*};
 
 use nvim::types::uievents::{GridLine, GridResize};
 
 use crate::{colors::Colors, font::Font};
 
-mod buffer;
 mod imp;
 
 glib::wrapper! {
@@ -20,10 +19,8 @@ impl Grid {
     }
 
     pub fn put(&self, event: GridLine) {
-        let imp = self.imp();
-
-        let mut buffer = imp.buffer.borrow_mut();
-        let row = buffer.get_row(event.row as usize).expect("invalid row");
+        let mut rows = self.imp().buffer.get_rows_mut();
+        let row = rows.get_mut(event.row as usize).expect("invalid row");
 
         row.update(&event);
     }
@@ -31,35 +28,32 @@ impl Grid {
     pub fn resize(&self, event: GridResize) {
         self.imp()
             .buffer
-            .borrow_mut()
             .resize(event.width as usize, event.height as usize);
     }
 
     pub fn flush(&self, colors: &Colors, font: &Font) {
-        let imp = self.imp();
-
-        let h = font.height();
-        for (i, row) in imp.buffer.borrow_mut().rows.iter_mut().enumerate() {
-            row.generate_nodes(&self.pango_context(), colors, font, i as f32 * h, h);
-        }
-
-        let alloc = self.allocation();
-        let mut nodes = imp.background_nodes.borrow_mut();
-
-        nodes.clear();
-        nodes.push(
-            gsk::ColorNode::new(
-                &colors.bg,
-                &graphene::Rect::new(0.0, 0.0, alloc.width() as f32, alloc.height() as f32),
-            )
-            .upcast(),
-        );
-
-        self.queue_draw();
+        self.imp().buffer.flush(colors, font);
     }
 
     pub fn clear(&self) {
-        self.imp().buffer.borrow_mut().clear();
+        self.imp().buffer.clear();
+    }
+
+    pub fn cursor_goto(&self, font: &Font, colors: &Colors, col: i64, row: i64) {
+        let imp = self.imp();
+        let hl_id = imp
+            .buffer
+            .get_rows()
+            .get(row as usize)
+            .expect("invalid row")
+            .cells
+            .get(col as usize)
+            .expect("invalid col")
+            .hl_id;
+
+        let fg = colors.get_hl_fg(hl_id);
+
+        imp.cursor.move_to(font, col, row, fg);
     }
 }
 
