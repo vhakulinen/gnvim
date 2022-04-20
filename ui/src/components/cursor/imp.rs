@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 
-use gtk::glib::subclass::InitializingObject;
-use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, graphene};
 

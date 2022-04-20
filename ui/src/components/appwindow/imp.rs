@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use futures::lock::Mutex;
-use nvim::types::uievents::UiOptions;
+use nvim::types::uievents::{DefaultColorsSet, UiOptions};
 use nvim::types::UiEvent;
 
 use glib::subclass::InitializingObject;
@@ -117,41 +117,65 @@ impl AppWindow {
         }
     }
 
-    fn handle_ui_event(&self, event: UiEvent) {
-        match event {
-            UiEvent::OptionSet(_) => {}
-            UiEvent::DefaultColorsSet(events) => events.into_iter().for_each(|event| {
-                let mut colors = self.colors.borrow_mut();
-                colors.fg = Color::from_i64(event.rgb_fg);
-                colors.bg = Color::from_i64(event.rgb_bg);
-                colors.sp = Color::from_i64(event.rgb_sp);
+    fn handle_default_colors_set(&self, event: DefaultColorsSet) {
+        let mut colors = self.colors.borrow_mut();
+        colors.fg = Color::from_i64(event.rgb_fg);
+        colors.bg = Color::from_i64(event.rgb_bg);
+        colors.sp = Color::from_i64(event.rgb_sp);
 
-                self.css_provider.load_from_data(
-                    format!(
-                        r#"
+        self.css_provider.load_from_data(
+            format!(
+                r#"
                             .app-window {{
                                 background-color: #{bg};
                             }}
                         "#,
-                        bg = colors.bg.as_hex(),
-                    )
-                    .as_bytes(),
-                );
+                bg = colors.bg.as_hex(),
+            )
+            .as_bytes(),
+        );
+    }
+
+    fn handle_ui_event(&self, event: UiEvent) {
+        match event {
+            // Global events
+            UiEvent::SetTitle(_) => {}
+            UiEvent::SetIcon(_) => {}
+            UiEvent::ModeInfoSet(_) => {}
+            UiEvent::OptionSet(_) => {}
+            UiEvent::ModeChange(_) => {}
+            UiEvent::MouseOn => {}
+            UiEvent::MouseOff => {}
+            UiEvent::BusyStart => {}
+            UiEvent::BusyStop => {}
+            UiEvent::Suspend => {}
+            UiEvent::UpdateMenu => {}
+            UiEvent::Bell => {}
+            UiEvent::VisualBell => {}
+            UiEvent::Flush => {
+                self.shell
+                    .handle_flush(&self.colors.borrow(), &self.font.borrow());
+            }
+
+            // linegrid events
+            UiEvent::GridResize(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_resize(event);
             }),
+            UiEvent::DefaultColorsSet(events) => events
+                .into_iter()
+                .for_each(|event| self.handle_default_colors_set(event)),
             UiEvent::HlAttrDefine(events) => events.into_iter().for_each(|event| {
                 let mut colors = self.colors.borrow_mut();
                 colors.hls.insert(event.id, event.rgb_attrs);
             }),
             UiEvent::HlGroupSet(_) => {}
-            UiEvent::GridResize(events) => events.into_iter().for_each(|event| {
-                self.shell.handle_grid_resize(event);
+            UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
+                self.shell.handle_grid_line(event);
             }),
             UiEvent::GridClear(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_clear(event);
             }),
-            UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
-                self.shell.handle_grid_line(event);
-            }),
+            UiEvent::GridDestroy(_) => {}
             UiEvent::GridCursorGoto(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_cursor_goto(
                     event,
@@ -162,18 +186,11 @@ impl AppWindow {
             UiEvent::GridScroll(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_grid_scroll(event)),
-            UiEvent::UpdateMenu => {}
+
+            // For some reason, this lonely multigrid event is sent
+            // even tho' we haven't enabled that feature yet.
             UiEvent::WinViewport(_) => {}
-            UiEvent::ModeInfoSet(_) => {}
-            UiEvent::ModeChange(_) => {}
-            UiEvent::Flush => {
-                self.shell
-                    .handle_flush(&self.colors.borrow(), &self.font.borrow());
-            }
-            UiEvent::SetIcon(_) => {}
-            UiEvent::SetTitle(_) => {}
-            UiEvent::MouseOn => {}
-            UiEvent::MouseOff => {}
+
             event => panic!("Unhandled ui event: {}", event),
         }
     }
