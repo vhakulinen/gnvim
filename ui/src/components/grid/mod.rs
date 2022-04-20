@@ -1,7 +1,7 @@
 use glib::Object;
 use gtk::{glib, subclass::prelude::*};
 
-use nvim::types::uievents::{GridLine, GridResize};
+use nvim::types::uievents::{GridLine, GridResize, GridScroll};
 
 use crate::{colors::Colors, font::Font};
 
@@ -59,6 +59,10 @@ impl Grid {
         let fg = colors.get_hl_fg(hl_id);
 
         imp.cursor.move_to(font, col, row, fg);
+    }
+
+    pub fn scroll(&self, event: GridScroll) {
+        self.imp().buffer.scroll(event);
     }
 }
 

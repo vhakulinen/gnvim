@@ -1,5 +1,5 @@
 use gtk::{glib, subclass::prelude::*};
-use nvim::types::uievents::{GridClear, GridCursorGoto, GridLine, GridResize};
+use nvim::types::uievents::{GridClear, GridCursorGoto, GridLine, GridResize, GridScroll};
 
 use crate::{colors::Colors, font::Font};
 
@@ -56,6 +56,15 @@ impl Shell {
         self.imp()
             .root_grid
             .cursor_goto(font, colors, event.col, event.row);
+    }
+
+    pub fn handle_grid_scroll(&self, event: GridScroll) {
+        assert_eq!(
+            event.grid, 1,
+            "without ext_multigrid, all events should be on grid 1"
+        );
+
+        self.imp().root_grid.scroll(event);
     }
 }
 

@@ -27,7 +27,7 @@ struct LineSegment {
     text: String,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Row {
     pub cells: Vec<Cell>,
     pub fg_nodes: Vec<gsk::RenderNode>,
@@ -39,6 +39,10 @@ pub struct Row {
 impl Row {
     pub fn clear(&mut self) {
         self.cells = vec![Cell::default(); self.cells.len()];
+        self.dirty = true;
+    }
+
+    pub fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 

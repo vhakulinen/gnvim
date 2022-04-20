@@ -159,6 +159,9 @@ impl AppWindow {
                     &self.colors.borrow(),
                 );
             }),
+            UiEvent::GridScroll(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_grid_scroll(event)),
             UiEvent::UpdateMenu => {}
             UiEvent::WinViewport(_) => {}
             UiEvent::ModeInfoSet(_) => {}

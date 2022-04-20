@@ -1,6 +1,7 @@
 use std::cell::{Ref, RefMut};
 
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
+use nvim::types::uievents::GridScroll;
 
 use crate::{colors::Colors, font::Font};
 
@@ -64,6 +65,43 @@ impl GridBuffer {
         );
 
         self.queue_draw();
+    }
+
+    fn scroll_region(event: &GridScroll) -> (Box<dyn Iterator<Item = i64>>, i64) {
+        if event.rows > 0 {
+            let top = event.top + event.rows;
+            let bot = event.bot;
+
+            return (Box::new(top..bot), -event.rows);
+        } else {
+            let top = event.top;
+            let bot = event.bot + event.rows;
+
+            return (Box::new((top..bot).rev()), event.rows.abs());
+        }
+    }
+
+    pub fn scroll(&self, event: GridScroll) {
+        assert_eq!(
+            event.cols, 0,
+            "at the moment of writing, grid_scroll event documents cols to be always zero"
+        );
+
+        let left = event.left as usize;
+        let right = event.right as usize;
+        let (iter, count) = GridBuffer::scroll_region(&event);
+
+        let mut rows = self.imp().rows.borrow_mut();
+        for i in iter {
+            let dst = (i + count) as usize;
+            let i = i as usize;
+
+            // TODO(ville): Would be nice to do the swap without this extra move step.
+            let mut src = std::mem::replace(&mut rows[i].cells, Default::default());
+
+            rows[dst].cells[left..right].swap_with_slice(&mut src[left..right]);
+            let _ = std::mem::replace(&mut rows[i].cells, src);
+        }
     }
 }
 
