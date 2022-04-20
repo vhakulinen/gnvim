@@ -91,6 +91,9 @@ impl Row {
             return;
         }
 
+        // We're not dirty anymore after we're done here.
+        self.dirty = false;
+
         self.fg_nodes.clear(); // Make sure the glyphs are cleared.
         self.bg_nodes.clear(); // Make sure the glyphs are cleared.
 

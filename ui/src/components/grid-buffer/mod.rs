@@ -100,6 +100,7 @@ impl GridBuffer {
             let mut src = std::mem::replace(&mut rows[i].cells, Default::default());
 
             rows[dst].cells[left..right].swap_with_slice(&mut src[left..right]);
+            rows[dst].mark_dirty();
             let _ = std::mem::replace(&mut rows[i].cells, src);
         }
     }
