@@ -25,6 +25,7 @@ impl Default for Cell {
 struct LineSegment {
     hl_id: i64,
     text: String,
+    cell_count: i64,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -105,10 +106,12 @@ impl Row {
                 match acc.last_mut() {
                     Some(prev) if prev.hl_id == cell.hl_id => {
                         prev.text.push_str(cell.text.as_ref());
+                        prev.cell_count += 1
                     }
                     _ => acc.push(LineSegment {
                         text: cell.text.clone(),
                         hl_id: cell.hl_id,
+                        cell_count: 1,
                     }),
                 };
 
@@ -167,7 +170,7 @@ impl Row {
                     .upcast(),
             );
 
-            x_offset += width;
+            x_offset += font.char_width() * segment.cell_count as f32;
         }
     }
 }
