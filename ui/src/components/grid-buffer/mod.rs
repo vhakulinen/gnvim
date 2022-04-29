@@ -47,9 +47,11 @@ impl GridBuffer {
     pub fn flush(&self, colors: &Colors, font: &Font) {
         let imp = self.imp();
 
+        let ctx = self.pango_context();
+
         let h = font.height();
         for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
-            row.generate_nodes(&self.pango_context(), colors, font, i as f32 * h, h);
+            row.generate_nodes(&ctx, colors, font, i as f32 * h, h);
         }
 
         let alloc = self.allocation();
@@ -96,12 +98,22 @@ impl GridBuffer {
             let dst = (i + count) as usize;
             let i = i as usize;
 
-            // TODO(ville): Would be nice to do the swap without this extra move step.
-            let mut src = std::mem::replace(&mut rows[i].cells, Default::default());
+            assert!(i != dst, "cant get two mutable references to same element");
+            let (src, dst) = unsafe {
+                let src: &mut Row = &mut *(rows.get_mut(i).expect("bad scroll region") as *mut _);
+                let dst: &mut Row = &mut *(rows.get_mut(dst).expect("bad scroll region") as *mut _);
+                (src, dst)
+            };
 
-            rows[dst].cells[left..right].swap_with_slice(&mut src[left..right]);
-            rows[dst].mark_dirty();
-            let _ = std::mem::replace(&mut rows[i].cells, src);
+            // Clear render nodes, so they get redrawn.
+            src.cells[left..right]
+                .iter_mut()
+                .for_each(Cell::clear_nodes);
+            dst.cells[left..right]
+                .iter_mut()
+                .for_each(Cell::clear_nodes);
+
+            dst.cells[left..right].swap_with_slice(&mut src.cells[left..right]);
         }
     }
 }

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk};
@@ -29,12 +30,15 @@ impl WidgetImpl for GridBuffer {
         }
 
         for row in self.rows.borrow().iter() {
-            for node in row.bg_nodes.iter() {
-                snapshot.append_node(node);
+            for nodes in row.render_node_iter() {
+                if let Some(ref nodes) = *nodes {
+                    snapshot.append_node(&nodes.bg);
+                }
             }
-
-            for node in row.fg_nodes.iter() {
-                snapshot.append_node(node);
+            for nodes in row.render_node_iter() {
+                if let Some(ref nodes) = *nodes {
+                    snapshot.append_node(&nodes.fg);
+                }
             }
         }
     }

@@ -46,17 +46,11 @@ impl Grid {
 
         // TODO(ville): Getting hl_id (or copy ) of a cell should probably
         // happen in the buffer instead of here.
-        let hl_id = imp
-            .buffer
-            .get_rows()
-            .get(row as usize)
-            .expect("invalid row")
-            .cells
-            .get(col as usize)
-            .expect("invalid col")
-            .hl_id;
+        let rows = imp.buffer.get_rows();
+        let cells = &rows.get(row as usize).expect("invalid row").cells;
+        let cell = cells.get(col as usize).expect("invalid col");
 
-        let fg = colors.get_hl_fg(hl_id);
+        let fg = colors.get_hl_fg(cell.hl_id);
 
         imp.cursor.move_to(font, col, row, fg);
     }
