@@ -1,5 +1,7 @@
 use gtk::{glib, subclass::prelude::*};
-use nvim::types::uievents::{GridClear, GridCursorGoto, GridLine, GridResize, GridScroll};
+use nvim::types::uievents::{
+    GridClear, GridCursorGoto, GridLine, GridResize, GridScroll, ModeInfo,
+};
 
 use crate::{colors::Colors, font::Font};
 
@@ -63,6 +65,10 @@ impl Shell {
         );
 
         self.imp().root_grid.scroll(event);
+    }
+
+    pub fn handle_mode_change(&self, mode: &ModeInfo) {
+        self.imp().root_grid.mode_change(mode);
     }
 }
 

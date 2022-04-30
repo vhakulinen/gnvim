@@ -23,9 +23,11 @@ impl Cursor {
             return;
         }
 
-        // NOTE(ville): Inverted colors.
-        let fg = colors.get_hl_bg(*imp.hl_id.borrow());
-        let bg = colors.get_hl_fg(*imp.hl_id.borrow());
+        let hl_id = *imp.attr_id.borrow();
+        let fg = colors.get_hl_fg(hl_id);
+        let bg = colors.get_hl_bg(hl_id);
+        // For hl id zero, we need to flip fg and bg.
+        let (fg, bg) = if hl_id == 0 { (bg, fg) } else { (fg, bg) };
 
         let height = font.height();
         let ch = font.char_width();
@@ -40,12 +42,18 @@ impl Cursor {
         } else {
             ch
         };
-        snapshot.append_node(
-            gsk::ColorNode::new(&bg, &graphene::Rect::new(x, y, width, height)).upcast(),
-        );
+        let width = width * *imp.width_percentage.borrow();
+        let rect = graphene::Rect::new(x, y, width, height);
 
-        let attrs = crate::render::create_hl_attrs(*imp.hl_id.borrow(), colors, font);
+        // Clip the area where we're drawing. This avoids a issue when the cursor
+        // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
+        // _our_ render node to our _width_ and thus' the underlying grid cell
+        // will be visible instead.
+        snapshot.push_clip(&rect);
 
+        snapshot.append_node(gsk::ColorNode::new(&bg, &rect).upcast());
+
+        let attrs = crate::render::create_hl_attrs(hl_id, colors, font);
         crate::render::render_text(
             &snapshot,
             &self.pango_context(),
@@ -55,6 +63,8 @@ impl Cursor {
             x,
             y + font.ascent(),
         );
+
+        snapshot.pop();
 
         let node = snapshot
             .to_node()
@@ -67,12 +77,19 @@ impl Cursor {
     pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
         let imp = self.imp();
         imp.pos.replace((col, row));
-        imp.hl_id.replace(cell.hl_id);
         imp.text.replace(cell.text.clone());
         imp.double_width.replace(cell.double_width);
 
         // Clear the render node.
         imp.node.replace(None);
+    }
+
+    pub fn set_width_percentage(&self, p: f32) {
+        self.imp().width_percentage.replace(p);
+    }
+
+    pub fn set_attr_id(&self, id: i64) {
+        self.imp().attr_id.replace(id);
     }
 }
 

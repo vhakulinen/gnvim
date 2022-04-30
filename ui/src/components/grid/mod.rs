@@ -1,7 +1,7 @@
 use glib::Object;
 use gtk::{glib, subclass::prelude::*};
 
-use nvim::types::uievents::{GridLine, GridResize, GridScroll};
+use nvim::types::uievents::{GridLine, GridResize, GridScroll, ModeInfo};
 
 use crate::{colors::Colors, font::Font};
 
@@ -55,6 +55,21 @@ impl Grid {
 
     pub fn scroll(&self, event: GridScroll) {
         self.imp().buffer.scroll(event);
+    }
+
+    pub fn mode_change(&self, mode: &ModeInfo) {
+        let cell_percentage = mode
+            .cell_percentage
+            // Make sure we have non 0 value.
+            .map(|v| if v == 0 { 100 } else { v })
+            .map(|v| v as f32 / 100.0)
+            .unwrap_or(100.0);
+
+        let imp = self.imp();
+        imp.cursor.set_width_percentage(cell_percentage);
+        imp.cursor.set_attr_id(mode.attr_id.unwrap_or(0) as i64);
+
+        // TODO(ville): Handle rest of the mode properties (blink, cursor shape).
     }
 }
 

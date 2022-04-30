@@ -6,11 +6,13 @@ use gtk::{glib, gsk};
 #[derive(Default)]
 pub struct Cursor {
     pub pos: RefCell<(i64, i64)>,
-    pub hl_id: RefCell<i64>,
     pub text: RefCell<String>,
     pub double_width: RefCell<bool>,
 
     pub node: RefCell<Option<gsk::RenderNode>>,
+
+    pub width_percentage: RefCell<f32>,
+    pub attr_id: RefCell<i64>,
 }
 
 #[glib::object_subclass]

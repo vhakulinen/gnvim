@@ -148,7 +148,13 @@ impl AppWindow {
                 self.mode_infos.replace(event.cursor_styles);
             }),
             UiEvent::OptionSet(_) => {}
-            UiEvent::ModeChange(_) => {}
+            UiEvent::ModeChange(events) => events.into_iter().for_each(|event| {
+                let modes = self.mode_infos.borrow();
+                let mode = modes
+                    .get(event.mode_idx as usize)
+                    .expect("invalid mode_idx");
+                self.shell.handle_mode_change(&mode);
+            }),
             UiEvent::MouseOn => {}
             UiEvent::MouseOff => {}
             UiEvent::BusyStart => {}
