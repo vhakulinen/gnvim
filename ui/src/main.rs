@@ -6,6 +6,7 @@ mod colors;
 mod components;
 mod font;
 mod macros;
+mod render;
 
 use components::appwindow::AppWindow;
 

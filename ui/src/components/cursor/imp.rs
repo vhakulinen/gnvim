@@ -1,22 +1,16 @@
 use std::cell::RefCell;
 
 use gtk::subclass::prelude::*;
-use gtk::{glib, graphene};
+use gtk::{glib, gsk};
 
-use crate::colors::Color;
-
+#[derive(Default)]
 pub struct Cursor {
-    pub pos: RefCell<graphene::Rect>,
-    pub color: RefCell<Color>,
-}
+    pub pos: RefCell<(i64, i64)>,
+    pub hl_id: RefCell<i64>,
+    pub text: RefCell<String>,
+    pub double_width: RefCell<bool>,
 
-impl Default for Cursor {
-    fn default() -> Self {
-        Self {
-            pos: RefCell::new(graphene::Rect::new(0.0, 0.0, 0.0, 0.0)),
-            color: Default::default(),
-        }
-    }
+    pub node: RefCell<Option<gsk::RenderNode>>,
 }
 
 #[glib::object_subclass]
@@ -30,6 +24,8 @@ impl ObjectImpl for Cursor {}
 
 impl WidgetImpl for Cursor {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
-        snapshot.append_color(&self.color.borrow(), &self.pos.borrow())
+        if let Some(ref node) = *self.node.borrow() {
+            snapshot.append_node(node);
+        }
     }
 }

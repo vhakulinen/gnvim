@@ -6,7 +6,7 @@ use nvim::types::uievents::GridScroll;
 use crate::{colors::Colors, font::Font};
 
 mod imp;
-mod row;
+pub mod row;
 
 use row::{Cell, Row};
 

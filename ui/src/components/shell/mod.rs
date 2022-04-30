@@ -47,15 +47,13 @@ impl Shell {
         self.imp().root_grid.clear();
     }
 
-    pub fn handle_grid_cursor_goto(&self, event: GridCursorGoto, font: &Font, colors: &Colors) {
+    pub fn handle_grid_cursor_goto(&self, event: GridCursorGoto) {
         assert_eq!(
             event.grid, 1,
             "without ext_multigrid, all events should be on grid 1"
         );
 
-        self.imp()
-            .root_grid
-            .cursor_goto(font, colors, event.col, event.row);
+        self.imp().root_grid.cursor_goto(event.col, event.row);
     }
 
     pub fn handle_grid_scroll(&self, event: GridScroll) {

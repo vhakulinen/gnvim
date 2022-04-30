@@ -14,6 +14,10 @@ pub struct Colors {
 }
 
 impl Colors {
+    pub fn get_hl(&self, hl: i64) -> Option<&HlAttr> {
+        self.hls.get(&hl)
+    }
+
     pub fn get_hl_fg(&self, hl: i64) -> Color {
         if let Some(hl) = self.hls.get(&hl) {
             if hl.reverse.unwrap_or(false) {

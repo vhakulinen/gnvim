@@ -177,11 +177,7 @@ impl AppWindow {
             }),
             UiEvent::GridDestroy(_) => {}
             UiEvent::GridCursorGoto(events) => events.into_iter().for_each(|event| {
-                self.shell.handle_grid_cursor_goto(
-                    event,
-                    &self.font.borrow(),
-                    &self.colors.borrow(),
-                );
+                self.shell.handle_grid_cursor_goto(event);
             }),
             UiEvent::GridScroll(events) => events
                 .into_iter()

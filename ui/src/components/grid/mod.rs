@@ -34,25 +34,23 @@ impl Grid {
     }
 
     pub fn flush(&self, colors: &Colors, font: &Font) {
-        self.imp().buffer.flush(colors, font);
+        let imp = self.imp();
+        imp.buffer.flush(colors, font);
+        imp.cursor.flush(colors, font);
     }
 
     pub fn clear(&self) {
         self.imp().buffer.clear();
     }
 
-    pub fn cursor_goto(&self, font: &Font, colors: &Colors, col: i64, row: i64) {
+    pub fn cursor_goto(&self, col: i64, row: i64) {
         let imp = self.imp();
 
-        // TODO(ville): Getting hl_id (or copy ) of a cell should probably
-        // happen in the buffer instead of here.
         let rows = imp.buffer.get_rows();
         let cells = &rows.get(row as usize).expect("invalid row").cells;
         let cell = cells.get(col as usize).expect("invalid col");
 
-        let fg = colors.get_hl_fg(cell.hl_id);
-
-        imp.cursor.move_to(font, col, row, fg);
+        imp.cursor.move_to(cell, col, row);
     }
 
     pub fn scroll(&self, event: GridScroll) {

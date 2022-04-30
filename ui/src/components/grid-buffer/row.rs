@@ -47,7 +47,7 @@ impl Cell {
     /// Width of this cell on the grid. A cell might have length of 1, 2 or
     /// zero. Normal, double width, zero width. Zero width happens when the
     /// cell is right of a double width cell.
-    pub fn width(&mut self) -> i64 {
+    pub fn width(&self) -> i64 {
         if self.double_width {
             2
         } else if self.text.is_empty() {
@@ -63,6 +63,7 @@ struct LineSegment<'a> {
     cells: Vec<&'a mut Cell>,
     dirty: bool,
     width: i64,
+    double_width: bool,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -130,10 +131,31 @@ impl Row {
                 let dirty = cell.nodes.borrow().is_none();
                 let width = cell.width();
 
-                // TODO(ville): Render double width characters independently
+                // If the cell is double width, render it independently.
+                if cell.double_width {
+                    acc.push(LineSegment {
+                        hl_id: cell.hl_id,
+                        cells: vec![cell],
+                        width,
+                        dirty,
+                        double_width: true,
+                    });
+
+                    return acc;
+                }
 
                 match acc.last_mut() {
-                    Some(prev) if prev.hl_id == cell.hl_id => {
+                    // Double width cells are always followed by a "empty" cell.
+                    // We want to render these together.
+                    Some(prev) if prev.double_width && width == 0 => {
+                        prev.cells.push(cell);
+                        prev.dirty = dirty || prev.dirty;
+                        prev.width += width;
+                    }
+                    // Combine neighbouring cells that share share same hl id,
+                    // but not when the other is a double width (excluding
+                    // the above case).
+                    Some(prev) if !prev.double_width && prev.hl_id == cell.hl_id => {
                         prev.cells.push(cell);
                         prev.dirty = dirty || prev.dirty;
                         prev.width += width;
@@ -143,18 +165,14 @@ impl Row {
                         cells: vec![cell],
                         width,
                         dirty,
+                        double_width: false,
                     }),
                 };
 
                 acc
             });
 
-        let attrs = pango::AttrList::new();
-        attrs.insert(pango::AttrFontDesc::new(&font.font_desc()));
-        // TODO(ville): Add bold, italics etc. attrs.
-
-        let scale = pango::SCALE as f32;
-        let ascent = font.ascent();
+        let ch = font.char_width();
 
         let mut x_offset = 0.0_f32;
         for segment in segments.iter_mut() {
@@ -165,6 +183,7 @@ impl Row {
 
             let snapshot_fg = gtk::Snapshot::new();
             let snapshot_bg = gtk::Snapshot::new();
+            let attrs = crate::render::create_hl_attrs(segment.hl_id, colors, font);
 
             let text = segment
                 .cells
@@ -172,40 +191,27 @@ impl Row {
                 .map(|cell| cell.text.clone())
                 .collect::<String>();
 
-            let items = pango::itemize(&ctx, &text, 0, text.len() as i32, &attrs, None);
-
             let fg = colors.get_hl_fg(segment.hl_id);
             let bg = colors.get_hl_bg(segment.hl_id);
 
-            let mut width = 0.0_f32;
-            for item in items {
-                let a = item.analysis();
-                let offset = item.offset() as usize;
-                let len = item.length() as usize;
-                let mut glyphs = pango::GlyphString::new();
-                let text = &text[offset..offset + len];
+            // Create glyphs.
+            crate::render::render_text(
+                &snapshot_fg,
+                ctx,
+                &text,
+                &fg,
+                &attrs,
+                x_offset,
+                y_offset + font.ascent(),
+            );
 
-                pango::shape(text, a, &mut glyphs);
-
-                let node = gsk::TextNode::new(
-                    &a.font(),
-                    &mut glyphs,
-                    &fg,
-                    // TODO(ville): Double check that the x and y values are correct.
-                    &graphene::Point::new(x_offset + width, y_offset + ascent),
-                );
-
-                // Empty glyphs (e.g. whitespace) won't get any nodes.
-                if let Some(node) = node {
-                    snapshot_fg.append_node(node.upcast());
-                }
-
-                width += glyphs.width() as f32 / scale;
-            }
-
+            // Create background.
             snapshot_bg.append_node(
-                gsk::ColorNode::new(&bg, &graphene::Rect::new(x_offset, y_offset, width, height))
-                    .upcast(),
+                gsk::ColorNode::new(
+                    &bg,
+                    &graphene::Rect::new(x_offset, y_offset, segment.width as f32 * ch, height),
+                )
+                .upcast(),
             );
 
             let nodes = Rc::new(RefCell::new(Some(CellNodes {
@@ -220,7 +226,7 @@ impl Row {
                 cell.nodes = nodes.clone();
             });
 
-            x_offset += font.char_width() * segment.width as f32;
+            x_offset += ch * segment.width as f32;
         }
     }
 }
