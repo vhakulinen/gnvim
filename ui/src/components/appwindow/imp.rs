@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use futures::lock::Mutex;
-use nvim::types::uievents::{DefaultColorsSet, UiOptions};
+use nvim::types::uievents::{DefaultColorsSet, ModeInfo, UiOptions};
 use nvim::types::UiEvent;
 
 use glib::subclass::InitializingObject;
@@ -38,6 +38,7 @@ pub struct AppWindow {
 
     colors: Rc<RefCell<Colors>>,
     font: Rc<RefCell<Font>>,
+    mode_infos: RefCell<Vec<ModeInfo>>,
 
     /// Source id for debouncing nvim resizing.
     resize_id: Rc<Cell<Option<glib::SourceId>>>,
@@ -126,10 +127,10 @@ impl AppWindow {
         self.css_provider.load_from_data(
             format!(
                 r#"
-                            .app-window {{
-                                background-color: #{bg};
-                            }}
-                        "#,
+                    .app-window {{
+                        background-color: #{bg};
+                    }}
+                "#,
                 bg = colors.bg.as_hex(),
             )
             .as_bytes(),
@@ -143,7 +144,9 @@ impl AppWindow {
                 obj.set_title(Some(&event.title));
             }),
             UiEvent::SetIcon(_) => {}
-            UiEvent::ModeInfoSet(_) => {}
+            UiEvent::ModeInfoSet(events) => events.into_iter().for_each(|event| {
+                self.mode_infos.replace(event.cursor_styles);
+            }),
             UiEvent::OptionSet(_) => {}
             UiEvent::ModeChange(_) => {}
             UiEvent::MouseOn => {}
