@@ -79,7 +79,7 @@ impl AppWindow {
         (nvim::Client::new(writer), reader)
     }
 
-    async fn io_loop(&self, reader: CompatRead) {
+    async fn io_loop(&self, obj: super::AppWindow, reader: CompatRead) {
         use nvim::rpc::{message::Notification, Message};
         let mut reader: RpcReader<CompatRead> = reader.into();
 
@@ -106,7 +106,7 @@ impl AppWindow {
 
                             events
                                 .into_iter()
-                                .for_each(|event| self.handle_ui_event(event))
+                                .for_each(|event| self.handle_ui_event(&obj, event))
                         }
                         _ => {
                             println!("Unexpected notification: {}", method);
@@ -136,10 +136,12 @@ impl AppWindow {
         );
     }
 
-    fn handle_ui_event(&self, event: UiEvent) {
+    fn handle_ui_event(&self, obj: &super::AppWindow, event: UiEvent) {
         match event {
             // Global events
-            UiEvent::SetTitle(_) => {}
+            UiEvent::SetTitle(events) => events.into_iter().for_each(|event| {
+                obj.set_title(Some(&event.title));
+            }),
             UiEvent::SetIcon(_) => {}
             UiEvent::ModeInfoSet(_) => {}
             UiEvent::OptionSet(_) => {}
@@ -273,7 +275,7 @@ impl ObjectImpl for AppWindow {
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
-            app.imp().io_loop(reader).await;
+            app.imp().io_loop(app.clone(), reader).await;
         }));
 
         // Call nvim_ui_attach.
