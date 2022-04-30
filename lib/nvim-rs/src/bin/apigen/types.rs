@@ -136,6 +136,7 @@ impl UiEvent {
             ("grid_line", "data") => "Vec<GridLineData>",
             ("hl_attr_define", "rgb_attrs") => "HlAttr",
             ("hl_attr_define", "cterm_attrs") => "HlAttr",
+            ("mode_info_set", "cursor_styles") => "Vec<ModeInfo>",
             _ => return _type.as_rust_type(),
         };
 

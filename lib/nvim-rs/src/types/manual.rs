@@ -53,3 +53,46 @@ impl<'de> serde::Deserialize<'de> for GridLineData {
         })
     }
 }
+
+#[derive(Debug)]
+pub enum CursorShape {
+    Block,
+    Horizontal,
+    Vertical,
+}
+
+impl Default for CursorShape {
+    fn default() -> Self {
+        Self::Block
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CursorShape {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let data = rmpv::Value::deserialize(d)?;
+
+        match data.as_str() {
+            Some("block") => Ok(Self::Block),
+            Some("horizontal") => Ok(Self::Horizontal),
+            Some("vertical") => Ok(Self::Vertical),
+            Some(v) => Err(serde::de::Error::custom(format!(
+                "unknown cursor shape: {}",
+                v
+            ))),
+            None => Err(serde::de::Error::custom("missing value for cursor shape")),
+        }
+    }
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct ModeInfo {
+    pub cursor_shape: Option<CursorShape>,
+    pub cell_percentage: Option<u64>,
+    pub blinkwait: Option<u64>,
+    pub blinkon: Option<u64>,
+    pub blinkoff: Option<u64>,
+    pub attr_id: Option<u64>,
+    pub attr_id_lm: Option<u64>,
+    pub short_name: Option<String>,
+    pub name: Option<String>,
+}

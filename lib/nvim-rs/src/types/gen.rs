@@ -5,7 +5,7 @@ use super::manual::*;
 #[derive(Debug, serde::Deserialize)]
 pub struct ModeInfoSet {
     pub enabled: bool,
-    pub cursor_styles: rmpv::Value, /* Array */
+    pub cursor_styles: Vec<ModeInfo>,
 }
 
 #[derive(Debug, serde::Deserialize)]
