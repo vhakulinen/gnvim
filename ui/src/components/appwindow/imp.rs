@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use futures::lock::Mutex;
-use nvim::types::uievents::{DefaultColorsSet, ModeInfo, UiOptions};
+use nvim::types::uievents::{DefaultColorsSet, ModeInfo, OptionSet, UiOptions};
 use nvim::types::UiEvent;
 
 use glib::subclass::InitializingObject;
@@ -42,6 +42,9 @@ pub struct AppWindow {
 
     /// Source id for debouncing nvim resizing.
     resize_id: Rc<Cell<Option<glib::SourceId>>>,
+    /// When resize on flush is set, there were some operations on the previous
+    /// ui events that changed our grid size (e.g. font chagned etc.).
+    resize_on_flush: Cell<bool>,
 }
 
 impl AppWindow {
@@ -147,7 +150,9 @@ impl AppWindow {
             UiEvent::ModeInfoSet(events) => events.into_iter().for_each(|event| {
                 self.mode_infos.replace(event.cursor_styles);
             }),
-            UiEvent::OptionSet(_) => {}
+            UiEvent::OptionSet(events) => events.into_iter().for_each(|event| {
+                self.handle_option_set(event);
+            }),
             UiEvent::ModeChange(events) => events.into_iter().for_each(|event| {
                 let modes = self.mode_infos.borrow();
                 let mode = modes
@@ -166,6 +171,11 @@ impl AppWindow {
             UiEvent::Flush => {
                 self.shell
                     .handle_flush(&self.colors.borrow(), &self.font.borrow());
+
+                if self.resize_on_flush.take() {
+                    self.font.borrow().update_metrics();
+                    self.resize_nvim();
+                }
             }
 
             // linegrid events
@@ -199,6 +209,52 @@ impl AppWindow {
             UiEvent::WinViewport(_) => {}
 
             event => panic!("Unhandled ui event: {}", event),
+        }
+    }
+
+    fn handle_option_set(&self, event: OptionSet) {
+        match event {
+            OptionSet::Linespace(linespace) => {
+                self.font.borrow().set_linespace(linespace as f32);
+                self.resize_on_flush.set(true);
+            }
+            OptionSet::Guifont(guifont) => {
+                self.font.borrow().set_font_from_str(&guifont);
+                self.resize_on_flush.set(true);
+            }
+            OptionSet::Unknown(_) => {}
+        }
+    }
+
+    fn resize_nvim(&self) {
+        let (cols, rows) = self
+            .font
+            .borrow()
+            .grid_size_for_allocation(&self.shell.allocation());
+
+        let id = glib::timeout_add_local(
+            Duration::from_millis(10),
+            clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
+                spawn_local!(clone!(@weak nvim => async move {
+                    let res = nvim_unlock!(nvim)
+                        .nvim_ui_try_resize(cols.max(1) as i64, rows.max(1) as i64)
+                        .await
+                        .unwrap();
+
+                    res.await.expect("nvim_ui_try_resize failed");
+                }));
+
+                // Clear after our selves, so we don't try to remove
+                // our id once we're already done.
+                resize_id.replace(None);
+
+                Continue(false)
+            }),
+        );
+
+        // Cancel the earlier timeout if it exists.
+        if let Some(id) = self.resize_id.replace(Some(id)).take() {
+            id.remove();
         }
     }
 
@@ -330,36 +386,7 @@ impl ObjectImpl for AppWindow {
 impl WidgetImpl for AppWindow {
     fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
         self.parent_size_allocate(widget, width, height, baseline);
-
-        let (cols, rows) = self
-            .font
-            .borrow()
-            .grid_size_for_allocation(&self.shell.allocation());
-
-        let id = glib::timeout_add_local(
-            Duration::from_millis(10),
-            clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
-                spawn_local!(clone!(@weak nvim => async move {
-                    let res = nvim_unlock!(nvim)
-                        .nvim_ui_try_resize(cols as i64, rows as i64)
-                        .await
-                        .unwrap();
-
-                    res.await.expect("nvim_ui_try_resize failed");
-                }));
-
-                // Clear after our selves, so we don't try to remove
-                // our id once we're already done.
-                resize_id.replace(None);
-
-                Continue(false)
-            }),
-        );
-
-        // Cancel the earlier timeout if it exists.
-        if let Some(id) = self.resize_id.replace(Some(id)).take() {
-            id.remove();
-        }
+        self.resize_nvim();
     }
 }
 
