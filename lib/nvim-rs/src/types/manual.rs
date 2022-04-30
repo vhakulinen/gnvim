@@ -42,7 +42,7 @@ impl<'de> serde::Deserialize<'de> for GridLineData {
 
         let text = data[0]
             .as_str()
-            .ok_or(serde::de::Error::missing_field("text"))?;
+            .ok_or_else(|| serde::de::Error::missing_field("text"))?;
         let hl_id = data[1].as_i64();
         let repeat = data[2].as_i64();
 

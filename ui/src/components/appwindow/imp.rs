@@ -153,7 +153,7 @@ impl AppWindow {
                 let mode = modes
                     .get(event.mode_idx as usize)
                     .expect("invalid mode_idx");
-                self.shell.handle_mode_change(&mode);
+                self.shell.handle_mode_change(mode);
             }),
             UiEvent::MouseOn => {}
             UiEvent::MouseOff => {}
@@ -216,7 +216,7 @@ impl AppWindow {
 
     fn im_commit(&self, input: &str) {
         // NOTE(ville): "<" needs to be escaped for nvim_input (see `:h nvim_input`)
-        let input = input.replace("<", "<lt>");
+        let input = input.replace('<', "<lt>");
         self.send_nvim_input(input);
     }
 
@@ -352,7 +352,7 @@ impl WidgetImpl for AppWindow {
                 // our id once we're already done.
                 resize_id.replace(None);
 
-                return Continue(false)
+                Continue(false)
             }),
         );
 

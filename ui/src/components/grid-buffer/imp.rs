@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk};

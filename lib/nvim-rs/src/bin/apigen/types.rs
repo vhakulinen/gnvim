@@ -140,7 +140,7 @@ impl UiEvent {
             _ => return _type.as_rust_type(),
         };
 
-        return s.into();
+        s.into()
     }
 }
 

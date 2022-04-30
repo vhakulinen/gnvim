@@ -68,7 +68,7 @@ impl Cursor {
 
         let node = snapshot
             .to_node()
-            .unwrap_or(gsk::ContainerNode::new(&[]).upcast());
+            .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast());
         imp.node.replace(Some(node));
 
         self.queue_draw();

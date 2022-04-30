@@ -21,32 +21,24 @@ impl Colors {
     pub fn get_hl_fg(&self, hl: i64) -> Color {
         if let Some(hl) = self.hls.get(&hl) {
             if hl.reverse.unwrap_or(false) {
-                hl.background
-                    .map(Color::from_i64)
-                    .unwrap_or(self.bg.clone())
+                hl.background.map(Color::from_i64).unwrap_or(self.bg)
             } else {
-                hl.foreground
-                    .map(Color::from_i64)
-                    .unwrap_or(self.fg.clone())
+                hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
             }
         } else {
-            self.fg.clone()
+            self.fg
         }
     }
 
     pub fn get_hl_bg(&self, hl: i64) -> Color {
         if let Some(hl) = self.hls.get(&hl) {
             if hl.reverse.unwrap_or(false) {
-                hl.foreground
-                    .map(Color::from_i64)
-                    .unwrap_or(self.fg.clone())
+                hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
             } else {
-                hl.background
-                    .map(Color::from_i64)
-                    .unwrap_or(self.bg.clone())
+                hl.background.map(Color::from_i64).unwrap_or(self.bg)
             }
         } else {
-            self.bg.clone()
+            self.bg
         }
     }
 }

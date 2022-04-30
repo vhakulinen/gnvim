@@ -12,7 +12,7 @@ pub fn render_text(
     x_offset: f32,
     y_offset: f32,
 ) {
-    let items = pango::itemize(&ctx, &text, 0, text.len() as i32, &attrs, None);
+    let items = pango::itemize(ctx, text, 0, text.len() as i32, attrs, None);
 
     items.iter().fold(0.0_f32, |width, item| {
         let a = item.analysis();
@@ -26,7 +26,7 @@ pub fn render_text(
         let node = gsk::TextNode::new(
             &a.font(),
             &mut glyphs,
-            &color,
+            color,
             &graphene::Point::new(x_offset + width, y_offset),
         );
 

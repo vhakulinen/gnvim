@@ -74,12 +74,12 @@ impl GridBuffer {
             let top = event.top + event.rows;
             let bot = event.bot;
 
-            return (Box::new(top..bot), -event.rows);
+            (Box::new(top..bot), -event.rows)
         } else {
             let top = event.top;
             let bot = event.bot + event.rows;
 
-            return (Box::new((top..bot).rev()), event.rows.abs());
+            (Box::new((top..bot).rev()), event.rows.abs())
         }
     }
 

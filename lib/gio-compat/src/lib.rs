@@ -1,7 +1,6 @@
 use std::pin::Pin;
 
 use futures::io::{AsyncRead, AsyncWrite};
-use gio;
 
 #[derive(Debug)]
 pub struct CompatWrite {

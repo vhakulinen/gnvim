@@ -108,7 +108,7 @@ impl Row {
         }
     }
 
-    pub fn render_node_iter<'a>(&'a self) -> RenderNodeIter<'a> {
+    pub fn render_node_iter(&self) -> RenderNodeIter<'_> {
         RenderNodeIter {
             inner: self.cells.iter().peekable(),
         }
@@ -217,10 +217,10 @@ impl Row {
             let nodes = Rc::new(RefCell::new(Some(CellNodes {
                 fg: snapshot_fg
                     .to_node()
-                    .unwrap_or(gsk::ContainerNode::new(&[]).upcast()),
+                    .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast()),
                 bg: snapshot_bg
                     .to_node()
-                    .unwrap_or(gsk::ContainerNode::new(&[]).upcast()),
+                    .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast()),
             })));
             segment.cells.iter_mut().for_each(|cell| {
                 cell.nodes = nodes.clone();
