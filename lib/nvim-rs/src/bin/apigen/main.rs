@@ -67,7 +67,7 @@ fn main() {
                 .ui_events
                 .iter()
                 .filter_map(|event| {
-                    if event.parameters.is_empty() {
+                    if event.parameters.is_empty() || event.has_manual_type() {
                         return None;
                     }
 
@@ -86,7 +86,7 @@ fn main() {
                                 format!(
                                     "pub {name}: {_type},",
                                     name = param.rust_name(),
-                                    _type = UiEvent::parameter_type_for(
+                                    _type = UiEvent::field_type_for(
                                         &event.name,
                                         &param.name,
                                         &param.r#type

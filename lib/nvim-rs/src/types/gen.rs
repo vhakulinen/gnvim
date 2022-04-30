@@ -30,12 +30,6 @@ pub struct Screenshot {
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub struct OptionSet {
-    pub name: String,
-    pub value: rmpv::Value, /* Object */
-}
-
-#[derive(Debug, serde::Deserialize)]
 pub struct UpdateFg {
     pub fg: i64,
 }

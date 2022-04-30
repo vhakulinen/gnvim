@@ -131,7 +131,7 @@ pub struct UiEvent {
 }
 
 impl UiEvent {
-    pub fn parameter_type_for<S: AsRef<str>>(evt: S, param: S, _type: S) -> String {
+    pub fn field_type_for<S: AsRef<str>>(evt: S, param: S, _type: S) -> String {
         let s: &str = match (evt.as_ref(), param.as_ref()) {
             ("grid_line", "data") => "Vec<GridLineData>",
             ("hl_attr_define", "rgb_attrs") => "HlAttr",
@@ -141,6 +141,13 @@ impl UiEvent {
         };
 
         s.into()
+    }
+
+    pub fn has_manual_type(&self) -> bool {
+        match self.name.as_ref() {
+            "option_set" => true,
+            _ => false,
+        }
     }
 }
 

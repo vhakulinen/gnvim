@@ -1,3 +1,30 @@
+#[derive(Debug)]
+pub enum OptionSet {
+    Guifont(String),
+    Linespace(i64),
+    Unknown(String),
+}
+
+impl<'de> serde::Deserialize<'de> for OptionSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let data = rmpv::Value::deserialize(d)?;
+
+        let bad_value = || serde::de::Error::missing_field("value");
+
+        let name = data[0]
+            .as_str()
+            .ok_or_else(|| serde::de::Error::custom("bad name"))?;
+
+        match name {
+            "linespace" => Ok(Self::Linespace(data[1].as_i64().ok_or_else(bad_value)?)),
+            "guifont" => Ok(Self::Guifont(
+                data[1].as_str().ok_or_else(bad_value)?.to_string(),
+            )),
+            _ => Ok(Self::Unknown(name.to_string())),
+        }
+    }
+}
+
 #[derive(Debug, Default, into_value_proc::IntoValue)]
 pub struct UiOptions {
     pub rgb: bool,
