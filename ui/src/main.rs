@@ -1,4 +1,5 @@
 use gtk::gio;
+use gtk::pango;
 use gtk::prelude::*;
 use gtk::Application;
 
@@ -9,6 +10,8 @@ mod macros;
 mod render;
 
 use components::appwindow::AppWindow;
+
+pub const SCALE: f32 = pango::SCALE as f32;
 
 fn main() {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");

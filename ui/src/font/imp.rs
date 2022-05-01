@@ -2,8 +2,10 @@ use std::cell::{Cell, RefCell};
 
 use gtk::{glib, pango, prelude::*, subclass::prelude::*};
 
-const DEFAULT_HEIGHT: f32 = 16.0;
-const DEFAULT_WIDTH: f32 = 8.0;
+use crate::SCALE;
+
+const DEFAULT_HEIGHT: f32 = 16.0 * SCALE;
+const DEFAULT_WIDTH: f32 = 8.0 * SCALE;
 
 #[derive(Default)]
 pub struct Font {
@@ -31,16 +33,13 @@ impl Font {
 
         let extra = self.linespace.get() / 2.0;
 
-        let scale = pango::SCALE as f32;
-        self.ascent
-            .set(font_metrics.ascent() as f32 / scale + extra);
-        self.descent
-            .set(font_metrics.descent() as f32 / scale + extra);
+        self.ascent.set(font_metrics.ascent() as f32 + extra);
+        self.descent.set(font_metrics.descent() as f32 + extra);
 
         let height = font_metrics.height() as f32;
         self.height.set(
             if height != 0.0 {
-                height / scale
+                height
             } else {
                 DEFAULT_HEIGHT
             } + self.linespace.get(),
@@ -48,7 +47,7 @@ impl Font {
 
         let char_width = font_metrics.approximate_char_width() as f32;
         self.char_width.set(if char_width != 0.0 {
-            char_width / scale
+            char_width
         } else {
             DEFAULT_WIDTH
         })

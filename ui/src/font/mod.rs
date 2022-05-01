@@ -2,6 +2,8 @@ use std::cell::Ref;
 
 use gtk::{glib, pango, prelude::*, subclass::prelude::*};
 
+use crate::SCALE;
+
 mod imp;
 
 glib::wrapper! {
@@ -24,13 +26,14 @@ impl Font {
     }
 
     pub fn set_font_from_str(&self, font: &str) {
+        // TODO(ville): Check the font desc size and report error if its zero.
         self.imp()
             .font_desc
             .replace(pango::FontDescription::from_string(font));
     }
 
     pub fn set_linespace(&self, linespace: f32) {
-        self.imp().linespace.set(linespace);
+        self.imp().linespace.set(linespace * SCALE);
     }
 
     pub fn ascent(&self) -> f32 {
@@ -46,8 +49,8 @@ impl Font {
     }
 
     pub fn grid_size_for_allocation(&self, alloc: &gtk::Allocation) -> (usize, usize) {
-        let rows = (alloc.height() as f32 / self.height()).floor();
-        let cols = (alloc.width() as f32 / self.char_width()).floor();
+        let rows = (alloc.height() as f32 / (self.height() / SCALE)).floor();
+        let cols = (alloc.width() as f32 / (self.char_width() / SCALE)).floor();
 
         (cols as usize, rows as usize)
     }

@@ -2,15 +2,17 @@ use gtk::{graphene, gsk, pango, prelude::*};
 
 use crate::colors::{Color, Colors};
 use crate::font::Font;
+use crate::SCALE;
 
+/// Creates text render nodes for `text`, and adds the to `snapshot`.
 pub fn render_text(
     snapshot: &gtk::Snapshot,
     ctx: &pango::Context,
     text: &str,
     color: &Color,
     attrs: &pango::AttrList,
-    x_offset: f32,
-    y_offset: f32,
+    x: f32,
+    y: f32,
 ) {
     let items = pango::itemize(ctx, text, 0, text.len() as i32, attrs, None);
 
@@ -27,7 +29,7 @@ pub fn render_text(
             &a.font(),
             &mut glyphs,
             color,
-            &graphene::Point::new(x_offset + width, y_offset),
+            &graphene::Point::new(x + width / SCALE, y),
         );
 
         // Empty glyphs (e.g. whitespace) won't get any nodes.
@@ -35,7 +37,7 @@ pub fn render_text(
             snapshot.append_node(node.upcast());
         }
 
-        width + glyphs.width() as f32 / pango::SCALE as f32
+        width + glyphs.width() as f32
     });
 }
 

@@ -49,9 +49,8 @@ impl GridBuffer {
 
         let ctx = self.pango_context();
 
-        let h = font.height();
         for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
-            row.generate_nodes(&ctx, colors, font, i as f32 * h, h);
+            row.generate_nodes(&ctx, colors, font, i as f32);
         }
 
         let alloc = self.allocation();

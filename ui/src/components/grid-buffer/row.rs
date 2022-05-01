@@ -8,7 +8,7 @@ use gtk::{graphene, gsk, pango, prelude::*};
 
 use nvim::types::uievents::GridLine;
 
-use crate::{colors::Colors, font::Font};
+use crate::{colors::Colors, font::Font, SCALE};
 
 #[derive(Debug)]
 pub struct CellNodes {
@@ -119,8 +119,7 @@ impl Row {
         ctx: &pango::Context,
         colors: &Colors,
         font: &Font,
-        y_offset: f32,
-        height: f32,
+        row_num: f32,
     ) {
         // Gather cells into continuous segments based on hl ids.
         let mut segments = self
@@ -172,12 +171,18 @@ impl Row {
                 acc
             });
 
-        let ch = font.char_width();
+        let height = font.height();
+        let text_y = (row_num * height + font.ascent()) / SCALE;
+        let bg_y = (row_num * height) / SCALE;
+        let bg_h = height / SCALE;
 
+        let ch = font.char_width() / SCALE;
         let mut x_offset = 0.0_f32;
         for segment in segments.iter_mut() {
+            let width = segment.width as f32 * ch;
+
             if !segment.dirty {
-                x_offset += font.char_width() * segment.cells.len() as f32;
+                x_offset += width;
                 continue;
             }
 
@@ -195,23 +200,12 @@ impl Row {
             let bg = colors.get_hl_bg(segment.hl_id);
 
             // Create glyphs.
-            crate::render::render_text(
-                &snapshot_fg,
-                ctx,
-                &text,
-                &fg,
-                &attrs,
-                x_offset,
-                y_offset + font.ascent(),
-            );
+            crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x_offset, text_y);
 
             // Create background.
             snapshot_bg.append_node(
-                gsk::ColorNode::new(
-                    &bg,
-                    &graphene::Rect::new(x_offset, y_offset, segment.width as f32 * ch, height),
-                )
-                .upcast(),
+                gsk::ColorNode::new(&bg, &graphene::Rect::new(x_offset, bg_y, width, bg_h))
+                    .upcast(),
             );
 
             let nodes = Rc::new(RefCell::new(Some(CellNodes {
@@ -226,7 +220,7 @@ impl Row {
                 cell.nodes = nodes.clone();
             });
 
-            x_offset += ch * segment.width as f32;
+            x_offset += width;
         }
     }
 }

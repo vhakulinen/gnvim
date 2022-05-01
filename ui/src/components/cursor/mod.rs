@@ -1,6 +1,6 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
-use crate::{colors::Colors, font::Font};
+use crate::{colors::Colors, font::Font, SCALE};
 
 use super::grid_buffer::row::Cell;
 
@@ -32,18 +32,18 @@ impl Cursor {
         let height = font.height();
         let ch = font.char_width();
         let pos = imp.pos.borrow();
-        let x = pos.0 as f32 * ch;
+        let x = pos.0 as f32 * ch / SCALE;
         let y = pos.1 as f32 * height;
 
         let snapshot = gtk::Snapshot::new();
 
         let width = if *imp.double_width.borrow() {
-            ch * 2.0
+            ch * 2.0 / SCALE
         } else {
-            ch
+            ch / SCALE
         };
         let width = width * *imp.width_percentage.borrow();
-        let rect = graphene::Rect::new(x, y, width, height);
+        let rect = graphene::Rect::new(x, y / SCALE, width, height / SCALE);
 
         // Clip the area where we're drawing. This avoids a issue when the cursor
         // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
@@ -61,7 +61,7 @@ impl Cursor {
             &fg,
             &attrs,
             x,
-            y + font.ascent(),
+            (y + font.ascent()) / SCALE,
         );
 
         snapshot.pop();
