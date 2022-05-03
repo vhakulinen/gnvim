@@ -228,6 +228,14 @@ impl Row {
                 )
             }
 
+            if hl.map(|hl| hl.underdot).flatten().unwrap_or(false) {
+                crate::render::render_underdot(&snapshot_fg, &font, &sp, x, baseline, width)
+            }
+
+            if hl.map(|hl| hl.underdash).flatten().unwrap_or(false) {
+                crate::render::render_underdash(&snapshot_fg, &font, &sp, x, baseline, width)
+            }
+
             // Create background.
             snapshot_bg.append_node(
                 gsk::ColorNode::new(&bg, &graphene::Rect::new(x, bg_y, width, bg_h)).upcast(),
