@@ -33,7 +33,8 @@ impl Cursor {
         let ch = font.char_width();
         let pos = imp.pos.borrow();
         let x = pos.0 as f32 * ch / SCALE;
-        let y = pos.1 as f32 * height;
+        let y = pos.1 as f32 * height / SCALE;
+        let baseline = (pos.1 as f32 * height + font.baseline()) / SCALE;
 
         let snapshot = gtk::Snapshot::new();
 
@@ -43,7 +44,7 @@ impl Cursor {
             ch / SCALE
         };
         let width = width * *imp.width_percentage.borrow();
-        let rect = graphene::Rect::new(x, y / SCALE, width, height / SCALE);
+        let rect = graphene::Rect::new(x, y, width, height / SCALE);
 
         // Clip the area where we're drawing. This avoids a issue when the cursor
         // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
@@ -61,7 +62,7 @@ impl Cursor {
             &fg,
             &attrs,
             x,
-            (y + font.ascent()) / SCALE,
+            baseline,
         );
 
         snapshot.pop();

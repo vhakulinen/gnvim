@@ -172,23 +172,24 @@ impl Row {
             });
 
         let height = font.height();
-        let text_y = (row_num * height + font.ascent()) / SCALE;
+        let baseline = (row_num * height + font.baseline()) / SCALE;
         let bg_y = (row_num * height) / SCALE;
         let bg_h = height / SCALE;
 
-        let ch = font.char_width() / SCALE;
-        let mut x_offset = 0.0_f32;
+        let ch = font.char_width();
+        let mut x = 0.0_f32;
         for segment in segments.iter_mut() {
-            let width = segment.width as f32 * ch;
+            let width = segment.width as f32 * ch / SCALE;
 
             if !segment.dirty {
-                x_offset += width;
+                x += width;
                 continue;
             }
 
             let snapshot_fg = gtk::Snapshot::new();
             let snapshot_bg = gtk::Snapshot::new();
             let attrs = crate::render::create_hl_attrs(segment.hl_id, colors, font);
+            let hl = colors.get_hl(segment.hl_id);
 
             let text = segment
                 .cells
@@ -198,14 +199,38 @@ impl Row {
 
             let fg = colors.get_hl_fg(segment.hl_id);
             let bg = colors.get_hl_bg(segment.hl_id);
+            let sp = colors.get_hl_sp(segment.hl_id);
 
             // Create glyphs.
-            crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x_offset, text_y);
+            crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x, baseline);
+
+            if hl.map(|hl| hl.underline).flatten().unwrap_or(false) {
+                crate::render::render_underline(&snapshot_fg, &font, &sp, x, baseline, width)
+            }
+
+            if hl.map(|hl| hl.underlineline).flatten().unwrap_or(false) {
+                crate::render::render_underlineline(&snapshot_fg, &font, &sp, x, baseline, width)
+            }
+
+            if hl.map(|hl| hl.strikethrough).flatten().unwrap_or(false) {
+                crate::render::render_strikethrough(&snapshot_fg, &font, &fg, x, baseline, width)
+            }
+
+            if hl.map(|hl| hl.undercurl).flatten().unwrap_or(false) {
+                crate::render::render_undercurl(
+                    &snapshot_fg,
+                    &font,
+                    &sp,
+                    x,
+                    baseline,
+                    width,
+                    segment.width,
+                )
+            }
 
             // Create background.
             snapshot_bg.append_node(
-                gsk::ColorNode::new(&bg, &graphene::Rect::new(x_offset, bg_y, width, bg_h))
-                    .upcast(),
+                gsk::ColorNode::new(&bg, &graphene::Rect::new(x, bg_y, width, bg_h)).upcast(),
             );
 
             let nodes = Rc::new(RefCell::new(Some(CellNodes {
@@ -220,7 +245,7 @@ impl Row {
                 cell.nodes = nodes.clone();
             });
 
-            x_offset += width;
+            x += width;
         }
     }
 }

@@ -36,8 +36,37 @@ impl Font {
         self.imp().linespace.set(linespace * SCALE);
     }
 
+    pub fn baseline(&self) -> f32 {
+        //let imp = self.imp();
+        self.height() - self.descent() - self.linespace() / 2.0
+    }
+
+    pub fn linespace(&self) -> f32 {
+        self.imp().linespace.get()
+    }
+
     pub fn ascent(&self) -> f32 {
         self.imp().ascent.get()
+    }
+
+    pub fn descent(&self) -> f32 {
+        self.imp().descent.get()
+    }
+
+    pub fn strikethrough_position(&self) -> f32 {
+        self.imp().strikethrough_position.get()
+    }
+
+    pub fn strikethrough_thickness(&self) -> f32 {
+        self.imp().strikethrough_thickness.get()
+    }
+
+    pub fn underline_position(&self) -> f32 {
+        self.imp().underline_position.get()
+    }
+
+    pub fn underline_thickness(&self) -> f32 {
+        self.imp().underline_thickness.get()
     }
 
     pub fn height(&self) -> f32 {

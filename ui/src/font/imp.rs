@@ -16,6 +16,10 @@ pub struct Font {
     pub char_width: Cell<f32>,
     pub ascent: Cell<f32>,
     pub descent: Cell<f32>,
+    pub underline_position: Cell<f32>,
+    pub underline_thickness: Cell<f32>,
+    pub strikethrough_position: Cell<f32>,
+    pub strikethrough_thickness: Cell<f32>,
 }
 
 #[glib::object_subclass]
@@ -31,10 +35,21 @@ impl Font {
             .metrics(Some(&self.font_desc.borrow()), None)
             .expect("can't get font metrics");
 
-        let extra = self.linespace.get() / 2.0;
+        self.ascent.set(font_metrics.ascent() as f32);
+        self.descent.set(font_metrics.descent() as f32);
 
-        self.ascent.set(font_metrics.ascent() as f32 + extra);
-        self.descent.set(font_metrics.descent() as f32 + extra);
+        self.underline_position
+            .set(font_metrics.underline_position() as f32);
+        self.strikethrough_position
+            .set(font_metrics.strikethrough_position() as f32);
+
+        // NOTE(ville): Set min size for the thickness. This is to workaround
+        // some situations where the reported size for the thickness ends up
+        // being less than a singe pixel on the sceen (and thus not rendered).
+        self.underline_thickness
+            .set((font_metrics.underline_thickness() as f32).max(SCALE));
+        self.strikethrough_thickness
+            .set((font_metrics.strikethrough_thickness() as f32).max(SCALE));
 
         let height = font_metrics.height() as f32;
         self.height.set(

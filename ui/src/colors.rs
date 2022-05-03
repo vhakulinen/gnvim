@@ -41,6 +41,14 @@ impl Colors {
             self.bg
         }
     }
+
+    pub fn get_hl_sp(&self, hl: i64) -> Color {
+        if let Some(hl) = self.hls.get(&hl) {
+            hl.special.map(Color::from_i64).unwrap_or(self.sp)
+        } else {
+            self.sp
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
