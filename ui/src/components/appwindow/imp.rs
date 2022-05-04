@@ -162,8 +162,12 @@ impl AppWindow {
             }),
             UiEvent::MouseOn => {}
             UiEvent::MouseOff => {}
-            UiEvent::BusyStart => {}
-            UiEvent::BusyStop => {}
+            UiEvent::BusyStart => {
+                self.shell.busy_start();
+            }
+            UiEvent::BusyStop => {
+                self.shell.busy_stop();
+            }
             UiEvent::Suspend => {}
             UiEvent::UpdateMenu => {}
             UiEvent::Bell => {}

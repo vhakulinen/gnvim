@@ -18,6 +18,14 @@ impl Shell {
         glib::Object::new(&[]).expect("Failed to create Shell")
     }
 
+    pub fn busy_start(&self) {
+        self.imp().root_grid.hide_cursor(true);
+    }
+
+    pub fn busy_stop(&self) {
+        self.imp().root_grid.hide_cursor(false);
+    }
+
     pub fn handle_grid_line(&self, event: GridLine) {
         assert_eq!(
             event.grid, 1,

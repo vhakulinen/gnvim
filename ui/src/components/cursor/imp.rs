@@ -13,6 +13,8 @@ pub struct Cursor {
 
     pub width_percentage: RefCell<f32>,
     pub attr_id: RefCell<i64>,
+
+    pub hide: RefCell<bool>,
 }
 
 #[glib::object_subclass]
@@ -26,6 +28,10 @@ impl ObjectImpl for Cursor {}
 
 impl WidgetImpl for Cursor {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
+        if *self.hide.borrow() {
+            return;
+        }
+
         if let Some(ref node) = *self.node.borrow() {
             snapshot.append_node(node);
         }

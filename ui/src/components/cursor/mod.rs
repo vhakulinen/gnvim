@@ -17,6 +17,10 @@ impl Cursor {
         glib::Object::new(&[]).expect("Failed to create Cursor")
     }
 
+    pub fn hide(&self, hide: bool) {
+        self.imp().hide.replace(hide);
+    }
+
     pub fn flush(&self, colors: &Colors, font: &Font) {
         let imp = self.imp();
         if imp.node.borrow().is_some() {

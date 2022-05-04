@@ -18,6 +18,10 @@ impl Grid {
         Object::new(&[("grid-id", &id)]).expect("Failed to create Grid")
     }
 
+    pub fn hide_cursor(&self, hide: bool) {
+        self.imp().cursor.hide(hide);
+    }
+
     pub fn put(&self, event: GridLine) {
         // TODO(ville): This function should be proxied to the buffer.
 
