@@ -75,6 +75,14 @@ impl Cursor {
         self.queue_draw();
     }
 
+    pub fn row(&self) -> i64 {
+        return self.imp().pos.borrow().1;
+    }
+
+    pub fn col(&self) -> i64 {
+        return self.imp().pos.borrow().0;
+    }
+
     pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
         let imp = self.imp();
         imp.pos.replace((col, row));
@@ -82,6 +90,12 @@ impl Cursor {
         imp.double_width.replace(cell.double_width);
 
         // Clear the render node.
+        imp.node.replace(None);
+    }
+
+    pub fn set_text(&self, text: String) {
+        let imp = self.imp();
+        imp.text.replace(text);
         imp.node.replace(None);
     }
 

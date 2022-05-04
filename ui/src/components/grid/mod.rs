@@ -36,6 +36,19 @@ impl Grid {
     pub fn flush(&self, colors: &Colors, font: &Font) {
         let imp = self.imp();
         imp.buffer.flush(colors, font);
+
+        // Update the text under the cursor, since in some cases neovim doesn't
+        // dispatch cursor goto (e.g. when grid scroll happens but cursor
+        // doesn't move).
+        let rows = imp.buffer.get_rows();
+        let row = rows
+            .get(imp.cursor.row() as usize)
+            .expect("bad cursor position");
+        let cell = row
+            .cells
+            .get(imp.cursor.col() as usize)
+            .expect("bad cursor position");
+        imp.cursor.set_text(cell.text.clone());
         imp.cursor.flush(colors, font);
     }
 
