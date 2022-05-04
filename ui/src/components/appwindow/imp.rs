@@ -222,10 +222,10 @@ impl AppWindow {
                 self.font.borrow().set_linespace(linespace as f32);
                 self.resize_on_flush.set(true);
             }
-            OptionSet::Guifont(guifont) => {
-                self.font.borrow().set_font_from_str(&guifont);
-                self.resize_on_flush.set(true);
-            }
+            OptionSet::Guifont(guifont) => match self.font.borrow().set_font_from_str(&guifont) {
+                Ok(_) => self.resize_on_flush.set(true),
+                Err(err) => println!("failed to set font: {}", err),
+            },
             OptionSet::Unknown(_) => {}
         }
     }

@@ -25,11 +25,16 @@ impl Font {
         self.imp().font_desc.borrow()
     }
 
-    pub fn set_font_from_str(&self, font: &str) {
-        // TODO(ville): Check the font desc size and report error if its zero.
-        self.imp()
-            .font_desc
-            .replace(pango::FontDescription::from_string(font));
+    pub fn set_font_from_str(&self, font: &str) -> Result<(), &'static str> {
+        let desc = pango::FontDescription::from_string(font);
+
+        if desc.size() == 0 {
+            return Err("font doesn't have size");
+        }
+
+        self.imp().font_desc.replace(desc);
+
+        Ok(())
     }
 
     pub fn set_linespace(&self, linespace: f32) {
