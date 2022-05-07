@@ -22,6 +22,8 @@ pub struct Grid {
 
     pub gesture_click: gtk::GestureClick,
     pub gesture_drag: gtk::GestureDrag,
+    pub event_controller_scroll: gtk::EventControllerScroll,
+    pub event_controller_motion: gtk::EventControllerMotion,
 }
 
 #[glib::object_subclass]
@@ -43,9 +45,15 @@ impl ObjectImpl for Grid {
 
         self.gesture_click.set_button(0);
         self.gesture_drag.set_button(0);
+        let mut flags = gtk::EventControllerScrollFlags::empty();
+        flags.insert(gtk::EventControllerScrollFlags::DISCRETE);
+        flags.insert(gtk::EventControllerScrollFlags::BOTH_AXES);
+        self.event_controller_scroll.set_flags(flags);
 
         obj.add_controller(&self.gesture_click);
         obj.add_controller(&self.gesture_drag);
+        obj.add_controller(&self.event_controller_scroll);
+        obj.add_controller(&self.event_controller_motion);
     }
 
     fn dispose(&self, _obj: &Self::Type) {

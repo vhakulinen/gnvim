@@ -3,6 +3,7 @@ pub enum Mouse {
     Left,
     Right,
     Middle,
+    Wheel,
 }
 
 impl Mouse {
@@ -11,6 +12,7 @@ impl Mouse {
             Mouse::Left => "left",
             Mouse::Right => "right",
             Mouse::Middle => "middle",
+            Mouse::Wheel => "wheel",
         }
     }
 }
@@ -20,6 +22,10 @@ pub enum Action {
     Pressed,
     Released,
     Drag,
+    ScrollUp,
+    ScrollDown,
+    ScrollLeft,
+    ScrollRight,
 }
 
 impl Action {
@@ -28,6 +34,10 @@ impl Action {
             Action::Pressed => "press",
             Action::Released => "release",
             Action::Drag => "drag",
+            Action::ScrollUp => "up",
+            Action::ScrollDown => "down",
+            Action::ScrollLeft => "left",
+            Action::ScrollRight => "right",
         }
     }
 }

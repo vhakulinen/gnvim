@@ -90,8 +90,7 @@ impl Grid {
                 start.replace((x, y));
             }));
         imp.gesture_drag.connect_drag_update(
-            clone!(@strong start, @strong pos, @weak self as obj, @weak font => move |gst, x, y| {
-                let imp = obj.imp();
+            clone!(@strong start, @strong pos, @weak self as obj, @weak font, @strong f => move |gst, x, y| {
                 let start = start.borrow();
                 let x = start.0 + x;
                 let y = start.1 + y;
@@ -105,8 +104,39 @@ impl Grid {
 
                     let modifier = Grid::input_modifier(gst.upcast_ref::<gtk::EventController>());
                     let mouse = Grid::input_mouse(gst.upcast_ref::<gtk::GestureSingle>());
-                    f(imp.id.get(), mouse, Action::Drag, modifier, row, col);
+                    f(obj.imp().id.get(), mouse, Action::Drag, modifier, row, col);
                 }
+            }),
+        );
+
+        let mouse_pos = Rc::new(RefCell::new((0.0, 0.0)));
+        imp.event_controller_motion
+            .connect_motion(clone!(@strong mouse_pos => move |_, x, y| {
+                mouse_pos.replace((x, y));
+            }));
+
+        imp.event_controller_scroll.connect_scroll(
+            clone!(@weak self as obj, @weak font, @strong mouse_pos => @default-return gtk::Inhibit(false), move |evt, dx, dy| {
+                let modifier = Grid::input_modifier(evt.upcast_ref::<gtk::EventController>());
+                let pos = mouse_pos.borrow();
+                let col = font.scale_to_col(pos.0);
+                let row = font.scale_to_row(pos.1);
+
+                let id = obj.imp().id.get();
+
+                if dx > 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollRight, modifier.clone(), row, col);
+                } else if dx < 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollLeft, modifier.clone(), row, col);
+                }
+
+                if dy > 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollDown, modifier.clone(), row, col);
+                }  else if dy < 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollUp, modifier.clone(), row, col);
+                }
+
+                gtk::Inhibit(true)
             }),
         );
     }
