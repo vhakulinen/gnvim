@@ -88,6 +88,14 @@ impl Font {
 
         (cols as usize, rows as usize)
     }
+
+    pub fn scale_to_col(&self, x: f64) -> usize {
+        (x / (self.char_width() / SCALE) as f64).floor() as usize
+    }
+
+    pub fn scale_to_row(&self, y: f64) -> usize {
+        (y / (self.height() / SCALE) as f64).floor() as usize
+    }
 }
 
 impl Default for Font {

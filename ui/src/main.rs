@@ -7,6 +7,7 @@ mod colors;
 mod components;
 mod font;
 mod macros;
+mod mouse;
 mod render;
 
 use components::appwindow::AppWindow;

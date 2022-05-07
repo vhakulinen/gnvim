@@ -1,10 +1,15 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
-use gtk::glib;
 use gtk::subclass::prelude::*;
-use gtk::traits::WidgetExt;
+use gtk::{glib, prelude::*};
 
 use crate::components::{Cursor, GridBuffer};
+
+#[derive(Default)]
+pub struct DragStartPosition {
+    pub pos: RefCell<(usize, usize)>,
+    pub offset: RefCell<(f64, f64)>,
+}
 
 #[derive(Default)]
 pub struct Grid {
@@ -14,6 +19,9 @@ pub struct Grid {
     pub cursor: Cursor,
     /// The content.
     pub buffer: GridBuffer,
+
+    pub gesture_click: gtk::GestureClick,
+    pub gesture_drag: gtk::GestureDrag,
 }
 
 #[glib::object_subclass]
@@ -32,6 +40,12 @@ impl ObjectImpl for Grid {
 
         self.buffer.set_parent(obj);
         self.cursor.set_parent(obj);
+
+        self.gesture_click.set_button(0);
+        self.gesture_drag.set_button(0);
+
+        obj.add_controller(&self.gesture_click);
+        obj.add_controller(&self.gesture_drag);
     }
 
     fn dispose(&self, _obj: &Self::Type) {

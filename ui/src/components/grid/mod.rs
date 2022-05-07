@@ -1,9 +1,15 @@
+use std::{cell::RefCell, rc::Rc};
+
 use glib::Object;
-use gtk::{glib, subclass::prelude::*};
+use gtk::{gdk, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use nvim::types::uievents::{GridLine, GridResize, GridScroll, ModeInfo};
 
-use crate::{colors::Colors, font::Font};
+use crate::{
+    colors::Colors,
+    font::Font,
+    mouse::{Action, Mouse},
+};
 
 mod imp;
 
@@ -16,6 +22,93 @@ glib::wrapper! {
 impl Grid {
     pub fn new(id: i64) -> Self {
         Object::new(&[("grid-id", &id)]).expect("Failed to create Grid")
+    }
+
+    fn input_modifier(evt: &gtk::EventController) -> String {
+        let state = evt.current_event_state();
+
+        let mut modifier = String::new();
+        if state.contains(gdk::ModifierType::SHIFT_MASK) {
+            modifier.push_str("S");
+        }
+        if state.contains(gdk::ModifierType::CONTROL_MASK) {
+            modifier.push_str("C");
+        }
+        if state.contains(gdk::ModifierType::ALT_MASK) {
+            modifier.push_str("A");
+        }
+
+        modifier
+    }
+
+    fn input_mouse(gst: &gtk::GestureSingle) -> Mouse {
+        match gst.current_button() {
+            gdk::BUTTON_PRIMARY => Mouse::Left,
+            gdk::BUTTON_SECONDARY => Mouse::Right,
+            gdk::BUTTON_MIDDLE => Mouse::Middle,
+            _ => {
+                println!("unknown button, defaulting to primary");
+                Mouse::Left
+            }
+        }
+    }
+
+    pub fn connect_mouse<F>(&self, font: Font, f: F)
+    where
+        F: Fn(i64, Mouse, Action, String, usize, usize) + 'static + Clone,
+    {
+        let click = clone!(@weak self as obj, @weak font, @strong f, => move |
+            gst: &gtk::GestureClick,
+            action: Action,
+            n: i32,
+            x: f64,
+            y: f64,
+        | {
+            let col = font.scale_to_col(x) as usize;
+            let row = font.scale_to_row(y) as usize;
+
+            let modifier = Grid::input_modifier(gst.upcast_ref::<gtk::EventController>());
+            let mouse = Grid::input_mouse(gst.upcast_ref::<gtk::GestureSingle>());
+
+            for _ in 0..n {
+                f(obj.imp().id.get(), mouse, action, modifier.clone(), row, col)
+            }
+        });
+
+        let imp = self.imp();
+        imp.gesture_click.connect_pressed(
+            clone!(@strong click => move |gst, n, x, y| click(gst, Action::Pressed, n, x, y)),
+        );
+        imp.gesture_click.connect_released(
+            clone!(@strong click => move |gst, n, x, y| click(gst, Action::Released, n, x, y)),
+        );
+
+        let start = Rc::new(RefCell::new((0.0, 0.0)));
+        let pos = Rc::new(RefCell::new((0, 0)));
+        imp.gesture_drag
+            .connect_drag_begin(clone!(@weak font, @strong start => move |_, x, y| {
+                start.replace((x, y));
+            }));
+        imp.gesture_drag.connect_drag_update(
+            clone!(@strong start, @strong pos, @weak self as obj, @weak font => move |gst, x, y| {
+                let imp = obj.imp();
+                let start = start.borrow();
+                let x = start.0 + x;
+                let y = start.1 + y;
+
+                let mut prev = pos.borrow_mut();
+                let col = font.scale_to_col(x);
+                let row = font.scale_to_row(y);
+
+                if prev.0 != row || prev.1 != col {
+                    *prev = (row, col);
+
+                    let modifier = Grid::input_modifier(gst.upcast_ref::<gtk::EventController>());
+                    let mouse = Grid::input_mouse(gst.upcast_ref::<gtk::GestureSingle>());
+                    f(imp.id.get(), mouse, Action::Drag, modifier, row, col);
+                }
+            }),
+        );
     }
 
     pub fn hide_cursor(&self, hide: bool) {

@@ -1,9 +1,13 @@
-use gtk::{glib, subclass::prelude::*};
+use std::rc::Rc;
+
+use futures::lock::Mutex;
+use gio_compat::CompatWrite;
+use gtk::{glib, glib::clone, subclass::prelude::*};
 use nvim::types::uievents::{
     GridClear, GridCursorGoto, GridLine, GridResize, GridScroll, ModeInfo,
 };
 
-use crate::{colors::Colors, font::Font};
+use crate::{colors::Colors, font::Font, nvim_unlock, spawn_local};
 
 mod imp;
 
@@ -16,6 +20,32 @@ glib::wrapper! {
 impl Shell {
     pub fn new() -> Self {
         glib::Object::new(&[]).expect("Failed to create Shell")
+    }
+
+    pub fn connect_root_grid(
+        &self,
+        font: Font,
+        nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
+    ) {
+        self.imp().root_grid.connect_mouse(
+            font,
+            clone!(@weak nvim => move |id, mouse, action, modifier, row, col| {
+                spawn_local!(async move {
+                    let res = nvim_unlock!(nvim)
+                        .nvim_input_mouse(
+                            mouse.as_nvim_input().to_owned(),
+                            action.as_nvim_action().to_owned(),
+                            modifier,
+                            id,
+                            row as i64,
+                            col as i64,
+                        )
+                        .await.expect("call to nvim failed");
+
+                    res.await.expect("nvim_input_mouse failed");
+                });
+            }),
+        )
     }
 
     pub fn busy_start(&self) {

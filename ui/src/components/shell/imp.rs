@@ -39,6 +39,8 @@ impl ObjectSubclass for Shell {
 impl ObjectImpl for Shell {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
+
+        self.fixed.set_can_target(false);
     }
 
     fn dispose(&self, _obj: &Self::Type) {

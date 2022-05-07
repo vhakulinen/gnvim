@@ -37,7 +37,7 @@ pub struct AppWindow {
     nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
 
     colors: Rc<RefCell<Colors>>,
-    font: Rc<RefCell<Font>>,
+    font: Font,
     mode_infos: RefCell<Vec<ModeInfo>>,
 
     /// Source id for debouncing nvim resizing.
@@ -173,11 +173,10 @@ impl AppWindow {
             UiEvent::Bell => {}
             UiEvent::VisualBell => {}
             UiEvent::Flush => {
-                self.shell
-                    .handle_flush(&self.colors.borrow(), &self.font.borrow());
+                self.shell.handle_flush(&self.colors.borrow(), &self.font);
 
                 if self.resize_on_flush.take() {
-                    self.font.borrow().update_metrics();
+                    self.font.update_metrics();
                     self.resize_nvim();
                 }
             }
@@ -219,10 +218,10 @@ impl AppWindow {
     fn handle_option_set(&self, event: OptionSet) {
         match event {
             OptionSet::Linespace(linespace) => {
-                self.font.borrow().set_linespace(linespace as f32);
+                self.font.set_linespace(linespace as f32);
                 self.resize_on_flush.set(true);
             }
-            OptionSet::Guifont(guifont) => match self.font.borrow().set_font_from_str(&guifont) {
+            OptionSet::Guifont(guifont) => match self.font.set_font_from_str(&guifont) {
                 Ok(_) => self.resize_on_flush.set(true),
                 Err(err) => println!("failed to set font: {}", err),
             },
@@ -231,10 +230,7 @@ impl AppWindow {
     }
 
     fn resize_nvim(&self) {
-        let (cols, rows) = self
-            .font
-            .borrow()
-            .grid_size_for_allocation(&self.shell.allocation());
+        let (cols, rows) = self.font.grid_size_for_allocation(&self.shell.allocation());
 
         let id = glib::timeout_add_local(
             Duration::from_millis(10),
@@ -341,6 +337,9 @@ impl ObjectImpl for AppWindow {
         let (client, reader) = self.open_nvim();
 
         *self.nvim.try_lock().expect("can't get lock") = Some(client);
+
+        self.shell
+            .connect_root_grid(self.font.clone(), self.nvim.clone());
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
