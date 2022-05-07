@@ -204,22 +204,22 @@ impl Row {
             // Create glyphs.
             crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x, baseline);
 
-            if hl.map(|hl| hl.underline).flatten().unwrap_or(false) {
-                crate::render::render_underline(&snapshot_fg, &font, &sp, x, baseline, width)
+            if hl.and_then(|hl| hl.underline).unwrap_or(false) {
+                crate::render::render_underline(&snapshot_fg, font, &sp, x, baseline, width)
             }
 
-            if hl.map(|hl| hl.underlineline).flatten().unwrap_or(false) {
-                crate::render::render_underlineline(&snapshot_fg, &font, &sp, x, baseline, width)
+            if hl.and_then(|hl| hl.underlineline).unwrap_or(false) {
+                crate::render::render_underlineline(&snapshot_fg, font, &sp, x, baseline, width)
             }
 
-            if hl.map(|hl| hl.strikethrough).flatten().unwrap_or(false) {
-                crate::render::render_strikethrough(&snapshot_fg, &font, &fg, x, baseline, width)
+            if hl.and_then(|hl| hl.strikethrough).unwrap_or(false) {
+                crate::render::render_strikethrough(&snapshot_fg, font, &fg, x, baseline, width)
             }
 
-            if hl.map(|hl| hl.undercurl).flatten().unwrap_or(false) {
+            if hl.and_then(|hl| hl.undercurl).unwrap_or(false) {
                 crate::render::render_undercurl(
                     &snapshot_fg,
-                    &font,
+                    font,
                     &sp,
                     x,
                     baseline,
@@ -228,12 +228,12 @@ impl Row {
                 )
             }
 
-            if hl.map(|hl| hl.underdot).flatten().unwrap_or(false) {
-                crate::render::render_underdot(&snapshot_fg, &font, &sp, x, baseline, width)
+            if hl.and_then(|hl| hl.underdot).unwrap_or(false) {
+                crate::render::render_underdot(&snapshot_fg, font, &sp, x, baseline, width)
             }
 
-            if hl.map(|hl| hl.underdash).flatten().unwrap_or(false) {
-                crate::render::render_underdash(&snapshot_fg, &font, &sp, x, baseline, width)
+            if hl.and_then(|hl| hl.underdash).unwrap_or(false) {
+                crate::render::render_underdash(&snapshot_fg, font, &sp, x, baseline, width)
             }
 
             // Create background.

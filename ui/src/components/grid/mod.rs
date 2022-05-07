@@ -29,13 +29,13 @@ impl Grid {
 
         let mut modifier = String::new();
         if state.contains(gdk::ModifierType::SHIFT_MASK) {
-            modifier.push_str("S");
+            modifier.push('S');
         }
         if state.contains(gdk::ModifierType::CONTROL_MASK) {
-            modifier.push_str("C");
+            modifier.push('C');
         }
         if state.contains(gdk::ModifierType::ALT_MASK) {
-            modifier.push_str("A");
+            modifier.push('A');
         }
 
         modifier
@@ -125,15 +125,13 @@ impl Grid {
                 let id = obj.imp().id.get();
 
                 if dx > 0.0 {
-                    f(id, Mouse::Wheel, Action::ScrollRight, modifier.clone(), row, col);
+                    f(id, Mouse::Wheel, Action::ScrollRight, modifier, row, col);
                 } else if dx < 0.0 {
-                    f(id, Mouse::Wheel, Action::ScrollLeft, modifier.clone(), row, col);
-                }
-
-                if dy > 0.0 {
-                    f(id, Mouse::Wheel, Action::ScrollDown, modifier.clone(), row, col);
-                }  else if dy < 0.0 {
-                    f(id, Mouse::Wheel, Action::ScrollUp, modifier.clone(), row, col);
+                    f(id, Mouse::Wheel, Action::ScrollLeft, modifier, row, col);
+                } else if dy > 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollDown, modifier, row, col);
+                } else if dy < 0.0 {
+                    f(id, Mouse::Wheel, Action::ScrollUp, modifier, row, col);
                 }
 
                 gtk::Inhibit(true)

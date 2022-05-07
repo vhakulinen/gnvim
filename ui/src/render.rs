@@ -142,7 +142,7 @@ pub fn render_underdot(
     let bounds = graphene::Rect::new(x, y, h, h);
     let dot = gsk::RoundedRect::from_rect(bounds, h);
     snapshot.push_rounded_clip(&dot);
-    snapshot.append_color(&color, dot.bounds());
+    snapshot.append_color(color, dot.bounds());
     snapshot.pop();
 
     // Add transparent "dummy" block so we can add some spacing between dots.
