@@ -36,10 +36,14 @@ impl GridBuffer {
         for row in rows.iter_mut() {
             // Invalidate the last cell's nodes so they'll get re-render when
             // truncating the rows.
+            row.cells.resize(width, Cell::default());
+
+            // Clear the last cell's render nodes. This is needed when we're
+            // truncating, which might cause the last render segment to be
+            // cut off.
             if let Some(cell) = row.cells.last_mut() {
                 cell.clear_nodes();
             }
-            row.cells.resize(width, Cell::default())
         }
     }
 

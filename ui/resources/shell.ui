@@ -11,5 +11,10 @@
                 <property name="can-target">false</property>
             </object>
         </child>
+        <child>
+            <object class="GtkFixed" id="msg-fixed">
+                <property name="can-target">false</property>
+            </object>
+        </child>
     </template>
 </interface>

@@ -226,9 +226,9 @@ impl AppWindow {
             UiEvent::WinClose(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_win_close(event)),
-            UiEvent::MsgSetPos(_) => {
-                // TODO(ville): Implement
-            }
+            UiEvent::MsgSetPos(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_msg_set_pos(event, &self.font)),
             UiEvent::WinViewport(_) => {}
 
             event => panic!("Unhandled ui event: {}", event),

@@ -5,8 +5,8 @@ use gio_compat::CompatWrite;
 use gtk::{glib, glib::clone, prelude::*, subclass::prelude::*};
 use nvim::types::{
     uievents::{
-        GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, WinClose,
-        WinFloatPos, WinHide, WinPos,
+        GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
+        WinClose, WinFloatPos, WinHide, WinPos,
     },
     ModeInfo,
 };
@@ -192,6 +192,25 @@ impl Shell {
         let grid = self.find_grid_must(event.grid);
         grid.set_nvim_window(None);
         grid.unparent();
+    }
+
+    pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {
+        assert!(event.grid != 1, "cant do msg_set_pos for grid 1");
+
+        let grid = self.find_grid_must(event.grid);
+        let fixed = self.imp().msg_fixed.clone();
+
+        let x = 0.0;
+        let y = font.row_to_y(event.row as f64);
+
+        if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
+            fixed.move_(&grid, x, y);
+        } else {
+            grid.unparent();
+            fixed.put(&grid, x, y);
+        }
+
+        // TODO(ville): Draw the separator.
     }
 }
 

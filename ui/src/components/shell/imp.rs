@@ -12,6 +12,8 @@ use crate::components::grid::Grid;
 pub struct Shell {
     #[template_child(id = "fixed")]
     pub fixed: TemplateChild<gtk::Fixed>,
+    #[template_child(id = "msg-fixed")]
+    pub msg_fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "root-grid")]
     pub root_grid: TemplateChild<Grid>,
 
