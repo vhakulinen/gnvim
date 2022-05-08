@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="Shell" parent="GtkWidget">
+    <template class="Grid" parent="GtkWidget">
         <child>
-            <object class="Grid" id="root-grid">
-                <property name="grid-id">1</property>
+            <object class="GridBuffer" id="buffer">
+            </object>
+        </child>
+        <child>
+            <object class="Cursor" id="cursor">
             </object>
         </child>
         <child>
             <object class="GtkFixed" id="fixed">
-                <property name="can-target">false</property>
             </object>
         </child>
     </template>
 </interface>
+
+

@@ -1,24 +1,28 @@
 use std::cell::{Cell, RefCell};
 
+use gtk::glib::subclass::InitializingObject;
 use gtk::subclass::prelude::*;
 use gtk::{glib, prelude::*};
+use nvim::types::Window;
 
 use crate::components::{Cursor, GridBuffer};
 
-#[derive(Default)]
-pub struct DragStartPosition {
-    pub pos: RefCell<(usize, usize)>,
-    pub offset: RefCell<(f64, f64)>,
-}
-
-#[derive(Default)]
+#[derive(gtk::CompositeTemplate, Default)]
+#[template(resource = "/com/github/vhakulinen/gnvim/grid.ui")]
 pub struct Grid {
+    /// Our cursor on the screen.
+    #[template_child(id = "cursor")]
+    pub cursor: TemplateChild<Cursor>,
+    #[template_child(id = "fixed")]
+    pub fixed: TemplateChild<gtk::Fixed>,
+    /// The content.
+    #[template_child(id = "buffer")]
+    pub buffer: TemplateChild<GridBuffer>,
+
     /// The grid id from neovim.
     pub id: Cell<i64>,
-    /// Our cursor on the screen.
-    pub cursor: Cursor,
-    /// The content.
-    pub buffer: GridBuffer,
+    /// Neovim window associated to this grid.
+    pub nvim_window: RefCell<Option<Window>>,
 
     pub gesture_click: gtk::GestureClick,
     pub gesture_drag: gtk::GestureDrag,
@@ -31,6 +35,17 @@ impl ObjectSubclass for Grid {
     const NAME: &'static str = "Grid";
     type Type = super::Grid;
     type ParentType = gtk::Widget;
+
+    fn class_init(klass: &mut Self::Class) {
+        GridBuffer::ensure_type();
+        Cursor::ensure_type();
+
+        klass.bind_template();
+    }
+
+    fn instance_init(obj: &InitializingObject<Self>) {
+        obj.init_template();
+    }
 }
 
 impl ObjectImpl for Grid {
@@ -39,9 +54,6 @@ impl ObjectImpl for Grid {
 
         let layout = gtk::BinLayout::new();
         obj.set_layout_manager(Some(&layout));
-
-        self.buffer.set_parent(obj);
-        self.cursor.set_parent(obj);
 
         self.gesture_click.set_button(0);
         self.gesture_drag.set_button(0);
@@ -59,6 +71,7 @@ impl ObjectImpl for Grid {
     fn dispose(&self, _obj: &Self::Type) {
         self.buffer.unparent();
         self.cursor.unparent();
+        self.fixed.unparent();
     }
 
     fn properties() -> &'static [glib::ParamSpec] {

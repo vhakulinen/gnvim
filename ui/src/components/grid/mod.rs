@@ -1,9 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
-use glib::Object;
 use gtk::{gdk, glib, glib::clone, prelude::*, subclass::prelude::*};
 
-use nvim::types::uievents::{GridLine, GridResize, GridScroll, ModeInfo};
+use nvim::types::{
+    uievents::{GridLine, GridResize, GridScroll},
+    ModeInfo, Window,
+};
 
 use crate::{
     colors::Colors,
@@ -21,7 +23,19 @@ glib::wrapper! {
 
 impl Grid {
     pub fn new(id: i64) -> Self {
-        Object::new(&[("grid-id", &id)]).expect("Failed to create Grid")
+        glib::Object::new(&[("grid-id", &id)]).expect("Failed to create Grid")
+    }
+
+    pub fn fixed(&self) -> &gtk::Fixed {
+        &self.imp().fixed
+    }
+
+    pub fn id(&self) -> i64 {
+        self.imp().id.get()
+    }
+
+    pub fn set_nvim_window(&self, window: Option<Window>) {
+        self.imp().nvim_window.replace(window);
     }
 
     fn input_modifier(evt: &gtk::EventController) -> String {
@@ -37,6 +51,8 @@ impl Grid {
         if state.contains(gdk::ModifierType::ALT_MASK) {
             modifier.push('A');
         }
+
+        // TODO(ville): Meta key
 
         modifier
     }

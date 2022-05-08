@@ -34,6 +34,11 @@ impl GridBuffer {
         rows.resize_with(height, Default::default);
 
         for row in rows.iter_mut() {
+            // Invalidate the last cell's nodes so they'll get re-render when
+            // truncating the rows.
+            if let Some(cell) = row.cells.last_mut() {
+                cell.clear_nodes();
+            }
             row.cells.resize(width, Cell::default())
         }
     }

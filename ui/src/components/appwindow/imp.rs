@@ -3,8 +3,9 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use futures::lock::Mutex;
-use nvim::types::uievents::{DefaultColorsSet, ModeInfo, OptionSet, UiOptions};
+use nvim::types::uievents::DefaultColorsSet;
 use nvim::types::UiEvent;
+use nvim::types::{ModeInfo, OptionSet, UiOptions};
 
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
@@ -199,7 +200,9 @@ impl AppWindow {
             UiEvent::GridClear(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_clear(event);
             }),
-            UiEvent::GridDestroy(_) => {}
+            UiEvent::GridDestroy(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_grid_destroy(event)),
             UiEvent::GridCursorGoto(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_cursor_goto(event);
             }),
@@ -207,8 +210,25 @@ impl AppWindow {
                 .into_iter()
                 .for_each(|event| self.shell.handle_grid_scroll(event)),
 
-            // For some reason, this lonely multigrid event is sent
-            // even tho' we haven't enabled that feature yet.
+            // multigrid events
+            UiEvent::WinPos(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_pos(event, &self.font)),
+            UiEvent::WinFloatPos(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_float_pos(event, &self.font)),
+            UiEvent::WinExternalPos(_) => {
+                // TODO(ville): Implement
+            }
+            UiEvent::WinHide(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_hide(event)),
+            UiEvent::WinClose(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_close(event)),
+            UiEvent::MsgSetPos(_) => {
+                // TODO(ville): Implement
+            }
             UiEvent::WinViewport(_) => {}
 
             event => panic!("Unhandled ui event: {}", event),
@@ -352,7 +372,7 @@ impl ObjectImpl for AppWindow {
                 UiOptions{
                     rgb: true,
                     ext_linegrid: true,
-                    //ext_multigrid: true,
+                    ext_multigrid: true,
                     ..Default::default()
                 }
             ).await.expect("call to nvim failed");
@@ -472,6 +492,8 @@ fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option<Str
     if state.contains(gdk::ModifierType::ALT_MASK) {
         input.push_str("A-");
     }
+
+    // TODO(ville): Meta key
 
     if keyname.chars().count() > 1 {
         let n = keyname_to_nvim_key(keyname.as_str())?;

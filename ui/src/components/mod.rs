@@ -6,4 +6,5 @@ pub mod grid_buffer;
 pub mod shell;
 
 pub use cursor::Cursor;
+pub use grid::Grid;
 pub use grid_buffer::GridBuffer;

@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use gtk::gdk;
 
-use nvim::types::uievents::HlAttr;
+use nvim::types::HlAttr;
 
 #[derive(Debug, Default)]
 pub struct Colors {

@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use gtk::glib;
 use gtk::glib::subclass::InitializingObject;
 use gtk::prelude::*;
@@ -8,12 +10,12 @@ use crate::components::grid::Grid;
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
 pub struct Shell {
-    #[template_child(id = "overlay")]
-    overlay: TemplateChild<gtk::Overlay>,
     #[template_child(id = "fixed")]
-    fixed: TemplateChild<gtk::Fixed>,
+    pub fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "root-grid")]
     pub root_grid: TemplateChild<Grid>,
+
+    pub grids: RefCell<Vec<Grid>>,
 }
 
 #[glib::object_subclass]
@@ -40,13 +42,7 @@ impl ObjectImpl for Shell {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
 
-        self.fixed.set_can_target(false);
-    }
-
-    fn dispose(&self, _obj: &Self::Type) {
-        // The overlay widget got added into our widget/layout manager by
-        // the template, so we need to remove it.
-        self.overlay.unparent();
+        self.grids.borrow_mut().push(self.root_grid.clone());
     }
 }
 

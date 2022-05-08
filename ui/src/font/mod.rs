@@ -96,6 +96,14 @@ impl Font {
     pub fn scale_to_row(&self, y: f64) -> usize {
         (y / (self.height() / SCALE) as f64).floor() as usize
     }
+
+    pub fn col_to_x(&self, col: f64) -> f64 {
+        col * (self.char_width() / SCALE) as f64
+    }
+
+    pub fn row_to_y(&self, row: f64) -> f64 {
+        row * (self.height() / SCALE) as f64
+    }
 }
 
 impl Default for Font {

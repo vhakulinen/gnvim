@@ -3,5 +3,6 @@
     <gresource prefix="/com/github/vhakulinen/gnvim/">
         <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">grid.ui</file>
     </gresource>
 </gresources>
