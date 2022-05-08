@@ -1,5 +1,9 @@
 use crate::rpc::{RpcWriter, WriteError};
-use crate::{args, types::uievents::UiOptions, CallResponse, Client};
+use crate::{
+    args,
+    types::{UiOptions, Window},
+    CallResponse, Client,
+};
 
 impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_autocmds(
@@ -436,7 +440,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_tabpage_list_wins(
         &mut self,
         tabpage: rmpv::Value, /* Tabpage */
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Window */>>, WriteError> {
+    ) -> Result<CallResponse<Vec<Window>>, WriteError> {
         self.call("nvim_tabpage_list_wins", args![tabpage]).await
     }
 
@@ -471,7 +475,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_tabpage_get_win(
         &mut self,
         tabpage: rmpv::Value, /* Tabpage */
-    ) -> Result<CallResponse<rmpv::Value /* Window */>, WriteError> {
+    ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_tabpage_get_win", args![tabpage]).await
     }
 
@@ -800,21 +804,17 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_set_current_buf", args![buffer]).await
     }
 
-    pub async fn nvim_list_wins(
-        &mut self,
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Window */>>, WriteError> {
+    pub async fn nvim_list_wins(&mut self) -> Result<CallResponse<Vec<Window>>, WriteError> {
         self.call("nvim_list_wins", args![]).await
     }
 
-    pub async fn nvim_get_current_win(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Window */>, WriteError> {
+    pub async fn nvim_get_current_win(&mut self) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_get_current_win", args![]).await
     }
 
     pub async fn nvim_set_current_win(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_win", args![window]).await
     }
@@ -1123,14 +1123,14 @@ impl<W: RpcWriter> Client<W> {
         buffer: rmpv::Value, /* Buffer */
         enter: bool,
         config: rmpv::Value, /* Dictionary */
-    ) -> Result<CallResponse<rmpv::Value /* Window */>, WriteError> {
+    ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_open_win", args![buffer, enter, config])
             .await
     }
 
     pub async fn nvim_win_set_config(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         config: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_config", args![window, config])
@@ -1139,21 +1139,21 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_config(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
         self.call("nvim_win_get_config", args![window]).await
     }
 
     pub async fn nvim_win_get_buf(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<rmpv::Value /* Buffer */>, WriteError> {
         self.call("nvim_win_get_buf", args![window]).await
     }
 
     pub async fn nvim_win_set_buf(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         buffer: rmpv::Value, /* Buffer */
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_buf", args![window, buffer]).await
@@ -1161,14 +1161,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_cursor(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_win_get_cursor", args![window]).await
     }
 
     pub async fn nvim_win_set_cursor(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         pos: (i64, i64),
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_cursor", args![window, pos]).await
@@ -1176,14 +1176,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_height(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_height", args![window]).await
     }
 
     pub async fn nvim_win_set_height(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         height: i64,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_height", args![window, height])
@@ -1192,14 +1192,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_width(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_width", args![window]).await
     }
 
     pub async fn nvim_win_set_width(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         width: i64,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_width", args![window, width]).await
@@ -1207,7 +1207,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_var(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         name: String,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_win_get_var", args![window, name]).await
@@ -1215,7 +1215,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_set_var(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         name: String,
         value: rmpv::Value, /* Object */
     ) -> Result<CallResponse<()>, WriteError> {
@@ -1225,7 +1225,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_del_var(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         name: String,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_del_var", args![window, name]).await
@@ -1233,7 +1233,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_option(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         name: String,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_win_get_option", args![window, name]).await
@@ -1241,7 +1241,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_set_option(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         name: String,
         value: rmpv::Value, /* Object */
     ) -> Result<CallResponse<()>, WriteError> {
@@ -1251,42 +1251,39 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_get_position(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_win_get_position", args![window]).await
     }
 
     pub async fn nvim_win_get_tabpage(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<rmpv::Value /* Tabpage */>, WriteError> {
         self.call("nvim_win_get_tabpage", args![window]).await
     }
 
     pub async fn nvim_win_get_number(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_number", args![window]).await
     }
 
     pub async fn nvim_win_is_valid(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_win_is_valid", args![window]).await
     }
 
-    pub async fn nvim_win_hide(
-        &mut self,
-        window: rmpv::Value, /* Window */
-    ) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_win_hide(&mut self, window: Window) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_hide", args![window]).await
     }
 
     pub async fn nvim_win_close(
         &mut self,
-        window: rmpv::Value, /* Window */
+        window: Window,
         force: bool,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_close", args![window, force]).await
@@ -1294,8 +1291,8 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_win_call(
         &mut self,
-        window: rmpv::Value, /* Window */
-        fun: rmpv::Value,    /* LuaRef */
+        window: Window,
+        fun: rmpv::Value, /* LuaRef */
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_win_call", args![window, fun]).await
     }

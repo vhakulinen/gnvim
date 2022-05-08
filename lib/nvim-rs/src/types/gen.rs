@@ -148,7 +148,7 @@ pub struct GridDestroy {
 #[derive(Debug, serde::Deserialize)]
 pub struct WinPos {
     pub grid: i64,
-    pub win: rmpv::Value, /* Window */
+    pub win: Window,
     pub startrow: i64,
     pub startcol: i64,
     pub width: i64,
@@ -158,7 +158,7 @@ pub struct WinPos {
 #[derive(Debug, serde::Deserialize)]
 pub struct WinFloatPos {
     pub grid: i64,
-    pub win: rmpv::Value, /* Window */
+    pub win: Window,
     pub anchor: String,
     pub anchor_grid: i64,
     pub anchor_row: f64,
@@ -170,7 +170,7 @@ pub struct WinFloatPos {
 #[derive(Debug, serde::Deserialize)]
 pub struct WinExternalPos {
     pub grid: i64,
-    pub win: rmpv::Value, /* Window */
+    pub win: Window,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -194,7 +194,7 @@ pub struct MsgSetPos {
 #[derive(Debug, serde::Deserialize)]
 pub struct WinViewport {
     pub grid: i64,
-    pub win: rmpv::Value, /* Window */
+    pub win: Window,
     pub topline: i64,
     pub botline: i64,
     pub curline: i64,

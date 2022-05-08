@@ -1,7 +1,7 @@
 use std::process::Stdio;
 use std::time::Duration;
 
-use nvim_rs::types::uievents::UiOptions;
+use nvim_rs::types::UiOptions;
 use tokio::process::Command;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 

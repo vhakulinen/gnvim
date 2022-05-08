@@ -1,3 +1,5 @@
+use into_value::IntoValue;
+
 #[derive(Debug)]
 pub enum OptionSet {
     Guifont(String),
@@ -122,4 +124,13 @@ pub struct ModeInfo {
     pub attr_id_lm: Option<u64>,
     pub short_name: Option<String>,
     pub name: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Window(rmpv::Value);
+
+impl IntoValue for Window {
+    fn into_value(self) -> rmpv::Value {
+        self.0
+    }
 }
