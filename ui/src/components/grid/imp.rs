@@ -6,6 +6,7 @@ use gtk::{glib, prelude::*};
 use nvim::types::Window;
 
 use crate::components::{Cursor, GridBuffer};
+use crate::font::Font;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/grid.ui")]
@@ -18,6 +19,8 @@ pub struct Grid {
     /// The content.
     #[template_child(id = "buffer")]
     pub buffer: TemplateChild<GridBuffer>,
+
+    pub font: RefCell<Font>,
 
     /// The grid id from neovim.
     pub id: Cell<i64>,
@@ -51,9 +54,6 @@ impl ObjectSubclass for Grid {
 impl ObjectImpl for Grid {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
-
-        let layout = gtk::BinLayout::new();
-        obj.set_layout_manager(Some(&layout));
 
         self.gesture_click.set_button(0);
         self.gesture_drag.set_button(0);
@@ -109,4 +109,30 @@ impl ObjectImpl for Grid {
     }
 }
 
-impl WidgetImpl for Grid {}
+impl WidgetImpl for Grid {
+    fn measure(
+        &self,
+        _widget: &Self::Type,
+        orientation: gtk::Orientation,
+        for_size: i32,
+    ) -> (i32, i32, i32, i32) {
+        // NOTE(ville): Currently, our size is always the same as our buffer's
+        // size. This manual measure implementation is to avoid issues where
+        // the buffer's sibling, gtkfixed, has "old" size on flush.
+        self.buffer.measure(orientation, for_size)
+    }
+
+    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(widget, width, height, baseline);
+
+        let mut child: Option<gtk::Widget> = widget.first_child();
+        while let Some(sib) = child {
+            if sib.should_layout() {
+                let (req, _) = sib.preferred_size();
+                sib.allocate(req.width(), req.height(), -1, None);
+            }
+
+            child = sib.next_sibling();
+        }
+    }
+}

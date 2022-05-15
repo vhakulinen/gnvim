@@ -21,12 +21,17 @@ impl Cursor {
         self.imp().hide.replace(hide);
     }
 
-    pub fn flush(&self, colors: &Colors, font: &Font) {
+    pub fn set_font(&self, font: Font) {
+        self.imp().font.replace(font);
+    }
+
+    pub fn flush(&self, colors: &Colors) {
         let imp = self.imp();
         if imp.node.borrow().is_some() {
             return;
         }
 
+        let font = imp.font.borrow();
         let hl_id = *imp.attr_id.borrow();
         let fg = colors.get_hl_fg(hl_id);
         let bg = colors.get_hl_bg(hl_id);
@@ -58,7 +63,7 @@ impl Cursor {
 
         snapshot.append_node(gsk::ColorNode::new(&bg, &rect).upcast());
 
-        let attrs = crate::render::create_hl_attrs(hl_id, colors, font);
+        let attrs = crate::render::create_hl_attrs(hl_id, colors, &font);
         crate::render::render_text(
             &snapshot,
             &self.pango_context(),

@@ -65,7 +65,7 @@ impl Font {
             char_width
         } else {
             DEFAULT_WIDTH
-        })
+        });
     }
 }
 

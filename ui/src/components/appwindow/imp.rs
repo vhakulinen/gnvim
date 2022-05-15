@@ -46,6 +46,9 @@ pub struct AppWindow {
     /// When resize on flush is set, there were some operations on the previous
     /// ui events that changed our grid size (e.g. font chagned etc.).
     resize_on_flush: Cell<bool>,
+    /// Our previous window size. Used to track when we need to tell neovim to
+    /// resize itself.
+    prev_win_size: Cell<(i32, i32)>,
 }
 
 impl AppWindow {
@@ -174,9 +177,11 @@ impl AppWindow {
             UiEvent::Bell => {}
             UiEvent::VisualBell => {}
             UiEvent::Flush => {
-                self.shell.handle_flush(&self.colors.borrow(), &self.font);
+                self.shell.handle_flush(&self.colors.borrow());
 
                 if self.resize_on_flush.take() {
+                    // TODO(ville): Here, we need to invalidate all the render
+                    // nodes on grids that use this font.
                     self.font.update_metrics();
                     self.resize_nvim();
                 }
@@ -360,6 +365,7 @@ impl ObjectImpl for AppWindow {
 
         self.shell
             .connect_root_grid(self.font.clone(), self.nvim.clone());
+        self.shell.set_font(self.font.clone());
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -409,7 +415,15 @@ impl ObjectImpl for AppWindow {
 impl WidgetImpl for AppWindow {
     fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
         self.parent_size_allocate(widget, width, height, baseline);
-        self.resize_nvim();
+
+        let prev = self.prev_win_size.get();
+        // TODO(ville): Check for rows/col instead.
+        // NOTE(ville): If we try to resize nvim unconditionally, we'll
+        // end up in a infinite loop.
+        if prev != (width, height) {
+            self.prev_win_size.set((width, height));
+            self.resize_nvim();
+        }
     }
 }
 

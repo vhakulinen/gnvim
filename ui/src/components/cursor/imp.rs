@@ -3,6 +3,9 @@ use std::cell::RefCell;
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk};
 
+use crate::font::Font;
+use crate::SCALE;
+
 #[derive(Default)]
 pub struct Cursor {
     pub pos: RefCell<(i64, i64)>,
@@ -15,6 +18,8 @@ pub struct Cursor {
     pub attr_id: RefCell<i64>,
 
     pub hide: RefCell<bool>,
+
+    pub font: RefCell<Font>,
 }
 
 #[glib::object_subclass]
@@ -34,6 +39,34 @@ impl WidgetImpl for Cursor {
 
         if let Some(ref node) = *self.node.borrow() {
             snapshot.append_node(node);
+        }
+    }
+
+    fn measure(
+        &self,
+        widget: &Self::Type,
+        orientation: gtk::Orientation,
+        for_size: i32,
+    ) -> (i32, i32, i32, i32) {
+        match orientation {
+            gtk::Orientation::Horizontal => {
+                // width
+                let len = self.double_width.borrow().then(|| 2.0).unwrap_or(1.0);
+                let font = self.font.borrow();
+                let w = len * (font.char_width() / SCALE);
+                let w = w.ceil() as i32;
+
+                (w, w, -1, -1)
+            }
+            gtk::Orientation::Vertical => {
+                // height
+                let font = self.font.borrow();
+                let h = font.height() / SCALE;
+                let h = h.ceil() as i32;
+
+                return (h, h, -1, -1);
+            }
+            _ => self.parent_measure(widget, orientation, for_size),
         }
     }
 }

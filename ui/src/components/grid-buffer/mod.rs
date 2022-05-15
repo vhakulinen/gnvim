@@ -21,6 +21,10 @@ impl GridBuffer {
         glib::Object::new(&[]).expect("Failed to create GridBuffer")
     }
 
+    pub fn set_font(&self, font: Font) {
+        self.imp().font.replace(font);
+    }
+
     pub fn get_rows(&self) -> Ref<'_, Vec<Row>> {
         self.imp().rows.borrow()
     }
@@ -42,9 +46,12 @@ impl GridBuffer {
             // truncating, which might cause the last render segment to be
             // cut off.
             if let Some(cell) = row.cells.last_mut() {
+                // TODO(ville): Should we do this also before the resize?
                 cell.clear_nodes();
             }
         }
+
+        self.queue_resize();
     }
 
     pub fn clear(&self) {
@@ -53,17 +60,17 @@ impl GridBuffer {
         }
     }
 
-    pub fn flush(&self, colors: &Colors, font: &Font) {
+    pub fn flush(&self, colors: &Colors) {
         let imp = self.imp();
 
         let ctx = self.pango_context();
 
+        let font = imp.font.borrow();
         for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
-            row.generate_nodes(&ctx, colors, font, i as f32);
+            row.generate_nodes(&ctx, colors, &font, i as f32);
         }
 
-        let alloc = self.allocation();
-
+        let (alloc, _) = self.preferred_size();
         let mut nodes = imp.background_nodes.borrow_mut();
         nodes.clear();
         nodes.push(

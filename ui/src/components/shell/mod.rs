@@ -28,6 +28,14 @@ impl Shell {
         glib::Object::new(&[]).expect("Failed to create Shell")
     }
 
+    pub fn set_font(&self, font: Font) {
+        self.imp()
+            .grids
+            .borrow()
+            .iter()
+            .for_each(|grid| grid.set_font(font.clone()));
+    }
+
     pub fn connect_root_grid(
         &self,
         font: Font,
@@ -79,22 +87,26 @@ impl Shell {
         self.find_grid_must(event.grid).put(event);
     }
 
+    pub fn font(&self) -> Font {
+        self.imp().root_grid.font().clone()
+    }
+
     pub fn handle_grid_resize(&self, event: GridResize) {
         self.find_grid(event.grid)
             .unwrap_or_else(|| {
-                let grid = Grid::new(event.grid);
+                let grid = Grid::new(event.grid, self.font());
                 self.imp().grids.borrow_mut().push(grid.clone());
                 grid
             })
             .resize(event);
     }
 
-    pub fn handle_flush(&self, colors: &Colors, font: &Font) {
+    pub fn handle_flush(&self, colors: &Colors) {
         self.imp()
             .grids
             .borrow()
             .iter()
-            .for_each(|grid| grid.flush(colors, font))
+            .for_each(|grid| grid.flush(colors));
     }
 
     pub fn handle_grid_clear(&self, event: GridClear) {
@@ -177,6 +189,8 @@ impl Shell {
             grid.unparent();
             fixed.put(&grid, x, y);
         }
+
+        // TODO(ville): Make sure the grid fits the screen.
     }
 
     pub fn handle_win_hide(&self, event: WinHide) {

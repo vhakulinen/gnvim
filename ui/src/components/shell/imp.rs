@@ -10,8 +10,6 @@ use crate::components::grid::Grid;
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
 pub struct Shell {
-    #[template_child(id = "fixed")]
-    pub fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "msg-fixed")]
     pub msg_fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "root-grid")]
@@ -29,9 +27,6 @@ impl ObjectSubclass for Shell {
     fn class_init(klass: &mut Self::Class) {
         Grid::ensure_type();
 
-        // Set our layout manager.
-        klass.set_layout_manager_type::<gtk::BinLayout>();
-
         klass.bind_template();
     }
 
@@ -48,4 +43,31 @@ impl ObjectImpl for Shell {
     }
 }
 
-impl WidgetImpl for Shell {}
+impl WidgetImpl for Shell {
+    fn measure(
+        &self,
+        _widget: &Self::Type,
+        orientation: gtk::Orientation,
+        for_size: i32,
+    ) -> (i32, i32, i32, i32) {
+        // Currently, the shell's size is the same as the root grid's size.
+        // Note that for the min width we need to report something smaller so
+        // that the top level window remains resizable (since its using the
+        // shell as the root widget).
+        let (mw, nw, mb, nb) = self.root_grid.measure(orientation, for_size);
+        (mw.min(1), nw, mb, nb)
+    }
+
+    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(widget, width, height, baseline);
+
+        let mut child: Option<gtk::Widget> = widget.first_child();
+        while let Some(sib) = child {
+            if sib.should_layout() {
+                sib.allocate(width, height, -1, None);
+            }
+
+            child = sib.next_sibling();
+        }
+    }
+}

@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
 
 use gtk::{gdk, glib, glib::clone, prelude::*, subclass::prelude::*};
 
@@ -22,8 +25,10 @@ glib::wrapper! {
 }
 
 impl Grid {
-    pub fn new(id: i64) -> Self {
-        glib::Object::new(&[("grid-id", &id)]).expect("Failed to create Grid")
+    pub fn new(id: i64, font: Font) -> Self {
+        let grid: Grid = glib::Object::new(&[("grid-id", &id)]).expect("Failed to create Grid");
+        grid.set_font(font);
+        grid
     }
 
     pub fn fixed(&self) -> &gtk::Fixed {
@@ -174,9 +179,20 @@ impl Grid {
             .resize(event.width as usize, event.height as usize);
     }
 
-    pub fn flush(&self, colors: &Colors, font: &Font) {
+    pub fn font(&self) -> Ref<'_, Font> {
+        self.imp().font.borrow()
+    }
+
+    pub fn set_font(&self, font: Font) {
         let imp = self.imp();
-        imp.buffer.flush(colors, font);
+        imp.font.replace(font.clone());
+        imp.buffer.set_font(font.clone());
+        imp.cursor.set_font(font.clone());
+    }
+
+    pub fn flush(&self, colors: &Colors) {
+        let imp = self.imp();
+        imp.buffer.flush(colors);
 
         // Update the text under the cursor, since in some cases neovim doesn't
         // dispatch cursor goto (e.g. when grid scroll happens but cursor
@@ -190,7 +206,7 @@ impl Grid {
             .get(imp.cursor.col() as usize)
             .expect("bad cursor position");
         imp.cursor.set_text(cell.text.clone());
-        imp.cursor.flush(colors, font);
+        imp.cursor.flush(colors);
     }
 
     pub fn clear(&self) {
@@ -229,6 +245,6 @@ impl Grid {
 
 impl Default for Grid {
     fn default() -> Self {
-        Self::new(0)
+        Self::new(0, Default::default())
     }
 }
