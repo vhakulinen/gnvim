@@ -19,6 +19,18 @@
                     bind-property="font"
                     bind-flags="sync-create"
                 />
+                <property
+                    name="busy"
+                    bind-source="Grid"
+                    bind-property="busy"
+                    bind-flags="sync-create"
+                />
+                <property
+                    name="active"
+                    bind-source="Grid"
+                    bind-property="active"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
         <child>

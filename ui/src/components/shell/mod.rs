@@ -28,14 +28,6 @@ impl Shell {
         glib::Object::new(&[]).expect("Failed to create Shell")
     }
 
-    pub fn set_font(&self, font: Font) {
-        self.imp()
-            .grids
-            .borrow()
-            .iter()
-            .for_each(|grid| grid.set_font(font.clone()));
-    }
-
     pub fn connect_root_grid(&self, nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>) {
         self.imp().root_grid.connect_mouse(
             clone!(@weak nvim => move |id, mouse, action, modifier, row, col| {
@@ -70,12 +62,16 @@ impl Shell {
         self.find_grid(id).expect(&format!("grid {} not found", id))
     }
 
+    fn set_busy(&self, busy: bool) {
+        self.set_property("busy", busy);
+    }
+
     pub fn busy_start(&self) {
-        self.imp().root_grid.hide_cursor(true);
+        self.set_busy(true);
     }
 
     pub fn busy_stop(&self) {
-        self.imp().root_grid.hide_cursor(false);
+        self.set_busy(false);
     }
 
     pub fn handle_grid_line(&self, event: GridLine) {
@@ -91,8 +87,11 @@ impl Shell {
             .unwrap_or_else(|| {
                 let grid = Grid::new(event.grid, &self.font());
 
-                // Bind the font properties.
+                // Bind the properties.
                 self.bind_property("font", &grid, "font")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
+                self.bind_property("busy", &grid, "busy")
                     .flags(glib::BindingFlags::SYNC_CREATE)
                     .build();
 
@@ -115,8 +114,14 @@ impl Shell {
     }
 
     pub fn handle_grid_cursor_goto(&self, event: GridCursorGoto) {
-        self.find_grid_must(event.grid)
-            .cursor_goto(event.col, event.row);
+        let mut current_grid = self.imp().current_grid.borrow_mut();
+        current_grid.set_active(false);
+
+        let grid = self.find_grid_must(event.grid);
+        grid.cursor_goto(event.col, event.row);
+        grid.set_active(true);
+
+        *current_grid = grid;
     }
 
     pub fn handle_grid_scroll(&self, event: GridScroll) {

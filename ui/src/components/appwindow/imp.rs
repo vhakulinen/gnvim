@@ -367,9 +367,7 @@ impl ObjectImpl for AppWindow {
 
         *self.nvim.try_lock().expect("can't get lock") = Some(client);
 
-        let font = self.font.borrow();
         self.shell.connect_root_grid(self.nvim.clone());
-        self.shell.set_font(font.clone());
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {

@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk, prelude::*};
@@ -17,9 +17,9 @@ pub struct Cursor {
     pub width_percentage: RefCell<f32>,
     pub attr_id: RefCell<i64>,
 
-    pub hide: RefCell<bool>,
+    pub active: Cell<bool>,
+    pub busy: Cell<bool>,
 
-    // TODO(ville): bind property
     pub font: RefCell<Font>,
 }
 
@@ -31,16 +31,39 @@ impl ObjectSubclass for Cursor {
 }
 
 impl ObjectImpl for Cursor {
+    fn constructed(&self, obj: &Self::Type) {
+        self.parent_constructed(obj);
+
+        // Set the default width.
+        self.width_percentage.replace(1.0);
+    }
+
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![
+                glib::ParamSpecObject::new(
+                    "font",
+                    "font",
+                    "Font",
+                    Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecBoolean::new(
+                    "active",
+                    "Active",
+                    "Active",
+                    false,
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecBoolean::new(
+                    "busy",
+                    "Busy",
+                    "Busy",
+                    false,
+                    glib::ParamFlags::READWRITE,
+                ),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -49,6 +72,8 @@ impl ObjectImpl for Cursor {
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
+            "active" => self.active.get().to_value(),
+            "busy" => self.busy.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -61,9 +86,14 @@ impl ObjectImpl for Cursor {
         pspec: &glib::ParamSpec,
     ) {
         match pspec.name() {
-            "font" => self
-                .font
-                .replace(value.get().expect("font value must be object Font")),
+            "font" => {
+                self.font
+                    .replace(value.get().expect("font value must be object Font"));
+            }
+            "active" => self
+                .active
+                .set(value.get().expect("active must be a boolean")),
+            "busy" => self.busy.set(value.get().expect("busy must be a boolean")),
             _ => unimplemented!(),
         };
     }
@@ -71,7 +101,7 @@ impl ObjectImpl for Cursor {
 
 impl WidgetImpl for Cursor {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
-        if *self.hide.borrow() {
+        if self.busy.get() || !self.active.get() {
             return;
         }
 

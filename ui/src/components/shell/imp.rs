@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use gtk::glib;
 use gtk::glib::subclass::InitializingObject;
@@ -17,7 +17,13 @@ pub struct Shell {
     pub root_grid: TemplateChild<Grid>,
 
     pub grids: RefCell<Vec<Grid>>,
+    /// Current grid.
+    ///
+    /// On startup this will be an invalid grid, but the first cursor goto
+    /// event will fix that.
+    pub current_grid: RefCell<Grid>,
     pub font: RefCell<Font>,
+    pub busy: Cell<bool>,
 }
 
 #[glib::object_subclass]
@@ -47,13 +53,22 @@ impl ObjectImpl for Shell {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![
+                glib::ParamSpecObject::new(
+                    "font",
+                    "font",
+                    "Font",
+                    Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecBoolean::new(
+                    "busy",
+                    "busy",
+                    "Busy",
+                    false,
+                    glib::ParamFlags::READWRITE,
+                ),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -62,6 +77,7 @@ impl ObjectImpl for Shell {
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
+            "busy" => self.busy.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -74,9 +90,13 @@ impl ObjectImpl for Shell {
         pspec: &glib::ParamSpec,
     ) {
         match pspec.name() {
-            "font" => self
-                .font
-                .replace(value.get().expect("font value must be object Font")),
+            "font" => {
+                self.font
+                    .replace(value.get().expect("font value must be object Font"));
+            }
+            "busy" => self
+                .busy
+                .set(value.get().expect("busy value needs to be a bool")),
             _ => unimplemented!(),
         };
     }

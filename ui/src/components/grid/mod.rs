@@ -163,10 +163,6 @@ impl Grid {
         );
     }
 
-    pub fn hide_cursor(&self, hide: bool) {
-        self.imp().cursor.hide(hide);
-    }
-
     pub fn put(&self, event: GridLine) {
         // TODO(ville): This function should be proxied to the buffer.
 
@@ -186,30 +182,29 @@ impl Grid {
         self.imp().font.borrow()
     }
 
-    pub fn set_font(&self, font: Font) {
-        let imp = self.imp();
-        imp.font.replace(font.clone());
-        imp.buffer.set_font(font.clone());
-        imp.cursor.set_font(font.clone());
+    pub fn set_active(&self, active: bool) {
+        self.set_property("active", active);
     }
 
     pub fn flush(&self, colors: &Colors) {
         let imp = self.imp();
         imp.buffer.flush(colors);
 
-        // Update the text under the cursor, since in some cases neovim doesn't
-        // dispatch cursor goto (e.g. when grid scroll happens but cursor
-        // doesn't move).
-        let rows = imp.buffer.get_rows();
-        let row = rows
-            .get(imp.cursor.row() as usize)
-            .expect("bad cursor position");
-        let cell = row
-            .cells
-            .get(imp.cursor.col() as usize)
-            .expect("bad cursor position");
-        imp.cursor.set_text(cell.text.clone());
-        imp.cursor.flush(colors);
+        if imp.active.get() {
+            // Update the text under the cursor, since in some cases neovim doesn't
+            // dispatch cursor goto (e.g. when grid scroll happens but cursor
+            // doesn't move).
+            let rows = imp.buffer.get_rows();
+            let row = rows
+                .get(imp.cursor.row() as usize)
+                .expect("bad cursor position");
+            let cell = row
+                .cells
+                .get(imp.cursor.col() as usize)
+                .expect("bad cursor position");
+            imp.cursor.set_text(cell.text.clone());
+            imp.cursor.flush(colors);
+        }
     }
 
     pub fn clear(&self) {

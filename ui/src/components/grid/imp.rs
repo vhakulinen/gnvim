@@ -26,6 +26,9 @@ pub struct Grid {
     pub id: Cell<i64>,
     /// Neovim window associated to this grid.
     pub nvim_window: RefCell<Option<Window>>,
+    /// If grid is the active grid or not.
+    pub active: Cell<bool>,
+    pub busy: Cell<bool>,
 
     pub gesture_click: gtk::GestureClick,
     pub gesture_drag: gtk::GestureDrag,
@@ -94,6 +97,20 @@ impl ObjectImpl for Grid {
                     Font::static_type(),
                     glib::ParamFlags::READWRITE,
                 ),
+                glib::ParamSpecBoolean::new(
+                    "busy",
+                    "Busy",
+                    "Busy",
+                    false,
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecBoolean::new(
+                    "active",
+                    "active",
+                    "Active",
+                    false,
+                    glib::ParamFlags::READWRITE,
+                ),
             ]
         });
 
@@ -102,8 +119,10 @@ impl ObjectImpl for Grid {
 
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
-            "id" => self.id.get().to_value(),
+            "grid-id" => self.id.get().to_value(),
             "font" => self.font.borrow().to_value(),
+            "busy" => self.busy.get().to_value(),
+            "active" => self.active.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -124,6 +143,12 @@ impl ObjectImpl for Grid {
                 self.font
                     .replace(value.get().expect("font value must be object Font"));
             }
+            "busy" => self
+                .busy
+                .set(value.get().expect("busy value must be a boolean")),
+            "active" => self
+                .active
+                .set(value.get().expect("active value must be a boolean")),
             _ => unimplemented!(),
         }
     }

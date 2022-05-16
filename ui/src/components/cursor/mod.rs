@@ -1,6 +1,6 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
-use crate::{colors::Colors, font::Font, SCALE};
+use crate::{colors::Colors, SCALE};
 
 use super::grid_buffer::row::Cell;
 
@@ -17,12 +17,8 @@ impl Cursor {
         glib::Object::new(&[]).expect("Failed to create Cursor")
     }
 
-    pub fn hide(&self, hide: bool) {
-        self.imp().hide.replace(hide);
-    }
-
-    pub fn set_font(&self, font: Font) {
-        self.imp().font.replace(font);
+    pub fn set_active(&self, active: bool) {
+        self.set_property("active", active);
     }
 
     pub fn flush(&self, colors: &Colors) {
@@ -109,11 +105,15 @@ impl Cursor {
     }
 
     pub fn set_width_percentage(&self, p: f32) {
-        self.imp().width_percentage.replace(p);
+        let imp = self.imp();
+        imp.width_percentage.replace(p);
+        imp.node.replace(None);
     }
 
     pub fn set_attr_id(&self, id: i64) {
-        self.imp().attr_id.replace(id);
+        let imp = self.imp();
+        imp.attr_id.replace(id);
+        imp.node.replace(None);
     }
 }
 
