@@ -25,9 +25,9 @@ glib::wrapper! {
 }
 
 impl Grid {
-    pub fn new(id: i64, font: Font) -> Self {
-        let grid: Grid = glib::Object::new(&[("grid-id", &id)]).expect("Failed to create Grid");
-        grid.set_font(font);
+    pub fn new(id: i64, font: &Font) -> Self {
+        let grid: Grid =
+            glib::Object::new(&[("grid-id", &id), ("font", font)]).expect("Failed to create Grid");
         grid
     }
 
@@ -74,17 +74,18 @@ impl Grid {
         }
     }
 
-    pub fn connect_mouse<F>(&self, font: Font, f: F)
+    pub fn connect_mouse<F>(&self, f: F)
     where
         F: Fn(i64, Mouse, Action, String, usize, usize) + 'static + Clone,
     {
-        let click = clone!(@weak self as obj, @weak font, @strong f, => move |
+        let click = clone!(@weak self as obj, @strong f, => move |
             gst: &gtk::GestureClick,
             action: Action,
             n: i32,
             x: f64,
             y: f64,
         | {
+            let font = obj.font();
             let col = font.scale_to_col(x) as usize;
             let row = font.scale_to_row(y) as usize;
 
@@ -107,15 +108,16 @@ impl Grid {
         let start = Rc::new(RefCell::new((0.0, 0.0)));
         let pos = Rc::new(RefCell::new((0, 0)));
         imp.gesture_drag
-            .connect_drag_begin(clone!(@weak font, @strong start => move |_, x, y| {
+            .connect_drag_begin(clone!(@strong start => move |_, x, y| {
                 start.replace((x, y));
             }));
         imp.gesture_drag.connect_drag_update(
-            clone!(@strong start, @strong pos, @weak self as obj, @weak font, @strong f => move |gst, x, y| {
+            clone!(@strong start, @strong pos, @weak self as obj, @strong f => move |gst, x, y| {
                 let start = start.borrow();
                 let x = start.0 + x;
                 let y = start.1 + y;
 
+                let font = obj.font();
                 let mut prev = pos.borrow_mut();
                 let col = font.scale_to_col(x);
                 let row = font.scale_to_row(y);
@@ -137,9 +139,10 @@ impl Grid {
             }));
 
         imp.event_controller_scroll.connect_scroll(
-            clone!(@weak self as obj, @weak font, @strong mouse_pos => @default-return gtk::Inhibit(false), move |evt, dx, dy| {
+            clone!(@weak self as obj, @strong mouse_pos => @default-return gtk::Inhibit(false), move |evt, dx, dy| {
                 let modifier = Grid::input_modifier(evt.upcast_ref::<gtk::EventController>());
                 let pos = mouse_pos.borrow();
+                let font = obj.font();
                 let col = font.scale_to_col(pos.0);
                 let row = font.scale_to_row(pos.1);
 
@@ -245,6 +248,6 @@ impl Grid {
 
 impl Default for Grid {
     fn default() -> Self {
-        Self::new(0, Default::default())
+        Self::new(0, &Default::default())
     }
 }

@@ -77,19 +77,35 @@ impl ObjectImpl for Grid {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecInt64::new(
-                "grid-id",
-                "Grid ID",
-                "Grid ID",
-                i64::MIN,
-                i64::MAX,
-                0,
-                // TODO(ville): Maybe we cal use ParamFlags::CONSTRUCT_ONLY here?
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![
+                glib::ParamSpecInt64::new(
+                    "grid-id",
+                    "Grid ID",
+                    "Grid ID",
+                    i64::MIN,
+                    i64::MAX,
+                    0,
+                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
+                ),
+                glib::ParamSpecObject::new(
+                    "font",
+                    "font",
+                    "Font",
+                    Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+            ]
         });
 
         PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "id" => self.id.get().to_value(),
+            "font" => self.font.borrow().to_value(),
+            _ => unimplemented!(),
+        }
     }
 
     fn set_property(
@@ -103,6 +119,10 @@ impl ObjectImpl for Grid {
             "grid-id" => {
                 let id = value.get().expect("property `grid-id` needs to be i64");
                 self.id.replace(id);
+            }
+            "font" => {
+                self.font
+                    .replace(value.get().expect("font value must be object Font"));
             }
             _ => unimplemented!(),
         }

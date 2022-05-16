@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use gtk::subclass::prelude::*;
-use gtk::{glib, gsk};
+use gtk::{glib, gsk, prelude::*};
 
 use crate::font::Font;
 use crate::SCALE;
@@ -19,6 +19,7 @@ pub struct Cursor {
 
     pub hide: RefCell<bool>,
 
+    // TODO(ville): bind property
     pub font: RefCell<Font>,
 }
 
@@ -29,7 +30,44 @@ impl ObjectSubclass for Cursor {
     type ParentType = gtk::Widget;
 }
 
-impl ObjectImpl for Cursor {}
+impl ObjectImpl for Cursor {
+    fn properties() -> &'static [glib::ParamSpec] {
+        use once_cell::sync::Lazy;
+        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
+            vec![glib::ParamSpecObject::new(
+                "font",
+                "font",
+                "Font",
+                Font::static_type(),
+                glib::ParamFlags::READWRITE,
+            )]
+        });
+
+        PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "font" => self.font.borrow().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_property(
+        &self,
+        _obj: &Self::Type,
+        _id: usize,
+        value: &glib::Value,
+        pspec: &glib::ParamSpec,
+    ) {
+        match pspec.name() {
+            "font" => self
+                .font
+                .replace(value.get().expect("font value must be object Font")),
+            _ => unimplemented!(),
+        };
+    }
+}
 
 impl WidgetImpl for Cursor {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {

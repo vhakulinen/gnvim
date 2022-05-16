@@ -3,10 +3,22 @@
     <template class="Grid" parent="GtkWidget">
         <child>
             <object class="GridBuffer" id="buffer">
+                <property
+                    name="font"
+                    bind-source="Grid"
+                    bind-property="font"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
         <child>
             <object class="Cursor" id="cursor">
+                <property
+                    name="font"
+                    bind-source="Grid"
+                    bind-property="font"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
         <child>

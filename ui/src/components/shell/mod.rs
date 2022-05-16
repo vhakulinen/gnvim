@@ -36,13 +36,8 @@ impl Shell {
             .for_each(|grid| grid.set_font(font.clone()));
     }
 
-    pub fn connect_root_grid(
-        &self,
-        font: Font,
-        nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
-    ) {
+    pub fn connect_root_grid(&self, nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>) {
         self.imp().root_grid.connect_mouse(
-            font,
             clone!(@weak nvim => move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
                     let res = nvim_unlock!(nvim)
@@ -94,7 +89,13 @@ impl Shell {
     pub fn handle_grid_resize(&self, event: GridResize) {
         self.find_grid(event.grid)
             .unwrap_or_else(|| {
-                let grid = Grid::new(event.grid, self.font());
+                let grid = Grid::new(event.grid, &self.font());
+
+                // Bind the font properties.
+                self.bind_property("font", &grid, "font")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
+
                 self.imp().grids.borrow_mut().push(grid.clone());
                 grid
             })

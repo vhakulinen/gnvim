@@ -9,6 +9,7 @@ const DEFAULT_WIDTH: f32 = 8.0 * SCALE;
 
 #[derive(Default)]
 pub struct Font {
+    pub guifont: RefCell<String>,
     pub font_desc: RefCell<pango::FontDescription>,
 
     pub linespace: Cell<f32>,
@@ -73,11 +74,76 @@ impl ObjectImpl for Font {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
 
-        self.font_desc
-            .replace(pango::FontDescription::from_string("Monospace 12"));
-
         let ctx = obj.pango_context();
         self.update_metrics(ctx);
+    }
+
+    fn properties() -> &'static [glib::ParamSpec] {
+        use once_cell::sync::Lazy;
+        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
+            vec![
+                glib::ParamSpecString::new(
+                    "guifont",
+                    "Neovim guifont value",
+                    "Used to construct internal pango font",
+                    Some("Monospace 12"),
+                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
+                ),
+                glib::ParamSpecFloat::new(
+                    "linespace",
+                    "Linespace",
+                    "Linespace",
+                    0.0,
+                    f32::MAX,
+                    0.0,
+                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
+                ),
+            ]
+        });
+
+        PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "guifont" => self.guifont.borrow().to_value(),
+            "linespace" => self.linespace.get().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_property(
+        &self,
+        _obj: &Self::Type,
+        _id: usize,
+        value: &glib::Value,
+        pspec: &glib::ParamSpec,
+    ) {
+        match pspec.name() {
+            "guifont" => {
+                let font_str = value
+                    .get::<&str>()
+                    .expect("property guifont needs to be &str");
+
+                let mut font_desc = pango::FontDescription::from_string(font_str);
+                if font_desc.size() == 0 {
+                    // TODO(ville): Should probably notify the user here.
+                    font_desc.set_size(12 * SCALE as i32);
+                }
+
+                self.guifont.replace(font_str.to_string());
+                self.font_desc.replace(font_desc);
+            }
+            "linespace" => {
+                self.linespace.set(
+                    value
+                        .get::<f32>()
+                        .expect("property linepsace needs to be f32")
+                        * SCALE,
+                );
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 

@@ -23,7 +23,7 @@ use nvim::rpc::RpcReader;
 use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
 use crate::font::Font;
-use crate::{nvim_unlock, spawn_local};
+use crate::{nvim_unlock, spawn_local, SCALE};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -38,7 +38,7 @@ pub struct AppWindow {
     nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
 
     colors: Rc<RefCell<Colors>>,
-    font: Font,
+    font: RefCell<Font>,
     mode_infos: RefCell<Vec<ModeInfo>>,
 
     /// Source id for debouncing nvim resizing.
@@ -155,7 +155,7 @@ impl AppWindow {
                 self.mode_infos.replace(event.cursor_styles);
             }),
             UiEvent::OptionSet(events) => events.into_iter().for_each(|event| {
-                self.handle_option_set(event);
+                self.handle_option_set(obj, event);
             }),
             UiEvent::ModeChange(events) => events.into_iter().for_each(|event| {
                 let modes = self.mode_infos.borrow();
@@ -180,9 +180,6 @@ impl AppWindow {
                 self.shell.handle_flush(&self.colors.borrow());
 
                 if self.resize_on_flush.take() {
-                    // TODO(ville): Here, we need to invalidate all the render
-                    // nodes on grids that use this font.
-                    self.font.update_metrics();
                     self.resize_nvim();
                 }
             }
@@ -218,10 +215,10 @@ impl AppWindow {
             // multigrid events
             UiEvent::WinPos(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_win_pos(event, &self.font)),
+                .for_each(|event| self.shell.handle_win_pos(event, &self.font.borrow())),
             UiEvent::WinFloatPos(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_float_pos(event, &self.font)),
+                .for_each(|event| self.shell.handle_float_pos(event, &self.font.borrow())),
             UiEvent::WinExternalPos(_) => {
                 // TODO(ville): Implement
             }
@@ -233,29 +230,36 @@ impl AppWindow {
                 .for_each(|event| self.shell.handle_win_close(event)),
             UiEvent::MsgSetPos(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_msg_set_pos(event, &self.font)),
+                .for_each(|event| self.shell.handle_msg_set_pos(event, &self.font.borrow())),
             UiEvent::WinViewport(_) => {}
 
             event => panic!("Unhandled ui event: {}", event),
         }
     }
 
-    fn handle_option_set(&self, event: OptionSet) {
+    fn handle_option_set(&self, obj: &super::AppWindow, event: OptionSet) {
         match event {
             OptionSet::Linespace(linespace) => {
-                self.font.set_linespace(linespace as f32);
+                let font = Font::new(&self.font.borrow().guifont(), linespace as f32);
+                obj.set_property("font", &font);
+
                 self.resize_on_flush.set(true);
             }
-            OptionSet::Guifont(guifont) => match self.font.set_font_from_str(&guifont) {
-                Ok(_) => self.resize_on_flush.set(true),
-                Err(err) => println!("failed to set font: {}", err),
-            },
+            OptionSet::Guifont(guifont) => {
+                let font = Font::new(&guifont, self.font.borrow().linespace() / SCALE);
+                obj.set_property("font", &font);
+
+                self.resize_on_flush.set(true);
+            }
             OptionSet::Unknown(_) => {}
         }
     }
 
     fn resize_nvim(&self) {
-        let (cols, rows) = self.font.grid_size_for_allocation(&self.shell.allocation());
+        let (cols, rows) = self
+            .font
+            .borrow()
+            .grid_size_for_allocation(&self.shell.allocation());
 
         let id = glib::timeout_add_local(
             Duration::from_millis(10),
@@ -363,9 +367,9 @@ impl ObjectImpl for AppWindow {
 
         *self.nvim.try_lock().expect("can't get lock") = Some(client);
 
-        self.shell
-            .connect_root_grid(self.font.clone(), self.nvim.clone());
-        self.shell.set_font(self.font.clone());
+        let font = self.font.borrow();
+        self.shell.connect_root_grid(self.nvim.clone());
+        self.shell.set_font(font.clone());
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -409,6 +413,43 @@ impl ObjectImpl for AppWindow {
             }));
 
         obj.add_controller(&self.event_controller_key);
+    }
+
+    fn properties() -> &'static [glib::ParamSpec] {
+        use once_cell::sync::Lazy;
+        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
+            vec![glib::ParamSpecObject::new(
+                "font",
+                "font",
+                "Font",
+                Font::static_type(),
+                glib::ParamFlags::READWRITE,
+            )]
+        });
+
+        PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "font" => self.font.borrow().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_property(
+        &self,
+        _obj: &Self::Type,
+        _id: usize,
+        value: &glib::Value,
+        pspec: &glib::ParamSpec,
+    ) {
+        match pspec.name() {
+            "font" => self
+                .font
+                .replace(value.get().expect("font value must be object Font")),
+            _ => unimplemented!(),
+        };
     }
 }
 

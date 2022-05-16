@@ -9,6 +9,12 @@
         </style>
         <child>
             <object class="Shell" id="shell">
+                <property
+                    name="font"
+                    bind-source="AppWindow"
+                    bind-property="font"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
     </template>

@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 
 use gtk::subclass::prelude::*;
-use gtk::{glib, gsk};
+use gtk::{glib, gsk, prelude::*};
 
 use crate::font::Font;
 use crate::SCALE;
 
+use super::row::Cell;
 use super::Row;
 
 #[derive(Default)]
@@ -25,7 +26,51 @@ impl ObjectSubclass for GridBuffer {
     type ParentType = gtk::Widget;
 }
 
-impl ObjectImpl for GridBuffer {}
+impl ObjectImpl for GridBuffer {
+    fn properties() -> &'static [glib::ParamSpec] {
+        use once_cell::sync::Lazy;
+        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
+            vec![glib::ParamSpecObject::new(
+                "font",
+                "font",
+                "Font",
+                Font::static_type(),
+                glib::ParamFlags::READWRITE,
+            )]
+        });
+
+        PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "font" => self.font.borrow().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_property(
+        &self,
+        _obj: &Self::Type,
+        _id: usize,
+        value: &glib::Value,
+        pspec: &glib::ParamSpec,
+    ) {
+        match pspec.name() {
+            "font" => {
+                self.font
+                    .replace(value.get().expect("font value must be object Font"));
+
+                // Invalidate all the render notes.
+                self.rows
+                    .borrow_mut()
+                    .iter_mut()
+                    .for_each(|row| row.cells.iter_mut().for_each(Cell::clear_nodes));
+            }
+            _ => unimplemented!(),
+        };
+    }
+}
 
 impl WidgetImpl for GridBuffer {
     fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {

@@ -6,6 +6,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
 use crate::components::grid::Grid;
+use crate::font::Font;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
@@ -16,6 +17,7 @@ pub struct Shell {
     pub root_grid: TemplateChild<Grid>,
 
     pub grids: RefCell<Vec<Grid>>,
+    pub font: RefCell<Font>,
 }
 
 #[glib::object_subclass]
@@ -40,6 +42,43 @@ impl ObjectImpl for Shell {
         self.parent_constructed(obj);
 
         self.grids.borrow_mut().push(self.root_grid.clone());
+    }
+
+    fn properties() -> &'static [glib::ParamSpec] {
+        use once_cell::sync::Lazy;
+        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
+            vec![glib::ParamSpecObject::new(
+                "font",
+                "font",
+                "Font",
+                Font::static_type(),
+                glib::ParamFlags::READWRITE,
+            )]
+        });
+
+        PROPERTIES.as_ref()
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        match pspec.name() {
+            "font" => self.font.borrow().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn set_property(
+        &self,
+        _obj: &Self::Type,
+        _id: usize,
+        value: &glib::Value,
+        pspec: &glib::ParamSpec,
+    ) {
+        match pspec.name() {
+            "font" => self
+                .font
+                .replace(value.get().expect("font value must be object Font")),
+            _ => unimplemented!(),
+        };
     }
 }
 
