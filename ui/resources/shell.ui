@@ -26,6 +26,9 @@
         </child>
         <child>
             <object class="GtkFixed" id="msg-fixed">
+                <style>
+                    <class name="msg-fixed" />
+                </style>
                 <property name="can-target">false</property>
             </object>
         </child>

@@ -232,7 +232,11 @@ impl Shell {
             fixed.put(&grid, x, y);
         }
 
-        // TODO(ville): Draw the separator.
+        if event.scrolled {
+            fixed.add_css_class("scrolled");
+        } else {
+            fixed.remove_css_class("scrolled");
+        }
     }
 }
 

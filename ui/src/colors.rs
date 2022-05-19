@@ -5,17 +5,39 @@ use gtk::gdk;
 use nvim::types::HlAttr;
 
 #[derive(Debug, Default)]
+pub struct HlGroups {
+    msg_separator: Option<i64>,
+}
+
+#[derive(Debug, Default)]
 pub struct Colors {
     pub fg: Color,
     pub bg: Color,
     pub sp: Color,
 
     pub hls: HashMap<i64, HlAttr>,
+    pub hl_groups: HlGroups,
 }
 
 impl Colors {
     pub fn get_hl(&self, hl: i64) -> Option<&HlAttr> {
         self.hls.get(&hl)
+    }
+
+    pub fn set_msg_separator(&mut self, hl: i64) {
+        self.hl_groups.msg_separator = Some(hl);
+    }
+
+    pub fn msg_separator_fg(&self) -> Color {
+        self.hl_groups
+            .msg_separator
+            .and_then(|id| {
+                self.hls
+                    .get(&id)
+                    .and_then(|hl| hl.foreground)
+                    .map(Color::from_i64)
+            })
+            .unwrap_or(self.fg)
     }
 
     pub fn get_hl_fg(&self, hl: i64) -> Color {

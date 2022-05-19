@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
-use nvim::types::uievents::DefaultColorsSet;
+use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
 use nvim::types::UiEvent;
 use nvim::types::{ModeInfo, OptionSet, UiOptions};
 
@@ -45,6 +45,9 @@ pub struct AppWindow {
     /// When resize on flush is set, there were some operations on the previous
     /// ui events that changed our grid size (e.g. font chagned etc.).
     resize_on_flush: Cell<bool>,
+    /// Set when attributes affecting our CSS changed, and we need to regenerate
+    /// the css.
+    css_on_flush: Cell<bool>,
     /// Our previous window size. Used to track when we need to tell neovim to
     /// resize itself.
     prev_win_size: Cell<(i32, i32)>,
@@ -87,23 +90,23 @@ impl AppWindow {
         }
     }
 
+    fn handle_hl_group_set(&self, event: HlGroupSet) {
+        match event.name.as_ref() {
+            "MsgSeparator" => {
+                self.colors.borrow_mut().set_msg_separator(event.id);
+                self.css_on_flush.set(true);
+            }
+            _ => {}
+        }
+    }
+
     fn handle_default_colors_set(&self, event: DefaultColorsSet) {
         let mut colors = self.colors.borrow_mut();
         colors.fg = Color::from_i64(event.rgb_fg);
         colors.bg = Color::from_i64(event.rgb_bg);
         colors.sp = Color::from_i64(event.rgb_sp);
 
-        self.css_provider.load_from_data(
-            format!(
-                r#"
-                    .app-window, .external-window {{
-                        background-color: #{bg};
-                    }}
-                "#,
-                bg = colors.bg.as_hex(),
-            )
-            .as_bytes(),
-        );
+        self.css_on_flush.set(true);
     }
 
     fn handle_ui_event(&self, obj: &super::AppWindow, event: UiEvent) {
@@ -144,6 +147,26 @@ impl AppWindow {
                 if self.resize_on_flush.take() {
                     self.resize_nvim();
                 }
+
+                if self.css_on_flush.take() {
+                    let colors = self.colors.borrow();
+                    self.css_provider.load_from_data(
+                        format!(
+                            r#"
+                                .app-window, .external-window {{
+                                    background-color: #{bg};
+                                }}
+
+                                .msg-fixed.scrolled > * {{
+                                    border-top: 1px solid #{msgsep};
+                                }}
+                            "#,
+                            bg = colors.bg.as_hex(),
+                            msgsep = colors.msg_separator_fg().as_hex(),
+                        )
+                        .as_bytes(),
+                    );
+                }
             }
 
             // linegrid events
@@ -157,7 +180,9 @@ impl AppWindow {
                 let mut colors = self.colors.borrow_mut();
                 colors.hls.insert(event.id, event.rgb_attrs);
             }),
-            UiEvent::HlGroupSet(_) => {}
+            UiEvent::HlGroupSet(events) => events.into_iter().for_each(|event| {
+                self.handle_hl_group_set(event);
+            }),
             UiEvent::GridLine(events) => events.into_iter().for_each(|event| {
                 self.shell.handle_grid_line(event);
             }),
