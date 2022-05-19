@@ -14,7 +14,10 @@ use crate::{
     colors::Colors,
     font::Font,
     mouse::{Action, Mouse},
+    nvim::Neovim,
 };
+
+use super::ExternalWindow;
 
 mod imp;
 
@@ -37,6 +40,30 @@ impl Grid {
 
     pub fn id(&self) -> i64 {
         self.imp().id.get()
+    }
+
+    pub fn unparent(&self) {
+        WidgetExt::unparent(self);
+
+        if let Some(external) = self.imp().external_win.borrow_mut().take() {
+            external.destroy();
+        }
+    }
+
+    pub fn nvim(&self) -> Neovim {
+        self.imp().nvim.borrow().clone()
+    }
+
+    pub fn make_external(&self, parent: &gtk::Window) {
+        let mut external_win = self.imp().external_win.borrow_mut();
+        if external_win.is_some() {
+            // Already external.
+            return;
+        }
+
+        let external = ExternalWindow::new(parent, &self);
+        external.present();
+        *external_win = Some(external);
     }
 
     pub fn set_nvim_window(&self, window: Option<Window>) {

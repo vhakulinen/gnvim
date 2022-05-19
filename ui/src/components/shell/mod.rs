@@ -1,17 +1,13 @@
-use std::rc::Rc;
-
-use futures::lock::Mutex;
-use gio_compat::CompatWrite;
-use gtk::{glib, glib::clone, prelude::*, subclass::prelude::*};
+use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::types::{
     uievents::{
         GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
-        WinClose, WinFloatPos, WinHide, WinPos,
+        WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
     },
     ModeInfo,
 };
 
-use crate::{colors::Colors, font::Font, nvim_unlock, spawn_local};
+use crate::{colors::Colors, font::Font};
 
 use super::Grid;
 
@@ -26,27 +22,6 @@ glib::wrapper! {
 impl Shell {
     pub fn new() -> Self {
         glib::Object::new(&[]).expect("Failed to create Shell")
-    }
-
-    pub fn connect_root_grid(&self, nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>) {
-        self.imp().root_grid.connect_mouse(
-            clone!(@weak nvim => move |id, mouse, action, modifier, row, col| {
-                spawn_local!(async move {
-                    let res = nvim_unlock!(nvim)
-                        .nvim_input_mouse(
-                            mouse.as_nvim_input().to_owned(),
-                            action.as_nvim_action().to_owned(),
-                            modifier,
-                            id,
-                            row as i64,
-                            col as i64,
-                        )
-                        .await.expect("call to nvim failed");
-
-                    res.await.expect("nvim_input_mouse failed");
-                });
-            }),
-        )
     }
 
     fn find_grid(&self, id: i64) -> Option<Grid> {
@@ -89,6 +64,9 @@ impl Shell {
 
                 // Bind the properties.
                 self.bind_property("font", &grid, "font")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
+                self.bind_property("nvim", &grid, "nvim")
                     .flags(glib::BindingFlags::SYNC_CREATE)
                     .build();
                 self.bind_property("busy", &grid, "busy")
@@ -212,6 +190,14 @@ impl Shell {
         let grid = self.find_grid_must(event.grid);
         grid.set_nvim_window(None);
         grid.unparent();
+    }
+
+    pub fn handle_win_external_pos(&self, event: WinExternalPos, parent: &gtk::Window) {
+        assert!(event.grid != 1, "cant do win_external_pos for grid 1");
+
+        let grid = self.find_grid_must(event.grid);
+        grid.set_nvim_window(Some(event.win));
+        grid.make_external(parent);
     }
 
     pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {

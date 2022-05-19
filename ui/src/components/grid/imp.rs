@@ -2,11 +2,16 @@ use std::cell::{Cell, RefCell};
 
 use gtk::glib::subclass::InitializingObject;
 use gtk::subclass::prelude::*;
-use gtk::{glib, prelude::*};
+use gtk::{
+    glib::{self, clone},
+    prelude::*,
+};
 use nvim::types::Window;
 
-use crate::components::{Cursor, GridBuffer};
+use crate::components::{Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
+use crate::nvim::Neovim;
+use crate::spawn_local;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/grid.ui")]
@@ -26,10 +31,12 @@ pub struct Grid {
     pub id: Cell<i64>,
     /// Neovim window associated to this grid.
     pub nvim_window: RefCell<Option<Window>>,
+    pub nvim: RefCell<Neovim>,
     /// If grid is the active grid or not.
     pub active: Cell<bool>,
     pub busy: Cell<bool>,
 
+    pub external_win: RefCell<Option<ExternalWindow>>,
     pub gesture_click: gtk::GestureClick,
     pub gesture_drag: gtk::GestureDrag,
     pub event_controller_scroll: gtk::EventControllerScroll,
@@ -65,10 +72,36 @@ impl ObjectImpl for Grid {
         flags.insert(gtk::EventControllerScrollFlags::BOTH_AXES);
         self.event_controller_scroll.set_flags(flags);
 
-        obj.add_controller(&self.gesture_click);
-        obj.add_controller(&self.gesture_drag);
-        obj.add_controller(&self.event_controller_scroll);
-        obj.add_controller(&self.event_controller_motion);
+        // Add our event handlers to the buffer widget.
+        self.buffer.add_controller(&self.gesture_click);
+        self.buffer.add_controller(&self.gesture_drag);
+        self.buffer.add_controller(&self.event_controller_scroll);
+        self.buffer.add_controller(&self.event_controller_motion);
+
+        // Connect mouse events.
+        obj.connect_mouse(
+            clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
+                spawn_local!(async move {
+                    let res = obj
+                        .imp()
+                        .nvim
+                        .borrow()
+                        .client()
+                        .await
+                        .nvim_input_mouse(
+                            mouse.as_nvim_input().to_owned(),
+                            action.as_nvim_action().to_owned(),
+                            modifier,
+                            id,
+                            row as i64,
+                            col as i64,
+                        )
+                        .await.expect("call to nvim failed");
+
+                    res.await.expect("nvim_input_mouse failed");
+                });
+            }),
+        )
     }
 
     fn dispose(&self, _obj: &Self::Type) {
@@ -89,6 +122,13 @@ impl ObjectImpl for Grid {
                     i64::MAX,
                     0,
                     glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
+                ),
+                glib::ParamSpecObject::new(
+                    "nvim",
+                    "nvim",
+                    "Neovim",
+                    Neovim::static_type(),
+                    glib::ParamFlags::READWRITE,
                 ),
                 glib::ParamSpecObject::new(
                     "font",
@@ -121,6 +161,7 @@ impl ObjectImpl for Grid {
         match pspec.name() {
             "grid-id" => self.id.get().to_value(),
             "font" => self.font.borrow().to_value(),
+            "nvim" => self.nvim.borrow().to_value(),
             "busy" => self.busy.get().to_value(),
             "active" => self.active.get().to_value(),
             _ => unimplemented!(),
@@ -142,6 +183,10 @@ impl ObjectImpl for Grid {
             "font" => {
                 self.font
                     .replace(value.get().expect("font value must be object Font"));
+            }
+            "nvim" => {
+                self.nvim
+                    .replace(value.get().expect("font value must be object Neovim"));
             }
             "busy" => self
                 .busy

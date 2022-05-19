@@ -8,11 +8,13 @@ mod components;
 mod font;
 mod macros;
 mod mouse;
+mod nvim;
 mod render;
 
 use components::appwindow::AppWindow;
 
 pub const SCALE: f32 = pango::SCALE as f32;
+pub const WINDOW_RESIZE_DEBOUNCE_MS: u64 = 10;
 
 fn main() {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");

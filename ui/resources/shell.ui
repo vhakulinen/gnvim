@@ -11,6 +11,12 @@
                     bind-flags="sync-create"
                 />
                 <property
+                    name="nvim"
+                    bind-source="Shell"
+                    bind-property="nvim"
+                    bind-flags="sync-create"
+                />
+                <property
                     name="busy"
                     bind-source="Shell"
                     bind-property="busy"

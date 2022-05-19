@@ -2,7 +2,6 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
-use futures::lock::Mutex;
 use nvim::types::uievents::DefaultColorsSet;
 use nvim::types::UiEvent;
 use nvim::types::{ModeInfo, OptionSet, UiOptions};
@@ -12,18 +11,18 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::CompositeTemplate;
 use gtk::{
-    gdk, gio,
+    gdk,
     glib::{self, clone},
 };
 
 use gio_compat::CompatRead;
-use gio_compat::CompatWrite;
 use nvim::rpc::RpcReader;
 
 use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
 use crate::font::Font;
-use crate::{nvim_unlock, spawn_local, SCALE};
+use crate::nvim::Neovim;
+use crate::{spawn_local, SCALE};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -35,7 +34,7 @@ pub struct AppWindow {
 
     css_provider: gtk::CssProvider,
 
-    nvim: Rc<Mutex<Option<nvim::Client<CompatWrite>>>>,
+    nvim: Neovim,
 
     colors: Rc<RefCell<Colors>>,
     font: RefCell<Font>,
@@ -52,41 +51,6 @@ pub struct AppWindow {
 }
 
 impl AppWindow {
-    fn open_nvim(&self) -> (nvim::Client<CompatWrite>, CompatRead) {
-        let mut flags = gio::SubprocessFlags::empty();
-        flags.insert(gio::SubprocessFlags::STDIN_PIPE);
-        flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
-
-        let p = gio::Subprocess::newv(
-            &[
-                std::ffi::OsStr::new("nvim"),
-                std::ffi::OsStr::new("--embed"),
-            ],
-            flags,
-        )
-        .expect("failed to open nvim subprocess");
-
-        let writer: CompatWrite = p
-            .stdin_pipe()
-            .expect("get stdin pipe")
-            .dynamic_cast::<gio::PollableOutputStream>()
-            .expect("cast to PollableOutputStream")
-            .into_async_write()
-            .expect("convert to async write")
-            .into();
-
-        let reader: CompatRead = p
-            .stdout_pipe()
-            .expect("get stdout pipe")
-            .dynamic_cast::<gio::PollableInputStream>()
-            .expect("cast to PollableInputStream")
-            .into_async_read()
-            .expect("covert to async read")
-            .into();
-
-        (nvim::Client::new(writer), reader)
-    }
-
     async fn io_loop(&self, obj: super::AppWindow, reader: CompatRead) {
         use nvim::rpc::{message::Notification, Message};
         let mut reader: RpcReader<CompatRead> = reader.into();
@@ -96,10 +60,8 @@ impl AppWindow {
             match msg {
                 Message::Response(res) => {
                     self.nvim
-                        .lock()
+                        .client()
                         .await
-                        .as_mut()
-                        .expect("nvim not set")
                         .handle_response(res)
                         .expect("failed to handle nvim response");
                 }
@@ -134,7 +96,7 @@ impl AppWindow {
         self.css_provider.load_from_data(
             format!(
                 r#"
-                    .app-window {{
+                    .app-window, .external-window {{
                         background-color: #{bg};
                     }}
                 "#,
@@ -219,9 +181,9 @@ impl AppWindow {
             UiEvent::WinFloatPos(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_float_pos(event, &self.font.borrow())),
-            UiEvent::WinExternalPos(_) => {
-                // TODO(ville): Implement
-            }
+            UiEvent::WinExternalPos(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_external_pos(event, obj.upcast_ref())),
             UiEvent::WinHide(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_win_hide(event)),
@@ -262,11 +224,13 @@ impl AppWindow {
             .grid_size_for_allocation(&self.shell.allocation());
 
         let id = glib::timeout_add_local(
-            Duration::from_millis(10),
+            Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
             clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
                 spawn_local!(clone!(@weak nvim => async move {
-                    let res = nvim_unlock!(nvim)
-                        .nvim_ui_try_resize(cols.max(1) as i64, rows.max(1) as i64)
+                    let res = nvim
+                        .client()
+                        .await
+                        .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
                         .await
                         .unwrap();
 
@@ -289,7 +253,9 @@ impl AppWindow {
 
     fn send_nvim_input(&self, input: String) {
         spawn_local!(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim_unlock!(nvim)
+            let res = nvim
+                .client()
+                .await
                 .nvim_input(input)
                 .await
                 .expect("call to nvim failed");
@@ -363,11 +329,7 @@ impl ObjectImpl for AppWindow {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
 
-        let (client, reader) = self.open_nvim();
-
-        *self.nvim.try_lock().expect("can't get lock") = Some(client);
-
-        self.shell.connect_root_grid(self.nvim.clone());
+        let reader = self.nvim.open();
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -376,8 +338,10 @@ impl ObjectImpl for AppWindow {
 
         // Call nvim_ui_attach.
         spawn_local!(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim_unlock!(nvim).nvim_ui_attach(80, 30,
-                UiOptions{
+            let res = nvim
+                .client()
+                .await
+                .nvim_ui_attach(80, 30, UiOptions {
                     rgb: true,
                     ext_linegrid: true,
                     ext_multigrid: true,
@@ -416,13 +380,22 @@ impl ObjectImpl for AppWindow {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![
+                glib::ParamSpecObject::new(
+                    "font",
+                    "font",
+                    "Font",
+                    Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecObject::new(
+                    "nvim",
+                    "nvim",
+                    "Neovim client",
+                    Neovim::static_type(),
+                    glib::ParamFlags::READABLE,
+                ),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -431,6 +404,7 @@ impl ObjectImpl for AppWindow {
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
+            "nvim" => self.nvim.to_value(),
             _ => unimplemented!(),
         }
     }

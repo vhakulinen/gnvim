@@ -7,6 +7,7 @@ use gtk::subclass::prelude::*;
 
 use crate::components::grid::Grid;
 use crate::font::Font;
+use crate::nvim::Neovim;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
@@ -15,6 +16,8 @@ pub struct Shell {
     pub msg_fixed: TemplateChild<gtk::Fixed>,
     #[template_child(id = "root-grid")]
     pub root_grid: TemplateChild<Grid>,
+
+    pub nvim: RefCell<Neovim>,
 
     pub grids: RefCell<Vec<Grid>>,
     /// Current grid.
@@ -47,6 +50,7 @@ impl ObjectImpl for Shell {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
 
+        // Add the root grid to the grids list.
         self.grids.borrow_mut().push(self.root_grid.clone());
     }
 
@@ -59,6 +63,13 @@ impl ObjectImpl for Shell {
                     "font",
                     "Font",
                     Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecObject::new(
+                    "nvim",
+                    "nvim",
+                    "Neovim client",
+                    Neovim::static_type(),
                     glib::ParamFlags::READWRITE,
                 ),
                 glib::ParamSpecBoolean::new(
@@ -78,6 +89,7 @@ impl ObjectImpl for Shell {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "busy" => self.busy.get().to_value(),
+            "nvim" => self.nvim.borrow().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -92,11 +104,18 @@ impl ObjectImpl for Shell {
         match pspec.name() {
             "font" => {
                 self.font
-                    .replace(value.get().expect("font value must be object Font"));
+                    .replace(value.get().expect("font value must be an Font object"));
             }
             "busy" => self
                 .busy
                 .set(value.get().expect("busy value needs to be a bool")),
+            "nvim" => {
+                self.nvim.replace(
+                    value
+                        .get()
+                        .expect("nvim value needs to be an Neovim object"),
+                );
+            }
             _ => unimplemented!(),
         };
     }

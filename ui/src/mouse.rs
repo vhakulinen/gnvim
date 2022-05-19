@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Mouse {
     Left,
     Right,
@@ -17,7 +17,7 @@ impl Mouse {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Action {
     Pressed,
     Released,
