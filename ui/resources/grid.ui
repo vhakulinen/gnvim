@@ -35,6 +35,7 @@
         </child>
         <child>
             <object class="GtkFixed" id="fixed">
+                <property name="can-target">false</property>
             </object>
         </child>
     </template>
