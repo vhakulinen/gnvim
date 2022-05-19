@@ -25,6 +25,17 @@ impl GridBuffer {
         self.imp().font.replace(font);
     }
 
+    /// Returns the size of the grid, in rows and columns.
+    ///
+    /// Returns (cols, rows).
+    pub fn grid_size(&self) -> (usize, usize) {
+        let rows = self.get_rows();
+        let cols = rows.first().expect("bad grid size").cells.len();
+        let rows = rows.len();
+
+        (cols, rows)
+    }
+
     pub fn get_rows(&self) -> Ref<'_, Vec<Row>> {
         self.imp().rows.borrow()
     }

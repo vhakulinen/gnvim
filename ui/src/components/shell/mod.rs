@@ -138,19 +138,19 @@ impl Shell {
          * neovim is not controlling the window's/grid's size.
          */
 
-        // Mask the win_pos event as win_float_pos, since it does the same trick.
-        let synthetic_float_pos = WinFloatPos {
-            grid: event.grid,
-            win: event.win,
-            anchor: String::new(),
-            anchor_grid: 1,
-            anchor_col: event.startcol as f64,
-            anchor_row: event.startrow as f64,
-            focusable: true,
-            zindex: 0,
-        };
+        let grid = self.find_grid_must(event.grid);
+        grid.set_nvim_window(Some(event.win));
 
-        self.handle_float_pos(synthetic_float_pos, font);
+        let x = font.col_to_x(event.startcol as f64);
+        let y = font.row_to_y(event.startrow as f64);
+
+        let fixed = self.imp().root_grid.fixed().clone();
+        if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
+            fixed.move_(&grid, x, y);
+        } else {
+            grid.unparent();
+            fixed.put(&grid, x, y);
+        }
     }
 
     pub fn handle_float_pos(&self, event: WinFloatPos, font: &Font) {
@@ -158,23 +158,39 @@ impl Shell {
         grid.set_nvim_window(Some(event.win));
 
         let anchor_grid = self.find_grid_must(event.anchor_grid);
-        let x = font.col_to_x(event.anchor_col);
-        let y = font.row_to_y(event.anchor_row);
+
+        let east = event.anchor == "NE" || event.anchor == "SE";
+        let south = event.anchor == "SE" || event.anchor == "SW";
+
+        // Adjust position based on anchor.
+        let (cols, rows) = grid.grid_size();
+        let col = event.anchor_col - if east { cols as f64 } else { 0.0 };
+        let row = event.anchor_row - if south { rows as f64 } else { 0.0 };
+
+        // Adjust position if the floating grid overflows.
+        //
+        // NOTE(ville): It _seems_ like neovim clamps the floating window's
+        // size to the size of the anchor grid, but doesn't adjust position
+        // accordingly.
+        // TODO(ville): The current solution doesn't allow the floating grid
+        // overflow on anyway even if there would be space, e.g. when a floating
+        // window in middle of the screen overflows the anchor grid.
+        let (max_cols, max_rows) = anchor_grid.grid_size();
+        let col = col.min(col.min((max_cols - cols) as f64)).max(0.0);
+        let row = row.min(row.min((max_rows - rows + 1) as f64)).max(0.0);
+
+        let x = font.col_to_x(col);
+        let y = font.row_to_y(row);
 
         // TODO(ville): Implement layout that support the zindex.
         let fixed = anchor_grid.fixed().clone();
 
-        // TODO(ville): Adjust x and y based on event.anchor. For this we need
-        // to implement the "measure" virtual method for the grid (in order
-        // to get its actual size).
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);
         } else {
             grid.unparent();
             fixed.put(&grid, x, y);
         }
-
-        // TODO(ville): Make sure the grid fits the screen.
     }
 
     pub fn handle_win_hide(&self, event: WinHide) {

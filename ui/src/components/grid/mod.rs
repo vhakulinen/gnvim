@@ -34,6 +34,10 @@ impl Grid {
         grid
     }
 
+    pub fn grid_size(&self) -> (usize, usize) {
+        self.imp().buffer.grid_size()
+    }
+
     pub fn fixed(&self) -> &gtk::Fixed {
         &self.imp().fixed
     }
