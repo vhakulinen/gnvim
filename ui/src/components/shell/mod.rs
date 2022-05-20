@@ -220,22 +220,24 @@ impl Shell {
         assert!(event.grid != 1, "cant do msg_set_pos for grid 1");
 
         let grid = self.find_grid_must(event.grid);
-        let fixed = self.imp().msg_fixed.clone();
+        let imp = self.imp();
+        let win = imp.msg_win.clone();
 
-        let x = 0.0;
+        let h = imp.root_grid.grid_size().1 - event.row as usize;
+        win.set_height(font.row_to_y(h as f64).ceil() as i32);
+
         let y = font.row_to_y(event.row as f64);
+        win.set_y(y as f32);
 
-        if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
-            fixed.move_(&grid, x, y);
-        } else {
+        if grid.parent().map(|parent| parent != win).unwrap_or(true) {
             grid.unparent();
-            fixed.put(&grid, x, y);
+            grid.set_parent(&win);
         }
 
         if event.scrolled {
-            fixed.add_css_class("scrolled");
+            win.add_css_class("scrolled");
         } else {
-            fixed.remove_css_class("scrolled");
+            win.remove_css_class("scrolled");
         }
     }
 }

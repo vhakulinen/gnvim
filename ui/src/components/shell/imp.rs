@@ -1,19 +1,20 @@
 use std::cell::{Cell, RefCell};
 
-use gtk::glib;
 use gtk::glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use gtk::{glib, graphene, gsk};
 
 use crate::components::grid::Grid;
+use crate::components::MsgWin;
 use crate::font::Font;
 use crate::nvim::Neovim;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
 pub struct Shell {
-    #[template_child(id = "msg-fixed")]
-    pub msg_fixed: TemplateChild<gtk::Fixed>,
+    #[template_child(id = "msg-win")]
+    pub msg_win: TemplateChild<MsgWin>,
     #[template_child(id = "root-grid")]
     pub root_grid: TemplateChild<Grid>,
 
@@ -37,6 +38,7 @@ impl ObjectSubclass for Shell {
 
     fn class_init(klass: &mut Self::Class) {
         Grid::ensure_type();
+        MsgWin::ensure_type();
 
         klass.bind_template();
     }
@@ -139,13 +141,14 @@ impl WidgetImpl for Shell {
     fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
         self.parent_size_allocate(widget, width, height, baseline);
 
-        let mut child: Option<gtk::Widget> = widget.first_child();
-        while let Some(sib) = child {
-            if sib.should_layout() {
-                sib.allocate(width, height, -1, None);
-            }
+        self.root_grid.allocate(width, height, -1, None);
 
-            child = sib.next_sibling();
-        }
+        let transform = gsk::Transform::new();
+        let transform = transform
+            .translate(&graphene::Point::new(0.0, self.msg_win.y()))
+            .expect("failed to translate transform");
+
+        self.msg_win
+            .allocate(width, self.msg_win.height(), -1, Some(&transform));
     }
 }

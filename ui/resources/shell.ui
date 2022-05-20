@@ -25,11 +25,11 @@
             </object>
         </child>
         <child>
-            <object class="GtkFixed" id="msg-fixed">
-                <style>
-                    <class name="msg-fixed" />
-                </style>
+            <object class="MsgWin" id="msg-win">
                 <property name="can-target">false</property>
+                <style>
+                    <class name="msg-win" />
+                </style>
             </object>
         </child>
     </template>

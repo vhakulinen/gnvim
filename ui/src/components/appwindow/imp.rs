@@ -157,7 +157,7 @@ impl AppWindow {
                                     background-color: #{bg};
                                 }}
 
-                                .msg-fixed.scrolled > * {{
+                                .msg-win.scrolled {{
                                     border-top: 1px solid #{msgsep};
                                 }}
                             "#,

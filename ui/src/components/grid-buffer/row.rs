@@ -202,6 +202,8 @@ impl Row {
             let sp = colors.get_hl_sp(segment.hl_id);
 
             // Create glyphs.
+            // TODO(ville): The glyphs might overflow _backwards_, happens
+            // at least with xml comments.
             crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x, baseline);
 
             if hl.and_then(|hl| hl.underline).unwrap_or(false) {
