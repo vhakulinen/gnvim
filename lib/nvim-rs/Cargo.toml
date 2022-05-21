@@ -1,13 +1,13 @@
 [package]
 name = "nvim-rs"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 rmp-serde = "1.0.0"
 rmpv = { version = "1.0.0", features = ["with-serde"] }
-futures = "0.3"
+futures = "0.3.21"
 async-trait = "0.1.53"
 into-value = { path = "../into-value" }
 into-value-proc = { path = "../into-value-proc" }
