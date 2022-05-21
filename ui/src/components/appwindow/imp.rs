@@ -304,6 +304,16 @@ impl AppWindow {
         state: gdk::ModifierType,
     ) -> gtk::Inhibit {
         let evt = eck.current_event().expect("failed to get event");
+
+        // If the input is a modifier only event, ignore it.
+        if evt
+            .downcast_ref::<gdk::KeyEvent>()
+            .map(|evt| evt.is_modifier())
+            .unwrap_or(false)
+        {
+            return gtk::Inhibit(false);
+        }
+
         if self.im_context.filter_keypress(&evt) {
             gtk::Inhibit(true)
         } else {
@@ -469,86 +479,12 @@ impl WindowImpl for AppWindow {}
 
 impl ApplicationWindowImpl for AppWindow {}
 
-fn keyname_to_nvim_key(s: &str) -> Option<&str> {
-    // Originally sourced from python-gui.
-    match s {
-        "asciicircum" => Some("^"), // fix #137
-        "slash" => Some("/"),
-        "backslash" => Some("\\"),
-        "dead_circumflex" => Some("^"),
-        "at" => Some("@"),
-        "numbersign" => Some("#"),
-        "dollar" => Some("$"),
-        "percent" => Some("%"),
-        "ampersand" => Some("&"),
-        "asterisk" => Some("*"),
-        "parenleft" => Some("("),
-        "parenright" => Some(")"),
-        "underscore" => Some("_"),
-        "plus" => Some("+"),
-        "minus" => Some("-"),
-        "bracketleft" => Some("["),
-        "bracketright" => Some("]"),
-        "braceleft" => Some("{"),
-        "braceright" => Some("}"),
-        "dead_diaeresis" => Some("\""),
-        "dead_acute" => Some("\'"),
-        "less" => Some("<"),
-        "greater" => Some(">"),
-        "comma" => Some(","),
-        "period" => Some("."),
-        "space" => Some("Space"),
-        "BackSpace" => Some("BS"),
-        "Insert" => Some("Insert"),
-        "Return" => Some("CR"),
-        "Escape" => Some("Esc"),
-        "Delete" => Some("Del"),
-        "Page_Up" => Some("PageUp"),
-        "Page_Down" => Some("PageDown"),
-        "Enter" => Some("CR"),
-        "ISO_Left_Tab" => Some("Tab"),
-        "Tab" => Some("Tab"),
-        "Up" => Some("Up"),
-        "Down" => Some("Down"),
-        "Left" => Some("Left"),
-        "Right" => Some("Right"),
-        "Home" => Some("Home"),
-        "End" => Some("End"),
-        "F1" => Some("F1"),
-        "F2" => Some("F2"),
-        "F3" => Some("F3"),
-        "F4" => Some("F4"),
-        "F5" => Some("F5"),
-        "F6" => Some("F6"),
-        "F7" => Some("F7"),
-        "F8" => Some("F8"),
-        "F9" => Some("F9"),
-        "F10" => Some("F10"),
-        "F11" => Some("F11"),
-        "F12" => Some("F12"),
-        _ => None,
-    }
-}
-
 fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option<String> {
-    let mut input = String::from("");
-
+    let mut input = crate::input::modifier_to_nvim(&state);
     let keyname = keyval.name()?;
 
-    if state.contains(gdk::ModifierType::SHIFT_MASK) {
-        input.push_str("S-");
-    }
-    if state.contains(gdk::ModifierType::CONTROL_MASK) {
-        input.push_str("C-");
-    }
-    if state.contains(gdk::ModifierType::ALT_MASK) {
-        input.push_str("A-");
-    }
-
-    // TODO(ville): Meta key
-
     if keyname.chars().count() > 1 {
-        let n = keyname_to_nvim_key(keyname.as_str())?;
+        let n = crate::input::keyname_to_nvim_key(keyname.as_str())?;
         input.push_str(n);
     } else {
         input.push(keyval.to_unicode()?);

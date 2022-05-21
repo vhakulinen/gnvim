@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use gtk::{gdk, glib, glib::clone, prelude::*, subclass::prelude::*};
+use gtk::{glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use nvim::types::{
     uievents::{GridLine, GridResize, GridScroll},
@@ -13,7 +13,7 @@ use nvim::types::{
 use crate::{
     colors::Colors,
     font::Font,
-    mouse::{Action, Mouse},
+    input::{Action, Mouse},
     nvim::Neovim,
 };
 
@@ -74,37 +74,6 @@ impl Grid {
         self.imp().nvim_window.replace(window);
     }
 
-    fn input_modifier(evt: &gtk::EventController) -> String {
-        let state = evt.current_event_state();
-
-        let mut modifier = String::new();
-        if state.contains(gdk::ModifierType::SHIFT_MASK) {
-            modifier.push('S');
-        }
-        if state.contains(gdk::ModifierType::CONTROL_MASK) {
-            modifier.push('C');
-        }
-        if state.contains(gdk::ModifierType::ALT_MASK) {
-            modifier.push('A');
-        }
-
-        // TODO(ville): Meta key
-
-        modifier
-    }
-
-    fn input_mouse(gst: &gtk::GestureSingle) -> Mouse {
-        match gst.current_button() {
-            gdk::BUTTON_PRIMARY => Mouse::Left,
-            gdk::BUTTON_SECONDARY => Mouse::Right,
-            gdk::BUTTON_MIDDLE => Mouse::Middle,
-            _ => {
-                println!("unknown button, defaulting to primary");
-                Mouse::Left
-            }
-        }
-    }
-
     pub fn connect_mouse<F>(&self, f: F)
     where
         F: Fn(i64, Mouse, Action, String, usize, usize) + 'static + Clone,
@@ -120,8 +89,9 @@ impl Grid {
             let col = font.scale_to_col(x) as usize;
             let row = font.scale_to_row(y) as usize;
 
-            let modifier = Grid::input_modifier(gst.upcast_ref::<gtk::EventController>());
-            let mouse = Grid::input_mouse(gst.upcast_ref::<gtk::GestureSingle>());
+
+            let modifier = crate::input::modifier_to_nvim(&gst.current_event_state());
+            let mouse = Mouse::from(gst);
 
             for _ in 0..n {
                 f(obj.imp().id.get(), mouse, action, modifier.clone(), row, col)
@@ -156,8 +126,8 @@ impl Grid {
                 if prev.0 != row || prev.1 != col {
                     *prev = (row, col);
 
-                    let modifier = Grid::input_modifier(gst.upcast_ref::<gtk::EventController>());
-                    let mouse = Grid::input_mouse(gst.upcast_ref::<gtk::GestureSingle>());
+                    let modifier = crate::input::modifier_to_nvim(&gst.current_event_state());
+                    let mouse = Mouse::from(gst);
                     f(obj.imp().id.get(), mouse, Action::Drag, modifier, row, col);
                 }
             }),
@@ -171,7 +141,7 @@ impl Grid {
 
         imp.event_controller_scroll.connect_scroll(
             clone!(@weak self as obj, @strong mouse_pos => @default-return gtk::Inhibit(false), move |evt, dx, dy| {
-                let modifier = Grid::input_modifier(evt.upcast_ref::<gtk::EventController>());
+                let modifier = crate::input::modifier_to_nvim(&evt.current_event_state());
                 let pos = mouse_pos.borrow();
                 let font = obj.font();
                 let col = font.scale_to_col(pos.0);

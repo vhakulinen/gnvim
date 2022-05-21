@@ -6,8 +6,8 @@ use gtk::Application;
 mod colors;
 mod components;
 mod font;
+mod input;
 mod macros;
-mod mouse;
 mod nvim;
 mod render;
 
