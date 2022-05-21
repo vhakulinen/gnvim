@@ -96,11 +96,16 @@ impl Shell {
         let mut current_grid = self.imp().current_grid.borrow_mut();
         current_grid.set_active(false);
 
-        let grid = self.find_grid_must(event.grid);
-        grid.cursor_goto(event.col, event.row);
-        grid.set_active(true);
+        // NOTE(ville): In some situations, neovim sends `grid_cursor_goto`
+        // message for a grid that already got destroyed.
+        if let Some(grid) = self.find_grid(event.grid) {
+            grid.cursor_goto(event.col, event.row);
+            grid.set_active(true);
 
-        *current_grid = grid;
+            *current_grid = grid;
+        } else {
+            println!("invalid grid for grid_cursor_goto: {}", event.grid);
+        }
     }
 
     pub fn handle_grid_scroll(&self, event: GridScroll) {
