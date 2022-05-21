@@ -80,7 +80,7 @@ impl ObjectImpl for Cursor {
 
     fn set_property(
         &self,
-        _obj: &Self::Type,
+        obj: &Self::Type,
         _id: usize,
         value: &glib::Value,
         pspec: &glib::ParamSpec,
@@ -89,11 +89,17 @@ impl ObjectImpl for Cursor {
             "font" => {
                 self.font
                     .replace(value.get().expect("font value must be object Font"));
+                obj.queue_draw();
             }
-            "active" => self
-                .active
-                .set(value.get().expect("active must be a boolean")),
-            "busy" => self.busy.set(value.get().expect("busy must be a boolean")),
+            "active" => {
+                self.active
+                    .set(value.get().expect("active must be a boolean"));
+                obj.queue_draw();
+            }
+            "busy" => {
+                self.busy.set(value.get().expect("busy must be a boolean"));
+                obj.queue_draw();
+            }
             _ => unimplemented!(),
         };
     }
