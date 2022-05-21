@@ -34,7 +34,8 @@ impl Shell {
     }
 
     fn find_grid_must(&self, id: i64) -> Grid {
-        self.find_grid(id).expect(&format!("grid {} not found", id))
+        self.find_grid(id)
+            .unwrap_or_else(|| panic!("grid {} not found", id))
     }
 
     fn set_busy(&self, busy: bool) {

@@ -65,7 +65,7 @@ impl Grid {
             return;
         }
 
-        let external = ExternalWindow::new(parent, &self);
+        let external = ExternalWindow::new(parent, self);
         external.present();
         *external_win = Some(external);
     }

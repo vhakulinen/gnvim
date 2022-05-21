@@ -116,7 +116,7 @@ impl WidgetImpl for GridBuffer {
                 let h = len * (self.font.borrow().height() / SCALE);
                 let h = h.ceil() as i32;
 
-                return (h, h, -1, -1);
+                (h, h, -1, -1)
             }
             _ => self.parent_measure(widget, orientation, for_size),
         }
