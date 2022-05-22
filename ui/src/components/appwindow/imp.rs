@@ -22,7 +22,7 @@ use crate::colors::{Color, Colors};
 use crate::components::shell::Shell;
 use crate::font::Font;
 use crate::nvim::Neovim;
-use crate::{spawn_local, SCALE};
+use crate::{arguments::BoxedArguments, spawn_local, SCALE};
 
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -34,6 +34,7 @@ pub struct AppWindow {
 
     css_provider: gtk::CssProvider,
 
+    args: RefCell<BoxedArguments>,
     nvim: Neovim,
 
     colors: Rc<RefCell<Colors>>,
@@ -364,7 +365,10 @@ impl ObjectImpl for AppWindow {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
 
-        let reader = self.nvim.open();
+        let args = self.args.borrow();
+        let reader = self
+            .nvim
+            .open(args.nvim.as_ref(), &args.files, &args.nvim_args);
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -430,6 +434,13 @@ impl ObjectImpl for AppWindow {
                     Neovim::static_type(),
                     glib::ParamFlags::READABLE,
                 ),
+                glib::ParamSpecBoxed::new(
+                    "args",
+                    "args",
+                    "Arguments",
+                    BoxedArguments::static_type(),
+                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
+                ),
             ]
         });
 
@@ -440,6 +451,7 @@ impl ObjectImpl for AppWindow {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "nvim" => self.nvim.to_value(),
+            "args" => self.args.borrow().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -452,9 +464,17 @@ impl ObjectImpl for AppWindow {
         pspec: &glib::ParamSpec,
     ) {
         match pspec.name() {
-            "font" => self
-                .font
-                .replace(value.get().expect("font value must be object Font")),
+            "font" => {
+                self.font
+                    .replace(value.get().expect("font value must be object Font"));
+            }
+            "args" => {
+                self.args.replace(
+                    value
+                        .get()
+                        .expect("font value must be object BoxedArguments"),
+                );
+            }
             _ => unimplemented!(),
         };
     }

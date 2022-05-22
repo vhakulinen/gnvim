@@ -3,6 +3,8 @@ mod imp;
 use glib::Object;
 use gtk::{gio, glib};
 
+use crate::arguments::BoxedArguments;
+
 glib::wrapper! {
     pub struct AppWindow(ObjectSubclass<imp::AppWindow>)
         @extends gtk::ApplicationWindow, gtk::Window, gtk::Widget,
@@ -11,7 +13,7 @@ glib::wrapper! {
 }
 
 impl AppWindow {
-    pub fn new(app: &gtk::Application) -> Self {
-        Object::new(&[("application", app)]).expect("Failed to create Window")
+    pub fn new(app: &gtk::Application, args: &BoxedArguments) -> Self {
+        Object::new(&[("application", app), ("args", args)]).expect("Failed to create Window")
     }
 }

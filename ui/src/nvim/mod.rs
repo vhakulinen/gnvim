@@ -1,3 +1,5 @@
+use std::ffi::{OsStr, OsString};
+
 use futures::lock::{MappedMutexGuard, MutexGuard};
 use gio_compat::{CompatRead, CompatWrite};
 use gtk::{gio, glib, prelude::*, subclass::prelude::*};
@@ -24,19 +26,19 @@ impl Neovim {
         MutexGuard::map(self.imp().nvim.lock().await, |opt| opt.as_mut().unwrap())
     }
 
-    pub fn open(&self) -> CompatRead {
+    pub fn open(&self, nvim_bin: &OsStr, files: &[OsString], args: &[OsString]) -> CompatRead {
         let mut flags = gio::SubprocessFlags::empty();
         flags.insert(gio::SubprocessFlags::STDIN_PIPE);
         flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
 
-        let p = gio::Subprocess::newv(
-            &[
-                std::ffi::OsStr::new("nvim"),
-                std::ffi::OsStr::new("--embed"),
-            ],
-            flags,
-        )
-        .expect("failed to open nvim subprocess");
+        let default_args = vec![nvim_bin, OsStr::new("--embed")];
+        let cmd_args: Vec<&OsStr> = default_args
+            .into_iter()
+            .chain(args.into_iter().map(|a| a.as_ref()))
+            .chain(files.into_iter().map(|a| a.as_ref()))
+            .collect();
+
+        let p = gio::Subprocess::newv(&cmd_args, flags).expect("failed to open nvim subprocess");
 
         let writer: CompatWrite = p
             .stdin_pipe()
