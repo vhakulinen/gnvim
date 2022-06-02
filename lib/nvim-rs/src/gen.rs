@@ -25,6 +25,13 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_del_autocmd", args![id]).await
     }
 
+    pub async fn nvim_clear_autocmds(
+        &mut self,
+        opts: rmpv::Value, /* Dictionary */
+    ) -> Result<CallResponse<()>, WriteError> {
+        self.call("nvim_clear_autocmds", args![opts]).await
+    }
+
     pub async fn nvim_create_augroup(
         &mut self,
         name: String,
@@ -47,12 +54,12 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_del_augroup_by_name", args![name]).await
     }
 
-    pub async fn nvim_do_autocmd(
+    pub async fn nvim_exec_autocmds(
         &mut self,
         event: rmpv::Value, /* Object */
         opts: rmpv::Value,  /* Dictionary */
     ) -> Result<CallResponse<()>, WriteError> {
-        self.call("nvim_do_autocmd", args![event, opts]).await
+        self.call("nvim_exec_autocmds", args![event, opts]).await
     }
 
     pub async fn nvim_buf_line_count(
@@ -311,7 +318,7 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_buf_call", args![buffer, fun]).await
     }
 
-    pub async fn nvim_buf_add_user_command(
+    pub async fn nvim_buf_create_user_command(
         &mut self,
         buffer: rmpv::Value, /* Buffer */
         name: String,
@@ -319,7 +326,7 @@ impl<W: RpcWriter> Client<W> {
         opts: rmpv::Value,    /* Dictionary */
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
-            "nvim_buf_add_user_command",
+            "nvim_buf_create_user_command",
             args![buffer, name, command, opts],
         )
         .await
@@ -1054,13 +1061,13 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_eval_statusline", args![str, opts]).await
     }
 
-    pub async fn nvim_add_user_command(
+    pub async fn nvim_create_user_command(
         &mut self,
         name: String,
         command: rmpv::Value, /* Object */
         opts: rmpv::Value,    /* Dictionary */
     ) -> Result<CallResponse<()>, WriteError> {
-        self.call("nvim_add_user_command", args![name, command, opts])
+        self.call("nvim_create_user_command", args![name, command, opts])
             .await
     }
 
