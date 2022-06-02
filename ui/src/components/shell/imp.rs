@@ -1,22 +1,30 @@
 use std::cell::{Cell, RefCell};
 
+use gtk::glib;
 use gtk::glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, graphene, gsk};
 
 use crate::components::grid::Grid;
-use crate::components::MsgWin;
+use crate::components::{Fixedz, MsgWin};
 use crate::font::Font;
 use crate::nvim::Neovim;
 
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/shell.ui")]
 pub struct Shell {
-    #[template_child(id = "msg-win")]
-    pub msg_win: TemplateChild<MsgWin>,
+    /// Container to mainly place floating window.
+    #[template_child(id = "windows")]
+    pub fixed: TemplateChild<Fixedz>,
+    /// The root grid.
     #[template_child(id = "root-grid")]
     pub root_grid: TemplateChild<Grid>,
+    /// The message window.
+    ///
+    /// Note that the window it self is not direct child of the shell,
+    /// but instead child of `windows_container`.
+    #[template_child(id = "msg-win")]
+    pub msg_win: TemplateChild<MsgWin>,
 
     pub nvim: RefCell<Neovim>,
 
@@ -39,6 +47,7 @@ impl ObjectSubclass for Shell {
     fn class_init(klass: &mut Self::Class) {
         Grid::ensure_type();
         MsgWin::ensure_type();
+        Fixedz::ensure_type();
 
         klass.bind_template();
     }
@@ -142,13 +151,6 @@ impl WidgetImpl for Shell {
         self.parent_size_allocate(widget, width, height, baseline);
 
         self.root_grid.allocate(width, height, -1, None);
-
-        let transform = gsk::Transform::new();
-        let transform = transform
-            .translate(&graphene::Point::new(0.0, self.msg_win.y()))
-            .expect("failed to translate transform");
-
-        self.msg_win
-            .allocate(width, self.msg_win.height(), -1, Some(&transform));
+        self.fixed.allocate(width, height, -1, None);
     }
 }

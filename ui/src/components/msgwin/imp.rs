@@ -2,10 +2,11 @@ use std::cell::Cell;
 
 use gtk::{glib, prelude::*, subclass::prelude::*};
 
+use crate::child_iter::IterChildren;
+
 #[derive(Default)]
 pub struct MsgWin {
     pub height: Cell<i32>,
-    pub y: Cell<f32>,
 }
 
 #[glib::object_subclass]
@@ -48,13 +49,10 @@ impl WidgetImpl for MsgWin {
     fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
         self.parent_size_allocate(widget, width, height, baseline);
 
-        let mut child: Option<gtk::Widget> = widget.first_child();
-        while let Some(sib) = child {
-            if sib.should_layout() {
-                sib.allocate(width, height, -1, None);
+        for child in widget.iter_children() {
+            if child.should_layout() {
+                child.allocate(width, height, -1, None);
             }
-
-            child = sib.next_sibling();
         }
     }
 }

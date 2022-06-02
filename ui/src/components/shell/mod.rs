@@ -1,4 +1,4 @@
-use gtk::{glib, prelude::*, subclass::prelude::*};
+use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 use nvim::types::{
     uievents::{
         GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
@@ -7,7 +7,7 @@ use nvim::types::{
     ModeInfo,
 };
 
-use crate::{colors::Colors, font::Font};
+use crate::{colors::Colors, font::Font, SCALE};
 
 use super::Grid;
 
@@ -147,10 +147,10 @@ impl Shell {
         let grid = self.find_grid_must(event.grid);
         grid.set_nvim_window(Some(event.win));
 
-        let x = font.col_to_x(event.startcol as f64);
-        let y = font.row_to_y(event.startrow as f64);
+        let x = font.col_to_x(event.startcol as f64) as f32;
+        let y = font.row_to_y(event.startrow as f64) as f32;
 
-        let fixed = self.imp().root_grid.fixed().clone();
+        let fixed = self.imp().fixed.clone();
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);
         } else {
@@ -163,8 +163,6 @@ impl Shell {
         let grid = self.find_grid_must(event.grid);
         grid.set_nvim_window(Some(event.win));
 
-        let anchor_grid = self.find_grid_must(event.anchor_grid);
-
         let east = event.anchor == "NE" || event.anchor == "SE";
         let south = event.anchor == "SE" || event.anchor == "SW";
 
@@ -173,23 +171,30 @@ impl Shell {
         let col = event.anchor_col - if east { cols as f64 } else { 0.0 };
         let row = event.anchor_row - if south { rows as f64 } else { 0.0 };
 
-        // Adjust position if the floating grid overflows.
-        //
-        // NOTE(ville): It _seems_ like neovim clamps the floating window's
-        // size to the size of the anchor grid, but doesn't adjust position
-        // accordingly.
-        // TODO(ville): The current solution doesn't allow the floating grid
-        // overflow on anyway even if there would be space, e.g. when a floating
-        // window in middle of the screen overflows the anchor grid.
-        let (max_cols, max_rows) = anchor_grid.grid_size();
-        let col = col.min(col.min((max_cols - cols) as f64)).max(0.0);
-        let row = row.min(row.min((max_rows - rows + 1) as f64)).max(0.0);
+        let fixed = self.imp().fixed.clone();
 
-        let x = font.col_to_x(col);
-        let y = font.row_to_y(row);
+        let pos = if event.anchor_grid == 1 {
+            gsk::Transform::new()
+        } else {
+            fixed.child_position(&self.find_grid_must(event.anchor_grid))
+        }
+        .transform_point(&graphene::Point::new(
+            font.col_to_x(col) as f32,
+            font.row_to_y(row) as f32,
+        ));
 
-        // TODO(ville): Implement layout that support the zindex.
-        let fixed = anchor_grid.fixed().clone();
+        let (_, req) = self.imp().root_grid.preferred_size();
+        let (max_x, max_y) = (req.width(), req.height());
+
+        let (req, _) = grid.preferred_size();
+        // TODO(ville): Resize the grid if it doesn't fit the screen?
+        let x = pos.x().min((max_x - req.width()) as f32).max(0.0);
+        let y = pos
+            .y()
+            // NOTE(ville): Not 100% the substraction of one cell height is
+            // required.
+            .min((max_y - req.height()) as f32 - font.height() / SCALE)
+            .max(0.0);
 
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);
@@ -197,6 +202,8 @@ impl Shell {
             grid.unparent();
             fixed.put(&grid, x, y);
         }
+
+        fixed.set_zindex(&grid, event.zindex);
     }
 
     pub fn handle_win_hide(&self, event: WinHide) {
@@ -233,7 +240,7 @@ impl Shell {
         win.set_height(font.row_to_y(h as f64).ceil() as i32);
 
         let y = font.row_to_y(event.row as f64);
-        win.set_y(y as f32);
+        imp.fixed.move_(&win, 0.0, y as f32);
 
         if grid.parent().map(|parent| parent != win).unwrap_or(true) {
             grid.unparent();

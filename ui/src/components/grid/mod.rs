@@ -38,10 +38,6 @@ impl Grid {
         self.imp().buffer.grid_size()
     }
 
-    pub fn fixed(&self) -> &gtk::Fixed {
-        &self.imp().fixed
-    }
-
     pub fn id(&self) -> i64 {
         self.imp().id.get()
     }

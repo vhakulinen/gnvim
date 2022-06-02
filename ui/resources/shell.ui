@@ -25,11 +25,22 @@
             </object>
         </child>
         <child>
-            <object class="MsgWin" id="msg-win">
+            <object class="Fixedz" id="windows">
                 <property name="can-target">false</property>
-                <style>
-                    <class name="msg-win" />
-                </style>
+
+                <child>
+                    <object class="MsgWin" id="msg-win">
+                        <property name="can-target">false</property>
+                        <style>
+                            <class name="msg-win" />
+                        </style>
+                        <layout>
+                            <!--Default z-index taken from nvim flaoting win
+                            documentation. -->
+                            <property name="z-index">200</property>
+                        </layout>
+                    </object>
+                </child>
             </object>
         </child>
     </template>

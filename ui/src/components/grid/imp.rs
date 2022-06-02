@@ -19,8 +19,6 @@ pub struct Grid {
     /// Our cursor on the screen.
     #[template_child(id = "cursor")]
     pub cursor: TemplateChild<Cursor>,
-    #[template_child(id = "fixed")]
-    pub fixed: TemplateChild<gtk::Fixed>,
     /// The content.
     #[template_child(id = "buffer")]
     pub buffer: TemplateChild<GridBuffer>,
@@ -107,7 +105,6 @@ impl ObjectImpl for Grid {
     fn dispose(&self, _obj: &Self::Type) {
         self.buffer.unparent();
         self.cursor.unparent();
-        self.fixed.unparent();
     }
 
     fn properties() -> &'static [glib::ParamSpec] {

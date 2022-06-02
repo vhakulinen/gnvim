@@ -5,6 +5,7 @@ use gtk::prelude::*;
 use gtk::Application;
 
 mod arguments;
+mod child_iter;
 mod colors;
 mod components;
 mod font;
