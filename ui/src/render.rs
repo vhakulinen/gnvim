@@ -211,7 +211,7 @@ pub fn render_undercurl(
     ctx.stroke().expect("failed to draw with cairo");
 }
 
-pub fn create_hl_attrs(hl_id: i64, colors: &Colors, font: &Font) -> pango::AttrList {
+pub fn create_hl_attrs(hl_id: &i64, colors: &Colors, font: &Font) -> pango::AttrList {
     let attrs = pango::AttrList::new();
 
     attrs.insert(pango::AttrFontDesc::new(&font.font_desc()));

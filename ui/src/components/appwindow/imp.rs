@@ -18,7 +18,7 @@ use gtk::{
 use gio_compat::CompatRead;
 use nvim::rpc::RpcReader;
 
-use crate::colors::{Color, Colors};
+use crate::colors::{Color, Colors, HlGroup};
 use crate::components::shell::Shell;
 use crate::font::Font;
 use crate::nvim::Neovim;
@@ -92,12 +92,16 @@ impl AppWindow {
     }
 
     fn handle_hl_group_set(&self, event: HlGroupSet) {
-        match event.name.as_ref() {
-            "MsgSeparator" => {
-                self.colors.borrow_mut().set_msg_separator(event.id);
-                self.css_on_flush.set(true);
-            }
-            _ => {}
+        if let Some(group) = match event.name.as_ref() {
+            "MsgSeparator" => Some(HlGroup::MsgSeparator),
+            "Pmenu" => Some(HlGroup::Pmenu),
+            "PmenuSel" => Some(HlGroup::PmenuSel),
+            "PmenuSbar" => Some(HlGroup::PmenuSbar),
+            "PmenuThumb" => Some(HlGroup::PmenuThumb),
+            _ => None,
+        } {
+            self.colors.borrow_mut().set_hl_group(group, event.id);
+            self.css_on_flush.set(true);
         }
     }
 
@@ -151,6 +155,11 @@ impl AppWindow {
 
                 if self.css_on_flush.take() {
                     let colors = self.colors.borrow();
+                    let linespace = self.font.borrow().linespace() / SCALE;
+                    // TODO(ville): It might be possible to make the font
+                    // be set in CSS, instead of through custom property.
+                    // Tho' at least linespace value (e.g. line-height css
+                    // property) was added as recently as gtk version 4.6.
                     self.css_provider.load_from_data(
                         format!(
                             r#"
@@ -161,9 +170,41 @@ impl AppWindow {
                                 .msg-win.scrolled {{
                                     border-top: 1px solid #{msgsep};
                                 }}
+
+                                .popupmenu-listview,
+                                .popupmenu-row {{
+                                    color: #{pmenu_fg};
+                                    background-color: #{pmenu_bg};
+
+                                    padding-top: {linespace_top}px;
+                                    padding-bottom: {linespace_bottom}px;
+                                }}
+
+                                .popupmenu-listview > :selected,
+                                .popupmenu-listview > :selected > .popupmenu-row {{
+                                    color: #{pmenu_sel_fg};
+                                    background-color: #{pmenu_sel_bg};
+                                }}
+
+                                .popupmenu scrollbar {{
+                                    background-color: #{pmenusbar_bg};
+                                }}
+
+                                .popupmenu slider {{
+                                    background-color: #{pmenuthumb_bg};
+                                    border-color: #{pmenuthumb_bg};
+                                }}
                             "#,
                             bg = colors.bg.as_hex(),
-                            msgsep = colors.msg_separator_fg().as_hex(),
+                            msgsep = colors.get_hl_group_fg(&HlGroup::MsgSeparator).as_hex(),
+                            pmenu_fg = colors.get_hl_group_fg(&HlGroup::Pmenu).as_hex(),
+                            pmenu_bg = colors.get_hl_group_bg(&HlGroup::Pmenu).as_hex(),
+                            pmenu_sel_fg = colors.get_hl_group_fg(&HlGroup::PmenuSel).as_hex(),
+                            pmenu_sel_bg = colors.get_hl_group_bg(&HlGroup::PmenuSel).as_hex(),
+                            pmenusbar_bg = colors.get_hl_group_bg(&HlGroup::PmenuSbar).as_hex(),
+                            pmenuthumb_bg = colors.get_hl_group_bg(&HlGroup::PmenuThumb).as_hex(),
+                            linespace_top = (linespace / 2.0).ceil().max(0.0),
+                            linespace_bottom = (linespace / 2.0).floor().max(0.0),
                         )
                         .as_bytes(),
                     );
@@ -219,7 +260,17 @@ impl AppWindow {
             UiEvent::MsgSetPos(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_msg_set_pos(event, &self.font.borrow())),
+            // TODO(ville): Scrollbars?
             UiEvent::WinViewport(_) => {}
+
+            // popupmenu events
+            UiEvent::PopupmenuShow(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_popupmenu_show(event)),
+            UiEvent::PopupmenuSelect(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_popupmenu_select(event)),
+            UiEvent::PopupmenuHide => self.shell.handle_popupmenu_hide(),
 
             event => panic!("Unhandled ui event: {}", event),
         }
@@ -232,12 +283,14 @@ impl AppWindow {
                 obj.set_property("font", &font);
 
                 self.resize_on_flush.set(true);
+                self.css_on_flush.set(true);
             }
             OptionSet::Guifont(guifont) => {
                 let font = Font::new(&guifont, self.font.borrow().linespace() / SCALE);
                 obj.set_property("font", &font);
 
                 self.resize_on_flush.set(true);
+                self.css_on_flush.set(true);
             }
             OptionSet::Unknown(_) => {}
         }
@@ -384,6 +437,7 @@ impl ObjectImpl for AppWindow {
                     rgb: true,
                     ext_linegrid: true,
                     ext_multigrid: true,
+                    ext_popupmenu: true,
                     ..Default::default()
                 }
             ).await.expect("call to nvim failed");

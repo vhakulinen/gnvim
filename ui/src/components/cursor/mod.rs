@@ -28,11 +28,11 @@ impl Cursor {
         }
 
         let font = imp.font.borrow();
-        let hl_id = *imp.attr_id.borrow();
-        let fg = colors.get_hl_fg(hl_id);
-        let bg = colors.get_hl_bg(hl_id);
+        let hl_id = imp.attr_id.borrow();
+        let fg = colors.get_hl_fg(&hl_id);
+        let bg = colors.get_hl_bg(&hl_id);
         // For hl id zero, we need to flip fg and bg.
-        let (fg, bg) = if hl_id == 0 { (bg, fg) } else { (fg, bg) };
+        let (fg, bg) = if *hl_id == 0 { (bg, fg) } else { (fg, bg) };
 
         let height = font.height();
         let ch = font.char_width();
@@ -59,7 +59,7 @@ impl Cursor {
 
         snapshot.append_node(gsk::ColorNode::new(&bg, &rect).upcast());
 
-        let attrs = crate::render::create_hl_attrs(hl_id, colors, &font);
+        let attrs = crate::render::create_hl_attrs(&hl_id, colors, &font);
         crate::render::render_text(
             &snapshot,
             &self.pango_context(),

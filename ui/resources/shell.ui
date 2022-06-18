@@ -35,9 +35,24 @@
                             <class name="msg-win" />
                         </style>
                         <layout>
-                            <!--Default z-index taken from nvim flaoting win
-                            documentation. -->
+                            <!-- z-index according to the nvim docs. -->
                             <property name="z-index">200</property>
+                        </layout>
+                    </object>
+                </child>
+
+                <child>
+                    <object class="Popupmenu" id="popupmenu">
+                        <property name="visible">false</property>
+                        <property
+                            name="font"
+                            bind-source="Shell"
+                            bind-property="font"
+                            bind-flags="sync-create"
+                        />
+                        <layout>
+                            <!-- z-index according to the nvim docs. -->
+                            <property name="z-index">100</property>
                         </layout>
                     </object>
                 </child>

@@ -6,7 +6,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
 use crate::components::grid::Grid;
-use crate::components::{Fixedz, MsgWin};
+use crate::components::{Fixedz, MsgWin, Popupmenu};
 use crate::font::Font;
 use crate::nvim::Neovim;
 
@@ -25,6 +25,9 @@ pub struct Shell {
     /// but instead child of `windows_container`.
     #[template_child(id = "msg-win")]
     pub msg_win: TemplateChild<MsgWin>,
+
+    #[template_child(id = "popupmenu")]
+    pub popupmenu: TemplateChild<Popupmenu>,
 
     pub nvim: RefCell<Neovim>,
 
@@ -48,6 +51,7 @@ impl ObjectSubclass for Shell {
         Grid::ensure_type();
         MsgWin::ensure_type();
         Fixedz::ensure_type();
+        Popupmenu::ensure_type();
 
         klass.bind_template();
     }

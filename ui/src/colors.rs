@@ -4,9 +4,13 @@ use gtk::gdk;
 
 use nvim::types::HlAttr;
 
-#[derive(Debug, Default)]
-pub struct HlGroups {
-    msg_separator: Option<i64>,
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum HlGroup {
+    MsgSeparator,
+    Pmenu,
+    PmenuSel,
+    PmenuSbar,
+    PmenuThumb,
 }
 
 #[derive(Debug, Default)]
@@ -16,60 +20,64 @@ pub struct Colors {
     pub sp: Color,
 
     pub hls: HashMap<i64, HlAttr>,
-    pub hl_groups: HlGroups,
+    pub hl_groups: HashMap<HlGroup, i64>,
 }
 
 impl Colors {
-    pub fn get_hl(&self, hl: i64) -> Option<&HlAttr> {
-        self.hls.get(&hl)
+    pub fn get_hl(&self, hl: &i64) -> Option<&HlAttr> {
+        self.hls.get(hl)
     }
 
-    pub fn set_msg_separator(&mut self, hl: i64) {
-        self.hl_groups.msg_separator = Some(hl);
+    pub fn set_hl_group(&mut self, group: HlGroup, hl_id: i64) {
+        self.hl_groups.insert(group, hl_id);
     }
 
-    pub fn msg_separator_fg(&self) -> Color {
+    pub fn get_hl_group_fg(&self, group: &HlGroup) -> Color {
         self.hl_groups
-            .msg_separator
-            .and_then(|id| {
-                self.hls
-                    .get(&id)
-                    .and_then(|hl| hl.foreground)
-                    .map(Color::from_i64)
+            .get(group)
+            .and_then(|hl| Some(self.get_hl_fg(hl)))
+            .unwrap_or(self.fg)
+    }
+
+    pub fn get_hl_group_bg(&self, group: &HlGroup) -> Color {
+        self.hl_groups
+            .get(group)
+            .and_then(|hl| Some(self.get_hl_bg(hl)))
+            .unwrap_or(self.bg)
+    }
+
+    pub fn get_hl_fg(&self, hl: &i64) -> Color {
+        self.hls
+            .get(&hl)
+            .map(|hl| {
+                if hl.reverse.unwrap_or(false) {
+                    hl.background.map(Color::from_i64).unwrap_or(self.bg)
+                } else {
+                    hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
+                }
             })
             .unwrap_or(self.fg)
     }
 
-    pub fn get_hl_fg(&self, hl: i64) -> Color {
-        if let Some(hl) = self.hls.get(&hl) {
-            if hl.reverse.unwrap_or(false) {
-                hl.background.map(Color::from_i64).unwrap_or(self.bg)
-            } else {
-                hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
-            }
-        } else {
-            self.fg
-        }
+    pub fn get_hl_bg(&self, hl: &i64) -> Color {
+        self.hls
+            .get(&hl)
+            .map(|hl| {
+                if hl.reverse.unwrap_or(false) {
+                    hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
+                } else {
+                    hl.background.map(Color::from_i64).unwrap_or(self.bg)
+                }
+            })
+            .unwrap_or(self.bg)
     }
 
-    pub fn get_hl_bg(&self, hl: i64) -> Color {
-        if let Some(hl) = self.hls.get(&hl) {
-            if hl.reverse.unwrap_or(false) {
-                hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
-            } else {
-                hl.background.map(Color::from_i64).unwrap_or(self.bg)
-            }
-        } else {
-            self.bg
-        }
-    }
-
-    pub fn get_hl_sp(&self, hl: i64) -> Color {
-        if let Some(hl) = self.hls.get(&hl) {
-            hl.special.map(Color::from_i64).unwrap_or(self.sp)
-        } else {
-            self.sp
-        }
+    pub fn get_hl_sp(&self, hl: &i64) -> Color {
+        self.hls
+            .get(&hl)
+            .and_then(|hl| hl.special)
+            .map(Color::from_i64)
+            .unwrap_or(self.sp)
     }
 }
 

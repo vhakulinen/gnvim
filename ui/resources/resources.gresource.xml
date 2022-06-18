@@ -4,5 +4,7 @@
         <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">grid.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">popupmenu.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">popupmenu_row.ui</file>
     </gresource>
 </gresources>
