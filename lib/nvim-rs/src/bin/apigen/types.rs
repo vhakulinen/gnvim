@@ -138,6 +138,7 @@ impl UiEvent {
             ("hl_attr_define", "rgb_attrs") => "HlAttr",
             ("hl_attr_define", "cterm_attrs") => "HlAttr",
             ("mode_info_set", "cursor_styles") => "Vec<ModeInfo>",
+            ("popupmenu_show", "items") => "Vec<PopupmenuItem>",
             _ => return _type.as_rust_type(),
         };
 

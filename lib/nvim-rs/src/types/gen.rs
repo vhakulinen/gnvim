@@ -204,7 +204,7 @@ pub struct WinViewport {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct PopupmenuShow {
-    pub items: rmpv::Value, /* Array */
+    pub items: Vec<PopupmenuItem>,
     pub selected: i64,
     pub row: i64,
     pub col: i64,

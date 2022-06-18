@@ -134,3 +134,11 @@ impl IntoValue for Window {
         self.0
     }
 }
+
+#[derive(Default, Debug, serde::Deserialize)]
+pub struct PopupmenuItem {
+    pub word: String,
+    pub kind: String,
+    pub menu: String,
+    pub info: String,
+}
