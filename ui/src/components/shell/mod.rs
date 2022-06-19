@@ -7,15 +7,20 @@ use nvim::types::{
     ModeInfo,
 };
 
-use crate::{colors::Colors, font::Font, SCALE};
+use crate::{colors::Colors, font::Font, warn, SCALE};
 
 use super::Grid;
 
-macro_rules! find_grid_must {
+macro_rules! find_grid_or_return {
     ($self:expr, $grid:expr) => {
-        $self
-            .find_grid($grid)
-            .unwrap_or_else(|| panic!("grid {} not found in {}:{}", $grid, file!(), line!()))
+        if let Some(grid) = $self.find_grid($grid) {
+            grid
+        } else {
+            // TODO(ville): It would make sense to display some error to the
+            // user here too.
+            warn!("grid {} not found in {}:{}", $grid, file!(), line!());
+            return;
+        }
     };
 }
 
@@ -54,7 +59,7 @@ impl Shell {
     }
 
     pub fn handle_grid_line(&self, event: GridLine) {
-        find_grid_must!(self, event.grid).put(event);
+        find_grid_or_return!(self, event.grid).put(event);
     }
 
     pub fn font(&self) -> Font {
@@ -92,7 +97,7 @@ impl Shell {
     }
 
     pub fn handle_grid_clear(&self, event: GridClear) {
-        find_grid_must!(self, event.grid).clear();
+        find_grid_or_return!(self, event.grid).clear();
     }
 
     pub fn handle_grid_cursor_goto(&self, event: GridCursorGoto) {
@@ -112,7 +117,7 @@ impl Shell {
     }
 
     pub fn handle_grid_scroll(&self, event: GridScroll) {
-        find_grid_must!(self, event.grid).scroll(event);
+        find_grid_or_return!(self, event.grid).scroll(event);
     }
 
     pub fn handle_mode_change(&self, mode: &ModeInfo) {
@@ -127,16 +132,15 @@ impl Shell {
         assert!(event.grid != 1, "cant do grid_destroy for grid 1");
 
         let mut grids = self.imp().grids.borrow_mut();
-        let index = grids
-            .iter()
-            .position(|grid| grid.id() == event.grid)
-            .expect("grid_destroy: bad grid id");
-
-        // Remove the grid from our list, and unparent it. This will cause
-        // it to be dropped because all the references to the grid will be
-        // released.
-        let grid = grids.remove(index);
-        grid.unparent();
+        if let Some(index) = grids.iter().position(|grid| grid.id() == event.grid) {
+            // Remove the grid from our list, and unparent it. This will cause
+            // it to be dropped because all the references to the grid will be
+            // released.
+            let grid = grids.remove(index);
+            grid.unparent();
+        } else {
+            warn!("grid {} not found in {}:{}", event.grid, file!(), line!());
+        }
     }
 
     pub fn handle_win_pos(&self, event: WinPos, font: &Font) {
@@ -147,7 +151,7 @@ impl Shell {
          * neovim is not controlling the window's/grid's size.
          */
 
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         grid.set_nvim_window(Some(event.win));
 
         let x = font.col_to_x(event.startcol as f64) as f32;
@@ -163,7 +167,7 @@ impl Shell {
     }
 
     pub fn handle_float_pos(&self, event: WinFloatPos, font: &Font) {
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         grid.set_nvim_window(Some(event.win));
 
         let east = event.anchor == "NE" || event.anchor == "SE";
@@ -179,7 +183,7 @@ impl Shell {
         let pos = if event.anchor_grid == 1 {
             gsk::Transform::new()
         } else {
-            fixed.child_position(&find_grid_must!(self, event.anchor_grid))
+            fixed.child_position(&find_grid_or_return!(self, event.anchor_grid))
         }
         .transform_point(&graphene::Point::new(
             font.col_to_x(col) as f32,
@@ -212,14 +216,14 @@ impl Shell {
     pub fn handle_win_hide(&self, event: WinHide) {
         assert!(event.grid != 1, "cant do win_hide for grid 1");
 
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         grid.unparent();
     }
 
     pub fn handle_win_close(&self, event: WinClose) {
         assert!(event.grid != 1, "cant do win_close for grid 1");
 
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         grid.set_nvim_window(None);
         grid.unparent();
     }
@@ -227,7 +231,7 @@ impl Shell {
     pub fn handle_win_external_pos(&self, event: WinExternalPos, parent: &gtk::Window) {
         assert!(event.grid != 1, "cant do win_external_pos for grid 1");
 
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         grid.set_nvim_window(Some(event.win));
         grid.make_external(parent);
     }
@@ -235,7 +239,7 @@ impl Shell {
     pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {
         assert!(event.grid != 1, "cant do msg_set_pos for grid 1");
 
-        let grid = find_grid_must!(self, event.grid);
+        let grid = find_grid_or_return!(self, event.grid);
         let imp = self.imp();
         let win = imp.msg_win.clone();
 
@@ -274,7 +278,8 @@ impl Shell {
         let pos = if event.grid == 1 {
             gsk::Transform::new()
         } else {
-            imp.fixed.child_position(&find_grid_must!(self, event.grid))
+            imp.fixed
+                .child_position(&find_grid_or_return!(self, event.grid))
         }
         .transform_point(&graphene::Point::new(
             font.col_to_x(event.col as f64) as f32,

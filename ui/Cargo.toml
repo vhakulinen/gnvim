@@ -15,6 +15,10 @@ package = "gtk4"
 version = "0.4"
 features = ["v4_4"]
 
+[dependencies.glib]
+version = "0.15"
+features = ["log_macros"]
+
 [dependencies.nvim]
 package = "nvim-rs"
 path = "../lib/nvim-rs"

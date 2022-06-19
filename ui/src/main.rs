@@ -1,8 +1,5 @@
 use clap::Parser;
-use gtk::gio;
-use gtk::pango;
-use gtk::prelude::*;
-use gtk::Application;
+use gtk::{gio, pango, prelude::*};
 
 mod arguments;
 mod child_iter;
@@ -28,7 +25,7 @@ fn main() {
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
 
-    let app = Application::builder()
+    let app = gtk::Application::builder()
         .application_id("com.github.vhakulinen.gnvim")
         .flags(flags)
         .build();
@@ -38,7 +35,7 @@ fn main() {
     app.run_with_args::<&str>(&[]);
 }
 
-fn build_ui(app: &Application, args: &arguments::BoxedArguments) {
+fn build_ui(app: &gtk::Application, args: &arguments::BoxedArguments) {
     let window = AppWindow::new(app, args);
     window.present();
 }
