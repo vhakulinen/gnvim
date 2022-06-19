@@ -142,3 +142,25 @@ pub struct PopupmenuItem {
     pub menu: String,
     pub info: String,
 }
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Dictionary(Vec<(rmpv::Value, rmpv::Value)>);
+
+#[macro_export]
+macro_rules! dict {
+    ($($k:expr => $v:expr)*) => {
+        (vec![$(($k.into(), $v.into())),*]).into()
+    };
+}
+
+impl IntoValue for Dictionary {
+    fn into_value(self) -> rmpv::Value {
+        self.0.into()
+    }
+}
+
+impl From<Vec<(rmpv::Value, rmpv::Value)>> for Dictionary {
+    fn from(f: Vec<(rmpv::Value, rmpv::Value)>) -> Self {
+        Self(f)
+    }
+}

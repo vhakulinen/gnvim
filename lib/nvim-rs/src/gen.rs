@@ -1,14 +1,14 @@
 use crate::rpc::{RpcWriter, WriteError};
 use crate::{
     args,
-    types::{UiOptions, Window},
+    types::{Dictionary, UiOptions, Window},
     CallResponse, Client,
 };
 
 impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_autocmds(
         &mut self,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Array */>, WriteError> {
         self.call("nvim_get_autocmds", args![opts]).await
     }
@@ -16,7 +16,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_create_autocmd(
         &mut self,
         event: rmpv::Value, /* Object */
-        opts: rmpv::Value,  /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_create_autocmd", args![event, opts]).await
     }
@@ -27,7 +27,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_clear_autocmds(
         &mut self,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_clear_autocmds", args![opts]).await
     }
@@ -35,7 +35,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_create_augroup(
         &mut self,
         name: String,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_create_augroup", args![name, opts]).await
     }
@@ -57,7 +57,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_exec_autocmds(
         &mut self,
         event: rmpv::Value, /* Object */
-        opts: rmpv::Value,  /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_exec_autocmds", args![event, opts]).await
     }
@@ -73,7 +73,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         buffer: rmpv::Value, /* Buffer */
         send_buffer: bool,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_attach", args![buffer, send_buffer, opts])
             .await
@@ -138,7 +138,7 @@ impl<W: RpcWriter> Client<W> {
         start_col: i64,
         end_row: i64,
         end_col: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<Vec<String>>, WriteError> {
         self.call(
             "nvim_buf_get_text",
@@ -174,7 +174,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         buffer: rmpv::Value, /* Buffer */
         mode: String,
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Dictionary */>>, WriteError> {
+    ) -> Result<CallResponse<Vec<Dictionary>>, WriteError> {
         self.call("nvim_buf_get_keymap", args![buffer, mode]).await
     }
 
@@ -184,7 +184,7 @@ impl<W: RpcWriter> Client<W> {
         mode: String,
         lhs: String,
         rhs: String,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_keymap", args![buffer, mode, lhs, rhs, opts])
             .await
@@ -203,8 +203,8 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_buf_get_commands(
         &mut self,
         buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+        opts: Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_buf_get_commands", args![buffer, opts])
             .await
     }
@@ -270,7 +270,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_buf_delete(
         &mut self,
         buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_delete", args![buffer, opts]).await
     }
@@ -296,7 +296,7 @@ impl<W: RpcWriter> Client<W> {
         name: String,
         line: i64,
         col: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_set_mark", args![buffer, name, line, col, opts])
             .await
@@ -323,7 +323,7 @@ impl<W: RpcWriter> Client<W> {
         buffer: rmpv::Value, /* Buffer */
         name: String,
         command: rmpv::Value, /* Object */
-        opts: rmpv::Value,    /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_buf_create_user_command",
@@ -348,9 +348,7 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_create_namespace", args![name]).await
     }
 
-    pub async fn nvim_get_namespaces(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    pub async fn nvim_get_namespaces(&mut self) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_namespaces", args![]).await
     }
 
@@ -359,7 +357,7 @@ impl<W: RpcWriter> Client<W> {
         buffer: rmpv::Value, /* Buffer */
         ns_id: i64,
         id: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<Vec<i64>>, WriteError> {
         self.call("nvim_buf_get_extmark_by_id", args![buffer, ns_id, id, opts])
             .await
@@ -371,7 +369,7 @@ impl<W: RpcWriter> Client<W> {
         ns_id: i64,
         start: rmpv::Value, /* Object */
         end: rmpv::Value,   /* Object */
-        opts: rmpv::Value,  /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Array */>, WriteError> {
         self.call(
             "nvim_buf_get_extmarks",
@@ -386,7 +384,7 @@ impl<W: RpcWriter> Client<W> {
         ns_id: i64,
         line: i64,
         col: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call(
             "nvim_buf_set_extmark",
@@ -438,7 +436,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_set_decoration_provider(
         &mut self,
         ns_id: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_decoration_provider", args![ns_id, opts])
             .await
@@ -562,7 +560,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         name: String,
         rgb: bool,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_hl_by_name", args![name, rgb]).await
     }
 
@@ -570,7 +568,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         hl_id: i64,
         rgb: bool,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_hl_by_id", args![hl_id, rgb]).await
     }
 
@@ -585,7 +583,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         ns_id: i64,
         name: String,
-        val: rmpv::Value, /* Dictionary */
+        val: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_hl", args![ns_id, name, val]).await
     }
@@ -646,7 +644,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         msg: String,
         log_level: i64,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_notify", args![msg, log_level, opts]).await
     }
@@ -735,7 +733,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_option_value(
         &mut self,
         name: String,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_get_option_value", args![name, opts]).await
     }
@@ -744,7 +742,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         name: String,
         value: rmpv::Value, /* Object */
-        opts: rmpv::Value,  /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_option_value", args![name, value, opts])
             .await
@@ -752,14 +750,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_get_all_options_info(
         &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_all_options_info", args![]).await
     }
 
     pub async fn nvim_get_option_info(
         &mut self,
         name: String,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_option_info", args![name]).await
     }
 
@@ -775,7 +773,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         chunks: rmpv::Value, /* Array */
         history: bool,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_echo", args![chunks, history, opts]).await
     }
@@ -837,7 +835,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_open_term(
         &mut self,
         buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_open_term", args![buffer, opts]).await
     }
@@ -907,36 +905,32 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_get_color_by_name", args![name]).await
     }
 
-    pub async fn nvim_get_color_map(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    pub async fn nvim_get_color_map(&mut self) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_color_map", args![]).await
     }
 
     pub async fn nvim_get_context(
         &mut self,
-        opts: rmpv::Value, /* Dictionary */
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+        opts: Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_context", args![opts]).await
     }
 
     pub async fn nvim_load_context(
         &mut self,
-        dict: rmpv::Value, /* Dictionary */
+        dict: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_load_context", args![dict]).await
     }
 
-    pub async fn nvim_get_mode(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    pub async fn nvim_get_mode(&mut self) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_mode", args![]).await
     }
 
     pub async fn nvim_get_keymap(
         &mut self,
         mode: String,
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Dictionary */>>, WriteError> {
+    ) -> Result<CallResponse<Vec<Dictionary>>, WriteError> {
         self.call("nvim_get_keymap", args![mode]).await
     }
 
@@ -945,7 +939,7 @@ impl<W: RpcWriter> Client<W> {
         mode: String,
         lhs: String,
         rhs: String,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_keymap", args![mode, lhs, rhs, opts])
             .await
@@ -961,8 +955,8 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_get_commands(
         &mut self,
-        opts: rmpv::Value, /* Dictionary */
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+        opts: Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_commands", args![opts]).await
     }
 
@@ -975,10 +969,10 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_set_client_info(
         &mut self,
         name: String,
-        version: rmpv::Value, /* Dictionary */
+        version: Dictionary,
         _type: String,
-        methods: rmpv::Value,    /* Dictionary */
-        attributes: rmpv::Value, /* Dictionary */
+        methods: Dictionary,
+        attributes: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_set_client_info",
@@ -990,7 +984,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_chan_info(
         &mut self,
         chan: i64,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_chan_info", args![chan]).await
     }
 
@@ -1032,7 +1026,7 @@ impl<W: RpcWriter> Client<W> {
         item: i64,
         insert: bool,
         finish: bool,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_select_popupmenu_item",
@@ -1048,7 +1042,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_mark(
         &mut self,
         name: String,
-        opts: rmpv::Value, /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<rmpv::Value /* Array */>, WriteError> {
         self.call("nvim_get_mark", args![name, opts]).await
     }
@@ -1056,8 +1050,8 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_eval_statusline(
         &mut self,
         str: String,
-        opts: rmpv::Value, /* Dictionary */
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+        opts: Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_eval_statusline", args![str, opts]).await
     }
 
@@ -1065,7 +1059,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         name: String,
         command: rmpv::Value, /* Object */
-        opts: rmpv::Value,    /* Dictionary */
+        opts: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_create_user_command", args![name, command, opts])
             .await
@@ -1120,7 +1114,7 @@ impl<W: RpcWriter> Client<W> {
         expr: String,
         flags: String,
         highlight: bool,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_parse_expression", args![expr, flags, highlight])
             .await
     }
@@ -1129,7 +1123,7 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         buffer: rmpv::Value, /* Buffer */
         enter: bool,
-        config: rmpv::Value, /* Dictionary */
+        config: Dictionary,
     ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_open_win", args![buffer, enter, config])
             .await
@@ -1138,7 +1132,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_win_set_config(
         &mut self,
         window: Window,
-        config: rmpv::Value, /* Dictionary */
+        config: Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_config", args![window, config])
             .await
@@ -1147,7 +1141,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_win_get_config(
         &mut self,
         window: Window,
-    ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_win_get_config", args![window]).await
     }
 
