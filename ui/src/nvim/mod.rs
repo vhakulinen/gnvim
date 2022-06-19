@@ -34,8 +34,8 @@ impl Neovim {
         let default_args = vec![nvim_bin, OsStr::new("--embed")];
         let cmd_args: Vec<&OsStr> = default_args
             .into_iter()
-            .chain(args.into_iter().map(|a| a.as_ref()))
-            .chain(files.into_iter().map(|a| a.as_ref()))
+            .chain(args.iter().map(|a| a.as_ref()))
+            .chain(files.iter().map(|a| a.as_ref()))
             .collect();
 
         let p = gio::Subprocess::newv(&cmd_args, flags).expect("failed to open nvim subprocess");

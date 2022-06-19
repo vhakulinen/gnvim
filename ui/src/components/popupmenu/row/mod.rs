@@ -10,7 +10,7 @@ glib::wrapper! {
 }
 
 impl Row {
-    pub fn new() -> Self {
+    fn new() -> Self {
         glib::Object::new(&[]).expect("failed to create PopupmenuItem")
     }
 
@@ -19,5 +19,11 @@ impl Row {
 
         imp.word.set_label(&item.word);
         imp.kind.set_label(&format!("[{}]", item.kind));
+    }
+}
+
+impl Default for Row {
+    fn default() -> Self {
+        Self::new()
     }
 }

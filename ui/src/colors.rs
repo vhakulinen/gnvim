@@ -35,20 +35,20 @@ impl Colors {
     pub fn get_hl_group_fg(&self, group: &HlGroup) -> Color {
         self.hl_groups
             .get(group)
-            .and_then(|hl| Some(self.get_hl_fg(hl)))
+            .map(|hl| self.get_hl_fg(hl))
             .unwrap_or(self.fg)
     }
 
     pub fn get_hl_group_bg(&self, group: &HlGroup) -> Color {
         self.hl_groups
             .get(group)
-            .and_then(|hl| Some(self.get_hl_bg(hl)))
+            .map(|hl| self.get_hl_bg(hl))
             .unwrap_or(self.bg)
     }
 
     pub fn get_hl_fg(&self, hl: &i64) -> Color {
         self.hls
-            .get(&hl)
+            .get(hl)
             .map(|hl| {
                 if hl.reverse.unwrap_or(false) {
                     hl.background.map(Color::from_i64).unwrap_or(self.bg)
@@ -61,7 +61,7 @@ impl Colors {
 
     pub fn get_hl_bg(&self, hl: &i64) -> Color {
         self.hls
-            .get(&hl)
+            .get(hl)
             .map(|hl| {
                 if hl.reverse.unwrap_or(false) {
                     hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
@@ -74,7 +74,7 @@ impl Colors {
 
     pub fn get_hl_sp(&self, hl: &i64) -> Color {
         self.hls
-            .get(&hl)
+            .get(hl)
             .and_then(|hl| hl.special)
             .map(Color::from_i64)
             .unwrap_or(self.sp)

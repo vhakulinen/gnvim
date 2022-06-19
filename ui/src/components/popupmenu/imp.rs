@@ -55,7 +55,7 @@ impl ObjectImpl for Popupmenu {
         let factory = gtk::SignalListItemFactory::new();
 
         factory.connect_setup(clone!(@weak obj => move |_, listitem| {
-            let item = Row::new();
+            let item = Row::default();
             obj.bind_property("font", &item, "font")
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
