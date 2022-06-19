@@ -53,7 +53,7 @@ impl ObjectImpl for Child {
 
     fn set_property(
         &self,
-        _obj: &Self::Type,
+        obj: &Self::Type,
         _id: usize,
         value: &glib::Value,
         pspec: &glib::ParamSpec,
@@ -62,10 +62,14 @@ impl ObjectImpl for Child {
             "position" => {
                 self.position
                     .replace(value.get().expect("position must be object gsk::Transform"));
+
+                gtk::prelude::LayoutChildExt::layout_manager(obj).layout_changed();
             }
             "z-index" => {
                 self.zindex
                     .replace(value.get().expect("font value must be i64"));
+
+                gtk::prelude::LayoutChildExt::layout_manager(obj).layout_changed();
             }
             _ => unimplemented!(),
         }
