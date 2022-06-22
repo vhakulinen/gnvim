@@ -156,6 +156,11 @@ impl AppWindow {
                 if self.css_on_flush.take() {
                     let colors = self.colors.borrow();
                     let linespace = self.font.borrow().linespace() / SCALE;
+                    let pmenu = colors.get_hl_group(&HlGroup::Pmenu);
+                    let pmenu_sel = colors.get_hl_group(&HlGroup::PmenuSel);
+                    let pmenu_thumb = colors.get_hl_group(&HlGroup::PmenuThumb);
+                    let pmenu_bar = colors.get_hl_group(&HlGroup::PmenuSbar);
+                    let msgsep = colors.get_hl_group(&HlGroup::MsgSeparator);
                     // TODO(ville): It might be possible to make the font
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
@@ -196,13 +201,13 @@ impl AppWindow {
                                 }}
                             "#,
                             bg = colors.bg.as_hex(),
-                            msgsep = colors.get_hl_group_fg(&HlGroup::MsgSeparator).as_hex(),
-                            pmenu_fg = colors.get_hl_group_fg(&HlGroup::Pmenu).as_hex(),
-                            pmenu_bg = colors.get_hl_group_bg(&HlGroup::Pmenu).as_hex(),
-                            pmenu_sel_fg = colors.get_hl_group_fg(&HlGroup::PmenuSel).as_hex(),
-                            pmenu_sel_bg = colors.get_hl_group_bg(&HlGroup::PmenuSel).as_hex(),
-                            pmenusbar_bg = colors.get_hl_group_bg(&HlGroup::PmenuSbar).as_hex(),
-                            pmenuthumb_bg = colors.get_hl_group_bg(&HlGroup::PmenuThumb).as_hex(),
+                            msgsep = msgsep.fg().as_hex(),
+                            pmenu_fg = pmenu.fg().as_hex(),
+                            pmenu_bg = pmenu.bg().as_hex(),
+                            pmenu_sel_fg = pmenu_sel.fg().as_hex(),
+                            pmenu_sel_bg = pmenu_sel.bg().as_hex(),
+                            pmenusbar_bg = pmenu_bar.bg().as_hex(),
+                            pmenuthumb_bg = pmenu_thumb.bg().as_hex(),
                             linespace_top = (linespace / 2.0).ceil().max(0.0),
                             linespace_bottom = (linespace / 2.0).floor().max(0.0),
                         )

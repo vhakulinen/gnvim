@@ -189,7 +189,6 @@ impl Row {
             let snapshot_fg = gtk::Snapshot::new();
             let snapshot_bg = gtk::Snapshot::new();
             let attrs = crate::render::create_hl_attrs(&segment.hl_id, colors, font);
-            let hl = colors.get_hl(&segment.hl_id);
 
             let text = segment
                 .cells
@@ -197,9 +196,11 @@ impl Row {
                 .map(|cell| cell.text.clone())
                 .collect::<String>();
 
-            let fg = colors.get_hl_fg(&segment.hl_id);
-            let bg = colors.get_hl_bg(&segment.hl_id);
-            let sp = colors.get_hl_sp(&segment.hl_id);
+            let hl = colors.get_hl(&segment.hl_id);
+            let fg = hl.fg();
+            let bg = hl.bg();
+            let sp = hl.sp();
+            let hl = hl.hl_attr();
 
             // Create glyphs.
             crate::render::render_text(&snapshot_fg, ctx, &text, fg, &attrs, x, baseline);

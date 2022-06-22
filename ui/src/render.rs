@@ -216,7 +216,7 @@ pub fn create_hl_attrs(hl_id: &i64, colors: &Colors, font: &Font) -> pango::Attr
 
     attrs.insert(pango::AttrFontDesc::new(&font.font_desc()));
 
-    if let Some(hl) = colors.get_hl(hl_id) {
+    if let Some(hl) = colors.get_hl(hl_id).hl_attr() {
         if hl.bold.unwrap_or(false) {
             attrs.insert(pango::AttrInt::new_weight(pango::Weight::Bold));
         }

@@ -22,62 +22,71 @@ pub struct Colors {
 }
 
 impl Colors {
-    pub fn get_hl(&self, hl: &i64) -> Option<&HlAttr> {
-        self.hls.get(hl)
+    pub fn get_hl<'a>(&'a self, hl: &i64) -> Highlight<'a> {
+        let hl_attr = self.hls.get(hl);
+
+        Highlight {
+            colors: self,
+            hl_attr,
+        }
     }
 
     pub fn set_hl_group(&mut self, group: HlGroup, hl_id: i64) {
         self.hl_groups.insert(group, hl_id);
     }
 
-    pub fn get_hl_group_fg(&self, group: &HlGroup) -> &Color {
-        self.hl_groups
-            .get(group)
-            .map(|hl| self.get_hl_fg(hl))
-            .unwrap_or(&self.fg)
-    }
+    pub fn get_hl_group<'a>(&'a self, group: &HlGroup) -> Highlight<'a> {
+        let hl_attr = self.hl_groups.get(group).and_then(|hl| self.hls.get(hl));
 
-    pub fn get_hl_group_bg(&self, group: &HlGroup) -> &Color {
-        self.hl_groups
-            .get(group)
-            .map(|hl| self.get_hl_bg(hl))
-            .unwrap_or(&self.bg)
-    }
-
-    pub fn get_hl_fg(&self, hl: &i64) -> &Color {
-        self.hls
-            .get(hl)
-            .map(|hl| {
-                if hl.reverse.unwrap_or(false) {
-                    hl.background.as_ref().unwrap_or(&self.bg)
-                } else {
-                    hl.foreground.as_ref().unwrap_or(&self.fg)
-                }
-            })
-            .unwrap_or(&self.fg)
-    }
-
-    pub fn get_hl_bg(&self, hl: &i64) -> &Color {
-        self.hls
-            .get(hl)
-            .map(|hl| {
-                if hl.reverse.unwrap_or(false) {
-                    hl.foreground.as_ref().unwrap_or(&self.fg)
-                } else {
-                    hl.background.as_ref().unwrap_or(&self.bg)
-                }
-            })
-            .unwrap_or(&self.bg)
-    }
-
-    pub fn get_hl_sp(&self, hl: &i64) -> &Color {
-        self.hls
-            .get(hl)
-            .and_then(|hl| hl.special.as_ref())
-            .unwrap_or(&self.sp)
+        Highlight {
+            colors: self,
+            hl_attr,
+        }
     }
 }
 
+pub struct Highlight<'a> {
+    colors: &'a Colors,
+    hl_attr: Option<&'a HlAttr>,
+}
+
+impl<'a> Highlight<'a> {
+    pub fn fg(&self) -> &Color {
+        if self.hl_attr.and_then(|hl| hl.reverse).unwrap_or(false) {
+            self.hl_attr
+                .and_then(|hl| hl.background.as_ref())
+                .unwrap_or(&self.colors.bg)
+        } else {
+            self.hl_attr
+                .and_then(|hl| hl.foreground.as_ref())
+                .unwrap_or(&self.colors.fg)
+        }
+    }
+
+    pub fn bg(&self) -> &Color {
+        if self.hl_attr.and_then(|hl| hl.reverse).unwrap_or(false) {
+            self.hl_attr
+                .and_then(|hl| hl.foreground.as_ref())
+                .unwrap_or(&self.colors.fg)
+        } else {
+            self.hl_attr
+                .and_then(|hl| hl.background.as_ref())
+                .unwrap_or(&self.colors.bg)
+        }
+    }
+
+    pub fn sp(&self) -> &Color {
+        self.hl_attr
+            .and_then(|hl| hl.special.as_ref())
+            .unwrap_or(&self.colors.sp)
+    }
+
+    pub fn hl_attr(&self) -> Option<&HlAttr> {
+        self.hl_attr
+    }
+}
+
+/// Mapping from `nvim::HlAttr` that has the color fields converted to `Color`.
 #[derive(Debug)]
 pub struct HlAttr {
     pub foreground: Option<Color>,
@@ -115,7 +124,7 @@ impl From<nvim::types::HlAttr> for HlAttr {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct Color(gdk::RGBA);
 
 impl Default for Color {

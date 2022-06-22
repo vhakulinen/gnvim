@@ -29,8 +29,9 @@ impl Cursor {
 
         let font = imp.font.borrow();
         let hl_id = imp.attr_id.borrow();
-        let fg = colors.get_hl_fg(&hl_id);
-        let bg = colors.get_hl_bg(&hl_id);
+        let hl = colors.get_hl(&hl_id);
+        let fg = hl.fg();
+        let bg = hl.bg();
         // For hl id zero, we need to flip fg and bg.
         let (fg, bg) = if *hl_id == 0 { (bg, fg) } else { (fg, bg) };
 
