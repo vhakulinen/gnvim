@@ -220,7 +220,7 @@ impl AppWindow {
                 .for_each(|event| self.handle_default_colors_set(event)),
             UiEvent::HlAttrDefine(events) => events.into_iter().for_each(|event| {
                 let mut colors = self.colors.borrow_mut();
-                colors.hls.insert(event.id, event.rgb_attrs);
+                colors.hls.insert(event.id, event.rgb_attrs.into());
             }),
             UiEvent::HlGroupSet(events) => events.into_iter().for_each(|event| {
                 self.handle_hl_group_set(event);

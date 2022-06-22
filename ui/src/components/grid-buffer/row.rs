@@ -202,25 +202,25 @@ impl Row {
             let sp = colors.get_hl_sp(&segment.hl_id);
 
             // Create glyphs.
-            crate::render::render_text(&snapshot_fg, ctx, &text, &fg, &attrs, x, baseline);
+            crate::render::render_text(&snapshot_fg, ctx, &text, fg, &attrs, x, baseline);
 
             if hl.and_then(|hl| hl.underline).unwrap_or(false) {
-                crate::render::render_underline(&snapshot_fg, font, &sp, x, baseline, width)
+                crate::render::render_underline(&snapshot_fg, font, sp, x, baseline, width)
             }
 
             if hl.and_then(|hl| hl.underlineline).unwrap_or(false) {
-                crate::render::render_underlineline(&snapshot_fg, font, &sp, x, baseline, width)
+                crate::render::render_underlineline(&snapshot_fg, font, sp, x, baseline, width)
             }
 
             if hl.and_then(|hl| hl.strikethrough).unwrap_or(false) {
-                crate::render::render_strikethrough(&snapshot_fg, font, &fg, x, baseline, width)
+                crate::render::render_strikethrough(&snapshot_fg, font, fg, x, baseline, width)
             }
 
             if hl.and_then(|hl| hl.undercurl).unwrap_or(false) {
                 crate::render::render_undercurl(
                     &snapshot_fg,
                     font,
-                    &sp,
+                    sp,
                     x,
                     baseline,
                     width,
@@ -229,16 +229,16 @@ impl Row {
             }
 
             if hl.and_then(|hl| hl.underdot).unwrap_or(false) {
-                crate::render::render_underdot(&snapshot_fg, font, &sp, x, baseline, width)
+                crate::render::render_underdot(&snapshot_fg, font, sp, x, baseline, width)
             }
 
             if hl.and_then(|hl| hl.underdash).unwrap_or(false) {
-                crate::render::render_underdash(&snapshot_fg, font, &sp, x, baseline, width)
+                crate::render::render_underdash(&snapshot_fg, font, sp, x, baseline, width)
             }
 
             // Create background.
             snapshot_bg.append_node(
-                gsk::ColorNode::new(&bg, &graphene::Rect::new(x, bg_y, width, bg_h)).upcast(),
+                gsk::ColorNode::new(bg, &graphene::Rect::new(x, bg_y, width, bg_h)).upcast(),
             );
 
             let nodes = Rc::new(RefCell::new(Some(CellNodes {

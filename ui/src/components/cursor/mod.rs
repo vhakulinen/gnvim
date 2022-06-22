@@ -57,14 +57,14 @@ impl Cursor {
         // will be visible instead.
         snapshot.push_clip(&rect);
 
-        snapshot.append_node(gsk::ColorNode::new(&bg, &rect).upcast());
+        snapshot.append_node(gsk::ColorNode::new(bg, &rect).upcast());
 
         let attrs = crate::render::create_hl_attrs(&hl_id, colors, &font);
         crate::render::render_text(
             &snapshot,
             &self.pango_context(),
             &imp.text.borrow(),
-            &fg,
+            fg,
             &attrs,
             x,
             baseline,

@@ -2,8 +2,6 @@ use std::{collections::HashMap, ops::Deref};
 
 use gtk::gdk;
 
-use nvim::types::HlAttr;
-
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum HlGroup {
     MsgSeparator,
@@ -32,52 +30,88 @@ impl Colors {
         self.hl_groups.insert(group, hl_id);
     }
 
-    pub fn get_hl_group_fg(&self, group: &HlGroup) -> Color {
+    pub fn get_hl_group_fg(&self, group: &HlGroup) -> &Color {
         self.hl_groups
             .get(group)
             .map(|hl| self.get_hl_fg(hl))
-            .unwrap_or(self.fg)
+            .unwrap_or(&self.fg)
     }
 
-    pub fn get_hl_group_bg(&self, group: &HlGroup) -> Color {
+    pub fn get_hl_group_bg(&self, group: &HlGroup) -> &Color {
         self.hl_groups
             .get(group)
             .map(|hl| self.get_hl_bg(hl))
-            .unwrap_or(self.bg)
+            .unwrap_or(&self.bg)
     }
 
-    pub fn get_hl_fg(&self, hl: &i64) -> Color {
+    pub fn get_hl_fg(&self, hl: &i64) -> &Color {
         self.hls
             .get(hl)
             .map(|hl| {
                 if hl.reverse.unwrap_or(false) {
-                    hl.background.map(Color::from_i64).unwrap_or(self.bg)
+                    hl.background.as_ref().unwrap_or(&self.bg)
                 } else {
-                    hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
+                    hl.foreground.as_ref().unwrap_or(&self.fg)
                 }
             })
-            .unwrap_or(self.fg)
+            .unwrap_or(&self.fg)
     }
 
-    pub fn get_hl_bg(&self, hl: &i64) -> Color {
+    pub fn get_hl_bg(&self, hl: &i64) -> &Color {
         self.hls
             .get(hl)
             .map(|hl| {
                 if hl.reverse.unwrap_or(false) {
-                    hl.foreground.map(Color::from_i64).unwrap_or(self.fg)
+                    hl.foreground.as_ref().unwrap_or(&self.fg)
                 } else {
-                    hl.background.map(Color::from_i64).unwrap_or(self.bg)
+                    hl.background.as_ref().unwrap_or(&self.bg)
                 }
             })
-            .unwrap_or(self.bg)
+            .unwrap_or(&self.bg)
     }
 
-    pub fn get_hl_sp(&self, hl: &i64) -> Color {
+    pub fn get_hl_sp(&self, hl: &i64) -> &Color {
         self.hls
             .get(hl)
-            .and_then(|hl| hl.special)
-            .map(Color::from_i64)
-            .unwrap_or(self.sp)
+            .and_then(|hl| hl.special.as_ref())
+            .unwrap_or(&self.sp)
+    }
+}
+
+#[derive(Debug)]
+pub struct HlAttr {
+    pub foreground: Option<Color>,
+    pub background: Option<Color>,
+    pub special: Option<Color>,
+    pub reverse: Option<bool>,
+    pub italic: Option<bool>,
+    pub bold: Option<bool>,
+    pub strikethrough: Option<bool>,
+    pub underline: Option<bool>,
+    pub underlineline: Option<bool>,
+    pub undercurl: Option<bool>,
+    pub underdot: Option<bool>,
+    pub underdash: Option<bool>,
+    pub blend: Option<Color>,
+}
+
+impl From<nvim::types::HlAttr> for HlAttr {
+    fn from(from: nvim::types::HlAttr) -> Self {
+        HlAttr {
+            foreground: from.foreground.map(From::from),
+            background: from.background.map(From::from),
+            special: from.special.map(From::from),
+            reverse: from.reverse,
+            italic: from.italic,
+            bold: from.bold,
+            strikethrough: from.strikethrough,
+            underline: from.underline,
+            underlineline: from.underline,
+            undercurl: from.undercurl,
+            underdot: from.underdot,
+            underdash: from.underdash,
+            blend: from.blend.map(From::from),
+        }
     }
 }
 
@@ -107,6 +141,12 @@ impl Color {
             (self.green() * 255.0) as u8,
             (self.blue() * 255.0) as u8
         )
+    }
+}
+
+impl From<i64> for Color {
+    fn from(from: i64) -> Self {
+        Self::from_i64(from)
     }
 }
 
