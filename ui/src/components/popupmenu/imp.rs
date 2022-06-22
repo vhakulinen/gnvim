@@ -7,7 +7,7 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::font::Font;
+use crate::{font::Font, SCALE};
 
 use super::Row;
 
@@ -25,6 +25,8 @@ pub struct Popupmenu {
     pub selection_model: gtk::SingleSelection,
     pub store: RefCell<gio::ListStore>,
     pub font: RefCell<Font>,
+    // TODO(ville): This should probably be a gobject property of the font it self.
+    pub font_char_width: Cell<f32>,
 }
 
 #[glib::object_subclass]
@@ -59,6 +61,16 @@ impl ObjectImpl for Popupmenu {
             obj.bind_property("font", &item, "font")
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
+            obj.bind_property("font-char-width", &item, "margin-start")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            obj.bind_property("font-char-width", &item, "margin-end")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            obj.bind_property("font-char-width", &item, "spacing")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+
             listitem.set_child(Some(&item));
         }));
 
@@ -86,13 +98,24 @@ impl ObjectImpl for Popupmenu {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![
+                glib::ParamSpecObject::new(
+                    "font",
+                    "font",
+                    "Font",
+                    Font::static_type(),
+                    glib::ParamFlags::READWRITE,
+                ),
+                glib::ParamSpecFloat::new(
+                    "font-char-width",
+                    "font-char-width",
+                    "The font's char width",
+                    0.0,
+                    f32::MAX,
+                    0.0,
+                    glib::ParamFlags::READWRITE,
+                ),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -101,21 +124,28 @@ impl ObjectImpl for Popupmenu {
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
+            "font-char-width" => self.font_char_width.get().to_value(),
             _ => unimplemented!(),
         }
     }
 
     fn set_property(
         &self,
-        _obj: &Self::Type,
+        obj: &Self::Type,
         _id: usize,
         value: &glib::Value,
         pspec: &glib::ParamSpec,
     ) {
         match pspec.name() {
             "font" => {
-                self.font
-                    .replace(value.get().expect("font value must be object Font"));
+                let font: Font = value.get().expect("font value must be object Font");
+                let char_width = font.char_width() as f32 / SCALE;
+                self.font.replace(font);
+                obj.set_property("font-char-width", char_width);
+            }
+            "font-char-width" => {
+                self.font_char_width
+                    .replace(value.get().expect("font-char-width value must be f32"));
             }
             _ => unimplemented!(),
         };

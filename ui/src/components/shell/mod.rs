@@ -308,7 +308,8 @@ impl Shell {
         let x = if x + pmenu_w > max_w {
             (max_w - pmenu_w).max(0.0)
         } else {
-            x
+            // Adjust for padding when not overflowing to the right.
+            x - imp.popupmenu.get_padding_x()
         };
 
         imp.popupmenu.set_max_width(max_w.floor() as i32);

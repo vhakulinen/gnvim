@@ -27,6 +27,10 @@ impl Popupmenu {
         }
     }
 
+    pub fn get_padding_x(&self) -> f32 {
+        self.imp().font_char_width.get()
+    }
+
     /// Proxy to get the internal listview's preferred size.
     pub fn listview_preferred_size(&self) -> (gtk::Requisition, gtk::Requisition) {
         self.imp().listview.preferred_size()
