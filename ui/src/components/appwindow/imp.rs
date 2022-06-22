@@ -1,7 +1,10 @@
 use std::cell::{Cell, RefCell};
+use std::ffi::OsStr;
 use std::rc::Rc;
 use std::time::Duration;
 
+use nvim::dict;
+use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
 use nvim::types::UiEvent;
 use nvim::types::{ModeInfo, OptionSet, UiOptions};
@@ -18,10 +21,12 @@ use gtk::{
 use gio_compat::CompatRead;
 use nvim::rpc::RpcReader;
 
+use crate::api::GnvimEvent;
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::shell::Shell;
 use crate::font::Font;
 use crate::nvim::Neovim;
+use crate::warn;
 use crate::{arguments::BoxedArguments, spawn_local, SCALE};
 
 #[derive(CompositeTemplate, Default)]
@@ -82,6 +87,16 @@ impl AppWindow {
                                 .into_iter()
                                 .for_each(|event| self.handle_ui_event(&obj, event))
                         }
+                        "gnvim" => match params {
+                            rmpv::Value::Array(params) => params
+                                .into_iter()
+                                .map(GnvimEvent::deserialize)
+                                .for_each(|res| match res {
+                                    Ok(event) => self.handle_gnvim_event(&obj, event),
+                                    Err(err) => warn!("failed to parse gnvim event: {:?}", err),
+                                }),
+                            params => warn!("unexpected gnvim params: {:?}", params),
+                        },
                         _ => {
                             println!("Unexpected notification: {}", method);
                         }
@@ -112,6 +127,31 @@ impl AppWindow {
         colors.sp = Color::from_i64(event.rgb_sp);
 
         self.css_on_flush.set(true);
+    }
+
+    fn handle_gnvim_event(&self, obj: &super::AppWindow, event: GnvimEvent) {
+        match event {
+            GnvimEvent::EchoRepeat(echo_repeat) => {
+                let msg = vec![
+                    rmpv::Value::from(vec![rmpv::Value::from(echo_repeat.msg)]);
+                    echo_repeat.times
+                ];
+
+                spawn_local!(clone!(@weak self.nvim as nvim => async move {
+                    let res = nvim
+                        .client()
+                        .await
+                        .nvim_echo(msg.into(), false, dict![])
+                        .await
+                        .unwrap();
+
+                    res.await.expect("nvim_ui_try_resize failed");
+                }));
+            }
+            GnvimEvent::GtkDebugger => {
+                self.enable_debugging(obj, true);
+            }
+        }
     }
 
     fn handle_ui_event(&self, obj: &super::AppWindow, event: UiEvent) {
@@ -423,10 +463,9 @@ impl ObjectImpl for AppWindow {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
 
-        let args = self.args.borrow();
-        let reader = self
-            .nvim
-            .open(args.nvim.as_ref(), &args.files, &args.nvim_args);
+        let args = self.args.borrow().nvim_cmd_args();
+        let args: Vec<&OsStr> = args.iter().map(|a| a.as_ref()).collect();
+        let reader = self.nvim.open(&args);
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -435,6 +474,25 @@ impl ObjectImpl for AppWindow {
 
         // Call nvim_ui_attach.
         spawn_local!(clone!(@weak self.nvim as nvim => async move {
+            let res = nvim
+                .client()
+                .await
+                .nvim_set_client_info(
+                    "gnvim".to_string(),
+                    // TODO(ville): The Dictionary thingy isn't that nice after all,
+                    // figure out something better.
+                    dict![
+                        "major" => 0
+                        "minor" => 1
+                        "patch" => 0
+                    ],
+                    "ui".to_string(),
+                    dict![],
+                    dict![],
+                ).await.expect("call to nvim failed");
+
+            res.await.expect("nvim_set_client_info failed");
+
             let res = nvim
                 .client()
                 .await

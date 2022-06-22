@@ -1,6 +1,7 @@
 use clap::Parser;
 use gtk::{gio, pango, prelude::*};
 
+mod api;
 mod arguments;
 mod child_iter;
 mod colors;
