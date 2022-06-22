@@ -1,3 +1,4 @@
+use glib::clone;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 
 mod imp;
@@ -5,6 +6,8 @@ mod row;
 
 use nvim::types::PopupmenuItem;
 use row::Row;
+
+use crate::{nvim::Neovim, spawn_local, SCALE};
 
 glib::wrapper! {
     pub struct Popupmenu(ObjectSubclass<imp::Popupmenu>)
@@ -43,5 +46,28 @@ impl Popupmenu {
 
     pub fn set_max_width(&self, w: i32) {
         self.imp().max_width.set(w);
+    }
+
+    pub fn report_pum_bounds(&self, nvim: &Neovim, x: f32, y: f32) {
+        let imp = self.imp();
+        let font = imp.font.borrow();
+        let (_, req) = self.preferred_size();
+        let (w, h) = (req.width() as f32, req.height() as f32);
+
+        let w = (w / (font.char_width() / SCALE)) as f64;
+        let h = (h / (font.height() / SCALE)) as f64;
+        let col = (x / (font.char_width() / SCALE)) as f64;
+        let row = (y / (font.height() / SCALE)) as f64;
+
+        spawn_local!(clone!(@weak nvim => async move {
+            let res = nvim
+                .client()
+                .await
+                .nvim_ui_pum_set_bounds(w, h, row, col)
+                .await
+                .unwrap();
+
+            res.await.expect("nvim_ui_pum_set_bounds failed");
+        }));
     }
 }

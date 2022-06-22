@@ -18,7 +18,7 @@ impl Row {
         let imp = self.imp();
 
         imp.word.set_label(&item.word);
-        imp.kind.set_label(&format!("[{}]", item.kind));
+        imp.kind.set_label(&item.kind);
     }
 }
 

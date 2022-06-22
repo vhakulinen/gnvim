@@ -314,6 +314,8 @@ impl Shell {
         imp.popupmenu.set_max_width(max_w.floor() as i32);
         imp.popupmenu.set_max_height(max_h.floor() as i32);
         imp.fixed.move_(&*imp.popupmenu, x, y);
+
+        imp.popupmenu.report_pum_bounds(&imp.nvim.borrow(), x, y);
     }
 
     pub fn handle_popupmenu_select(&self, event: PopupmenuSelect) {
