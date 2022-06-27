@@ -15,6 +15,7 @@ use crate::{
     font::Font,
     input::{Action, Mouse},
     nvim::Neovim,
+    some_or_return,
 };
 
 use super::ExternalWindow;
@@ -212,7 +213,8 @@ impl Grid {
         let imp = self.imp();
 
         let rows = imp.buffer.get_rows();
-        let cells = &rows.get(row as usize).expect("invalid row").cells;
+        let cells =
+            &some_or_return!(rows.get(row as usize), "cursor_goto: invalid row {}", row).cells;
         let cell = cells.get(col as usize).expect("invalid col");
 
         imp.cursor.move_to(cell, col, row);

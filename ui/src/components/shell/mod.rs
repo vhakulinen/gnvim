@@ -13,14 +13,13 @@ use super::Grid;
 
 macro_rules! find_grid_or_return {
     ($self:expr, $grid:expr) => {
-        if let Some(grid) = $self.find_grid($grid) {
-            grid
-        } else {
-            // TODO(ville): It would make sense to display some error to the
-            // user here too.
-            warn!("grid {} not found in {}:{}", $grid, file!(), line!());
-            return;
-        }
+        crate::some_or_return!(
+            $self.find_grid($grid),
+            "grid {} not found in {}:{}",
+            $grid,
+            file!(),
+            line!()
+        )
     };
 }
 
