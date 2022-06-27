@@ -26,8 +26,6 @@
         </child>
         <child>
             <object class="Fixedz" id="windows">
-                <property name="can-target">false</property>
-
                 <child>
                     <object class="MsgWin" id="msg-win">
                         <property name="can-target">false</property>
