@@ -111,43 +111,24 @@ impl ObjectImpl for Grid {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecInt64::new(
-                    "grid-id",
-                    "Grid ID",
-                    "Grid ID",
-                    i64::MIN,
-                    i64::MAX,
-                    0,
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
-                glib::ParamSpecObject::new(
-                    "nvim",
-                    "nvim",
-                    "Neovim",
-                    Neovim::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecObject::new(
-                    "font",
-                    "font",
-                    "Font",
-                    Font::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecBoolean::new(
-                    "busy",
-                    "Busy",
-                    "Busy",
-                    false,
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecBoolean::new(
-                    "active",
-                    "active",
-                    "Active",
-                    false,
-                    glib::ParamFlags::READWRITE,
-                ),
+                glib::ParamSpecInt64::builder("grid-id")
+                    .default_value(0)
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
+                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecObject::builder("font", Font::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecBoolean::builder("busy")
+                    .default_value(false)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecBoolean::builder("active")
+                    .default_value(false)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 

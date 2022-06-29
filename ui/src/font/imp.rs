@@ -82,22 +82,15 @@ impl ObjectImpl for Font {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecString::new(
-                    "guifont",
-                    "Neovim guifont value",
-                    "Used to construct internal pango font",
-                    Some("Monospace 12"),
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
-                glib::ParamSpecFloat::new(
-                    "linespace",
-                    "Linespace",
-                    "Linespace",
-                    0.0,
-                    f32::MAX,
-                    0.0,
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
+                glib::ParamSpecString::builder("guifont")
+                    .default_value(Some("Monospace 12"))
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
+                glib::ParamSpecFloat::builder("linespace")
+                    .minimum(0.0)
+                    .default_value(0.0)
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
             ]
         });
 

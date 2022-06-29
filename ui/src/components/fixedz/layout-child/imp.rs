@@ -21,22 +21,13 @@ impl ObjectImpl for Child {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecBoxed::new(
-                    "position",
-                    "position",
-                    "Position",
-                    gsk::Transform::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecInt64::new(
-                    "z-index",
-                    "z-index",
-                    "Z-index",
-                    i64::MIN,
-                    i64::MAX,
-                    0,
-                    glib::ParamFlags::READWRITE,
-                ),
+                glib::ParamSpecBoxed::builder("position", gsk::Transform::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecInt64::builder("z-index")
+                    .default_value(0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 

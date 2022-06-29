@@ -42,27 +42,17 @@ impl ObjectImpl for Cursor {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::new(
-                    "font",
-                    "font",
-                    "Font",
-                    Font::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecBoolean::new(
-                    "active",
-                    "Active",
-                    "Active",
-                    false,
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecBoolean::new(
-                    "busy",
-                    "Busy",
-                    "Busy",
-                    false,
-                    glib::ParamFlags::READWRITE,
-                ),
+                glib::ParamSpecObject::builder("font", Font::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecBoolean::builder("active")
+                    .default_value(false)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecBoolean::builder("busy")
+                    .default_value(false)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 

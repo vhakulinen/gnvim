@@ -99,22 +99,14 @@ impl ObjectImpl for Popupmenu {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::new(
-                    "font",
-                    "font",
-                    "Font",
-                    Font::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecFloat::new(
-                    "font-char-width",
-                    "font-char-width",
-                    "The font's char width",
-                    0.0,
-                    f32::MAX,
-                    0.0,
-                    glib::ParamFlags::READWRITE,
-                ),
+                glib::ParamSpecObject::builder("font", Font::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecFloat::builder("font-char-width")
+                    .minimum(0.0)
+                    .default_value(0.0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 

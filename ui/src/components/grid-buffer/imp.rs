@@ -30,13 +30,9 @@ impl ObjectImpl for GridBuffer {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::READWRITE,
-            )]
+            vec![glib::ParamSpecObject::builder("font", Font::static_type())
+                .flags(glib::ParamFlags::READWRITE)
+                .build()]
         });
 
         PROPERTIES.as_ref()

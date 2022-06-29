@@ -40,13 +40,9 @@ impl ObjectImpl for Row {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::new(
-                "font",
-                "font",
-                "Font",
-                Font::static_type(),
-                glib::ParamFlags::WRITABLE,
-            )]
+            vec![glib::ParamSpecObject::builder("font", Font::static_type())
+                .flags(glib::ParamFlags::WRITABLE)
+                .build()]
         });
 
         PROPERTIES.as_ref()

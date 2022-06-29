@@ -531,27 +531,15 @@ impl ObjectImpl for AppWindow {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::new(
-                    "font",
-                    "font",
-                    "Font",
-                    Font::static_type(),
-                    glib::ParamFlags::READWRITE,
-                ),
-                glib::ParamSpecObject::new(
-                    "nvim",
-                    "nvim",
-                    "Neovim client",
-                    Neovim::static_type(),
-                    glib::ParamFlags::READABLE,
-                ),
-                glib::ParamSpecBoxed::new(
-                    "args",
-                    "args",
-                    "Arguments",
-                    BoxedArguments::static_type(),
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
+                glib::ParamSpecObject::builder("font", Font::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                    .flags(glib::ParamFlags::READABLE)
+                    .build(),
+                glib::ParamSpecBoxed::builder("args", BoxedArguments::static_type())
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
             ]
         });
 

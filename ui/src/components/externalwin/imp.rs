@@ -89,20 +89,12 @@ impl ObjectImpl for ExternalWindow {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::new(
-                    "main-window",
-                    "main-window",
-                    "The application's main window, where all the input is redirected.",
-                    gtk::Window::static_type(),
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
-                glib::ParamSpecObject::new(
-                    "grid",
-                    "grid",
-                    "Grid",
-                    Grid::static_type(),
-                    glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY,
-                ),
+                glib::ParamSpecObject::builder("main-window", gtk::Window::static_type())
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
+                glib::ParamSpecObject::builder("grid", Grid::static_type())
+                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
+                    .build(),
             ]
         });
 
