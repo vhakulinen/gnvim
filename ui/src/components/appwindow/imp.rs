@@ -3,7 +3,6 @@ use std::ffi::OsStr;
 use std::rc::Rc;
 use std::time::Duration;
 
-use nvim::dict;
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
 use nvim::types::UiEvent;
@@ -141,7 +140,7 @@ impl AppWindow {
                     let res = nvim
                         .client()
                         .await
-                        .nvim_echo(msg.into(), false, dict![])
+                        .nvim_echo(msg.into(), false, rmpv::Value::Nil)
                         .await
                         .unwrap();
 
@@ -479,16 +478,11 @@ impl ObjectImpl for AppWindow {
                 .await
                 .nvim_set_client_info(
                     "gnvim".to_string(),
-                    // TODO(ville): The Dictionary thingy isn't that nice after all,
-                    // figure out something better.
-                    dict![
-                        "major" => 0
-                        "minor" => 1
-                        "patch" => 0
-                    ],
+                    // TODO(ville): Tell the version in client info.
+                    rmpv::Value::Map(vec![]),
                     "ui".to_string(),
-                    dict![],
-                    dict![],
+                    rmpv::Value::Map(vec![]),
+                    rmpv::Value::Map(vec![]),
                 ).await.expect("call to nvim failed");
 
             res.await.expect("nvim_set_client_info failed");

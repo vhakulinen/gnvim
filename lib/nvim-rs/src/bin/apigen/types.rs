@@ -43,7 +43,6 @@ impl<T: AsRef<str>> AsRustType for T {
             "String" => "String",
             "void" => "()",
             "Window" => "Window",
-            "Dictionary" => "Dictionary",
             "ArrayOf(Integer, 2)" => "(i64, i64)",
             "ArrayOf(String)" => "Vec<String>",
             "ArrayOf(Integer)" => "Vec<i64>",

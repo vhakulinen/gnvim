@@ -58,7 +58,7 @@ pub struct CursorGoto {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct HighlightSet {
-    pub attrs: Dictionary,
+    pub attrs: rmpv::Value, /* Dictionary */
 }
 
 #[derive(Debug, serde::Deserialize)]
