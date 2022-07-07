@@ -4,6 +4,7 @@ use crate::{colors::Colors, SCALE};
 
 use super::grid_buffer::row::Cell;
 
+mod blink;
 mod imp;
 
 glib::wrapper! {
@@ -15,10 +16,6 @@ glib::wrapper! {
 impl Cursor {
     fn new() -> Self {
         glib::Object::new(&[]).expect("Failed to create Cursor")
-    }
-
-    pub fn set_active(&self, active: bool) {
-        self.set_property("active", active);
     }
 
     pub fn flush(&self, colors: &Colors) {
@@ -95,6 +92,14 @@ impl Cursor {
         imp.text.replace(cell.text.clone());
         imp.double_width.replace(cell.double_width);
 
+        if let Some(ref mut blink) = *imp.blink.borrow_mut() {
+            blink.reset_to_wait(
+                self.frame_clock()
+                    .expect("failed to get frame clock")
+                    .frame_time() as f64,
+            );
+        }
+
         // Clear the render node.
         imp.node.replace(None);
     }
@@ -102,18 +107,6 @@ impl Cursor {
     pub fn set_text(&self, text: String) {
         let imp = self.imp();
         imp.text.replace(text);
-        imp.node.replace(None);
-    }
-
-    pub fn set_width_percentage(&self, p: f32) {
-        let imp = self.imp();
-        imp.width_percentage.replace(p);
-        imp.node.replace(None);
-    }
-
-    pub fn set_attr_id(&self, id: i64) {
-        let imp = self.imp();
-        imp.attr_id.replace(id);
         imp.node.replace(None);
     }
 }

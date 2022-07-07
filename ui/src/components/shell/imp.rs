@@ -8,6 +8,7 @@ use gtk::subclass::prelude::*;
 use crate::components::grid::Grid;
 use crate::components::{Fixedz, MsgWin, Popupmenu};
 use crate::font::Font;
+use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 
 #[derive(gtk::CompositeTemplate, Default)]
@@ -39,6 +40,8 @@ pub struct Shell {
     pub current_grid: RefCell<Grid>,
     pub font: RefCell<Font>,
     pub busy: Cell<bool>,
+    pub current_mode_info: RefCell<ModeInfo>,
+    pub cursor_blink_transition: Cell<f64>,
 }
 
 #[glib::object_subclass]
@@ -83,6 +86,13 @@ impl ObjectImpl for Shell {
                     .default_value(false)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
+                glib::ParamSpecBoxed::builder("current-mode-info", ModeInfo::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecDouble::builder("cursor-blink-transition")
+                    .minimum(0.0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 
@@ -94,6 +104,8 @@ impl ObjectImpl for Shell {
             "font" => self.font.borrow().to_value(),
             "busy" => self.busy.get().to_value(),
             "nvim" => self.nvim.borrow().to_value(),
+            "current-mode-info" => self.current_mode_info.borrow().to_value(),
+            "cursor-blink-transition" => self.cursor_blink_transition.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -120,6 +132,18 @@ impl ObjectImpl for Shell {
                         .expect("nvim value needs to be an Neovim object"),
                 );
             }
+            "current-mode-info" => {
+                self.current_mode_info.replace(
+                    value
+                        .get()
+                        .expect("current-mode-info must be an ModeInfo object"),
+                );
+            }
+            "cursor-blink-transition" => self.cursor_blink_transition.set(
+                value
+                    .get()
+                    .expect("cursor-blink-transition value must be a f64"),
+            ),
             _ => unimplemented!(),
         };
     }

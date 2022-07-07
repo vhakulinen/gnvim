@@ -10,6 +10,7 @@ use nvim::types::Window;
 
 use crate::components::{Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
+use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 use crate::spawn_local;
 
@@ -33,12 +34,14 @@ pub struct Grid {
     /// If grid is the active grid or not.
     pub active: Cell<bool>,
     pub busy: Cell<bool>,
+    pub mode_info: RefCell<ModeInfo>,
 
     pub external_win: RefCell<Option<ExternalWindow>>,
     pub gesture_click: gtk::GestureClick,
     pub gesture_drag: gtk::GestureDrag,
     pub event_controller_scroll: gtk::EventControllerScroll,
     pub event_controller_motion: gtk::EventControllerMotion,
+    pub cursor_blink_transition: Cell<f64>,
 }
 
 #[glib::object_subclass]
@@ -129,6 +132,14 @@ impl ObjectImpl for Grid {
                     .default_value(false)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
+                glib::ParamSpecBoxed::builder("mode-info", ModeInfo::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecDouble::builder("cursor-blink-transition")
+                    .minimum(0.0)
+                    .default_value(160.0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 
@@ -142,6 +153,8 @@ impl ObjectImpl for Grid {
             "nvim" => self.nvim.borrow().to_value(),
             "busy" => self.busy.get().to_value(),
             "active" => self.active.get().to_value(),
+            "mode-info" => self.mode_info.borrow().to_value(),
+            "cursor-blink-transition" => self.cursor_blink_transition.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -172,6 +185,18 @@ impl ObjectImpl for Grid {
             "active" => self
                 .active
                 .set(value.get().expect("active value must be a boolean")),
+            "mode-info" => {
+                self.mode_info.replace(
+                    value
+                        .get()
+                        .expect("mode-info needs to be an ModeInfo object"),
+                );
+            }
+            "cursor-blink-transition" => self.cursor_blink_transition.set(
+                value
+                    .get()
+                    .expect("cursor-blink-transition value needs to be a f64"),
+            ),
             _ => unimplemented!(),
         }
     }

@@ -41,4 +41,8 @@ function M.gtk_debugger()
   M.notify('gtk_debugger')
 end
 
+function M.set_cursor_blink_transition(t)
+  M.notify('cursor_blink_transition', t)
+end
+
 return M

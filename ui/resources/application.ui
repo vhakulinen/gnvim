@@ -21,6 +21,7 @@
                     bind-property="nvim"
                     bind-flags="sync-create"
                 />
+                <property name="cursor-blink-transition">160</property>
             </object>
         </child>
     </template>

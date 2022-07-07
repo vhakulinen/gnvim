@@ -1,0 +1,21 @@
+*gnvim* GUI for Neovim.
+
+                      ____ _   _       _             ~
+                     / ___| \ | |_   _(_)_ __ ___    ~
+                    | |  _|  \| \ \ / / | '_ ` _ \   ~
+                    | |_| | |\  |\ V /| | | | | | |  ~
+                     \____|_| \_| \_/ |_|_| |_| |_|  ~
+
+
+
+================================================================================
+Cursor                                                           *gnvim-cursor*
+
+Gnvim's cursors respects neovim's blink options through 'guicursor'. In
+addition to blink wait, on and off, gnvim has cursor transition state which
+defines the time it takes to transition from one state to another. This can
+be set through `set_cursor_blink_transition`: >
+
+    require('gnvim').set_cursor_blink_transition(100)
+<
+The blink transition is in milliseconds.

@@ -6,7 +6,7 @@ use std::time::Duration;
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
 use nvim::types::UiEvent;
-use nvim::types::{ModeInfo, OptionSet, UiOptions};
+use nvim::types::{OptionSet, UiOptions};
 
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
@@ -24,6 +24,7 @@ use crate::api::GnvimEvent;
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::shell::Shell;
 use crate::font::Font;
+use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 use crate::warn;
 use crate::{arguments::BoxedArguments, spawn_local, SCALE};
@@ -150,6 +151,9 @@ impl AppWindow {
             GnvimEvent::GtkDebugger => {
                 self.enable_debugging(obj, true);
             }
+            GnvimEvent::CursorBlinkTransition(t) => {
+                self.shell.set_cursor_blink_transition(t);
+            }
         }
     }
 
@@ -161,7 +165,8 @@ impl AppWindow {
             }),
             UiEvent::SetIcon(_) => {}
             UiEvent::ModeInfoSet(events) => events.into_iter().for_each(|event| {
-                self.mode_infos.replace(event.cursor_styles);
+                self.mode_infos
+                    .replace(event.cursor_styles.into_iter().map(Into::into).collect());
             }),
             UiEvent::OptionSet(events) => events.into_iter().for_each(|event| {
                 self.handle_option_set(obj, event);

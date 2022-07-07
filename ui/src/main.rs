@@ -9,6 +9,7 @@ mod components;
 mod font;
 mod input;
 mod macros;
+mod mode_info;
 mod nvim;
 mod render;
 

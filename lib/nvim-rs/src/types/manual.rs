@@ -83,7 +83,7 @@ impl<'de> serde::Deserialize<'de> for GridLineData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CursorShape {
     Block,
     Horizontal,
@@ -113,7 +113,7 @@ impl<'de> serde::Deserialize<'de> for CursorShape {
     }
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
+#[derive(Debug, Default, serde::Deserialize, Clone)]
 pub struct ModeInfo {
     pub cursor_shape: Option<CursorShape>,
     pub cell_percentage: Option<u64>,

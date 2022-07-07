@@ -22,6 +22,18 @@
                     bind-property="busy"
                     bind-flags="sync-create"
                 />
+                <property
+                    name="mode-info"
+                    bind-source="Shell"
+                    bind-property="current-mode-info"
+                    bind-flags="sync-create"
+                />
+                <property
+                    name="cursor-blink-transition"
+                    bind-source="Shell"
+                    bind-property="cursor-blink-transition"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
         <child>

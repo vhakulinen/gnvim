@@ -31,6 +31,18 @@
                     bind-property="active"
                     bind-flags="sync-create"
                 />
+                <property
+                    name="mode-info"
+                    bind-source="Grid"
+                    bind-property="mode-info"
+                    bind-flags="sync-create"
+                />
+                <property
+                    name="blink-transition"
+                    bind-source="Grid"
+                    bind-property="cursor-blink-transition"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
     </template>

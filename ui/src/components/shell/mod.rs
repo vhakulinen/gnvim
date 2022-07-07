@@ -1,13 +1,10 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
-use nvim::types::{
-    uievents::{
-        GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
-        PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
-    },
-    ModeInfo,
+use nvim::types::uievents::{
+    GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
+    PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
 };
 
-use crate::{colors::Colors, font::Font, warn, SCALE};
+use crate::{colors::Colors, font::Font, mode_info::ModeInfo, warn, SCALE};
 
 use super::Grid;
 
@@ -45,6 +42,10 @@ impl Shell {
             .cloned()
     }
 
+    pub fn set_cursor_blink_transition(&self, t: f64) {
+        self.set_property("cursor-blink-transition", t);
+    }
+
     fn set_busy(&self, busy: bool) {
         self.set_property("busy", busy);
     }
@@ -78,6 +79,12 @@ impl Shell {
                     .flags(glib::BindingFlags::SYNC_CREATE)
                     .build();
                 self.bind_property("busy", &grid, "busy")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
+                self.bind_property("current-mode-info", &grid, "mode-info")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
+                self.bind_property("cursor-blink-transition", &grid, "cursor-blink-transition")
                     .flags(glib::BindingFlags::SYNC_CREATE)
                     .build();
 
@@ -120,11 +127,7 @@ impl Shell {
     }
 
     pub fn handle_mode_change(&self, mode: &ModeInfo) {
-        self.imp()
-            .grids
-            .borrow()
-            .iter()
-            .for_each(|grid| grid.mode_change(mode))
+        self.set_property("current-mode-info", mode);
     }
 
     pub fn handle_grid_destroy(&self, event: GridDestroy) {
