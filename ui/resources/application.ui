@@ -22,6 +22,7 @@
                     bind-flags="sync-create"
                 />
                 <property name="cursor-blink-transition">160</property>
+                <property name="cursor-position-transition">150</property>
             </object>
         </child>
     </template>

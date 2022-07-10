@@ -42,6 +42,7 @@ pub struct Shell {
     pub busy: Cell<bool>,
     pub current_mode_info: RefCell<ModeInfo>,
     pub cursor_blink_transition: Cell<f64>,
+    pub cursor_position_transition: Cell<f64>,
 }
 
 #[glib::object_subclass]
@@ -93,6 +94,10 @@ impl ObjectImpl for Shell {
                     .minimum(0.0)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
+                glib::ParamSpecDouble::builder("cursor-position-transition")
+                    .minimum(0.0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 
@@ -106,6 +111,7 @@ impl ObjectImpl for Shell {
             "nvim" => self.nvim.borrow().to_value(),
             "current-mode-info" => self.current_mode_info.borrow().to_value(),
             "cursor-blink-transition" => self.cursor_blink_transition.get().to_value(),
+            "cursor-position-transition" => self.cursor_position_transition.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -143,6 +149,11 @@ impl ObjectImpl for Shell {
                 value
                     .get()
                     .expect("cursor-blink-transition value must be a f64"),
+            ),
+            "cursor-position-transition" => self.cursor_position_transition.set(
+                value
+                    .get()
+                    .expect("cursor-position-transition value must be a f64"),
             ),
             _ => unimplemented!(),
         };

@@ -46,6 +46,10 @@ impl Shell {
         self.set_property("cursor-blink-transition", t);
     }
 
+    pub fn set_cursor_position_transition(&self, t: f64) {
+        self.set_property("cursor-position-transition", t);
+    }
+
     fn set_busy(&self, busy: bool) {
         self.set_property("busy", busy);
     }
@@ -87,6 +91,13 @@ impl Shell {
                 self.bind_property("cursor-blink-transition", &grid, "cursor-blink-transition")
                     .flags(glib::BindingFlags::SYNC_CREATE)
                     .build();
+                self.bind_property(
+                    "cursor-position-transition",
+                    &grid,
+                    "cursor-position-transition",
+                )
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
 
                 self.imp().grids.borrow_mut().push(grid.clone());
                 grid

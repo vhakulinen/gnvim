@@ -1,6 +1,6 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
-use crate::{colors::Colors, SCALE};
+use crate::{colors::Colors, warn, SCALE};
 
 use super::grid_buffer::row::Cell;
 
@@ -11,6 +11,10 @@ glib::wrapper! {
     pub struct Cursor(ObjectSubclass<imp::Cursor>)
         @extends gtk::Widget,
         @implements gtk::ConstraintTarget, gtk::Buildable, gtk::Accessible;
+}
+
+fn ease_out_cubic(t: f64) -> f64 {
+    1.0 + (t - 1.0).powi(3)
 }
 
 impl Cursor {
@@ -34,10 +38,6 @@ impl Cursor {
 
         let height = font.height();
         let ch = font.char_width();
-        let pos = imp.pos.borrow();
-        let x = pos.0 as f32 * ch / SCALE;
-        let y = pos.1 as f32 * height / SCALE;
-        let baseline = (pos.1 as f32 * height + font.baseline()) / SCALE;
 
         let snapshot = gtk::Snapshot::new();
 
@@ -47,7 +47,7 @@ impl Cursor {
             ch / SCALE
         };
         let width = width * *imp.width_percentage.borrow();
-        let rect = graphene::Rect::new(x, y, width, height / SCALE);
+        let rect = graphene::Rect::new(0.0, 0.0, width, height / SCALE);
 
         // Clip the area where we're drawing. This avoids a issue when the cursor
         // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
@@ -64,8 +64,8 @@ impl Cursor {
             &imp.text.borrow(),
             fg,
             &attrs,
-            x,
-            baseline,
+            0.0,
+            font.baseline() / SCALE,
         );
 
         snapshot.pop();
@@ -73,31 +73,71 @@ impl Cursor {
         let node = snapshot
             .to_node()
             .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast());
+
         imp.node.replace(Some(node));
 
         self.queue_draw();
     }
 
     pub fn row(&self) -> i64 {
-        return self.imp().pos.borrow().1;
+        return self.imp().pos.borrow().grid.1;
     }
 
     pub fn col(&self) -> i64 {
-        return self.imp().pos.borrow().0;
+        return self.imp().pos.borrow().grid.0;
     }
 
     pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
         let imp = self.imp();
-        imp.pos.replace((col, row));
+
         imp.text.replace(cell.text.clone());
         imp.double_width.replace(cell.double_width);
+        imp.pos.borrow_mut().grid = (col, row);
 
+        let start = self
+            .frame_clock()
+            .expect("failed to get frame clock")
+            .frame_time() as f64;
         if let Some(ref mut blink) = *imp.blink.borrow_mut() {
-            blink.reset_to_wait(
-                self.frame_clock()
-                    .expect("failed to get frame clock")
-                    .frame_time() as f64,
-            );
+            blink.reset_to_wait(start);
+        }
+
+        let font = imp.font.borrow();
+        let target = (
+            col as f64 * (font.char_width() / SCALE) as f64,
+            row as f64 * (font.height() / SCALE) as f64,
+        );
+        let start_pos = imp.pos.borrow().pos;
+        let end = start + imp.pos.borrow().transition;
+        let old_id =
+            imp.pos_tick
+                .borrow_mut()
+                .replace(self.add_tick_callback(move |this, clock| {
+                    let now = clock.frame_time() as f64;
+                    if now < start {
+                        warn!("Clock going backwards");
+                        return Continue(true);
+                    }
+
+                    let imp = this.imp();
+                    if now < end {
+                        let t = ease_out_cubic((now - start) / (end - start));
+                        let col = start_pos.0 + ((target.0 - start_pos.0) * t);
+                        let row = start_pos.1 + ((target.1 - start_pos.1) * t);
+                        imp.pos.borrow_mut().pos = (col, row);
+                        this.queue_draw();
+
+                        Continue(true)
+                    } else {
+                        imp.pos.borrow_mut().pos = target;
+                        this.queue_draw();
+
+                        Continue(false)
+                    }
+                }));
+
+        if let Some(old_id) = old_id {
+            old_id.remove();
         }
 
         // Clear the render node.

@@ -19,3 +19,6 @@ be set through `set_cursor_blink_transition`: >
     require('gnvim').set_cursor_blink_transition(100)
 <
 The blink transition is in milliseconds.
+
+Additionally, the cursors position change is also animated. The speed of this
+can be set through `set_cursor_position_transition`.

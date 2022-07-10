@@ -43,6 +43,12 @@
                     bind-property="cursor-blink-transition"
                     bind-flags="sync-create"
                 />
+                <property
+                    name="position-transition"
+                    bind-source="Grid"
+                    bind-property="cursor-position-transition"
+                    bind-flags="sync-create"
+                />
             </object>
         </child>
     </template>

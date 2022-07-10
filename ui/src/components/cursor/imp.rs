@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 
 use glib::clone;
 use gtk::subclass::prelude::*;
-use gtk::{glib, gsk, prelude::*};
+use gtk::{glib, graphene, gsk, prelude::*};
 
 use crate::font::Font;
 use crate::mode_info::ModeInfo;
@@ -11,8 +11,18 @@ use crate::SCALE;
 use super::blink::Blink;
 
 #[derive(Default)]
+pub struct Position {
+    /// Actual position on the grid.
+    pub grid: (i64, i64),
+    /// Current position on the screen.
+    pub pos: (f64, f64),
+    /// Transition time in milliseconds.
+    pub transition: f64,
+}
+
+#[derive(Default)]
 pub struct Cursor {
-    pub pos: RefCell<(i64, i64)>,
+    pub pos: RefCell<Position>,
     pub text: RefCell<String>,
     pub double_width: RefCell<bool>,
 
@@ -29,6 +39,7 @@ pub struct Cursor {
     pub blink_transition: Cell<f64>,
     /// Callback id to our function that makes the cursor blink.
     pub blink_tick: RefCell<Option<gtk::TickCallbackId>>,
+    pub pos_tick: RefCell<Option<gtk::TickCallbackId>>,
 }
 
 #[glib::object_subclass]
@@ -97,7 +108,10 @@ impl ObjectImpl for Cursor {
                     .build(),
                 glib::ParamSpecDouble::builder("blink-transition")
                     .minimum(0.0)
-                    .default_value(160.0)
+                    .flags(glib::ParamFlags::WRITABLE)
+                    .build(),
+                glib::ParamSpecDouble::builder("position-transition")
+                    .minimum(0.0)
                     .flags(glib::ParamFlags::WRITABLE)
                     .build(),
             ]
@@ -190,6 +204,13 @@ impl ObjectImpl for Cursor {
                     ),
                 );
             }
+            "position-transition" => {
+                let transition = value
+                    .get::<f64>()
+                    .expect("position-transition must be a f64")
+                    * 1000.0;
+                self.pos.borrow_mut().transition = transition;
+            }
             _ => unimplemented!(),
         };
     }
@@ -210,6 +231,15 @@ impl WidgetImpl for Cursor {
                     .map(|blink| blink.alpha as f32)
                     .unwrap_or(1.0),
             );
+
+            let pos = self.pos.borrow();
+            let node = gsk::TransformNode::new(
+                node,
+                &gsk::Transform::new()
+                    .translate(&graphene::Point::new(pos.pos.0 as f32, pos.pos.1 as f32))
+                    .expect("failed to translate 2d point"),
+            );
+
             snapshot.append_node(node);
         }
     }

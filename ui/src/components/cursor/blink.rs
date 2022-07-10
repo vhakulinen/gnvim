@@ -1,5 +1,7 @@
 use crate::warn;
 
+use super::ease_out_cubic;
+
 #[derive(Default, Debug)]
 pub struct Blink {
     wait: f64,
@@ -11,10 +13,6 @@ pub struct Blink {
     stage_end: f64,
     stage_start: f64,
     pub alpha: f64,
-}
-
-fn ease_out_cubic(t: f64) -> f64 {
-    1.0 + (t - 1.0).powi(3)
 }
 
 #[derive(Default, Debug)]

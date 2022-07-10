@@ -12,6 +12,7 @@ pub enum GnvimEvent {
     EchoRepeat(EchoRepeat),
     GtkDebugger,
     CursorBlinkTransition(f64),
+    CursorPositionTransition(f64),
 }
 
 #[derive(Debug, serde::Deserialize)]

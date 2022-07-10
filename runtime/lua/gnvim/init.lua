@@ -45,4 +45,8 @@ function M.set_cursor_blink_transition(t)
   M.notify('cursor_blink_transition', t)
 end
 
+function M.set_cursor_position_transition(t)
+  M.notify('cursor_position_transition', t)
+end
+
 return M
