@@ -223,25 +223,19 @@ impl WidgetImpl for Cursor {
         }
 
         if let Some(ref node) = *self.node.borrow() {
-            let node = gsk::OpacityNode::new(
-                node,
+            let pos = self.pos.borrow();
+            snapshot.translate(&graphene::Point::new(pos.pos.0 as f32, pos.pos.1 as f32));
+            snapshot.push_opacity(
                 self.blink
                     .borrow()
                     .as_ref()
-                    .map(|blink| blink.alpha as f32)
+                    .map(|blink| blink.alpha)
                     .unwrap_or(1.0),
             );
 
-            let pos = self.pos.borrow();
-            // TODO(ville): Might be better to use snapshot.translate instead.
-            let node = gsk::TransformNode::new(
-                node,
-                &gsk::Transform::new()
-                    .translate(&graphene::Point::new(pos.pos.0 as f32, pos.pos.1 as f32))
-                    .expect("failed to translate 2d point"),
-            );
-
             snapshot.append_node(node);
+
+            snapshot.pop();
         }
     }
 
