@@ -1,6 +1,6 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
-use crate::{colors::Colors, warn, SCALE};
+use crate::{colors::Colors, math::ease_out_cubic, warn, SCALE};
 
 use super::grid_buffer::row::Cell;
 
@@ -11,10 +11,6 @@ glib::wrapper! {
     pub struct Cursor(ObjectSubclass<imp::Cursor>)
         @extends gtk::Widget,
         @implements gtk::ConstraintTarget, gtk::Buildable, gtk::Accessible;
-}
-
-fn ease_out_cubic(t: f64) -> f64 {
-    1.0 + (t - 1.0).powi(3)
 }
 
 impl Cursor {
@@ -88,6 +84,10 @@ impl Cursor {
     }
 
     pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
+        // TODO(ville): To avoid jumpy initial cursor position, the position
+        // should be set directly on the "first" call. See the previous
+        // implementation: https://github.com/vhakulinen/gnvim/blob/6ba47373545c6e9be3677a3ae695415809cf2fdf/src/ui/grid/cursor.rs#L46-L49.
+
         let imp = self.imp();
 
         imp.text.replace(cell.text.clone());

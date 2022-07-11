@@ -1,7 +1,7 @@
-use std::cell::RefCell;
+use std::cell::{self, RefCell};
 
 use gtk::subclass::prelude::*;
-use gtk::{glib, gsk, prelude::*};
+use gtk::{glib, graphene, gsk, prelude::*};
 
 use crate::font::Font;
 use crate::SCALE;
@@ -15,6 +15,17 @@ pub struct GridBuffer {
     pub rows: RefCell<Vec<Row>>,
     /// Background nodes.
     pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
+
+    /// Node containing the "background" buffer (used for the scroll effect).
+    pub scroll_node: RefCell<Option<gsk::RenderNode>>,
+    /// Callback id for scroll animation.
+    pub scroll_tick: RefCell<Option<gtk::TickCallbackId>>,
+    /// Scroll transition time.
+    pub scroll_transition: cell::Cell<f64>,
+    /// Y offset for the main buffer.
+    pub y_offset: cell::Cell<f32>,
+    /// Y offset for the scroll/background buffer.
+    pub y_offset_scroll: cell::Cell<f32>,
 
     pub font: RefCell<Font>,
 }
@@ -30,9 +41,15 @@ impl ObjectImpl for GridBuffer {
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::builder("font", Font::static_type())
-                .flags(glib::ParamFlags::READWRITE)
-                .build()]
+            vec![
+                glib::ParamSpecObject::builder("font", Font::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
+                glib::ParamSpecDouble::builder("scroll-transition")
+                    .minimum(0.0)
+                    .flags(glib::ParamFlags::WRITABLE)
+                    .build(),
+            ]
         });
 
         PROPERTIES.as_ref()
@@ -63,13 +80,34 @@ impl ObjectImpl for GridBuffer {
                     .iter_mut()
                     .for_each(|row| row.cells.iter_mut().for_each(Cell::clear_nodes));
             }
+            "scroll-transition" => self
+                .scroll_transition
+                .set(value.get::<f64>().expect("scroll-transition must be a f64") * 1000.0),
             _ => unimplemented!(),
         };
     }
 }
 
 impl WidgetImpl for GridBuffer {
-    fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
+    fn snapshot(&self, widget: &Self::Type, snapshot: &gtk::Snapshot) {
+        let (_, req) = widget.preferred_size();
+
+        snapshot.push_clip(&graphene::Rect::new(
+            0.0,
+            0.0,
+            req.width() as f32,
+            req.height() as f32,
+        ));
+
+        if let Some(ref node) = *self.scroll_node.borrow() {
+            snapshot.save();
+            snapshot.translate(&graphene::Point::new(0.0, self.y_offset_scroll.get()));
+            snapshot.append_node(node);
+            snapshot.restore();
+        }
+
+        snapshot.translate(&graphene::Point::new(0.0, self.y_offset.get()));
+
         for node in self.background_nodes.borrow().iter() {
             snapshot.append_node(node);
         }
@@ -86,6 +124,8 @@ impl WidgetImpl for GridBuffer {
                 }
             }
         }
+
+        snapshot.pop();
     }
 
     fn measure(

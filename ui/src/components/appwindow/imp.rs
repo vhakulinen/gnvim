@@ -157,6 +157,9 @@ impl AppWindow {
             GnvimEvent::CursorPositionTransition(t) => {
                 self.shell.set_cursor_position_transition(t);
             }
+            GnvimEvent::ScrollTransition(t) => {
+                self.shell.set_scroll_transition(t);
+            }
         }
     }
 

@@ -50,6 +50,10 @@ impl Shell {
         self.set_property("cursor-position-transition", t);
     }
 
+    pub fn set_scroll_transition(&self, t: f64) {
+        self.set_property("scroll-transition", t);
+    }
+
     fn set_busy(&self, busy: bool) {
         self.set_property("busy", busy);
     }
@@ -98,6 +102,9 @@ impl Shell {
                 )
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
+                self.bind_property("scroll-transition", &grid, "scroll-transition")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
 
                 self.imp().grids.borrow_mut().push(grid.clone());
                 grid

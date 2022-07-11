@@ -49,4 +49,8 @@ function M.set_cursor_position_transition(t)
   M.notify('cursor_position_transition', t)
 end
 
+function M.set_scroll_transition(t)
+  M.notify('scroll_transition', t)
+end
+
 return M

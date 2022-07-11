@@ -22,3 +22,13 @@ The blink transition is in milliseconds.
 
 Additionally, the cursors position change is also animated. The speed of this
 can be set through `set_cursor_position_transition`.
+
+================================================================================
+Scrolling                                                        *gnvim-scroll*
+
+Gnvim animates the grid scrolling. The scroll speed can be adjusted through
+`set_scroll_transition`: >
+
+    require('gnvim').set_scroll_transition(300)
+<
+Setting the transition to 0 effectively disables the animation.

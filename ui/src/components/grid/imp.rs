@@ -43,6 +43,7 @@ pub struct Grid {
     pub event_controller_motion: gtk::EventControllerMotion,
     pub cursor_blink_transition: Cell<f64>,
     pub cursor_position_transition: Cell<f64>,
+    pub scroll_transition: Cell<f64>,
 }
 
 #[glib::object_subclass]
@@ -144,6 +145,10 @@ impl ObjectImpl for Grid {
                     .minimum(0.0)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
+                glib::ParamSpecDouble::builder("scroll-transition")
+                    .minimum(0.0)
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 
@@ -160,6 +165,7 @@ impl ObjectImpl for Grid {
             "mode-info" => self.mode_info.borrow().to_value(),
             "cursor-blink-transition" => self.cursor_blink_transition.get().to_value(),
             "cursor-position-transition" => self.cursor_position_transition.get().to_value(),
+            "scroll-transition" => self.scroll_transition.get().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -206,6 +212,11 @@ impl ObjectImpl for Grid {
                 value
                     .get()
                     .expect("cursor-position-transition value needs to be a f64"),
+            ),
+            "scroll-transition" => self.scroll_transition.set(
+                value
+                    .get()
+                    .expect("scroll-transition value needs to be a f64"),
             ),
             _ => unimplemented!(),
         }

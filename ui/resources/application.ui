@@ -23,6 +23,7 @@
                 />
                 <property name="cursor-blink-transition">160</property>
                 <property name="cursor-position-transition">150</property>
+                <property name="scroll-transition">300</property>
             </object>
         </child>
     </template>

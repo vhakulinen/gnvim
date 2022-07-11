@@ -233,6 +233,7 @@ impl WidgetImpl for Cursor {
             );
 
             let pos = self.pos.borrow();
+            // TODO(ville): Might be better to use snapshot.translate instead.
             let node = gsk::TransformNode::new(
                 node,
                 &gsk::Transform::new()

@@ -13,6 +13,7 @@ pub enum GnvimEvent {
     GtkDebugger,
     CursorBlinkTransition(f64),
     CursorPositionTransition(f64),
+    ScrollTransition(f64),
 }
 
 #[derive(Debug, serde::Deserialize)]
