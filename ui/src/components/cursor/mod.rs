@@ -83,16 +83,8 @@ impl Cursor {
         return self.imp().pos.borrow().grid.0;
     }
 
-    pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
-        // TODO(ville): To avoid jumpy initial cursor position, the position
-        // should be set directly on the "first" call. See the previous
-        // implementation: https://github.com/vhakulinen/gnvim/blob/6ba47373545c6e9be3677a3ae695415809cf2fdf/src/ui/grid/cursor.rs#L46-L49.
-
+    fn move_to_transition(&self, col: i64, row: i64) {
         let imp = self.imp();
-
-        imp.text.replace(cell.text.clone());
-        imp.double_width.replace(cell.double_width);
-        imp.pos.borrow_mut().grid = (col, row);
 
         let start = self
             .frame_clock()
@@ -103,12 +95,17 @@ impl Cursor {
         }
 
         let font = imp.font.borrow();
-        let target = (
-            col as f64 * (font.char_width() / SCALE) as f64,
-            row as f64 * (font.height() / SCALE) as f64,
-        );
+        let target = (font.col_to_x(col as f64), font.row_to_y(row as f64));
         let start_pos = imp.pos.borrow().pos;
-        let end = start + imp.pos.borrow().transition;
+
+        let end = if imp.pos.borrow().is_set {
+            start + imp.pos.borrow().transition
+        } else {
+            imp.pos.borrow_mut().is_set = true;
+            // Skip the animation by having zero transition time.
+            start
+        };
+
         let old_id =
             imp.pos_tick
                 .borrow_mut()
@@ -139,6 +136,16 @@ impl Cursor {
         if let Some(old_id) = old_id {
             old_id.remove();
         }
+    }
+
+    pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
+        let imp = self.imp();
+
+        imp.text.replace(cell.text.clone());
+        imp.double_width.replace(cell.double_width);
+        imp.pos.borrow_mut().grid = (col, row);
+
+        self.move_to_transition(col, row);
 
         // Clear the render node.
         imp.node.replace(None);

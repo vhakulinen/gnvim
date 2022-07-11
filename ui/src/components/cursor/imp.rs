@@ -18,6 +18,11 @@ pub struct Position {
     pub pos: (f64, f64),
     /// Transition time in milliseconds.
     pub transition: f64,
+    /// Is the positon already set once.
+    ///
+    /// If not, we must skip the transition animation to avoid jumpy cursor
+    /// (for example, when opening splits).
+    pub is_set: bool,
 }
 
 #[derive(Default)]
