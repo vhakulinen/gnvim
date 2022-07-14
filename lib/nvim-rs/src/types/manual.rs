@@ -135,6 +135,36 @@ impl IntoValue for Window {
     }
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Buffer(rmpv::Value);
+
+impl IntoValue for Buffer {
+    fn into_value(self) -> rmpv::Value {
+        self.0
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Tabpage(rmpv::Value);
+
+impl IntoValue for Tabpage {
+    fn into_value(self) -> rmpv::Value {
+        self.0
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TablineTab {
+    pub name: String,
+    pub tab: Tabpage,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TablineBuffer {
+    pub name: String,
+    pub buffer: Buffer,
+}
+
 #[derive(Default, Debug, serde::Deserialize)]
 pub struct PopupmenuItem {
     pub word: String,

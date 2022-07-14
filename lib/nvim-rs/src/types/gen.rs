@@ -218,10 +218,10 @@ pub struct PopupmenuSelect {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TablineUpdate {
-    pub current: rmpv::Value,        /* Tabpage */
-    pub tabs: rmpv::Value,           /* Array */
-    pub current_buffer: rmpv::Value, /* Buffer */
-    pub buffers: rmpv::Value,        /* Array */
+    pub current: Tabpage,
+    pub tabs: Vec<TablineTab>,
+    pub current_buffer: Buffer,
+    pub buffers: Vec<TablineBuffer>,
 }
 
 #[derive(Debug, serde::Deserialize)]

@@ -1,7 +1,7 @@
 use crate::rpc::{RpcWriter, WriteError};
 use crate::{
     args,
-    types::{UiOptions, Window},
+    types::{Buffer, Tabpage, UiOptions, Window},
     CallResponse, Client,
 };
 
@@ -64,14 +64,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_line_count(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_line_count", args![buffer]).await
     }
 
     pub async fn nvim_buf_attach(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         send_buffer: bool,
         opts: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<bool>, WriteError> {
@@ -81,14 +81,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_detach(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_detach", args![buffer]).await
     }
 
     pub async fn nvim_buf_get_lines(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         start: i64,
         end: i64,
         strict_indexing: bool,
@@ -102,7 +102,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_lines(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         start: i64,
         end: i64,
         strict_indexing: bool,
@@ -117,7 +117,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_text(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         start_row: i64,
         start_col: i64,
         end_row: i64,
@@ -133,7 +133,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_text(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         start_row: i64,
         start_col: i64,
         end_row: i64,
@@ -149,7 +149,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_offset(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         index: i64,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_get_offset", args![buffer, index]).await
@@ -157,7 +157,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_var(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_buf_get_var", args![buffer, name]).await
@@ -165,14 +165,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_changedtick(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_get_changedtick", args![buffer]).await
     }
 
     pub async fn nvim_buf_get_keymap(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         mode: String,
     ) -> Result<CallResponse<Vec<rmpv::Value /* Dictionary */>>, WriteError> {
         self.call("nvim_buf_get_keymap", args![buffer, mode]).await
@@ -180,7 +180,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_keymap(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         mode: String,
         lhs: String,
         rhs: String,
@@ -192,7 +192,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_del_keymap(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         mode: String,
         lhs: String,
     ) -> Result<CallResponse<()>, WriteError> {
@@ -202,8 +202,8 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_commands(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
+        buffer: Buffer,
+        opts: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<rmpv::Value /* Dictionary */>, WriteError> {
         self.call("nvim_buf_get_commands", args![buffer, opts])
             .await
@@ -211,7 +211,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_var(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
         value: rmpv::Value, /* Object */
     ) -> Result<CallResponse<()>, WriteError> {
@@ -221,7 +221,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_del_var(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_del_var", args![buffer, name]).await
@@ -229,7 +229,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_option(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_buf_get_option", args![buffer, name]).await
@@ -237,7 +237,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_option(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
         value: rmpv::Value, /* Object */
     ) -> Result<CallResponse<()>, WriteError> {
@@ -247,14 +247,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_name(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<String>, WriteError> {
         self.call("nvim_buf_get_name", args![buffer]).await
     }
 
     pub async fn nvim_buf_set_name(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_name", args![buffer, name]).await
@@ -262,29 +262,29 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_is_loaded(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_is_loaded", args![buffer]).await
     }
 
     pub async fn nvim_buf_delete(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
+        buffer: Buffer,
+        opts: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_delete", args![buffer, opts]).await
     }
 
     pub async fn nvim_buf_is_valid(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_is_valid", args![buffer]).await
     }
 
     pub async fn nvim_buf_del_mark(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_del_mark", args![buffer, name]).await
@@ -292,7 +292,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_mark(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
         line: i64,
         col: i64,
@@ -304,7 +304,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_mark(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_buf_get_mark", args![buffer, name]).await
@@ -312,15 +312,15 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_call(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
-        fun: rmpv::Value,    /* LuaRef */
+        buffer: Buffer,
+        fun: rmpv::Value, /* LuaRef */
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_buf_call", args![buffer, fun]).await
     }
 
     pub async fn nvim_buf_create_user_command(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
         command: rmpv::Value, /* Object */
         opts: rmpv::Value,    /* Dictionary */
@@ -334,7 +334,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_del_user_command(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         name: String,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_del_user_command", args![buffer, name])
@@ -356,7 +356,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_extmark_by_id(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         id: i64,
         opts: rmpv::Value, /* Dictionary */
@@ -367,7 +367,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_get_extmarks(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         start: rmpv::Value, /* Object */
         end: rmpv::Value,   /* Object */
@@ -382,7 +382,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_set_extmark(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         line: i64,
         col: i64,
@@ -397,7 +397,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_del_extmark(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         id: i64,
     ) -> Result<CallResponse<bool>, WriteError> {
@@ -407,7 +407,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_add_highlight(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         hl_group: String,
         line: i64,
@@ -423,7 +423,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_buf_clear_namespace(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         ns_id: i64,
         line_start: i64,
         line_end: i64,
@@ -446,14 +446,14 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_tabpage_list_wins(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
     ) -> Result<CallResponse<Vec<Window>>, WriteError> {
         self.call("nvim_tabpage_list_wins", args![tabpage]).await
     }
 
     pub async fn nvim_tabpage_get_var(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
         name: String,
     ) -> Result<CallResponse<rmpv::Value /* Object */>, WriteError> {
         self.call("nvim_tabpage_get_var", args![tabpage, name])
@@ -462,7 +462,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_tabpage_set_var(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
         name: String,
         value: rmpv::Value, /* Object */
     ) -> Result<CallResponse<()>, WriteError> {
@@ -472,7 +472,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_tabpage_del_var(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
         name: String,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_tabpage_del_var", args![tabpage, name])
@@ -481,21 +481,21 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_tabpage_get_win(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
     ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_tabpage_get_win", args![tabpage]).await
     }
 
     pub async fn nvim_tabpage_get_number(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_tabpage_get_number", args![tabpage]).await
     }
 
     pub async fn nvim_tabpage_is_valid(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_tabpage_is_valid", args![tabpage]).await
     }
@@ -792,21 +792,17 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_err_writeln", args![str]).await
     }
 
-    pub async fn nvim_list_bufs(
-        &mut self,
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Buffer */>>, WriteError> {
+    pub async fn nvim_list_bufs(&mut self) -> Result<CallResponse<Vec<Buffer>>, WriteError> {
         self.call("nvim_list_bufs", args![]).await
     }
 
-    pub async fn nvim_get_current_buf(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Buffer */>, WriteError> {
+    pub async fn nvim_get_current_buf(&mut self) -> Result<CallResponse<Buffer>, WriteError> {
         self.call("nvim_get_current_buf", args![]).await
     }
 
     pub async fn nvim_set_current_buf(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_buf", args![buffer]).await
     }
@@ -830,14 +826,14 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         listed: bool,
         scratch: bool,
-    ) -> Result<CallResponse<rmpv::Value /* Buffer */>, WriteError> {
+    ) -> Result<CallResponse<Buffer>, WriteError> {
         self.call("nvim_create_buf", args![listed, scratch]).await
     }
 
     pub async fn nvim_open_term(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
-        opts: rmpv::Value,   /* Dictionary */
+        buffer: Buffer,
+        opts: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_open_term", args![buffer, opts]).await
     }
@@ -850,21 +846,17 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_chan_send", args![chan, data]).await
     }
 
-    pub async fn nvim_list_tabpages(
-        &mut self,
-    ) -> Result<CallResponse<Vec<rmpv::Value /* Tabpage */>>, WriteError> {
+    pub async fn nvim_list_tabpages(&mut self) -> Result<CallResponse<Vec<Tabpage>>, WriteError> {
         self.call("nvim_list_tabpages", args![]).await
     }
 
-    pub async fn nvim_get_current_tabpage(
-        &mut self,
-    ) -> Result<CallResponse<rmpv::Value /* Tabpage */>, WriteError> {
+    pub async fn nvim_get_current_tabpage(&mut self) -> Result<CallResponse<Tabpage>, WriteError> {
         self.call("nvim_get_current_tabpage", args![]).await
     }
 
     pub async fn nvim_set_current_tabpage(
         &mut self,
-        tabpage: rmpv::Value, /* Tabpage */
+        tabpage: Tabpage,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_tabpage", args![tabpage]).await
     }
@@ -1127,7 +1119,7 @@ impl<W: RpcWriter> Client<W> {
 
     pub async fn nvim_open_win(
         &mut self,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
         enter: bool,
         config: rmpv::Value, /* Dictionary */
     ) -> Result<CallResponse<Window>, WriteError> {
@@ -1154,14 +1146,14 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_win_get_buf(
         &mut self,
         window: Window,
-    ) -> Result<CallResponse<rmpv::Value /* Buffer */>, WriteError> {
+    ) -> Result<CallResponse<Buffer>, WriteError> {
         self.call("nvim_win_get_buf", args![window]).await
     }
 
     pub async fn nvim_win_set_buf(
         &mut self,
         window: Window,
-        buffer: rmpv::Value, /* Buffer */
+        buffer: Buffer,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_buf", args![window, buffer]).await
     }
@@ -1266,7 +1258,7 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_win_get_tabpage(
         &mut self,
         window: Window,
-    ) -> Result<CallResponse<rmpv::Value /* Tabpage */>, WriteError> {
+    ) -> Result<CallResponse<Tabpage>, WriteError> {
         self.call("nvim_win_get_tabpage", args![window]).await
     }
 

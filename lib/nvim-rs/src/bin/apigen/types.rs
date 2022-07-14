@@ -43,6 +43,8 @@ impl<T: AsRef<str>> AsRustType for T {
             "String" => "String",
             "void" => "()",
             "Window" => "Window",
+            "Tabpage" => "Tabpage",
+            "Buffer" => "Buffer",
             "ArrayOf(Integer, 2)" => "(i64, i64)",
             "ArrayOf(String)" => "Vec<String>",
             "ArrayOf(Integer)" => "Vec<i64>",
@@ -139,6 +141,8 @@ impl UiEvent {
             ("hl_attr_define", "cterm_attrs") => "HlAttr",
             ("mode_info_set", "cursor_styles") => "Vec<ModeInfo>",
             ("popupmenu_show", "items") => "Vec<PopupmenuItem>",
+            ("tabline_update", "tabs") => "Vec<TablineTab>",
+            ("tabline_update", "buffers") => "Vec<TablineBuffer>",
             _ => return _type.as_rust_type(),
         };
 
