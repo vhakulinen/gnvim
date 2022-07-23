@@ -1,9 +1,18 @@
 use into_value::IntoValue;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ShowTabline {
+    #[default]
+    Never,
+    MoreThanOne,
+    Always,
+}
+
 #[derive(Debug)]
 pub enum OptionSet {
     Guifont(String),
     Linespace(i64),
+    ShowTabline(ShowTabline),
     Unknown(String),
 }
 
@@ -21,6 +30,20 @@ impl<'de> serde::Deserialize<'de> for OptionSet {
             "linespace" => Ok(Self::Linespace(data[1].as_i64().ok_or_else(bad_value)?)),
             "guifont" => Ok(Self::Guifont(
                 data[1].as_str().ok_or_else(bad_value)?.to_string(),
+            )),
+            "showtabline" => Ok(Self::ShowTabline(
+                data[1]
+                    .as_i64()
+                    .ok_or_else(bad_value)
+                    .and_then(|v| match v {
+                        0 => Ok(ShowTabline::Never),
+                        1 => Ok(ShowTabline::MoreThanOne),
+                        2 => Ok(ShowTabline::Always),
+                        _ => Err(serde::de::Error::custom(format!(
+                            "unexpected showtabline value: {:?}",
+                            v,
+                        ))),
+                    })?,
             )),
             _ => Ok(Self::Unknown(name.to_string())),
         }
@@ -135,7 +158,7 @@ impl IntoValue for Window {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize)]
 pub struct Buffer(rmpv::Value);
 
 impl IntoValue for Buffer {
@@ -144,7 +167,7 @@ impl IntoValue for Buffer {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize)]
 pub struct Tabpage(rmpv::Value);
 
 impl IntoValue for Tabpage {

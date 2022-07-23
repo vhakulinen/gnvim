@@ -19,6 +19,10 @@ features = ["v4_4"]
 version = "0.15"
 features = ["log_macros"]
 
+[dependencies.pango]
+version = "0.15"
+features = ["v1_50"]
+
 [dependencies.nvim]
 package = "nvim-rs"
 path = "../lib/nvim-rs"

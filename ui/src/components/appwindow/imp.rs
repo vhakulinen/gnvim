@@ -1,7 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
 use std::rc::Rc;
-use std::time::Duration;
 
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
@@ -21,10 +20,11 @@ use gio_compat::CompatRead;
 use nvim::rpc::RpcReader;
 
 use crate::api::GnvimEvent;
+use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::shell::Shell;
+use crate::components::Tabline;
 use crate::font::Font;
-use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 use crate::warn;
 use crate::{arguments::BoxedArguments, spawn_local, SCALE};
@@ -36,6 +36,8 @@ pub struct AppWindow {
     event_controller_key: gtk::EventControllerKey,
     #[template_child(id = "shell")]
     shell: TemplateChild<Shell>,
+    #[template_child(id = "tabline")]
+    tabline: TemplateChild<Tabline>,
 
     css_provider: gtk::CssProvider,
 
@@ -45,18 +47,14 @@ pub struct AppWindow {
     colors: Rc<RefCell<Colors>>,
     font: RefCell<Font>,
     mode_infos: RefCell<Vec<ModeInfo>>,
+    show_tabline: RefCell<ShowTabline>,
 
-    /// Source id for debouncing nvim resizing.
-    resize_id: Rc<Cell<Option<glib::SourceId>>>,
     /// When resize on flush is set, there were some operations on the previous
     /// ui events that changed our grid size (e.g. font chagned etc.).
     resize_on_flush: Cell<bool>,
     /// Set when attributes affecting our CSS changed, and we need to regenerate
     /// the css.
     css_on_flush: Cell<bool>,
-    /// Our previous window size. Used to track when we need to tell neovim to
-    /// resize itself.
-    prev_win_size: Cell<(i32, i32)>,
 }
 
 impl AppWindow {
@@ -113,6 +111,9 @@ impl AppWindow {
             "PmenuSel" => Some(HlGroup::PmenuSel),
             "PmenuSbar" => Some(HlGroup::PmenuSbar),
             "PmenuThumb" => Some(HlGroup::PmenuThumb),
+            "TabLine" => Some(HlGroup::TabLine),
+            "TabLineFill" => Some(HlGroup::TabLineFill),
+            "TabLineSel" => Some(HlGroup::TabLineSel),
             _ => None,
         } {
             self.colors.borrow_mut().set_hl_group(group, event.id);
@@ -198,9 +199,10 @@ impl AppWindow {
             UiEvent::VisualBell => {}
             UiEvent::Flush => {
                 self.shell.handle_flush(&self.colors.borrow());
+                self.tabline.flush();
 
                 if self.resize_on_flush.take() {
-                    self.resize_nvim();
+                    self.shell.resize_nvim();
                 }
 
                 if self.css_on_flush.take() {
@@ -211,6 +213,9 @@ impl AppWindow {
                     let pmenu_thumb = colors.get_hl_group(&HlGroup::PmenuThumb);
                     let pmenu_bar = colors.get_hl_group(&HlGroup::PmenuSbar);
                     let msgsep = colors.get_hl_group(&HlGroup::MsgSeparator);
+                    let tablinefill = colors.get_hl_group(&HlGroup::TabLineFill);
+                    let tabline = colors.get_hl_group(&HlGroup::TabLine);
+                    let tablinesel = colors.get_hl_group(&HlGroup::TabLineSel);
                     // TODO(ville): It might be possible to make the font
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
@@ -218,6 +223,10 @@ impl AppWindow {
                     self.css_provider.load_from_data(
                         format!(
                             r#"
+                                * {{
+                                    {font}
+                                }}
+
                                 .app-window, .external-window {{
                                     background-color: #{bg};
                                 }}
@@ -249,6 +258,23 @@ impl AppWindow {
                                     background-color: #{pmenuthumb_bg};
                                     border-color: #{pmenuthumb_bg};
                                 }}
+
+                                tabline {{
+                                    background-color: #{tablinefill_bg};
+                                    box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
+                                }}
+
+                                tabline label {{
+                                    background-color: #{tabline_bg};
+                                    color: #{tabline_fg};
+                                    box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
+                                    padding: 0 0.5em;
+                                }}
+
+                                tabline label.selected {{
+                                    background-color: #{tablinesel_bg};
+                                    color: #{tablinesel_fg};
+                                }}
                             "#,
                             bg = colors.bg.as_hex(),
                             msgsep = msgsep.fg().as_hex(),
@@ -258,8 +284,14 @@ impl AppWindow {
                             pmenu_sel_bg = pmenu_sel.bg().as_hex(),
                             pmenusbar_bg = pmenu_bar.bg().as_hex(),
                             pmenuthumb_bg = pmenu_thumb.bg().as_hex(),
+                            tabline_bg = tabline.bg().as_hex(),
+                            tabline_fg = tabline.fg().as_hex(),
+                            tablinefill_bg = tablinefill.bg().as_hex(),
+                            tablinesel_bg = tablinesel.bg().as_hex(),
+                            tablinesel_fg = tablinesel.fg().as_hex(),
                             linespace_top = (linespace / 2.0).ceil().max(0.0),
                             linespace_bottom = (linespace / 2.0).floor().max(0.0),
+                            font = self.font.borrow().to_css(),
                         )
                         .as_bytes(),
                     );
@@ -327,6 +359,11 @@ impl AppWindow {
                 .for_each(|event| self.shell.handle_popupmenu_select(event)),
             UiEvent::PopupmenuHide => self.shell.handle_popupmenu_hide(),
 
+            // tabline events
+            UiEvent::TablineUpdate(events) => events
+                .into_iter()
+                .for_each(|event| self.tabline.handle_tabline_update(event)),
+
             event => panic!("Unhandled ui event: {}", event),
         }
     }
@@ -347,41 +384,13 @@ impl AppWindow {
                 self.resize_on_flush.set(true);
                 self.css_on_flush.set(true);
             }
+            OptionSet::ShowTabline(show) => {
+                obj.set_property("show-tabline", ShowTabline::from(show).to_value());
+
+                self.resize_on_flush.set(true);
+                self.css_on_flush.set(true);
+            }
             OptionSet::Unknown(_) => {}
-        }
-    }
-
-    fn resize_nvim(&self) {
-        let (cols, rows) = self
-            .font
-            .borrow()
-            .grid_size_for_allocation(&self.shell.allocation());
-
-        let id = glib::timeout_add_local(
-            Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
-            clone!(@weak self.nvim as nvim, @weak self.resize_id as resize_id => @default-return Continue(false), move || {
-                spawn_local!(clone!(@weak nvim => async move {
-                    let res = nvim
-                        .client()
-                        .await
-                        .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
-                        .await
-                        .unwrap();
-
-                    res.await.expect("nvim_ui_try_resize failed");
-                }));
-
-                // Clear after our selves, so we don't try to remove
-                // our id once we're already done.
-                resize_id.replace(None);
-
-                Continue(false)
-            }),
-        );
-
-        // Cancel the earlier timeout if it exists.
-        if let Some(id) = self.resize_id.replace(Some(id)).take() {
-            id.remove();
         }
     }
 
@@ -454,7 +463,7 @@ impl ObjectSubclass for AppWindow {
 
     fn class_init(klass: &mut Self::Class) {
         Shell::ensure_type();
-
+        Tabline::ensure_type();
         klass.bind_template();
     }
 
@@ -506,6 +515,7 @@ impl ObjectImpl for AppWindow {
                     ext_linegrid: true,
                     ext_multigrid: true,
                     ext_popupmenu: true,
+                    ext_tabline: true,
                     ..Default::default()
                 }
             ).await.expect("call to nvim failed");
@@ -551,6 +561,9 @@ impl ObjectImpl for AppWindow {
                 glib::ParamSpecBoxed::builder("args", BoxedArguments::static_type())
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
                     .build(),
+                glib::ParamSpecBoxed::builder("show-tabline", ShowTabline::static_type())
+                    .flags(glib::ParamFlags::READWRITE)
+                    .build(),
             ]
         });
 
@@ -562,6 +575,7 @@ impl ObjectImpl for AppWindow {
             "font" => self.font.borrow().to_value(),
             "nvim" => self.nvim.to_value(),
             "args" => self.args.borrow().to_value(),
+            "show-tabline" => self.show_tabline.borrow().to_value(),
             _ => unimplemented!(),
         }
     }
@@ -585,25 +599,16 @@ impl ObjectImpl for AppWindow {
                         .expect("font value must be object BoxedArguments"),
                 );
             }
+            "show-tabline" => {
+                self.show_tabline
+                    .replace(value.get().expect("font value must be a ShowTabline"));
+            }
             _ => unimplemented!(),
         };
     }
 }
 
-impl WidgetImpl for AppWindow {
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
-
-        let prev = self.prev_win_size.get();
-        // TODO(ville): Check for rows/col instead.
-        // NOTE(ville): If we try to resize nvim unconditionally, we'll
-        // end up in a infinite loop.
-        if prev != (width, height) {
-            self.prev_win_size.set((width, height));
-            self.resize_nvim();
-        }
-    }
-}
+impl WidgetImpl for AppWindow {}
 
 impl WindowImpl for AppWindow {}
 

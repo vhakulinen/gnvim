@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Tabline" parent="GtkWidget">
+        <child>
+            <object class="GtkScrolledWindow" id="scrolled-window">
+                <property name="propagate-natural-width">true</property>
+                <property name="propagate-natural-height">true</property>
+
+                <child>
+                    <object class="GtkBox" id="content">
+                    </object>
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>

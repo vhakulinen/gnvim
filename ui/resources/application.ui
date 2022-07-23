@@ -7,23 +7,43 @@
         <style>
             <class name="app-window" />
         </style>
+
         <child>
-            <object class="Shell" id="shell">
-                <property
-                    name="font"
-                    bind-source="AppWindow"
-                    bind-property="font"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="nvim"
-                    bind-source="AppWindow"
-                    bind-property="nvim"
-                    bind-flags="sync-create"
-                />
-                <property name="cursor-blink-transition">160</property>
-                <property name="cursor-position-transition">150</property>
-                <property name="scroll-transition">300</property>
+            <object class="GtkBox">
+                <property name="orientation">vertical</property>
+
+                <child>
+                    <object class="Tabline" id="tabline">
+                        <property
+                            name="show"
+                            bind-source="AppWindow"
+                            bind-property="show-tabline"
+                            bind-flags="sync-create"
+                            />
+                    </object>
+                </child>
+
+                <child>
+                    <object class="Shell" id="shell">
+                        <property name="hexpand">true</property>
+                        <property name="vexpand">true</property>
+                        <property
+                            name="font"
+                            bind-source="AppWindow"
+                            bind-property="font"
+                            bind-flags="sync-create"
+                            />
+                        <property
+                            name="nvim"
+                            bind-source="AppWindow"
+                            bind-property="nvim"
+                            bind-flags="sync-create"
+                            />
+                        <property name="cursor-blink-transition">160</property>
+                        <property name="cursor-position-transition">150</property>
+                        <property name="scroll-transition">300</property>
+                    </object>
+                </child>
             </object>
         </child>
     </template>

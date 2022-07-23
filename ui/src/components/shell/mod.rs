@@ -1,10 +1,13 @@
+use std::time::Duration;
+
+use glib::clone;
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{
     GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
     PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
 };
 
-use crate::{colors::Colors, font::Font, mode_info::ModeInfo, warn, SCALE};
+use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
 
 use super::Grid;
 
@@ -40,6 +43,42 @@ impl Shell {
             .iter()
             .find(|grid| grid.id() == id)
             .cloned()
+    }
+
+    pub fn resize_nvim(&self) {
+        let (cols, rows) = self
+            .imp()
+            .font
+            .borrow()
+            .grid_size_for_allocation(&self.allocation());
+
+        let id = glib::timeout_add_local(
+            Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
+            clone!(@weak self as obj => @default-return Continue(false), move || {
+                spawn_local!(clone!(@weak obj => async move {
+                    let res = obj.imp().nvim
+                        .borrow()
+                        .client()
+                        .await
+                        .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
+                        .await
+                        .unwrap();
+
+                    res.await.expect("nvim_ui_try_resize failed");
+                }));
+
+                // Clear after our selves, so we don't try to remove
+                // our id once we're already done.
+                obj.imp().resize_id.replace(None);
+
+                Continue(false)
+            }),
+        );
+
+        // Cancel the earlier timeout if it exists.
+        if let Some(id) = self.imp().resize_id.replace(Some(id)).take() {
+            id.remove();
+        }
     }
 
     pub fn set_cursor_blink_transition(&self, t: f64) {

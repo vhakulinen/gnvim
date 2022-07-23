@@ -5,10 +5,10 @@ use gtk::glib::subclass::InitializingObject;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
+use crate::boxed::ModeInfo;
 use crate::components::grid::Grid;
 use crate::components::{Fixedz, MsgWin, Popupmenu};
 use crate::font::Font;
-use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 
 #[derive(gtk::CompositeTemplate, Default)]
@@ -44,6 +44,11 @@ pub struct Shell {
     pub cursor_blink_transition: Cell<f64>,
     pub cursor_position_transition: Cell<f64>,
     pub scroll_transition: Cell<f64>,
+    /// Source id for debouncing nvim resizing.
+    pub resize_id: RefCell<Option<glib::SourceId>>,
+    /// Our previous size. Used to track when we need to tell neovim to resize
+    /// itself.
+    pub prev_size: Cell<(i32, i32)>,
 }
 
 #[glib::object_subclass]
@@ -70,6 +75,9 @@ impl ObjectImpl for Shell {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
 
+        // TODO(ville): To avoid duplication of the property binding code
+        // between the ui file and the grid creation code, perhaps the root
+        // grid should be created here through code.
         // Add the root grid to the grids list.
         self.grids.borrow_mut().push(self.root_grid.clone());
     }
@@ -189,5 +197,14 @@ impl WidgetImpl for Shell {
 
         self.root_grid.allocate(width, height, -1, None);
         self.fixed.allocate(width, height, -1, None);
+
+        let prev = self.prev_size.get();
+        // TODO(ville): Check for rows/col instead.
+        // NOTE(ville): If we try to resize nvim unconditionally, we'll
+        // end up in a infinite loop.
+        if prev != (width, height) {
+            self.prev_size.set((width, height));
+            widget.resize_nvim();
+        }
     }
 }

@@ -3,6 +3,7 @@ use gtk::{gio, pango, prelude::*};
 
 mod api;
 mod arguments;
+mod boxed;
 mod child_iter;
 mod colors;
 mod components;
@@ -10,7 +11,6 @@ mod font;
 mod input;
 mod macros;
 mod math;
-mod mode_info;
 mod nvim;
 mod render;
 

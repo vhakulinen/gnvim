@@ -11,10 +11,10 @@ use nvim::types::{
 };
 
 use crate::{
+    boxed::ModeInfo,
     colors::Colors,
     font::Font,
     input::{Action, Mouse},
-    mode_info::ModeInfo,
     nvim::Neovim,
     some_or_return,
 };

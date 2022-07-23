@@ -385,6 +385,7 @@ dependencies = [
  "gtk4",
  "nvim-rs",
  "once_cell",
+ "pango",
  "rmpv",
 ]
 

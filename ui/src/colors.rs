@@ -9,6 +9,9 @@ pub enum HlGroup {
     PmenuSel,
     PmenuSbar,
     PmenuThumb,
+    TabLine,
+    TabLineFill,
+    TabLineSel,
 }
 
 #[derive(Debug, Default)]

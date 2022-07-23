@@ -8,9 +8,9 @@ use gtk::{
 };
 use nvim::types::Window;
 
+use crate::boxed::ModeInfo;
 use crate::components::{Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
-use crate::mode_info::ModeInfo;
 use crate::nvim::Neovim;
 use crate::spawn_local;
 
