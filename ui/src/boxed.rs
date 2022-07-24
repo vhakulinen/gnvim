@@ -35,3 +35,21 @@ impl From<nvim::types::ShowTabline> for ShowTabline {
         Self(s)
     }
 }
+
+#[derive(Debug, Clone, glib::Boxed)]
+#[boxed_type(name = "Tabpage")]
+pub struct Tabpage(pub nvim::types::Tabpage);
+
+impl Deref for Tabpage {
+    type Target = nvim::types::Tabpage;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<nvim::types::Tabpage> for Tabpage {
+    fn from(s: nvim::types::Tabpage) -> Self {
+        Self(s)
+    }
+}

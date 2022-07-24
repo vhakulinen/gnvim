@@ -1,9 +1,10 @@
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::types::{uievents::TablineUpdate, ShowTabline};
 
-use crate::child_iter::IterChildren;
+use crate::{boxed::Tabpage, child_iter::IterChildren};
 
 mod imp;
+mod tab;
 
 glib::wrapper! {
     pub struct Tabline(ObjectSubclass<imp::Tabline>)
@@ -19,14 +20,16 @@ impl Tabline {
             .iter_children()
             .for_each(|child| child.unparent());
 
-        for tab in event.tabs.iter() {
-            let label = gtk::Label::new(Some(&tab.name));
+        let nvim = imp.nvim.borrow();
+        for tab in event.tabs.into_iter() {
+            let current = tab.tab == event.current;
+            let child = tab::Tab::new(&*nvim, &tab.name, Tabpage(tab.tab));
 
-            if tab.tab == event.current {
-                label.add_css_class("selected");
+            if current {
+                child.add_css_class("selected");
             }
 
-            imp.content.append(&label);
+            imp.content.append(&child);
         }
     }
 

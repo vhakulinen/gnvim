@@ -36,6 +36,9 @@ pub trait AsRustType {
 
 impl<T: AsRef<str>> AsRustType for T {
     fn as_rust_type(&self) -> String {
+        // TODO(ville): Use different mapping for function parameters and
+        // return values, so that the function parameters can be references.
+
         let f = match self.as_ref() {
             "Boolean" => "bool",
             "Integer" => "i64",

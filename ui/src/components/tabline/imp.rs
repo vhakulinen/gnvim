@@ -90,7 +90,6 @@ impl ObjectImpl for Tabline {
                 self.show
                     .replace(value.get().expect("font value must be a ShowTabline"));
             }
-
             _ => unimplemented!(),
         };
     }

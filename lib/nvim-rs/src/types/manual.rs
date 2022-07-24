@@ -167,7 +167,7 @@ impl IntoValue for Buffer {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize)]
+#[derive(Debug, PartialEq, Clone, serde::Deserialize)]
 pub struct Tabpage(rmpv::Value);
 
 impl IntoValue for Tabpage {

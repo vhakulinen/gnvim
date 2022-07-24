@@ -7,5 +7,6 @@
         <file compressed="true" preprocess="xml-stripblanks">popupmenu.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">popupmenu_row.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">tabline.ui</file>
+        <file compressed="true" preprocess="xml-stripblanks">tab.ui</file>
     </gresource>
 </gresources>

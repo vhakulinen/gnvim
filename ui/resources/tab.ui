@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Tab" parent="GtkWidget">
+        <child>
+            <object class="GtkLabel" id="content">
+            </object>
+        </child>
+    </template>
+</interface>
+
