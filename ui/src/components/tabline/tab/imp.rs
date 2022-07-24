@@ -83,7 +83,7 @@ impl ObjectImpl for Tab {
 
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
-            "nvim" => self.nvim.borrow().to_value(),
+            "label" => self.content.label().to_value(),
             _ => unimplemented!(),
         }
     }

@@ -9,8 +9,6 @@ use crate::nvim::Neovim;
 #[derive(Default, gtk::CompositeTemplate)]
 #[template(resource = "/com/github/vhakulinen/gnvim/tabline.ui")]
 pub struct Tabline {
-    #[template_child(id = "scrolled-window")]
-    pub scrolledwindow: TemplateChild<gtk::ScrolledWindow>,
     #[template_child(id = "content")]
     pub content: TemplateChild<gtk::Box>,
 
@@ -37,17 +35,6 @@ impl ObjectSubclass for Tabline {
 }
 
 impl ObjectImpl for Tabline {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
-
-        self.scrolledwindow
-            .child()
-            .expect("failed to get scrolledwindow's child")
-            .downcast::<gtk::Viewport>()
-            .expect("child is not GtkViewport")
-            .set_scroll_to_focus(true);
-    }
-
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {

@@ -268,7 +268,7 @@ impl AppWindow {
                                     background-color: #{tabline_bg};
                                     color: #{tabline_fg};
                                     box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
-                                    padding: 0 1rem;
+                                    padding: 0.5rem 1rem;
                                 }}
 
                                 tabline tab.selected label {{

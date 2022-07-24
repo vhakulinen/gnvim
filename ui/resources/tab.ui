@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="Tab" parent="GtkWidget">
+        <property name="hexpand">true</property>
+
         <child>
             <object class="GtkLabel" id="content">
+                <property name="ellipsize">end</property>
             </object>
         </child>
     </template>
