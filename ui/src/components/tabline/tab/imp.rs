@@ -43,14 +43,19 @@ impl ObjectImpl for Tab {
         self.gesture_click
             .connect_pressed(clone!(@weak obj => move |_, _, _, _| {
                 spawn_local!(async move {
-                    let imp = obj.imp();
-                    let res = imp
-                        .nvim
+                    let nvim = obj.nvim();
+                    let page = obj
+                        .imp()
+                        .tabpage
                         .borrow()
+                        .clone()
+                        .expect("tabpage not set")
+                        .0;
+                    let res = nvim
                         .client()
                         .await
                         .nvim_set_current_tabpage(
-                            imp.tabpage.borrow().clone().expect("tabpage not set").0
+                            page
                         ).await.expect("call to nvim failed");
 
                     res.await.expect("nvim_set_current_tabpage failed");

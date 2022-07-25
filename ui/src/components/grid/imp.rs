@@ -86,9 +86,7 @@ impl ObjectImpl for Grid {
             clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
                     let res = obj
-                        .imp()
-                        .nvim
-                        .borrow()
+                        .nvim()
                         .client()
                         .await
                         .nvim_input_mouse(

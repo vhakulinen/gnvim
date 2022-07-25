@@ -44,7 +44,7 @@ impl WidgetImpl for Fixedz {
         widget
             .iter_children()
             .map(|c| self.layout_manager.layout_child(&c))
-            .find(|c| {
+            .any(|c| {
                 let pos = c.position();
                 let pos = pos.transform_point(&graphene::Point::zero());
                 let (x1, y1) = (pos.x() as f64, pos.y() as f64);
@@ -63,6 +63,5 @@ impl WidgetImpl for Fixedz {
 
                 true
             })
-            .is_some()
     }
 }

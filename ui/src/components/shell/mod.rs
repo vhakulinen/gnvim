@@ -7,7 +7,7 @@ use nvim::types::uievents::{
     PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
 };
 
-use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
+use crate::{boxed::ModeInfo, colors::Colors, font::Font, nvim::Neovim, spawn_local, warn, SCALE};
 
 use super::Grid;
 
@@ -36,6 +36,10 @@ impl Shell {
         glib::Object::new(&[]).expect("Failed to create Shell")
     }
 
+    fn nvim(&self) -> Neovim {
+        self.imp().nvim.borrow().clone()
+    }
+
     fn find_grid(&self, id: i64) -> Option<Grid> {
         self.imp()
             .grids
@@ -56,8 +60,7 @@ impl Shell {
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
             clone!(@weak self as obj => @default-return Continue(false), move || {
                 spawn_local!(clone!(@weak obj => async move {
-                    let res = obj.imp().nvim
-                        .borrow()
+                    let res = obj.nvim()
                         .client()
                         .await
                         .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)

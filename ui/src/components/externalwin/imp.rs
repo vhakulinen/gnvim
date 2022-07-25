@@ -34,14 +34,11 @@ impl ExternalWindow {
             clone!(@weak obj => @default-return Continue(false), move || {
                 spawn_local!(clone!(@weak obj => async move {
                     let res = obj
-                        .imp()
-                        .grid
-                        .borrow()
                         .nvim()
                         .client()
                         .await
                         .nvim_ui_try_resize_grid(
-                            obj.imp().grid.borrow().id(),
+                            obj.grid_id(),
                             cols.max(1) as i64, rows.max(1) as i64)
                         .await
                         .unwrap();

@@ -1,4 +1,5 @@
-use gtk::{self, glib};
+use crate::nvim::Neovim;
+use gtk::{self, glib, subclass::prelude::*};
 
 use super::Grid;
 
@@ -19,5 +20,13 @@ impl ExternalWindow {
             ("deletable", &false),
         ])
         .expect("failed to create ExternalWindow")
+    }
+
+    fn nvim(&self) -> Neovim {
+        self.imp().grid.borrow().nvim()
+    }
+
+    fn grid_id(&self) -> i64 {
+        self.imp().grid.borrow().id()
     }
 }

@@ -200,8 +200,8 @@ impl Font {
             {stretch}
             {variations}
             ",
-            family = family.unwrap_or(String::new()),
-            variations = variations.unwrap_or(String::new()),
+            family = family.unwrap_or_default(),
+            variations = variations.unwrap_or_default(),
         );
 
         f
