@@ -1,3 +1,6 @@
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+
 pub trait AsPascalCase {
     fn as_pascal_case(&self) -> String;
 }
@@ -55,7 +58,11 @@ impl<T: AsRef<str>> AsRustType for T {
             "ArrayOf(Dictionary)" => return format!("Vec<{}>", "Dictionary".as_rust_type()),
             "ArrayOf(Tabpage)" => return format!("Vec<{}>", "Tabpage".as_rust_type()),
             "ArrayOf(Window)" => return format!("Vec<{}>", "Window".as_rust_type()),
-            s => return format!("rmpv::Value /* {} */", s),
+            "Array" => "Vec<rmpv::Value>",
+            "Dictionary" => "Dictionary",
+            "Object" => "Object",
+            "LuaRef" => "LuaRef",
+            s => unimplemented!("nvim api type '{}'", s),
         };
 
         f.into()
@@ -69,12 +76,13 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    pub fn rust_name(&self) -> &str {
-        match self.name.as_str() {
+    pub fn rust_name(&self) -> syn::Ident {
+        syn::parse_str(match self.name.as_str() {
             "fn" => "_fn",
             "type" => "_type",
             s => s,
-        }
+        })
+        .expect("failed to parse name")
     }
 }
 
@@ -90,13 +98,50 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn rust_type_for_param(&self, param: &Parameter) -> String {
+    pub fn param_type(&self, param: &Parameter) -> String {
         let t = match (self.name.as_ref(), param.name.as_ref()) {
             ("nvim_ui_attach", "options") => "UiOptions",
             _ => return param.r#type.as_rust_type(),
         };
 
         t.into()
+    }
+
+    fn args_in(&self) -> Vec<TokenStream> {
+        self.parameters
+            .iter()
+            .map(|p| {
+                let name = p.rust_name();
+                let ty: syn::Type =
+                    syn::parse_str(&self.param_type(p)).expect("failed to parse type");
+                quote! {
+                    #name: #ty
+                }
+            })
+            .collect()
+    }
+
+    fn args_out(&self) -> Vec<syn::Ident> {
+        self.parameters.iter().map(|p| p.rust_name()).collect()
+    }
+
+    pub fn to_tokens(&self) -> Option<TokenStream> {
+        if self.deprecated_since.is_some() {
+            return None;
+        }
+
+        let fname: syn::Ident = syn::parse_str(&self.name).expect("failed to parse name");
+        let method = &self.name;
+        let args_in = self.args_in();
+        let args_out = self.args_out();
+        let output: syn::Type =
+            syn::parse_str(&self.return_type.as_rust_type()).expect("failed to parse name");
+
+        Some(quote! {
+            pub async fn #fname(&mut self, #(#args_in),*) -> Result<CallResponse<#output>, WriteError> {
+                self.call(#method, args![#(#args_out),*]).await
+            }
+        })
     }
 }
 
@@ -137,8 +182,86 @@ pub struct UiEvent {
 }
 
 impl UiEvent {
-    pub fn field_type_for<S: AsRef<str>>(evt: S, param: S, _type: S) -> String {
-        let s: &str = match (evt.as_ref(), param.as_ref()) {
+    pub fn to_decode_arm(&self) -> TokenStream {
+        let member: syn::Ident =
+            syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
+        let name = &self.name;
+
+        if self.parameters.is_empty() {
+            quote! {
+                (Some(#name), None) => UiEvent::#member,
+            }
+        } else {
+            quote! (
+                (Some(#name), Some(params)) => UiEvent::#member({
+                    params.into_iter().map(#member::deserialize)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(serde::de::Error::custom)?
+                }),
+            )
+        }
+    }
+
+    pub fn to_display_arm(&self) -> TokenStream {
+        let name: syn::Ident =
+            syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
+        let event = &self.name;
+
+        if self.parameters.is_empty() {
+            quote! {
+                Self::#name => write!(f, #event),
+            }
+        } else {
+            quote! {
+                Self::#name(_) => write!(f, #event),
+            }
+        }
+    }
+
+    pub fn to_enum_arm(&self) -> TokenStream {
+        let name: syn::Ident =
+            syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
+
+        if self.parameters.is_empty() {
+            quote! {
+                pub #name,
+            }
+        } else {
+            quote! {
+                pub #name(Vec<#name>),
+            }
+        }
+    }
+
+    pub fn to_struct(&self) -> Option<TokenStream> {
+        if self.parameters.is_empty() || self.has_manual_type() {
+            return None;
+        }
+
+        let name: syn::Ident =
+            syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
+
+        let fields = self.parameters.iter().map(|param| {
+            let name = format_ident!("{}", &param.name);
+            let ty = self.field_type_for(&param.name, &param.r#type);
+
+            let ty: syn::Type = syn::parse_str(&ty).unwrap();
+
+            quote! {
+                pub #name: #ty,
+            }
+        });
+
+        Some(quote! {
+            #[derive(Debug, serde::Deserialize)]
+            pub struct #name {
+                #(#fields)*
+            }
+        })
+    }
+
+    fn field_type_for<S: AsRef<str>>(&self, param: S, ty: S) -> String {
+        let s: &str = match (self.name.as_ref(), param.as_ref()) {
             ("grid_line", "data") => "Vec<GridLineData>",
             ("hl_attr_define", "rgb_attrs") => "HlAttr",
             ("hl_attr_define", "cterm_attrs") => "HlAttr",
@@ -146,7 +269,7 @@ impl UiEvent {
             ("popupmenu_show", "items") => "Vec<PopupmenuItem>",
             ("tabline_update", "tabs") => "Vec<TablineTab>",
             ("tabline_update", "buffers") => "Vec<TablineBuffer>",
-            _ => return _type.as_rust_type(),
+            _ => return ty.as_rust_type(),
         };
 
         s.into()

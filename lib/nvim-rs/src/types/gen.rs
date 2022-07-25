@@ -1,85 +1,69 @@
-use std::fmt::Display;
-
 use super::manual::*;
-
-#[derive(Debug, serde::Deserialize)]
+use std::fmt::Display;
+#[derive(Debug, serde :: Deserialize)]
 pub struct ModeInfoSet {
     pub enabled: bool,
     pub cursor_styles: Vec<ModeInfo>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct ModeChange {
     pub mode: String,
     pub mode_idx: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct SetTitle {
     pub title: String,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct SetIcon {
     pub icon: String,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct Screenshot {
     pub path: String,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct UpdateFg {
     pub fg: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct UpdateBg {
     pub bg: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct UpdateSp {
     pub sp: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct Resize {
     pub width: i64,
     pub height: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CursorGoto {
     pub row: i64,
     pub col: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct HighlightSet {
-    pub attrs: rmpv::Value, /* Dictionary */
+    pub attrs: Dictionary,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct Put {
     pub str: String,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct SetScrollRegion {
     pub top: i64,
     pub bot: i64,
     pub left: i64,
     pub right: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct Scroll {
     pub count: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct DefaultColorsSet {
     pub rgb_fg: i64,
     pub rgb_bg: i64,
@@ -87,49 +71,42 @@ pub struct DefaultColorsSet {
     pub cterm_fg: i64,
     pub cterm_bg: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct HlAttrDefine {
     pub id: i64,
     pub rgb_attrs: HlAttr,
     pub cterm_attrs: HlAttr,
-    pub info: rmpv::Value, /* Array */
+    pub info: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct HlGroupSet {
     pub name: String,
     pub id: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridResize {
     pub grid: i64,
     pub width: i64,
     pub height: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridClear {
     pub grid: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridCursorGoto {
     pub grid: i64,
     pub row: i64,
     pub col: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridLine {
     pub grid: i64,
     pub row: i64,
     pub col_start: i64,
     pub data: Vec<GridLineData>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridScroll {
     pub grid: i64,
     pub top: i64,
@@ -139,13 +116,11 @@ pub struct GridScroll {
     pub rows: i64,
     pub cols: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct GridDestroy {
     pub grid: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinPos {
     pub grid: i64,
     pub win: Window,
@@ -154,8 +129,7 @@ pub struct WinPos {
     pub width: i64,
     pub height: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinFloatPos {
     pub grid: i64,
     pub win: Window,
@@ -166,32 +140,27 @@ pub struct WinFloatPos {
     pub focusable: bool,
     pub zindex: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinExternalPos {
     pub grid: i64,
     pub win: Window,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinHide {
     pub grid: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinClose {
     pub grid: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgSetPos {
     pub grid: i64,
     pub row: i64,
     pub scrolled: bool,
     pub sep_char: String,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WinViewport {
     pub grid: i64,
     pub win: Window,
@@ -201,8 +170,7 @@ pub struct WinViewport {
     pub curcol: i64,
     pub line_count: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct PopupmenuShow {
     pub items: Vec<PopupmenuItem>,
     pub selected: i64,
@@ -210,95 +178,79 @@ pub struct PopupmenuShow {
     pub col: i64,
     pub grid: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct PopupmenuSelect {
     pub selected: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct TablineUpdate {
     pub current: Tabpage,
     pub tabs: Vec<TablineTab>,
     pub current_buffer: Buffer,
     pub buffers: Vec<TablineBuffer>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineShow {
-    pub content: rmpv::Value, /* Array */
+    pub content: Vec<rmpv::Value>,
     pub pos: i64,
     pub firstc: String,
     pub prompt: String,
     pub indent: i64,
     pub level: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlinePos {
     pub pos: i64,
     pub level: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineSpecialChar {
     pub c: String,
     pub shift: bool,
     pub level: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineHide {
     pub level: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineBlockShow {
-    pub lines: rmpv::Value, /* Array */
+    pub lines: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineBlockAppend {
-    pub lines: rmpv::Value, /* Array */
+    pub lines: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WildmenuShow {
-    pub items: rmpv::Value, /* Array */
+    pub items: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct WildmenuSelect {
     pub selected: i64,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgShow {
     pub kind: String,
-    pub content: rmpv::Value, /* Array */
+    pub content: Vec<rmpv::Value>,
     pub replace_last: bool,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgShowcmd {
-    pub content: rmpv::Value, /* Array */
+    pub content: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgShowmode {
-    pub content: rmpv::Value, /* Array */
+    pub content: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgRuler {
-    pub content: rmpv::Value, /* Array */
+    pub content: Vec<rmpv::Value>,
 }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde :: Deserialize)]
 pub struct MsgHistoryShow {
-    pub entries: rmpv::Value, /* Array */
+    pub entries: Vec<rmpv::Value>,
 }
-
 #[derive(Debug)]
 pub enum UiEvent {
     ModeInfoSet(Vec<ModeInfoSet>),
@@ -364,7 +316,6 @@ pub enum UiEvent {
     MsgRuler(Vec<MsgRuler>),
     MsgHistoryShow(Vec<MsgHistoryShow>),
 }
-
 impl Display for UiEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -433,13 +384,10 @@ impl Display for UiEvent {
         }
     }
 }
-
 impl<'de> serde::Deserialize<'de> for UiEvent {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let redraw = rmpv::Value::deserialize(d)?;
-
         let name = redraw[0].as_str();
-        // TODO(ville): Would be nice if this was possible to do with the derilization it self...
         let params = redraw.as_array().and_then(|v| {
             if v[1].as_array().map(|v| v.is_empty()) == Some(true) {
                 None
@@ -447,8 +395,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                 Some(v[1..].to_vec())
             }
         });
-
-        // TODO(ville): Error handling.
         Ok(match (name, params) {
             (Some("mode_info_set"), Some(params)) => UiEvent::ModeInfoSet({
                 params
@@ -457,17 +403,11 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("update_menu"), None) => UiEvent::UpdateMenu,
-
             (Some("busy_start"), None) => UiEvent::BusyStart,
-
             (Some("busy_stop"), None) => UiEvent::BusyStop,
-
             (Some("mouse_on"), None) => UiEvent::MouseOn,
-
             (Some("mouse_off"), None) => UiEvent::MouseOff,
-
             (Some("mode_change"), Some(params)) => UiEvent::ModeChange({
                 params
                     .into_iter()
@@ -475,15 +415,10 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("bell"), None) => UiEvent::Bell,
-
             (Some("visual_bell"), None) => UiEvent::VisualBell,
-
             (Some("flush"), None) => UiEvent::Flush,
-
             (Some("suspend"), None) => UiEvent::Suspend,
-
             (Some("set_title"), Some(params)) => UiEvent::SetTitle({
                 params
                     .into_iter()
@@ -491,7 +426,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("set_icon"), Some(params)) => UiEvent::SetIcon({
                 params
                     .into_iter()
@@ -499,7 +433,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("screenshot"), Some(params)) => UiEvent::Screenshot({
                 params
                     .into_iter()
@@ -507,7 +440,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("option_set"), Some(params)) => UiEvent::OptionSet({
                 params
                     .into_iter()
@@ -515,7 +447,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("update_fg"), Some(params)) => UiEvent::UpdateFg({
                 params
                     .into_iter()
@@ -523,7 +454,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("update_bg"), Some(params)) => UiEvent::UpdateBg({
                 params
                     .into_iter()
@@ -531,7 +461,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("update_sp"), Some(params)) => UiEvent::UpdateSp({
                 params
                     .into_iter()
@@ -539,7 +468,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("resize"), Some(params)) => UiEvent::Resize({
                 params
                     .into_iter()
@@ -547,11 +475,8 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("clear"), None) => UiEvent::Clear,
-
             (Some("eol_clear"), None) => UiEvent::EolClear,
-
             (Some("cursor_goto"), Some(params)) => UiEvent::CursorGoto({
                 params
                     .into_iter()
@@ -559,7 +484,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("highlight_set"), Some(params)) => UiEvent::HighlightSet({
                 params
                     .into_iter()
@@ -567,7 +491,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("put"), Some(params)) => UiEvent::Put({
                 params
                     .into_iter()
@@ -575,7 +498,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("set_scroll_region"), Some(params)) => UiEvent::SetScrollRegion({
                 params
                     .into_iter()
@@ -583,7 +505,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("scroll"), Some(params)) => UiEvent::Scroll({
                 params
                     .into_iter()
@@ -591,7 +512,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("default_colors_set"), Some(params)) => UiEvent::DefaultColorsSet({
                 params
                     .into_iter()
@@ -599,7 +519,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("hl_attr_define"), Some(params)) => UiEvent::HlAttrDefine({
                 params
                     .into_iter()
@@ -607,7 +526,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("hl_group_set"), Some(params)) => UiEvent::HlGroupSet({
                 params
                     .into_iter()
@@ -615,7 +533,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_resize"), Some(params)) => UiEvent::GridResize({
                 params
                     .into_iter()
@@ -623,7 +540,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_clear"), Some(params)) => UiEvent::GridClear({
                 params
                     .into_iter()
@@ -631,7 +547,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_cursor_goto"), Some(params)) => UiEvent::GridCursorGoto({
                 params
                     .into_iter()
@@ -639,7 +554,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_line"), Some(params)) => UiEvent::GridLine({
                 params
                     .into_iter()
@@ -647,7 +561,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_scroll"), Some(params)) => UiEvent::GridScroll({
                 params
                     .into_iter()
@@ -655,7 +568,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("grid_destroy"), Some(params)) => UiEvent::GridDestroy({
                 params
                     .into_iter()
@@ -663,7 +575,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_pos"), Some(params)) => UiEvent::WinPos({
                 params
                     .into_iter()
@@ -671,7 +582,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_float_pos"), Some(params)) => UiEvent::WinFloatPos({
                 params
                     .into_iter()
@@ -679,7 +589,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_external_pos"), Some(params)) => UiEvent::WinExternalPos({
                 params
                     .into_iter()
@@ -687,7 +596,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_hide"), Some(params)) => UiEvent::WinHide({
                 params
                     .into_iter()
@@ -695,7 +603,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_close"), Some(params)) => UiEvent::WinClose({
                 params
                     .into_iter()
@@ -703,7 +610,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("msg_set_pos"), Some(params)) => UiEvent::MsgSetPos({
                 params
                     .into_iter()
@@ -711,7 +617,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("win_viewport"), Some(params)) => UiEvent::WinViewport({
                 params
                     .into_iter()
@@ -719,7 +624,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("popupmenu_show"), Some(params)) => UiEvent::PopupmenuShow({
                 params
                     .into_iter()
@@ -727,9 +631,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("popupmenu_hide"), None) => UiEvent::PopupmenuHide,
-
             (Some("popupmenu_select"), Some(params)) => UiEvent::PopupmenuSelect({
                 params
                     .into_iter()
@@ -737,7 +639,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("tabline_update"), Some(params)) => UiEvent::TablineUpdate({
                 params
                     .into_iter()
@@ -745,7 +646,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_show"), Some(params)) => UiEvent::CmdlineShow({
                 params
                     .into_iter()
@@ -753,7 +653,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_pos"), Some(params)) => UiEvent::CmdlinePos({
                 params
                     .into_iter()
@@ -761,7 +660,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_special_char"), Some(params)) => UiEvent::CmdlineSpecialChar({
                 params
                     .into_iter()
@@ -769,7 +667,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_hide"), Some(params)) => UiEvent::CmdlineHide({
                 params
                     .into_iter()
@@ -777,7 +674,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_block_show"), Some(params)) => UiEvent::CmdlineBlockShow({
                 params
                     .into_iter()
@@ -785,7 +681,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_block_append"), Some(params)) => UiEvent::CmdlineBlockAppend({
                 params
                     .into_iter()
@@ -793,9 +688,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("cmdline_block_hide"), None) => UiEvent::CmdlineBlockHide,
-
             (Some("wildmenu_show"), Some(params)) => UiEvent::WildmenuShow({
                 params
                     .into_iter()
@@ -803,7 +696,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("wildmenu_select"), Some(params)) => UiEvent::WildmenuSelect({
                 params
                     .into_iter()
@@ -811,9 +703,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("wildmenu_hide"), None) => UiEvent::WildmenuHide,
-
             (Some("msg_show"), Some(params)) => UiEvent::MsgShow({
                 params
                     .into_iter()
@@ -821,9 +711,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("msg_clear"), None) => UiEvent::MsgClear,
-
             (Some("msg_showcmd"), Some(params)) => UiEvent::MsgShowcmd({
                 params
                     .into_iter()
@@ -831,7 +719,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("msg_showmode"), Some(params)) => UiEvent::MsgShowmode({
                 params
                     .into_iter()
@@ -839,7 +726,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("msg_ruler"), Some(params)) => UiEvent::MsgRuler({
                 params
                     .into_iter()
@@ -847,7 +733,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             (Some("msg_history_show"), Some(params)) => UiEvent::MsgHistoryShow({
                 params
                     .into_iter()
@@ -855,7 +740,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
-
             v => panic!("failed to decode message {:?}", v),
         })
     }

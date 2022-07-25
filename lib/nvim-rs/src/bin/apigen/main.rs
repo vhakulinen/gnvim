@@ -1,16 +1,83 @@
-extern crate rmp_serde;
-extern crate rmpv;
-extern crate serde;
+use quote::quote;
 
 mod types;
 
-use types::{ApiMetadata, AsPascalCase, AsRustType};
-
-use crate::types::UiEvent;
+use types::ApiMetadata;
 
 fn usage_exit() -> ! {
     eprintln!("Usage: apigen functions|uievents");
     std::process::exit(1);
+}
+
+fn functions(res: ApiMetadata) {
+    let functions = res
+        .functions
+        .iter()
+        .filter_map(|function| function.to_tokens());
+
+    let out = quote! {
+        use crate::rpc::{RpcWriter, WriteError};
+        use crate::{args, Client, CallResponse, types::{UiOptions, Window, Tabpage, Buffer, Dictionary, LuaRef, Object}};
+
+        impl<W: RpcWriter> Client<W> {
+            #(#functions)*
+        }
+    };
+
+    println!("{}", out);
+}
+
+fn uievents(res: ApiMetadata) {
+    let structs = res.ui_events.iter().filter_map(|event| event.to_struct());
+    let members = res.ui_events.iter().map(|event| event.to_enum_arm());
+    let display_members = res.ui_events.iter().map(|event| event.to_display_arm());
+    let decode_matches = res.ui_events.iter().map(|event| event.to_decode_arm());
+
+    let out = quote! {
+        use std::fmt::Display;
+
+        use super::manual::*;
+
+        #(#structs)*
+
+        #[derive(Debug)]
+        pub enum UiEvent {
+            #(#members)*
+        }
+
+        impl Display for UiEvent {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(#display_members)*
+                }
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for UiEvent {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                let redraw = rmpv::Value::deserialize(d)?;
+
+                let name = redraw[0].as_str();
+                // TODO(ville): Would be nice if this was possible to do with the derilization it self...
+                let params = redraw.as_array().and_then(|v| {
+                    if v[1].as_array().map(|v| v.is_empty()) == Some(true) {
+                        None
+                    } else {
+                        Some(v[1..].to_vec())
+                    }
+                });
+
+                // TODO(ville): Error handling.
+                Ok(match (name, params) {
+                    #(#decode_matches)*
+                    v => panic!("failed to decode message {:?}", v),
+                })
+            }
+        }
+    }
+    .to_string();
+
+    println!("{}", out);
 }
 
 fn main() {
@@ -23,144 +90,8 @@ fn main() {
     let res = res.unwrap();
 
     match cmd.as_deref() {
-        Some("functions") => {
-            let functions: Vec<String> = res
-                .functions
-                .iter()
-                .filter_map(|function| {
-                    if function.deprecated_since.is_some() {
-                        return None;
-                    }
-
-                    Some(format!(
-                        include_str!("./templates/function.rs.txt"),
-                        name = function.name,
-                        method = function.name,
-                        args_in = function
-                            .parameters
-                            .iter()
-                            .map(|p| format!(
-                                "{}: {}",
-                                p.rust_name(),
-                                function.rust_type_for_param(p)
-                            ))
-                            .collect::<Vec<String>>()
-                            .join(", "),
-                        args_out = function
-                            .parameters
-                            .iter()
-                            .map(|p| p.rust_name())
-                            .collect::<Vec<&str>>()
-                            .join(", "),
-                        output = function.return_type.as_rust_type(),
-                    ))
-                })
-                .collect();
-
-            println!(
-                include_str!("./templates/api.rs.txt"),
-                functions = functions.join("\n\n"),
-            );
-        }
-        Some("uievents") => {
-            let structs = res
-                .ui_events
-                .iter()
-                .filter_map(|event| {
-                    if event.parameters.is_empty() || event.has_manual_type() {
-                        return None;
-                    }
-
-                    Some(format!(
-                        r#"
-                        #[derive(Debug, serde::Deserialize)]
-                        pub struct {name} {{
-                            {fields}
-                        }}
-                    "#,
-                        name = event.name.as_pascal_case(),
-                        fields = event
-                            .parameters
-                            .iter()
-                            .map(|param| {
-                                format!(
-                                    "pub {name}: {_type},",
-                                    name = param.rust_name(),
-                                    _type = UiEvent::field_type_for(
-                                        &event.name,
-                                        &param.name,
-                                        &param.r#type
-                                    ),
-                                )
-                            })
-                            .collect::<Vec<String>>()
-                            .join("\n"),
-                    ))
-                })
-                .collect::<Vec<String>>()
-                .join("\n\n");
-
-            let members = res
-                .ui_events
-                .iter()
-                .map(|event| {
-                    let name = event.name.as_pascal_case();
-
-                    if event.parameters.is_empty() {
-                        format!("pub {}", name)
-                    } else {
-                        format!("pub {}(Vec<{}>)", name, name)
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(",\n");
-
-            let display_members = res
-                .ui_events
-                .iter()
-                .map(|event| {
-                    let name = event.name.as_pascal_case();
-
-                    if event.parameters.is_empty() {
-                        format!("Self::{} => write!(f, \"{}\")", name, event.name)
-                    } else {
-                        format!("Self::{}(_) => write!(f, \"{}\")", name, event.name)
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(",\n");
-
-            let decode_matches = res
-                .ui_events
-                .iter()
-                .map(|event| {
-                    if event.parameters.is_empty() {
-                        format!(
-                            r#"
-                                (Some("{name}"), None) => UiEvent::{member},
-                            "#,
-                            name = event.name,
-                            member = event.name.as_pascal_case(),
-                        )
-                    } else {
-                        format!(
-                            include_str!("./templates/uievent-arm.rs.txt"),
-                            name = event.name,
-                            member = event.name.as_pascal_case(),
-                        )
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("\n");
-
-            println!(
-                include_str!("./templates/uievents.rs.txt"),
-                structs = structs,
-                members = members,
-                decode_matches = decode_matches,
-                display_members = display_members,
-            );
-        }
+        Some("functions") => functions(res),
+        Some("uievents") => uievents(res),
         _ => usage_exit(),
     }
 

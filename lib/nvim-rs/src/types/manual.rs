@@ -1,4 +1,37 @@
-use into_value::IntoValue;
+use into_value::{impl_into_value, IntoValue};
+
+macro_rules! impl_from {
+    ($t:ident) => {
+        impl From<$t> for rmpv::Value {
+            fn from(t: $t) -> Self {
+                t.0
+            }
+        }
+
+        impl From<rmpv::Value> for $t {
+            fn from(v: rmpv::Value) -> Self {
+                $t(v)
+            }
+        }
+    };
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct Dictionary(rmpv::Value);
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct LuaRef(rmpv::Value);
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct Object(rmpv::Value);
+
+impl_from!(Dictionary);
+impl_from!(LuaRef);
+impl_from!(Object);
+
+impl_into_value!(Dictionary);
+impl_into_value!(LuaRef);
+impl_into_value!(Object);
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum ShowTabline {

@@ -662,9 +662,12 @@ dependencies = [
  "futures",
  "into-value",
  "into-value-proc",
+ "proc-macro2",
+ "quote",
  "rmp-serde",
  "rmpv",
  "serde",
+ "syn",
  "tokio",
  "tokio-util",
 ]

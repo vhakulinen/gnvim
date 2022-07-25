@@ -1,6 +1,0 @@
-use crate::rpc::{{RpcWriter, WriteError}};
-use crate::{{args, Client, CallResponse, types::{{UiOptions, Window, Tabpage, Buffer}}}};
-
-impl<W: RpcWriter> Client<W> {{
-    {functions}
-}}

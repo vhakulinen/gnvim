@@ -4,6 +4,7 @@ pub trait IntoValue {
     fn into_value(self) -> rmpv::Value;
 }
 
+#[macro_export]
 macro_rules! impl_into_value {
     ($t:ty) => {
         impl IntoValue for $t {

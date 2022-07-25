@@ -1,5 +1,0 @@
-(Some("{name}"), Some(params)) => UiEvent::{member}({{
-    params.into_iter().map({member}::deserialize)
-    .collect::<Result<Vec<_>, _>>()
-    .map_err(serde::de::Error::custom)?
-}}),

@@ -1,3 +1,0 @@
-pub async fn {name}(&mut self, {args_in}) -> Result<CallResponse<{output}>, WriteError> {{
-    self.call("{method}", args![{args_out}]).await
-}}
