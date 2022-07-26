@@ -1,6 +1,6 @@
 use into_value::{impl_into_value, IntoValue};
 
-macro_rules! impl_from {
+macro_rules! impl_api_arg {
     ($t:ident) => {
         impl From<$t> for rmpv::Value {
             fn from(t: $t) -> Self {
@@ -8,30 +8,21 @@ macro_rules! impl_from {
             }
         }
 
+        impl_into_value!($t);
+
+        impl IntoValue for &$t {
+            fn into_value(self) -> rmpv::Value {
+                self.0.clone().into()
+            }
+        }
+
         impl From<rmpv::Value> for $t {
-            fn from(v: rmpv::Value) -> Self {
+            fn from(v: rmpv::Value) -> $t {
                 $t(v)
             }
         }
     };
 }
-
-#[derive(Debug, PartialEq, serde::Deserialize)]
-pub struct Dictionary(rmpv::Value);
-
-#[derive(Debug, PartialEq, serde::Deserialize)]
-pub struct LuaRef(rmpv::Value);
-
-#[derive(Debug, PartialEq, serde::Deserialize)]
-pub struct Object(rmpv::Value);
-
-impl_from!(Dictionary);
-impl_from!(LuaRef);
-impl_from!(Object);
-
-impl_into_value!(Dictionary);
-impl_into_value!(LuaRef);
-impl_into_value!(Object);
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum ShowTabline {
@@ -185,29 +176,11 @@ pub struct ModeInfo {
 #[derive(Debug, serde::Deserialize)]
 pub struct Window(rmpv::Value);
 
-impl IntoValue for Window {
-    fn into_value(self) -> rmpv::Value {
-        self.0
-    }
-}
-
 #[derive(Debug, PartialEq, serde::Deserialize)]
 pub struct Buffer(rmpv::Value);
 
-impl IntoValue for Buffer {
-    fn into_value(self) -> rmpv::Value {
-        self.0
-    }
-}
-
 #[derive(Debug, PartialEq, Clone, serde::Deserialize)]
 pub struct Tabpage(rmpv::Value);
-
-impl IntoValue for Tabpage {
-    fn into_value(self) -> rmpv::Value {
-        self.0
-    }
-}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TablineTab {
@@ -228,3 +201,19 @@ pub struct PopupmenuItem {
     pub menu: String,
     pub info: String,
 }
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct Dictionary(rmpv::Value);
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct LuaRef(rmpv::Value);
+
+#[derive(Debug, PartialEq, serde::Deserialize)]
+pub struct Object(rmpv::Value);
+
+impl_api_arg!(Dictionary);
+impl_api_arg!(LuaRef);
+impl_api_arg!(Object);
+impl_api_arg!(Window);
+impl_api_arg!(Buffer);
+impl_api_arg!(Tabpage);

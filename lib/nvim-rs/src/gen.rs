@@ -7,14 +7,14 @@ use crate::{
 impl<W: RpcWriter> Client<W> {
     pub async fn nvim_get_autocmds(
         &mut self,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Vec<rmpv::Value>>, WriteError> {
         self.call("nvim_get_autocmds", args![opts]).await
     }
     pub async fn nvim_create_autocmd(
         &mut self,
-        event: Object,
-        opts: Dictionary,
+        event: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_create_autocmd", args![event, opts]).await
     }
@@ -23,14 +23,14 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_clear_autocmds(
         &mut self,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_clear_autocmds", args![opts]).await
     }
     pub async fn nvim_create_augroup(
         &mut self,
-        name: String,
-        opts: Dictionary,
+        name: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_create_augroup", args![name, opts]).await
     }
@@ -42,41 +42,41 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_del_augroup_by_name(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_del_augroup_by_name", args![name]).await
     }
     pub async fn nvim_exec_autocmds(
         &mut self,
-        event: Object,
-        opts: Dictionary,
+        event: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_exec_autocmds", args![event, opts]).await
     }
     pub async fn nvim_buf_line_count(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_line_count", args![buffer]).await
     }
     pub async fn nvim_buf_attach(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         send_buffer: bool,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_attach", args![buffer, send_buffer, opts])
             .await
     }
     pub async fn nvim_buf_detach(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_detach", args![buffer]).await
     }
     pub async fn nvim_buf_get_lines(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         start: i64,
         end: i64,
         strict_indexing: bool,
@@ -89,7 +89,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_set_lines(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         start: i64,
         end: i64,
         strict_indexing: bool,
@@ -103,7 +103,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_set_text(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         start_row: i64,
         start_col: i64,
         end_row: i64,
@@ -118,12 +118,12 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_get_text(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         start_row: i64,
         start_col: i64,
         end_row: i64,
         end_col: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Vec<String>>, WriteError> {
         self.call(
             "nvim_buf_get_text",
@@ -133,161 +133,161 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_get_offset(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         index: i64,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_get_offset", args![buffer, index]).await
     }
     pub async fn nvim_buf_get_var(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_buf_get_var", args![buffer, name]).await
     }
     pub async fn nvim_buf_get_changedtick(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_buf_get_changedtick", args![buffer]).await
     }
     pub async fn nvim_buf_get_keymap(
         &mut self,
-        buffer: Buffer,
-        mode: String,
+        buffer: &Buffer,
+        mode: &str,
     ) -> Result<CallResponse<Vec<Dictionary>>, WriteError> {
         self.call("nvim_buf_get_keymap", args![buffer, mode]).await
     }
     pub async fn nvim_buf_set_keymap(
         &mut self,
-        buffer: Buffer,
-        mode: String,
-        lhs: String,
-        rhs: String,
-        opts: Dictionary,
+        buffer: &Buffer,
+        mode: &str,
+        lhs: &str,
+        rhs: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_keymap", args![buffer, mode, lhs, rhs, opts])
             .await
     }
     pub async fn nvim_buf_del_keymap(
         &mut self,
-        buffer: Buffer,
-        mode: String,
-        lhs: String,
+        buffer: &Buffer,
+        mode: &str,
+        lhs: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_del_keymap", args![buffer, mode, lhs])
             .await
     }
     pub async fn nvim_buf_get_commands(
         &mut self,
-        buffer: Buffer,
-        opts: Dictionary,
+        buffer: &Buffer,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_buf_get_commands", args![buffer, opts])
             .await
     }
     pub async fn nvim_buf_set_var(
         &mut self,
-        buffer: Buffer,
-        name: String,
-        value: Object,
+        buffer: &Buffer,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_var", args![buffer, name, value])
             .await
     }
     pub async fn nvim_buf_del_var(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_del_var", args![buffer, name]).await
     }
     pub async fn nvim_buf_get_option(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_buf_get_option", args![buffer, name]).await
     }
     pub async fn nvim_buf_set_option(
         &mut self,
-        buffer: Buffer,
-        name: String,
-        value: Object,
+        buffer: &Buffer,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_option", args![buffer, name, value])
             .await
     }
     pub async fn nvim_buf_get_name(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<String>, WriteError> {
         self.call("nvim_buf_get_name", args![buffer]).await
     }
     pub async fn nvim_buf_set_name(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_set_name", args![buffer, name]).await
     }
     pub async fn nvim_buf_is_loaded(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_is_loaded", args![buffer]).await
     }
     pub async fn nvim_buf_delete(
         &mut self,
-        buffer: Buffer,
-        opts: Dictionary,
+        buffer: &Buffer,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_delete", args![buffer, opts]).await
     }
     pub async fn nvim_buf_is_valid(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_is_valid", args![buffer]).await
     }
     pub async fn nvim_buf_del_mark(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_del_mark", args![buffer, name]).await
     }
     pub async fn nvim_buf_set_mark(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
         line: i64,
         col: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_buf_set_mark", args![buffer, name, line, col, opts])
             .await
     }
     pub async fn nvim_buf_get_mark(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_buf_get_mark", args![buffer, name]).await
     }
     pub async fn nvim_buf_call(
         &mut self,
-        buffer: Buffer,
-        fun: LuaRef,
+        buffer: &Buffer,
+        fun: &LuaRef,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_buf_call", args![buffer, fun]).await
     }
     pub async fn nvim_buf_create_user_command(
         &mut self,
-        buffer: Buffer,
-        name: String,
-        command: Object,
-        opts: Dictionary,
+        buffer: &Buffer,
+        name: &str,
+        command: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_buf_create_user_command",
@@ -297,15 +297,15 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_del_user_command(
         &mut self,
-        buffer: Buffer,
-        name: String,
+        buffer: &Buffer,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_buf_del_user_command", args![buffer, name])
             .await
     }
     pub async fn nvim_create_namespace(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_create_namespace", args![name]).await
     }
@@ -314,21 +314,21 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_get_extmark_by_id(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
         id: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Vec<i64>>, WriteError> {
         self.call("nvim_buf_get_extmark_by_id", args![buffer, ns_id, id, opts])
             .await
     }
     pub async fn nvim_buf_get_extmarks(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
-        start: Object,
-        end: Object,
-        opts: Dictionary,
+        start: &Object,
+        end: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Vec<rmpv::Value>>, WriteError> {
         self.call(
             "nvim_buf_get_extmarks",
@@ -338,11 +338,11 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_set_extmark(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
         line: i64,
         col: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call(
             "nvim_buf_set_extmark",
@@ -352,7 +352,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_del_extmark(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
         id: i64,
     ) -> Result<CallResponse<bool>, WriteError> {
@@ -361,9 +361,9 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_add_highlight(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
-        hl_group: String,
+        hl_group: &str,
         line: i64,
         col_start: i64,
         col_end: i64,
@@ -376,7 +376,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_buf_clear_namespace(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         ns_id: i64,
         line_start: i64,
         line_end: i64,
@@ -390,57 +390,57 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_set_decoration_provider(
         &mut self,
         ns_id: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_decoration_provider", args![ns_id, opts])
             .await
     }
     pub async fn nvim_tabpage_list_wins(
         &mut self,
-        tabpage: Tabpage,
+        tabpage: &Tabpage,
     ) -> Result<CallResponse<Vec<Window>>, WriteError> {
         self.call("nvim_tabpage_list_wins", args![tabpage]).await
     }
     pub async fn nvim_tabpage_get_var(
         &mut self,
-        tabpage: Tabpage,
-        name: String,
+        tabpage: &Tabpage,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_tabpage_get_var", args![tabpage, name])
             .await
     }
     pub async fn nvim_tabpage_set_var(
         &mut self,
-        tabpage: Tabpage,
-        name: String,
-        value: Object,
+        tabpage: &Tabpage,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_tabpage_set_var", args![tabpage, name, value])
             .await
     }
     pub async fn nvim_tabpage_del_var(
         &mut self,
-        tabpage: Tabpage,
-        name: String,
+        tabpage: &Tabpage,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_tabpage_del_var", args![tabpage, name])
             .await
     }
     pub async fn nvim_tabpage_get_win(
         &mut self,
-        tabpage: Tabpage,
+        tabpage: &Tabpage,
     ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_tabpage_get_win", args![tabpage]).await
     }
     pub async fn nvim_tabpage_get_number(
         &mut self,
-        tabpage: Tabpage,
+        tabpage: &Tabpage,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_tabpage_get_number", args![tabpage]).await
     }
     pub async fn nvim_tabpage_is_valid(
         &mut self,
-        tabpage: Tabpage,
+        tabpage: &Tabpage,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_tabpage_is_valid", args![tabpage]).await
     }
@@ -465,8 +465,8 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_ui_set_option(
         &mut self,
-        name: String,
-        value: Object,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_ui_set_option", args![name, value]).await
     }
@@ -497,7 +497,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_hl_by_name(
         &mut self,
-        name: String,
+        name: &str,
         rgb: bool,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_hl_by_name", args![name, rgb]).await
@@ -511,35 +511,35 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_hl_id_by_name(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_get_hl_id_by_name", args![name]).await
     }
     pub async fn nvim_set_hl(
         &mut self,
         ns_id: i64,
-        name: String,
-        val: Dictionary,
+        name: &str,
+        val: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_hl", args![ns_id, name, val]).await
     }
     pub async fn nvim_feedkeys(
         &mut self,
-        keys: String,
-        mode: String,
+        keys: &str,
+        mode: &str,
         escape_ks: bool,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_feedkeys", args![keys, mode, escape_ks])
             .await
     }
-    pub async fn nvim_input(&mut self, keys: String) -> Result<CallResponse<i64>, WriteError> {
+    pub async fn nvim_input(&mut self, keys: &str) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_input", args![keys]).await
     }
     pub async fn nvim_input_mouse(
         &mut self,
-        button: String,
-        action: String,
-        modifier: String,
+        button: &str,
+        action: &str,
+        modifier: &str,
         grid: i64,
         row: i64,
         col: i64,
@@ -552,7 +552,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_replace_termcodes(
         &mut self,
-        str: String,
+        str: &str,
         from_part: bool,
         do_lt: bool,
         special: bool,
@@ -565,20 +565,20 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_exec_lua(
         &mut self,
-        code: String,
+        code: &str,
         args: Vec<rmpv::Value>,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_exec_lua", args![code, args]).await
     }
     pub async fn nvim_notify(
         &mut self,
-        msg: String,
+        msg: &str,
         log_level: i64,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_notify", args![msg, log_level, opts]).await
     }
-    pub async fn nvim_strwidth(&mut self, text: String) -> Result<CallResponse<i64>, WriteError> {
+    pub async fn nvim_strwidth(&mut self, text: &str) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_strwidth", args![text]).await
     }
     pub async fn nvim_list_runtime_paths(
@@ -588,14 +588,14 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_runtime_file(
         &mut self,
-        name: String,
+        name: &str,
         all: bool,
     ) -> Result<CallResponse<Vec<String>>, WriteError> {
         self.call("nvim_get_runtime_file", args![name, all]).await
     }
     pub async fn nvim_set_current_dir(
         &mut self,
-        dir: String,
+        dir: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_dir", args![dir]).await
     }
@@ -604,57 +604,54 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_set_current_line(
         &mut self,
-        line: String,
+        line: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_line", args![line]).await
     }
     pub async fn nvim_del_current_line(&mut self) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_del_current_line", args![]).await
     }
-    pub async fn nvim_get_var(&mut self, name: String) -> Result<CallResponse<Object>, WriteError> {
+    pub async fn nvim_get_var(&mut self, name: &str) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_get_var", args![name]).await
     }
     pub async fn nvim_set_var(
         &mut self,
-        name: String,
-        value: Object,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_var", args![name, value]).await
     }
-    pub async fn nvim_del_var(&mut self, name: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_del_var(&mut self, name: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_del_var", args![name]).await
     }
-    pub async fn nvim_get_vvar(
-        &mut self,
-        name: String,
-    ) -> Result<CallResponse<Object>, WriteError> {
+    pub async fn nvim_get_vvar(&mut self, name: &str) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_get_vvar", args![name]).await
     }
     pub async fn nvim_set_vvar(
         &mut self,
-        name: String,
-        value: Object,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_vvar", args![name, value]).await
     }
     pub async fn nvim_get_option(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_get_option", args![name]).await
     }
     pub async fn nvim_get_option_value(
         &mut self,
-        name: String,
-        opts: Dictionary,
+        name: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_get_option_value", args![name, opts]).await
     }
     pub async fn nvim_set_option_value(
         &mut self,
-        name: String,
-        value: Object,
-        opts: Dictionary,
+        name: &str,
+        value: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_option_value", args![name, value, opts])
             .await
@@ -666,14 +663,14 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_option_info(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_option_info", args![name]).await
     }
     pub async fn nvim_set_option(
         &mut self,
-        name: String,
-        value: Object,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_option", args![name, value]).await
     }
@@ -681,17 +678,17 @@ impl<W: RpcWriter> Client<W> {
         &mut self,
         chunks: Vec<rmpv::Value>,
         history: bool,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_echo", args![chunks, history, opts]).await
     }
-    pub async fn nvim_out_write(&mut self, str: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_out_write(&mut self, str: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_out_write", args![str]).await
     }
-    pub async fn nvim_err_write(&mut self, str: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_err_write(&mut self, str: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_err_write", args![str]).await
     }
-    pub async fn nvim_err_writeln(&mut self, str: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_err_writeln(&mut self, str: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_err_writeln", args![str]).await
     }
     pub async fn nvim_list_bufs(&mut self) -> Result<CallResponse<Vec<Buffer>>, WriteError> {
@@ -702,7 +699,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_set_current_buf(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_buf", args![buffer]).await
     }
@@ -714,7 +711,7 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_set_current_win(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_win", args![window]).await
     }
@@ -727,15 +724,15 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_open_term(
         &mut self,
-        buffer: Buffer,
-        opts: Dictionary,
+        buffer: &Buffer,
+        opts: &Dictionary,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_open_term", args![buffer, opts]).await
     }
     pub async fn nvim_chan_send(
         &mut self,
         chan: i64,
-        data: String,
+        data: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_chan_send", args![chan, data]).await
     }
@@ -747,13 +744,13 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_set_current_tabpage(
         &mut self,
-        tabpage: Tabpage,
+        tabpage: &Tabpage,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_current_tabpage", args![tabpage]).await
     }
     pub async fn nvim_paste(
         &mut self,
-        data: String,
+        data: &str,
         crlf: bool,
         phase: i64,
     ) -> Result<CallResponse<bool>, WriteError> {
@@ -762,25 +759,22 @@ impl<W: RpcWriter> Client<W> {
     pub async fn nvim_put(
         &mut self,
         lines: Vec<String>,
-        _type: String,
+        _type: &str,
         after: bool,
         follow: bool,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_put", args![lines, _type, after, follow])
             .await
     }
-    pub async fn nvim_subscribe(&mut self, event: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_subscribe(&mut self, event: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_subscribe", args![event]).await
     }
-    pub async fn nvim_unsubscribe(
-        &mut self,
-        event: String,
-    ) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_unsubscribe(&mut self, event: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_unsubscribe", args![event]).await
     }
     pub async fn nvim_get_color_by_name(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_get_color_by_name", args![name]).await
     }
@@ -789,13 +783,13 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_context(
         &mut self,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_context", args![opts]).await
     }
     pub async fn nvim_load_context(
         &mut self,
-        dict: Dictionary,
+        dict: &Dictionary,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_load_context", args![dict]).await
     }
@@ -804,30 +798,30 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_get_keymap(
         &mut self,
-        mode: String,
+        mode: &str,
     ) -> Result<CallResponse<Vec<Dictionary>>, WriteError> {
         self.call("nvim_get_keymap", args![mode]).await
     }
     pub async fn nvim_set_keymap(
         &mut self,
-        mode: String,
-        lhs: String,
-        rhs: String,
-        opts: Dictionary,
+        mode: &str,
+        lhs: &str,
+        rhs: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_set_keymap", args![mode, lhs, rhs, opts])
             .await
     }
     pub async fn nvim_del_keymap(
         &mut self,
-        mode: String,
-        lhs: String,
+        mode: &str,
+        lhs: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_del_keymap", args![mode, lhs]).await
     }
     pub async fn nvim_get_commands(
         &mut self,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_commands", args![opts]).await
     }
@@ -838,11 +832,11 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_set_client_info(
         &mut self,
-        name: String,
-        version: Dictionary,
-        _type: String,
-        methods: Dictionary,
-        attributes: Dictionary,
+        name: &str,
+        version: &Dictionary,
+        _type: &str,
+        methods: &Dictionary,
+        attributes: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_set_client_info",
@@ -882,7 +876,7 @@ impl<W: RpcWriter> Client<W> {
         item: i64,
         insert: bool,
         finish: bool,
-        opts: Dictionary,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call(
             "nvim_select_popupmenu_item",
@@ -890,62 +884,62 @@ impl<W: RpcWriter> Client<W> {
         )
         .await
     }
-    pub async fn nvim_del_mark(&mut self, name: String) -> Result<CallResponse<bool>, WriteError> {
+    pub async fn nvim_del_mark(&mut self, name: &str) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_del_mark", args![name]).await
     }
     pub async fn nvim_get_mark(
         &mut self,
-        name: String,
-        opts: Dictionary,
+        name: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Vec<rmpv::Value>>, WriteError> {
         self.call("nvim_get_mark", args![name, opts]).await
     }
     pub async fn nvim_eval_statusline(
         &mut self,
-        str: String,
-        opts: Dictionary,
+        str: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_eval_statusline", args![str, opts]).await
     }
     pub async fn nvim_create_user_command(
         &mut self,
-        name: String,
-        command: Object,
-        opts: Dictionary,
+        name: &str,
+        command: &Object,
+        opts: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_create_user_command", args![name, command, opts])
             .await
     }
     pub async fn nvim_del_user_command(
         &mut self,
-        name: String,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_del_user_command", args![name]).await
     }
     pub async fn nvim_exec(
         &mut self,
-        src: String,
+        src: &str,
         output: bool,
     ) -> Result<CallResponse<String>, WriteError> {
         self.call("nvim_exec", args![src, output]).await
     }
-    pub async fn nvim_command(&mut self, command: String) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_command(&mut self, command: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_command", args![command]).await
     }
-    pub async fn nvim_eval(&mut self, expr: String) -> Result<CallResponse<Object>, WriteError> {
+    pub async fn nvim_eval(&mut self, expr: &str) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_eval", args![expr]).await
     }
     pub async fn nvim_call_function(
         &mut self,
-        _fn: String,
+        _fn: &str,
         args: Vec<rmpv::Value>,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_call_function", args![_fn, args]).await
     }
     pub async fn nvim_call_dict_function(
         &mut self,
-        dict: Object,
-        _fn: String,
+        dict: &Object,
+        _fn: &str,
         args: Vec<rmpv::Value>,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_call_dict_function", args![dict, _fn, args])
@@ -953,8 +947,8 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_parse_expression(
         &mut self,
-        expr: String,
-        flags: String,
+        expr: &str,
+        flags: &str,
         highlight: bool,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_parse_expression", args![expr, flags, highlight])
@@ -962,62 +956,62 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_open_win(
         &mut self,
-        buffer: Buffer,
+        buffer: &Buffer,
         enter: bool,
-        config: Dictionary,
+        config: &Dictionary,
     ) -> Result<CallResponse<Window>, WriteError> {
         self.call("nvim_open_win", args![buffer, enter, config])
             .await
     }
     pub async fn nvim_win_set_config(
         &mut self,
-        window: Window,
-        config: Dictionary,
+        window: &Window,
+        config: &Dictionary,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_config", args![window, config])
             .await
     }
     pub async fn nvim_win_get_config(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_win_get_config", args![window]).await
     }
     pub async fn nvim_win_get_buf(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<Buffer>, WriteError> {
         self.call("nvim_win_get_buf", args![window]).await
     }
     pub async fn nvim_win_set_buf(
         &mut self,
-        window: Window,
-        buffer: Buffer,
+        window: &Window,
+        buffer: &Buffer,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_buf", args![window, buffer]).await
     }
     pub async fn nvim_win_get_cursor(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_win_get_cursor", args![window]).await
     }
     pub async fn nvim_win_set_cursor(
         &mut self,
-        window: Window,
+        window: &Window,
         pos: (i64, i64),
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_cursor", args![window, pos]).await
     }
     pub async fn nvim_win_get_height(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_height", args![window]).await
     }
     pub async fn nvim_win_set_height(
         &mut self,
-        window: Window,
+        window: &Window,
         height: i64,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_height", args![window, height])
@@ -1025,94 +1019,94 @@ impl<W: RpcWriter> Client<W> {
     }
     pub async fn nvim_win_get_width(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_width", args![window]).await
     }
     pub async fn nvim_win_set_width(
         &mut self,
-        window: Window,
+        window: &Window,
         width: i64,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_width", args![window, width]).await
     }
     pub async fn nvim_win_get_var(
         &mut self,
-        window: Window,
-        name: String,
+        window: &Window,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_win_get_var", args![window, name]).await
     }
     pub async fn nvim_win_set_var(
         &mut self,
-        window: Window,
-        name: String,
-        value: Object,
+        window: &Window,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_var", args![window, name, value])
             .await
     }
     pub async fn nvim_win_del_var(
         &mut self,
-        window: Window,
-        name: String,
+        window: &Window,
+        name: &str,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_del_var", args![window, name]).await
     }
     pub async fn nvim_win_get_option(
         &mut self,
-        window: Window,
-        name: String,
+        window: &Window,
+        name: &str,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_win_get_option", args![window, name]).await
     }
     pub async fn nvim_win_set_option(
         &mut self,
-        window: Window,
-        name: String,
-        value: Object,
+        window: &Window,
+        name: &str,
+        value: &Object,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_set_option", args![window, name, value])
             .await
     }
     pub async fn nvim_win_get_position(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<(i64, i64)>, WriteError> {
         self.call("nvim_win_get_position", args![window]).await
     }
     pub async fn nvim_win_get_tabpage(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<Tabpage>, WriteError> {
         self.call("nvim_win_get_tabpage", args![window]).await
     }
     pub async fn nvim_win_get_number(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_win_get_number", args![window]).await
     }
     pub async fn nvim_win_is_valid(
         &mut self,
-        window: Window,
+        window: &Window,
     ) -> Result<CallResponse<bool>, WriteError> {
         self.call("nvim_win_is_valid", args![window]).await
     }
-    pub async fn nvim_win_hide(&mut self, window: Window) -> Result<CallResponse<()>, WriteError> {
+    pub async fn nvim_win_hide(&mut self, window: &Window) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_hide", args![window]).await
     }
     pub async fn nvim_win_close(
         &mut self,
-        window: Window,
+        window: &Window,
         force: bool,
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_win_close", args![window, force]).await
     }
     pub async fn nvim_win_call(
         &mut self,
-        window: Window,
-        fun: LuaRef,
+        window: &Window,
+        fun: &LuaRef,
     ) -> Result<CallResponse<Object>, WriteError> {
         self.call("nvim_win_call", args![window, fun]).await
     }

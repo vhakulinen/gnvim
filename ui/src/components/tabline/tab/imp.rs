@@ -47,10 +47,10 @@ impl ObjectImpl for Tab {
                     let page = obj
                         .imp()
                         .tabpage
-                        .borrow()
-                        .clone()
-                        .expect("tabpage not set")
-                        .0;
+                        .borrow();
+                    let page = page
+                        .as_ref()
+                        .expect("tabpage not set");
                     let res = nvim
                         .client()
                         .await

@@ -90,9 +90,9 @@ impl ObjectImpl for Grid {
                         .client()
                         .await
                         .nvim_input_mouse(
-                            mouse.as_nvim_input().to_owned(),
-                            action.as_nvim_action().to_owned(),
-                            modifier,
+                            mouse.as_nvim_input(),
+                            action.as_nvim_action(),
+                            &modifier,
                             id,
                             row as i64,
                             col as i64,

@@ -142,7 +142,7 @@ impl AppWindow {
                     let res = nvim
                         .client()
                         .await
-                        .nvim_echo(msg.into(), false, rmpv::Value::Nil.into())
+                        .nvim_echo(msg.into(), false, &rmpv::Value::Nil.into())
                         .await
                         .unwrap();
 
@@ -399,7 +399,7 @@ impl AppWindow {
             let res = nvim
                 .client()
                 .await
-                .nvim_input(input)
+                .nvim_input(&input)
                 .await
                 .expect("call to nvim failed");
 
@@ -497,12 +497,12 @@ impl ObjectImpl for AppWindow {
                 .client()
                 .await
                 .nvim_set_client_info(
-                    "gnvim".to_string(),
+                    "gnvim",
                     // TODO(ville): Tell the version in client info.
-                    rmpv::Value::Map(vec![]).into(),
-                    "ui".to_string(),
-                    rmpv::Value::Map(vec![]).into(),
-                    rmpv::Value::Map(vec![]).into(),
+                    &rmpv::Value::Map(vec![]).into(),
+                    "ui",
+                    &rmpv::Value::Map(vec![]).into(),
+                    &rmpv::Value::Map(vec![]).into(),
                 ).await.expect("call to nvim failed");
 
             res.await.expect("nvim_set_client_info failed");

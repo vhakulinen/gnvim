@@ -18,6 +18,7 @@ macro_rules! impl_into_value {
 impl_into_value!(f64);
 impl_into_value!(i64);
 impl_into_value!(String);
+impl_into_value!(&str);
 impl_into_value!(bool);
 impl_into_value!(rmpv::Value);
 

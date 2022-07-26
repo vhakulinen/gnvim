@@ -1,6 +1,3 @@
-use rmpv::Value;
-use serde;
-
 #[derive(Debug, serde::Serialize)]
 pub enum Message {
     Request(Request),
@@ -71,7 +68,7 @@ pub struct Notification {
 
 impl<'de> serde::Deserialize<'de> for Message {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let value = Value::deserialize(d)?;
+        let value = rmpv::Value::deserialize(d)?;
 
         // TODO(ville): Error handling.
         Ok(

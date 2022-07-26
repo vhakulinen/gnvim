@@ -33,42 +33,6 @@ impl<T: AsRef<str>> AsPascalCase for T {
     }
 }
 
-pub trait AsRustType {
-    fn as_rust_type(&self) -> String;
-}
-
-impl<T: AsRef<str>> AsRustType for T {
-    fn as_rust_type(&self) -> String {
-        // TODO(ville): Use different mapping for function parameters and
-        // return values, so that the function parameters can be references.
-
-        let f = match self.as_ref() {
-            "Boolean" => "bool",
-            "Integer" => "i64",
-            "Float" => "f64",
-            "String" => "String",
-            "void" => "()",
-            "Window" => "Window",
-            "Tabpage" => "Tabpage",
-            "Buffer" => "Buffer",
-            "ArrayOf(Integer, 2)" => "(i64, i64)",
-            "ArrayOf(String)" => "Vec<String>",
-            "ArrayOf(Integer)" => "Vec<i64>",
-            "ArrayOf(Buffer)" => return format!("Vec<{}>", "Buffer".as_rust_type()),
-            "ArrayOf(Dictionary)" => return format!("Vec<{}>", "Dictionary".as_rust_type()),
-            "ArrayOf(Tabpage)" => return format!("Vec<{}>", "Tabpage".as_rust_type()),
-            "ArrayOf(Window)" => return format!("Vec<{}>", "Window".as_rust_type()),
-            "Array" => "Vec<rmpv::Value>",
-            "Dictionary" => "Dictionary",
-            "Object" => "Object",
-            "LuaRef" => "LuaRef",
-            s => unimplemented!("nvim api type '{}'", s),
-        };
-
-        f.into()
-    }
-}
-
 #[derive(Debug, serde::Deserialize)]
 pub struct Parameter {
     pub r#type: String,
@@ -98,13 +62,61 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn param_type(&self, param: &Parameter) -> String {
-        let t = match (self.name.as_ref(), param.name.as_ref()) {
-            ("nvim_ui_attach", "options") => "UiOptions",
-            _ => return param.r#type.as_rust_type(),
-        };
+    pub fn param_type_for(&self, param: &Parameter) -> TokenStream {
+        match (self.name.as_ref(), param.name.as_ref()) {
+            ("nvim_ui_attach", "options") => quote! { UiOptions },
+            _ => return self.param_type(&param.r#type),
+        }
+    }
 
-        t.into()
+    fn param_type(&self, ty: &str) -> TokenStream {
+        match ty {
+            "Boolean" => quote! { bool },
+            "Integer" => quote! { i64 },
+            "Float" => quote! { f64 },
+            "String" => quote! { &str },
+            "void" => quote! { () },
+            "Window" => quote! { &Window },
+            "Tabpage" => quote! { &Tabpage },
+            "Buffer" => quote! { &Buffer },
+            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
+            "ArrayOf(String)" => quote! { Vec<String> },
+            "ArrayOf(Integer)" => quote! { &[i64] },
+            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
+            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
+            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
+            "ArrayOf(Window)" => quote! { Vec<Window> },
+            "Array" => quote! { Vec<rmpv::Value> },
+            "Dictionary" => quote! { &Dictionary },
+            "Object" => quote! { &Object },
+            "LuaRef" => quote! { &LuaRef },
+            s => unimplemented!("function param type '{}'", s),
+        }
+    }
+
+    fn output_type_for(&self, ty: &str) -> TokenStream {
+        match ty {
+            "Boolean" => quote! { bool },
+            "Integer" => quote! { i64 },
+            "Float" => quote! { f64 },
+            "String" => quote! { String },
+            "void" => quote! { () },
+            "Window" => quote! { Window },
+            "Tabpage" => quote! { Tabpage },
+            "Buffer" => quote! { Buffer },
+            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
+            "ArrayOf(String)" => quote! { Vec<String> },
+            "ArrayOf(Integer)" => quote! { Vec<i64> },
+            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
+            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
+            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
+            "ArrayOf(Window)" => quote! { Vec<Window> },
+            "Array" => quote! { Vec<rmpv::Value> },
+            "Dictionary" => quote! { Dictionary },
+            "Object" => quote! { Object },
+            "LuaRef" => quote! { LuaRef },
+            s => unimplemented!("function output type '{}'", s),
+        }
     }
 
     fn args_in(&self) -> Vec<TokenStream> {
@@ -112,8 +124,7 @@ impl Function {
             .iter()
             .map(|p| {
                 let name = p.rust_name();
-                let ty: syn::Type =
-                    syn::parse_str(&self.param_type(p)).expect("failed to parse type");
+                let ty = self.param_type_for(p);
                 quote! {
                     #name: #ty
                 }
@@ -134,8 +145,7 @@ impl Function {
         let method = &self.name;
         let args_in = self.args_in();
         let args_out = self.args_out();
-        let output: syn::Type =
-            syn::parse_str(&self.return_type.as_rust_type()).expect("failed to parse name");
+        let output = self.output_type_for(&self.return_type);
 
         Some(quote! {
             pub async fn #fname(&mut self, #(#args_in),*) -> Result<CallResponse<#output>, WriteError> {
@@ -245,8 +255,6 @@ impl UiEvent {
             let name = format_ident!("{}", &param.name);
             let ty = self.field_type_for(&param.name, &param.r#type);
 
-            let ty: syn::Type = syn::parse_str(&ty).unwrap();
-
             quote! {
                 pub #name: #ty,
             }
@@ -260,19 +268,43 @@ impl UiEvent {
         })
     }
 
-    fn field_type_for<S: AsRef<str>>(&self, param: S, ty: S) -> String {
-        let s: &str = match (self.name.as_ref(), param.as_ref()) {
-            ("grid_line", "data") => "Vec<GridLineData>",
-            ("hl_attr_define", "rgb_attrs") => "HlAttr",
-            ("hl_attr_define", "cterm_attrs") => "HlAttr",
-            ("mode_info_set", "cursor_styles") => "Vec<ModeInfo>",
-            ("popupmenu_show", "items") => "Vec<PopupmenuItem>",
-            ("tabline_update", "tabs") => "Vec<TablineTab>",
-            ("tabline_update", "buffers") => "Vec<TablineBuffer>",
-            _ => return ty.as_rust_type(),
-        };
+    fn field_type_for(&self, param: &str, ty: &str) -> TokenStream {
+        match (self.name.as_ref(), param) {
+            ("grid_line", "data") => quote! { Vec<GridLineData> },
+            ("hl_attr_define", "rgb_attrs") => quote! { HlAttr },
+            ("hl_attr_define", "cterm_attrs") => quote! { HlAttr },
+            ("mode_info_set", "cursor_styles") => quote! { Vec<ModeInfo> },
+            ("popupmenu_show", "items") => quote! { Vec<PopupmenuItem> },
+            ("tabline_update", "tabs") => quote! { Vec<TablineTab> },
+            ("tabline_update", "buffers") => quote! { Vec<TablineBuffer> },
+            _ => return self.field_type(ty),
+        }
+    }
 
-        s.into()
+    /// Get the rust struct field type for this ui event.
+    fn field_type(&self, ty: &str) -> TokenStream {
+        match ty {
+            "Boolean" => quote! { bool },
+            "Integer" => quote! { i64 },
+            "Float" => quote! { f64 },
+            "String" => quote! { String },
+            "void" => quote! { () },
+            "Window" => quote! { Window },
+            "Tabpage" => quote! { Tabpage },
+            "Buffer" => quote! { Buffer },
+            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
+            "ArrayOf(String)" => quote! { Vec<String> },
+            "ArrayOf(Integer)" => quote! { Vec<i64> },
+            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
+            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
+            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
+            "ArrayOf(Window)" => quote! { Vec<Window> },
+            "Array" => quote! { Vec<rmpv::Value> },
+            "Dictionary" => quote! { Dictionary },
+            "Object" => quote! { Object },
+            "LuaRef" => quote! { LuaRef },
+            s => unimplemented!("uievent field type '{}'", s),
+        }
     }
 
     pub fn has_manual_type(&self) -> bool {
