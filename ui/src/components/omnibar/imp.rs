@@ -78,7 +78,7 @@ impl ObjectImpl for Omnibar {
 
     fn set_property(
         &self,
-        _obj: &Self::Type,
+        obj: &Self::Type,
         _id: usize,
         value: &glib::Value,
         pspec: &glib::ParamSpec,
@@ -89,8 +89,20 @@ impl ObjectImpl for Omnibar {
                     .set_label(value.get().expect("label must be a string"));
             }
             "max-height" => {
-                self.cmdline
-                    .set_max_height(value.get().expect("max-height must be a i32"));
+                let h: i32 = value.get().expect("max-height must be a i32");
+
+                let style_ctx = obj.style_context();
+                let border = style_ctx.border();
+                let margin = style_ctx.margin();
+
+                // Remove our border and margin.
+                let h = h
+                    - border.top() as i32
+                    - border.bottom() as i32
+                    - margin.top() as i32
+                    - margin.bottom() as i32;
+
+                self.cmdline.set_max_height(h);
             }
             _ => unimplemented!(),
         };
@@ -108,6 +120,7 @@ impl WidgetImpl for Omnibar {
             gtk::Orientation::Horizontal => {
                 let (mw, _nw, mb, nb) = self.parent_measure(widget, orientation, for_size);
 
+                // TODO(ville): Make the width smarter/configurable?
                 (mw, 800, mb, nb)
             }
             gtk::Orientation::Vertical => widget.iter_children().fold(

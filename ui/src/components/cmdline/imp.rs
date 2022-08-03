@@ -62,15 +62,21 @@ impl ObjectImpl for Cmdline {
 
     fn set_property(
         &self,
-        _obj: &Self::Type,
+        obj: &Self::Type,
         _id: usize,
         value: &glib::Value,
         pspec: &glib::ParamSpec,
     ) {
         match pspec.name() {
             "max-height" => {
-                self.max_height
-                    .set(value.get().expect("max-height must be a i32"));
+                let h: i32 = value.get().expect("max-height must be a i32");
+
+                let style_ctx = obj.style_context();
+                let padding = style_ctx.padding();
+                // Remove our padding.
+                let h = h - padding.top() as i32 - padding.bottom() as i32;
+
+                self.max_height.set(h);
             }
             _ => unimplemented!(),
         };
