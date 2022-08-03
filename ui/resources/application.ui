@@ -8,6 +8,32 @@
             <class name="app-window" />
         </style>
 
+        <child type="titlebar">
+            <object class="GtkHeaderBar">
+                <property name="title-widget">
+                    <object class="Overflower">
+                        <property
+                            name="height"
+                            bind-source="omnibar"
+                            bind-property="title-height"
+                            bind-flags="sync-create"
+                            />
+
+                        <child>
+                            <object class="Omnibar" id="omnibar">
+                                <property
+                                    name="title"
+                                    bind-source="AppWindow"
+                                    bind-property="title"
+                                    bind-flags="sync-create"
+                                    />
+                            </object>
+                        </child>
+                    </object>
+                </property>
+            </object>
+        </child>
+
         <child>
             <object class="GtkBox">
                 <property name="orientation">vertical</property>

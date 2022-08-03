@@ -191,7 +191,7 @@ pub struct TablineUpdate {
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineShow {
-    pub content: Vec<rmpv::Value>,
+    pub content: Vec<CmdlineContent>,
     pub pos: i64,
     pub firstc: String,
     pub prompt: String,
@@ -215,11 +215,11 @@ pub struct CmdlineHide {
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineBlockShow {
-    pub lines: Vec<rmpv::Value>,
+    pub lines: Vec<Vec<CmdlineContent>>,
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct CmdlineBlockAppend {
-    pub lines: Vec<rmpv::Value>,
+    pub lines: Vec<CmdlineContent>,
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct WildmenuShow {

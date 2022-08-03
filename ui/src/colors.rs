@@ -12,6 +12,7 @@ pub enum HlGroup {
     TabLine,
     TabLineFill,
     TabLineSel,
+    Menu,
 }
 
 #[derive(Debug, Default)]
@@ -86,6 +87,59 @@ impl<'a> Highlight<'a> {
 
     pub fn hl_attr(&self) -> Option<&HlAttr> {
         self.hl_attr
+    }
+
+    pub fn pango_markup(&self, text: &str) -> String {
+        let weight = if self.hl_attr.and_then(|hl| hl.bold).unwrap_or(false) {
+            "bold"
+        } else {
+            "normal"
+        };
+        let underline = if self.hl_attr.and_then(|hl| hl.undercurl).unwrap_or(false) {
+            "error"
+        } else if self.hl_attr.and_then(|hl| hl.underline).unwrap_or(false) {
+            "single"
+        } else if self
+            .hl_attr
+            .and_then(|hl| hl.underlineline)
+            .unwrap_or(false)
+        {
+            "double"
+        } else {
+            "none"
+        };
+
+        let strikethrough = if self
+            .hl_attr
+            .and_then(|hl| hl.strikethrough)
+            .unwrap_or(false)
+        {
+            "true"
+        } else {
+            "false"
+        };
+
+        let fontstyle = if self.hl_attr.and_then(|hl| hl.italic).unwrap_or(false) {
+            "italic"
+        } else {
+            "normal"
+        };
+
+        format!(
+            "<span
+            foreground=\"#{fg}\"
+            background=\"#{bg}\"
+            underline_color=\"#{sp}\"
+            strikethrough_color=\"#{sp}\"
+            weight=\"{weight}\"
+            font_style=\"{fontstyle}\"
+            strikethrough=\"{strikethrough}\"
+            underline=\"{underline}\">{text}</span>",
+            fg = self.fg().as_hex(),
+            bg = self.bg().as_hex(),
+            sp = self.sp().as_hex(),
+            text = glib::markup_escape_text(text)
+        )
     }
 }
 

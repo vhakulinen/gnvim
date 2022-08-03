@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Omnibar" parent="GtkWidget">
+
+        <child>
+            <object class="GtkLabel" id="title">
+                <property name="single-line-mode">True</property>
+                <property name="ellipsize">end</property>
+
+                <style>
+                    <class name="title" />
+                </style>
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkRevealer" id="cmdline-revealer">
+                <property name="valign">end</property>
+                <property name="transition-type">slide-up</property>
+
+                <child>
+                    <object class="Cmdline" id="cmdline" />
+                </child>
+            </object>
+        </child>
+    </template>
+</interface>

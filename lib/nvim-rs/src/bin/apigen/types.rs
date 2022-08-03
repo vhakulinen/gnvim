@@ -277,6 +277,9 @@ impl UiEvent {
             ("popupmenu_show", "items") => quote! { Vec<PopupmenuItem> },
             ("tabline_update", "tabs") => quote! { Vec<TablineTab> },
             ("tabline_update", "buffers") => quote! { Vec<TablineBuffer> },
+            ("cmdline_show", "content") => quote! { Vec<CmdlineContent> },
+            ("cmdline_block_show", "lines") => quote! { Vec<Vec<CmdlineContent>> },
+            ("cmdline_block_append", "lines") => quote! { Vec<CmdlineContent> },
             _ => return self.field_type(ty),
         }
     }

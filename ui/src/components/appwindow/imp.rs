@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::rc::Rc;
 
 use nvim::serde::Deserialize;
-use nvim::types::uievents::{DefaultColorsSet, HlGroupSet};
+use nvim::types::uievents::{DefaultColorsSet, HlGroupSet, PopupmenuSelect, PopupmenuShow};
 use nvim::types::UiEvent;
 use nvim::types::{OptionSet, UiOptions};
 
@@ -22,8 +22,7 @@ use nvim::rpc::RpcReader;
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
-use crate::components::shell::Shell;
-use crate::components::Tabline;
+use crate::components::{Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
@@ -38,6 +37,8 @@ pub struct AppWindow {
     shell: TemplateChild<Shell>,
     #[template_child(id = "tabline")]
     tabline: TemplateChild<Tabline>,
+    #[template_child(id = "omnibar")]
+    omnibar: TemplateChild<Omnibar>,
 
     css_provider: gtk::CssProvider,
 
@@ -114,6 +115,7 @@ impl AppWindow {
             "TabLine" => Some(HlGroup::TabLine),
             "TabLineFill" => Some(HlGroup::TabLineFill),
             "TabLineSel" => Some(HlGroup::TabLineSel),
+            "Menu" => Some(HlGroup::Menu),
             _ => None,
         } {
             self.colors.borrow_mut().set_hl_group(group, event.id);
@@ -128,6 +130,30 @@ impl AppWindow {
         colors.sp = Color::from_i64(event.rgb_sp);
 
         self.css_on_flush.set(true);
+    }
+
+    fn handle_popupmenu_show(&self, event: PopupmenuShow) {
+        if event.grid == -1 {
+            self.omnibar.handle_popupmenu_show(event)
+        } else {
+            self.shell.handle_popupmenu_show(event)
+        }
+    }
+
+    fn handle_popupmenu_select(&self, event: PopupmenuSelect) {
+        if self.omnibar.cmdline_popupmenu_visible() {
+            self.omnibar.handle_popupmenu_select(event)
+        } else {
+            self.shell.handle_popupmenu_select(event)
+        }
+    }
+
+    fn handle_popupmenu_hide(&self) {
+        if self.omnibar.cmdline_popupmenu_visible() {
+            self.omnibar.handle_popupmenu_hide()
+        } else {
+            self.shell.handle_popupmenu_hide()
+        }
     }
 
     fn handle_gnvim_event(&self, obj: &super::AppWindow, event: GnvimEvent) {
@@ -216,6 +242,8 @@ impl AppWindow {
                     let tablinefill = colors.get_hl_group(&HlGroup::TabLineFill);
                     let tabline = colors.get_hl_group(&HlGroup::TabLine);
                     let tablinesel = colors.get_hl_group(&HlGroup::TabLineSel);
+                    // TODO(ville): Figure out better headerbar colors.
+                    let menu = colors.get_hl_group(&HlGroup::Menu);
                     // TODO(ville): It might be possible to make the font
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
@@ -275,8 +303,41 @@ impl AppWindow {
                                     background-color: #{tablinesel_bg};
                                     color: #{tablinesel_fg};
                                 }}
+
+                                headerbar {{
+                                    background-color: #{menu_bg};
+                                    color: #{menu_fg};
+                                    border: 0;
+                                    min-height: 0;
+                                }}
+
+                                omnibar {{
+                                    background-color: #{menu_bg};
+                                    margin: 5px;
+                                    border: 1px solid shade(#{menu_fg}, 0.8);
+                                    border-radius: 3px;
+                                }}
+
+                                omnibar label {{
+                                    padding:
+                                        calc({omnibar_pad}px + {linespace_top}px)
+                                        {omnibar_pad}px
+                                        calc({omnibar_pad}px + {linespace_bottom}px)
+                                        {omnibar_pad}px;
+                                }}
+
+                                omnibar cmdline {{
+                                    padding: {omnibar_pad}px;
+                                }}
+
+                                cmdline textview, cmdline text {{
+                                    background-color: #{bg};
+                                    color: #{fg};
+                                    caret-color: #{fg};
+                                }}
                             "#,
                             bg = colors.bg.as_hex(),
+                            fg = colors.fg.as_hex(),
                             msgsep = msgsep.fg().as_hex(),
                             pmenu_fg = pmenu.fg().as_hex(),
                             pmenu_bg = pmenu.bg().as_hex(),
@@ -291,6 +352,9 @@ impl AppWindow {
                             tablinesel_fg = tablinesel.fg().as_hex(),
                             linespace_top = (linespace / 2.0).ceil().max(0.0),
                             linespace_bottom = (linespace / 2.0).floor().max(0.0),
+                            menu_bg = menu.bg().as_hex(),
+                            menu_fg = menu.fg().as_hex(),
+                            omnibar_pad = 5,
                             font = self.font.borrow().to_css(),
                         )
                         .as_bytes(),
@@ -353,16 +417,40 @@ impl AppWindow {
             // popupmenu events
             UiEvent::PopupmenuShow(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_popupmenu_show(event)),
+                .for_each(|event| self.handle_popupmenu_show(event)),
             UiEvent::PopupmenuSelect(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_popupmenu_select(event)),
-            UiEvent::PopupmenuHide => self.shell.handle_popupmenu_hide(),
+                .for_each(|event| self.handle_popupmenu_select(event)),
+            UiEvent::PopupmenuHide => self.handle_popupmenu_hide(),
 
             // tabline events
             UiEvent::TablineUpdate(events) => events
                 .into_iter()
                 .for_each(|event| self.tabline.handle_tabline_update(event)),
+
+            // cmdline events
+            UiEvent::CmdlineShow(events) => events.into_iter().for_each(|event| {
+                self.omnibar
+                    .handle_cmdline_show(event, &self.colors.borrow())
+            }),
+            UiEvent::CmdlineHide(events) => events
+                .into_iter()
+                .for_each(|event| self.omnibar.handle_cmdline_hide(event)),
+            UiEvent::CmdlinePos(events) => events
+                .into_iter()
+                .for_each(|event| self.omnibar.handle_cmdline_pos(event)),
+            UiEvent::CmdlineSpecialChar(events) => events
+                .into_iter()
+                .for_each(|event| self.omnibar.handle_cmdline_special_char(event)),
+            UiEvent::CmdlineBlockShow(events) => events.into_iter().for_each(|event| {
+                self.omnibar
+                    .handle_cmdline_block_show(event, &self.colors.borrow())
+            }),
+            UiEvent::CmdlineBlockHide => self.omnibar.handle_cmdline_block_hide(),
+            UiEvent::CmdlineBlockAppend(events) => events.into_iter().for_each(|event| {
+                self.omnibar
+                    .handle_cmdline_block_append(event, &self.colors.borrow())
+            }),
 
             event => panic!("Unhandled ui event: {}", event),
         }
@@ -376,6 +464,8 @@ impl AppWindow {
 
                 self.resize_on_flush.set(true);
                 self.css_on_flush.set(true);
+
+                self.omnibar.set_cmdline_linespace(linespace as f32);
             }
             OptionSet::Guifont(guifont) => {
                 let font = Font::new(&guifont, self.font.borrow().linespace() / SCALE);
@@ -462,8 +552,11 @@ impl ObjectSubclass for AppWindow {
     type ParentType = gtk::ApplicationWindow;
 
     fn class_init(klass: &mut Self::Class) {
+        Overflower::ensure_type();
+        Omnibar::ensure_type();
         Shell::ensure_type();
         Tabline::ensure_type();
+
         klass.bind_template();
     }
 
@@ -516,6 +609,7 @@ impl ObjectImpl for AppWindow {
                     ext_multigrid: true,
                     ext_popupmenu: true,
                     ext_tabline: true,
+                    ext_cmdline: true,
                     ..Default::default()
                 }
             ).await.expect("call to nvim failed");
@@ -608,7 +702,13 @@ impl ObjectImpl for AppWindow {
     }
 }
 
-impl WidgetImpl for AppWindow {}
+impl WidgetImpl for AppWindow {
+    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(widget, width, height, baseline);
+
+        self.omnibar.set_max_height(height);
+    }
+}
 
 impl WindowImpl for AppWindow {}
 

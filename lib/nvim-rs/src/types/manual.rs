@@ -173,6 +173,12 @@ pub struct ModeInfo {
     pub name: Option<String>,
 }
 
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct CmdlineContent {
+    pub hl_id: i64,
+    pub text: String,
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Window(rmpv::Value);
 
