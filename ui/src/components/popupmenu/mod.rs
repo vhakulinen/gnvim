@@ -36,12 +36,18 @@ impl Popupmenu {
         self.imp().listview.preferred_size()
     }
 
-    pub fn select(&self, n: u32) {
+    pub fn select(&self, n: i64) {
         let imp = self.imp();
-        imp.selection_model.select_item(n, true);
-        imp.listview
-            .activate_action("list.scroll-to-item", Some(&n.to_variant()))
-            .expect("failed to activate list.scroll-to-item action");
+
+        if n < 0 {
+            imp.selection_model.unselect_all();
+        } else {
+            let n = n as u32;
+            imp.selection_model.select_item(n, true);
+            imp.listview
+                .activate_action("list.scroll-to-item", Some(&n.to_variant()))
+                .expect("failed to activate list.scroll-to-item action");
+        }
     }
 
     pub fn set_max_height(&self, h: i32) {

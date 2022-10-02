@@ -329,6 +329,7 @@ impl Shell {
         // NOTE(ville): Need to set the content and visibility before checking
         // the size.
         imp.popupmenu.set_items(event.items);
+        imp.popupmenu.select(event.selected);
         imp.popupmenu.set_visible(true);
 
         // TODO(ville): Would be nice to make the popupmenu to retain its
@@ -382,7 +383,7 @@ impl Shell {
     }
 
     pub fn handle_popupmenu_select(&self, event: PopupmenuSelect) {
-        self.imp().popupmenu.select(event.selected as u32);
+        self.imp().popupmenu.select(event.selected);
     }
 
     pub fn handle_popupmenu_hide(&self) {

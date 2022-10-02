@@ -150,7 +150,7 @@ impl Cmdline {
     }
 
     pub fn popupmenu_select(&self, event: PopupmenuSelect) {
-        self.imp().popupmenu.select(event.selected as u32);
+        self.imp().popupmenu.select(event.selected);
     }
 
     pub fn popupmenu_hide(&self) {
