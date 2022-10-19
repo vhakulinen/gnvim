@@ -451,7 +451,7 @@ impl UIState {
                         border: none;
                     }}
 
-                    #message-grid-contianer frame.scrolled {{
+                    #message-grid-container frame.scrolled {{
                         border-top: 1px solid #{msgsep}
                     }}
                     ",

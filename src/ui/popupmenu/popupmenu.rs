@@ -255,9 +255,9 @@ impl Popupmenu {
                     });
                 }
 
-                // If we moved the popupmenu above the achor position, make
+                // If we moved the popupmenu above the anchor position, make
                 // sure our contents are aligned to the bottom so there is not
-                // cap between the achor and the content it self.
+                // cap between the anchor and the content it self.
                 if y < pos.y {
                     // Use get_child to get the viewport which is between
                     // the scrolled window and the actual widget that is

@@ -238,7 +238,7 @@ impl Grid {
                         // Smooth scrolling. During scroll, many little deltas
                         // are accumulated in scroll_deltas. Once a delta
                         // reaches -1.0 or +1.0, given delta is reset and
-                        // scroll opreation is made effective.
+                        // scroll operation is made effective.
                         let (smooth_dx, smooth_dy) = e.scroll_deltas().unwrap();
                         let (prev_dx, prev_dy) = *scroll_delta.borrow();
                         let dy = prev_dy + smooth_dy;
@@ -461,7 +461,7 @@ impl Grid {
         }
     }
 
-    /// Calcualtes the size of a grid that can fit in the current drawingarea
+    /// Calculates the size of a grid that can fit in the current drawingarea
     /// with current cell metrics.
     pub fn calc_size(&self) -> (i64, i64) {
         let ctx = self.context.borrow();

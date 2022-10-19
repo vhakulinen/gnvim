@@ -1070,7 +1070,7 @@ impl Handler for NvimBridge {
             },
             _ => {
                 error!("Unknown request: {}", name);
-                Err("Unkown request".into())
+                Err("Unknown request".into())
             }
         }
     }

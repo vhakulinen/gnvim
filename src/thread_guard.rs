@@ -1,8 +1,8 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::thread;
 
-/// TheardGuard is a _runtime_ thread guard for its internal data. It panics if
-/// data is being accessed from a thread other than the one that TheardGuard
+/// ThreadGuard is a _runtime_ thread guard for its internal data. It panics if
+/// data is being accessed from a thread other than the one that ThreadGuard
 /// was initialized in.
 pub struct ThreadGuard<T> {
     thread_id: thread::ThreadId,

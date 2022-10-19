@@ -234,7 +234,7 @@ pub fn scroll(
     // Draw move the scrolled part on the cairo surface.
     front.save()?;
     // Create pattern which we can then "safely" draw to the surface. On X11, the pattern part was
-    // not needed but on wayland it is - I suppose it has something to do with the underlaying
+    // not needed but on wayland it is - I suppose it has something to do with the underlying
     // backbuffer.
     front.push_group();
     let (_, y) = get_coords(cm.height, cm.width, dst_top - src_top, 0.0);

@@ -23,10 +23,10 @@ pub fn get_preferred_horizontal_position(
 ) -> (i32, i32) {
     let mut x = pos.x;
 
-    let rigth = x + width;
+    let right = x + width;
     // If we're overflowing to the right...
-    if rigth > area.width {
-        let overflow = rigth - area.width;
+    if right > area.width {
+        let overflow = right - area.width;
         // Move our x position to the left, but not father that 0.
         x = (x - overflow).max(0);
 
@@ -187,7 +187,7 @@ mod test {
 
     #[test]
     fn test_get_preferred_horizontal_position2() {
-        // Case 2: Width is trucated.
+        // Case 2: Width is truncated.
         let area = gdk::Rectangle {
             x: 0,
             y: 0,

@@ -13,7 +13,7 @@ pub struct Surfaces {
     // Back buffer is where, when required, contents of previous draw iteration
     // is kept.
     pub back: cairo::Context,
-    // Prev is a intermedate buffer to which front and back buffers are drawn
+    // Prev is a intermediate buffer to which front and back buffers are drawn
     // before the contents are drawn to the screen. This allows us to aniamte
     // grid_scroll changes.
     pub prev: cairo::Context,
