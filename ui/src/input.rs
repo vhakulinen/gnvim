@@ -73,11 +73,11 @@ pub fn modifier_to_nvim(state: &gdk::ModifierType) -> String {
     if state.contains(gdk::ModifierType::CONTROL_MASK) {
         modifier.push_str("C-");
     }
-    if state.contains(gdk::ModifierType::ALT_MASK) {
-        modifier.push_str("A-");
-    }
-    if state.contains(gdk::ModifierType::META_MASK) {
+    if state.contains(gdk::ModifierType::ALT_MASK) || state.contains(gdk::ModifierType::META_MASK) {
         modifier.push_str("M-");
+    }
+    if state.contains(gdk::ModifierType::SUPER_MASK) {
+        modifier.push_str("D-");
     }
 
     modifier
@@ -87,6 +87,8 @@ pub fn keyname_to_nvim_key(s: &str) -> Option<&str> {
     // Originally sourced from python-gui.
     match s {
         "asciicircum" => Some("^"), // fix #137
+        "semicolon" => Some(";"),
+        "equal" => Some("="),
         "slash" => Some("/"),
         "backslash" => Some("\\"),
         "dead_circumflex" => Some("^"),
@@ -141,5 +143,36 @@ pub fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "F11" => Some("F11"),
         "F12" => Some("F12"),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gtk::gdk;
+
+    use super::modifier_to_nvim;
+
+    #[test]
+    fn test_modifier_to_nvim() {
+        assert_eq!(&modifier_to_nvim(&gdk::ModifierType::empty()), "");
+        assert_eq!(&modifier_to_nvim(&gdk::ModifierType::ALT_MASK), "M-");
+        assert_eq!(&modifier_to_nvim(&gdk::ModifierType::META_MASK), "M-");
+        assert_eq!(&modifier_to_nvim(&gdk::ModifierType::CONTROL_MASK), "C-");
+        assert_eq!(&modifier_to_nvim(&gdk::ModifierType::SUPER_MASK), "D-");
+
+        let mut m = gdk::ModifierType::empty();
+        m.set(gdk::ModifierType::META_MASK, true);
+        m.set(gdk::ModifierType::ALT_MASK, true);
+        assert_eq!(&modifier_to_nvim(&m), "M-");
+
+        let mut m = gdk::ModifierType::empty();
+        m.set(gdk::ModifierType::SUPER_MASK, true);
+        m.set(gdk::ModifierType::ALT_MASK, true);
+        assert_eq!(&modifier_to_nvim(&m), "M-D-");
+
+        let mut m = gdk::ModifierType::empty();
+        m.set(gdk::ModifierType::SHIFT_MASK, true);
+        m.set(gdk::ModifierType::ALT_MASK, true);
+        assert_eq!(&modifier_to_nvim(&m), "S-M-");
     }
 }
