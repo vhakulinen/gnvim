@@ -192,15 +192,16 @@ impl Grid {
             // Update the text under the cursor, since in some cases neovim doesn't
             // dispatch cursor goto (e.g. when grid scroll happens but cursor
             // doesn't move).
+            // NOTE(ville): Sometimes the cursor position during a flush is not
+            // valid. In those cases, set the cursor's text to empty string and
+            // hope that neovim will soon give us updated cusror position.
             let rows = imp.buffer.get_rows();
-            let row = rows
+            let text = rows
                 .get(imp.cursor.row() as usize)
-                .expect("bad cursor position");
-            let cell = row
-                .cells
-                .get(imp.cursor.col() as usize)
-                .expect("bad cursor position");
-            imp.cursor.set_text(cell.text.clone());
+                .and_then(|row| row.cells.get(imp.cursor.col() as usize))
+                .map(|cell| cell.text.clone())
+                .unwrap_or_default();
+            imp.cursor.set_text(text);
             imp.cursor.flush(colors);
         }
     }
