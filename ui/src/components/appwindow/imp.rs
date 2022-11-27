@@ -2,6 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
 use std::rc::Rc;
 
+use nvim::dict;
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet, PopupmenuSelect, PopupmenuShow};
 use nvim::types::UiEvent;
@@ -168,11 +169,11 @@ impl AppWindow {
                     let res = nvim
                         .client()
                         .await
-                        .nvim_echo(msg.into(), false, &rmpv::Value::Nil.into())
+                        .nvim_echo(msg.into(), false, &dict![])
                         .await
                         .unwrap();
 
-                    res.await.expect("nvim_ui_try_resize failed");
+                    res.await.expect("nvim_echo failed");
                 }));
             }
             GnvimEvent::GtkDebugger => {
@@ -592,10 +593,10 @@ impl ObjectImpl for AppWindow {
                 .nvim_set_client_info(
                     "gnvim",
                     // TODO(ville): Tell the version in client info.
-                    &rmpv::Value::Map(vec![]).into(),
+                    &dict![],
                     "ui",
-                    &rmpv::Value::Map(vec![]).into(),
-                    &rmpv::Value::Map(vec![]).into(),
+                    &dict![],
+                    &dict![],
                 ).await.expect("call to nvim failed");
 
             res.await.expect("nvim_set_client_info failed");

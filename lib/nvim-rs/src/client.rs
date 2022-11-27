@@ -9,18 +9,24 @@ use futures::prelude::*;
 use serde::Deserialize;
 
 use crate::rpc::{
-    message::{Request, Response},
+    message::Response,
     writer::{RpcWriter, WriteError},
 };
 
 #[macro_export]
 macro_rules! args {
-    () => {
-        Vec::new()
-    };
     ($($x:expr),*) => {{
-        use $crate::IntoValue;
-        vec![$($x.into_value(),)*]
+        ($($x,)*)
+    }};
+}
+
+#[macro_export]
+macro_rules! dict {
+    ($($key:expr => $val:expr),*) => {{
+        use $crate::types::Dictionary;
+        Dictionary::new(vec![
+            $(($key, $val),)*
+        ])
     }};
 }
 
@@ -63,16 +69,11 @@ impl<W: RpcWriter> Client<W> {
         }
     }
 
-    pub async fn call<T, S, V>(
-        &mut self,
-        method: S,
-        args: Vec<V>,
-    ) -> Result<CallResponse<T>, WriteError>
+    pub async fn call<T, S, V>(&mut self, method: S, args: V) -> Result<CallResponse<T>, WriteError>
     where
         T: for<'de> Deserialize<'de> + Any,
         S: AsRef<str>,
-        V: Into<rmpv::Value>,
-        Vec<rmpv::Value>: From<Vec<V>>,
+        V: serde::Serialize,
     {
         let msgid = self.msgid_counter;
         self.msgid_counter += 1;
@@ -81,7 +82,7 @@ impl<W: RpcWriter> Client<W> {
         self.callbacks.push((msgid, sender));
 
         self.writer
-            .write_rpc_request(&Request::new(msgid, method.as_ref(), args.into()))
+            .write_rpc_request(msgid, method.as_ref(), &args)
             .await?;
 
         Ok(receiver

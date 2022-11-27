@@ -1,7 +1,7 @@
 use std::process::Stdio;
 use std::time::Duration;
 
-use nvim_rs::types::UiOptions;
+use nvim_rs::types::{Object, UiOptions};
 use tokio::process::Command;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -44,7 +44,7 @@ async fn smoke_test() {
         rmpv::Value::from("call stdioopen({'rpc': v:true})"),
     ];
 
-    assert_eq!(result.await, Ok(rmpv::Value::from(vals).into()));
+    assert_eq!(result.await, Ok(Object::new(rmpv::Value::from(vals))));
 
     handle.await.unwrap();
 }

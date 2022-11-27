@@ -1,4 +1,3 @@
-use nvim_rs::rpc::message::Response;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use nvim_rs::rpc::{Message, RpcReader, RpcWriter};
@@ -24,10 +23,10 @@ async fn void_response_decodes_correctly() {
                 };
 
                 assert_eq!(req.method, "get_nil");
-                assert_eq!(req.params, vec![]);
+                assert_eq!(req.params, rmpv::Value::Nil);
 
                 writer
-                    .write_rpc_response(&Response::new(req.msgid, None, None))
+                    .write_rpc_response(req.msgid, None::<&rmpv::Value>, None::<&rmpv::Value>)
                     .await
                     .unwrap();
             });
@@ -39,7 +38,7 @@ async fn void_response_decodes_correctly() {
 
                 let mut client = Client::new(writer);
 
-                let res = client.call::<(), _, _>("get_nil", vec![]).await.unwrap();
+                let res = client.call::<(), _, _>("get_nil", args![]).await.unwrap();
 
                 let handle = tokio::task::spawn(async move {
                     let v = reader.recv().await.unwrap();
@@ -63,12 +62,5 @@ async fn void_response_decodes_correctly() {
 fn args_macro() {
     let args = args!(3, 5, "foobar".to_string());
 
-    assert_eq!(
-        args,
-        vec![
-            rmpv::Value::from(3),
-            rmpv::Value::from(5),
-            rmpv::Value::from("foobar".to_string()),
-        ]
-    )
+    assert_eq!(args, (3, 5, "foobar".to_string()))
 }

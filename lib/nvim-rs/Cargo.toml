@@ -9,8 +9,6 @@ rmp-serde = "1.0.0"
 rmpv = { version = "1.0.0", features = ["with-serde"] }
 futures = "0.3.21"
 async-trait = "0.1.53"
-into-value = { path = "../into-value" }
-into-value-proc = { path = "../into-value-proc" }
 quote = "1.0"
 syn = "1.0"
 proc-macro2 = "1.0"

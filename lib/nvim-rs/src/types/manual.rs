@@ -1,29 +1,3 @@
-use into_value::{impl_into_value, IntoValue};
-
-macro_rules! impl_api_arg {
-    ($t:ident) => {
-        impl From<$t> for rmpv::Value {
-            fn from(t: $t) -> Self {
-                t.0
-            }
-        }
-
-        impl_into_value!($t);
-
-        impl IntoValue for &$t {
-            fn into_value(self) -> rmpv::Value {
-                self.0.clone().into()
-            }
-        }
-
-        impl From<rmpv::Value> for $t {
-            fn from(v: rmpv::Value) -> $t {
-                $t(v)
-            }
-        }
-    };
-}
-
 #[derive(Debug, Clone, Copy, Default)]
 pub enum ShowTabline {
     #[default]
@@ -74,7 +48,7 @@ impl<'de> serde::Deserialize<'de> for OptionSet {
     }
 }
 
-#[derive(Debug, Default, into_value_proc::IntoValue)]
+#[derive(Debug, Default, serde::Serialize)]
 pub struct UiOptions {
     pub rgb: bool,
     pub r#override: bool,
@@ -88,7 +62,7 @@ pub struct UiOptions {
     pub ext_termcolors: bool,
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct HlAttr {
     pub foreground: Option<i64>,
     pub background: Option<i64>,
@@ -173,34 +147,34 @@ pub struct ModeInfo {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Default, serde::Deserialize)]
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct CmdlineContent {
     pub hl_id: i64,
     pub text: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Window(rmpv::Value);
 
-#[derive(Debug, PartialEq, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Buffer(rmpv::Value);
 
-#[derive(Debug, PartialEq, Clone, serde::Deserialize)]
+#[derive(Debug, PartialEq, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Tabpage(rmpv::Value);
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct TablineTab {
     pub name: String,
     pub tab: Tabpage,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct TablineBuffer {
     pub name: String,
     pub buffer: Buffer,
 }
 
-#[derive(Default, Debug, serde::Deserialize)]
+#[derive(Default, Debug, serde::Deserialize, serde::Serialize)]
 pub struct PopupmenuItem {
     pub word: String,
     pub kind: String,
@@ -208,18 +182,26 @@ pub struct PopupmenuItem {
     pub info: String,
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(transparent)]
 pub struct Dictionary(rmpv::Value);
 
-#[derive(Debug, PartialEq, serde::Deserialize)]
+impl Dictionary {
+    pub fn new(d: Vec<(rmpv::Value, rmpv::Value)>) -> Self {
+        Self(rmpv::Value::Map(d))
+    }
+}
+
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(transparent)]
 pub struct LuaRef(rmpv::Value);
 
-#[derive(Debug, PartialEq, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(transparent)]
 pub struct Object(rmpv::Value);
 
-impl_api_arg!(Dictionary);
-impl_api_arg!(LuaRef);
-impl_api_arg!(Object);
-impl_api_arg!(Window);
-impl_api_arg!(Buffer);
-impl_api_arg!(Tabpage);
+impl Object {
+    pub fn new(v: rmpv::Value) -> Self {
+        Self(v)
+    }
+}

@@ -1,6 +1,3 @@
-pub use into_value::IntoValue;
-pub use into_value_proc::IntoValue;
-
 pub mod client;
 mod gen;
 pub mod rpc;
