@@ -3,10 +3,24 @@
     <h3 align="center">GNvim - GTK4 Neovim GUI</h3>
 </p>
 
-# This is the `next` branch
+Gnvim, opinionated Neovim GUI.
 
-...which is WIP rewrite of gnvim to gtk4 and a new neovim rpc client.
+<p align="center">
+	<img src="https://github.com/vhakulinen/gnvim/wiki/screenshot.png" alt="Screenshot of gnvim">
+</p>
 
-Building gnivm requires the gtk4 development files.
+_For previous gtk3 version, checkout the `legacy` branch._
 
-Regenerating the API bindings requires moreutils.
+# Install
+
+```
+$ # Install gtk4 dev files, e.g. apt install gtk-4-dev
+$ make build
+$ sudo make install
+```
+
+# Development
+
+Gnvim comes with custom rpc client which uses code generation for generating
+bindings to the Neovim API. This is done by the `scripts/generate-bindings.sh`
+script and requires the `moreutils` package.
