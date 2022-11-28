@@ -1,10 +1,9 @@
 use std::ffi::OsString;
 use std::ops::Deref;
 
-use clap::Parser;
 use gtk::glib;
 
-#[derive(Parser, Default, Debug, Clone)]
+#[derive(clap::Parser, Default, Debug, Clone)]
 #[clap(author, version)]
 pub struct Arguments {
     /// Neovim binary.
@@ -27,6 +26,9 @@ pub struct Arguments {
     /// Arguments for neovim.
     #[clap(name = "ARGS", last = true)]
     pub nvim_args: Vec<OsString>,
+
+    #[clap(skip)]
+    pub stdin_fd: Option<i32>,
 }
 
 impl Arguments {
@@ -42,6 +44,51 @@ impl Arguments {
         args.extend_from_slice(&self.files);
 
         args
+    }
+
+    /// Wrapper around `clap::Praser::parse`. Handle's `Self::stdin_fd`.
+    pub fn parse() -> Self {
+        let mut args: Self = clap::Parser::parse();
+
+        if atty::isnt(atty::Stream::Stdin) {
+            args.stdin_fd = dup_stdin();
+        }
+
+        args
+    }
+}
+
+fn dup_stdin() -> Option<i32> {
+    cfg_if::cfg_if! {
+        if #[cfg(unix)] {
+            use std::os::unix::prelude::AsRawFd;
+
+            let fd = unsafe {
+                // Duplicate the stdin fd.
+                let fd_dup = libc::dup(std::io::stdin().as_raw_fd());
+
+                let fdflags = libc::fcntl(fd_dup, libc::F_GETFD);
+                if fdflags < 0 {
+                    println!("ERR: couldn't get fdglags");
+                    return None;
+                }
+
+                // Remove FD_CLOEXEC.
+                if fdflags & libc::FD_CLOEXEC == 1
+                    && libc::fcntl(fd_dup, libc::F_SETFD, fdflags & !libc::FD_CLOEXEC) < 0
+                    {
+                        println!("ERR: couldn't set fdglags");
+                        return None;
+                    }
+
+                Some(fd_dup)
+            };
+
+            return fd;
+        } else {
+            println!("ERR: stdin pipe not supported on this platform");
+            return None;
+        }
     }
 }
 

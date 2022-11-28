@@ -26,10 +26,21 @@ impl Neovim {
         MutexGuard::map(self.imp().nvim.lock().await, |opt| opt.as_mut().unwrap())
     }
 
-    pub fn open(&self, args: &[&OsStr]) -> CompatRead {
+    /// Open the neovim subprocess.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - Arguments (including the nvim command) for the subprocess.
+    /// * `inherit_fds` - If the fds should be shared with the subprocess. Required
+    /// for the stdin_fd uiattach option.
+    pub fn open(&self, args: &[&OsStr], inherit_fds: bool) -> CompatRead {
         let mut flags = gio::SubprocessFlags::empty();
         flags.insert(gio::SubprocessFlags::STDIN_PIPE);
         flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
+
+        if inherit_fds {
+            flags.insert(gio::SubprocessFlags::INHERIT_FDS);
+        }
 
         let p = gio::Subprocess::newv(args, flags).expect("failed to open nvim subprocess");
 

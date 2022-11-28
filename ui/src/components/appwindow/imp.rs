@@ -576,9 +576,19 @@ impl ObjectImpl for AppWindow {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
 
+        let uiopts = UiOptions {
+            rgb: true,
+            ext_linegrid: true,
+            ext_multigrid: true,
+            ext_popupmenu: true,
+            ext_tabline: true,
+            ext_cmdline: true,
+            stdin_fd: self.args.borrow().stdin_fd,
+            ..Default::default()
+        };
         let args = self.args.borrow().nvim_cmd_args();
         let args: Vec<&OsStr> = args.iter().map(|a| a.as_ref()).collect();
-        let reader = self.nvim.open(&args);
+        let reader = self.nvim.open(&args, uiopts.stdin_fd.is_some());
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
@@ -604,16 +614,8 @@ impl ObjectImpl for AppWindow {
             let res = nvim
                 .client()
                 .await
-                .nvim_ui_attach(80, 30, UiOptions {
-                    rgb: true,
-                    ext_linegrid: true,
-                    ext_multigrid: true,
-                    ext_popupmenu: true,
-                    ext_tabline: true,
-                    ext_cmdline: true,
-                    ..Default::default()
-                }
-            ).await.expect("call to nvim failed");
+                .nvim_ui_attach(80, 30, uiopts)
+                .await.expect("call to nvim failed");
 
             res.await.expect("nvim_ui_attach failed");
         }));

@@ -60,6 +60,9 @@ pub struct UiOptions {
     pub ext_popupmenu: bool,
     pub ext_tabline: bool,
     pub ext_termcolors: bool,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdin_fd: Option<i32>,
 }
 
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]

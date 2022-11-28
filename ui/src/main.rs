@@ -1,4 +1,3 @@
-use clap::Parser;
 use gtk::{gio, pango, prelude::*};
 
 mod api;

@@ -378,11 +378,14 @@ dependencies = [
 name = "gnvim"
 version = "0.1.0"
 dependencies = [
+ "atty",
+ "cfg-if",
  "clap",
  "futures",
  "gio-compat",
  "glib",
  "gtk4",
+ "libc",
  "nvim-rs",
  "once_cell",
  "pango",
