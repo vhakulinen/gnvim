@@ -40,7 +40,12 @@ impl Popupmenu {
         let imp = self.imp();
 
         if n < 0 {
-            imp.selection_model.unselect_all();
+            // NOTE(ville): unselect_all is not supported on gtk::SingleSelection model,
+            // so we'll have to unselected the selected item manually.
+            let selected = imp.selection_model.selected();
+            if selected != gtk::INVALID_LIST_POSITION {
+                imp.selection_model.unselect_item(selected);
+            }
         } else {
             let n = n as u32;
             imp.selection_model.select_item(n, true);

@@ -90,6 +90,8 @@ impl ObjectImpl for Popupmenu {
             row.set_item(&item.borrow());
         });
 
+        self.selection_model.set_autoselect(false);
+        self.selection_model.set_can_unselect(true);
         self.selection_model.set_model(Some(&*self.store.borrow()));
         self.listview.set_model(Some(&self.selection_model));
         self.listview.set_factory(Some(&factory));
