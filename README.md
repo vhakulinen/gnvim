@@ -14,6 +14,7 @@ _For previous gtk3 version, checkout the `legacy` branch._
 # Install
 
 ```
+$ # Install cargo (e.g. the rust toolchain)
 $ # Install gtk4 dev files, e.g. apt install gtk-4-dev
 $ make build
 $ sudo make install
