@@ -1,6 +1,6 @@
 [package]
 name = "gnvim"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ville Hakulinen <ville.hakulinen@gmail.com>"]
 edition = "2021"
 
