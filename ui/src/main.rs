@@ -26,6 +26,7 @@ fn main() {
 
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
+    flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
 
     let app = gtk::Application::builder()
         .application_id("com.github.vhakulinen.gnvim")
