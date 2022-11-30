@@ -44,7 +44,7 @@ async fn smoke_test() {
         rmpv::Value::from("call stdioopen({'rpc': v:true})"),
     ];
 
-    assert_eq!(result.await, Ok(Object::new(rmpv::Value::from(vals))));
+    assert_eq!(result.await, Ok(Object::new(vals)));
 
     handle.await.unwrap();
 }

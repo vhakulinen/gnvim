@@ -204,7 +204,7 @@ pub struct LuaRef(rmpv::Value);
 pub struct Object(rmpv::Value);
 
 impl Object {
-    pub fn new(v: rmpv::Value) -> Self {
-        Self(v)
+    pub fn new<T: Into<rmpv::Value>>(v: T) -> Self {
+        Self(v.into())
     }
 }
