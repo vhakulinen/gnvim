@@ -171,6 +171,15 @@ pub struct WinViewport {
     pub line_count: i64,
 }
 #[derive(Debug, serde :: Deserialize)]
+pub struct WinExtmark {
+    pub grid: i64,
+    pub win: Window,
+    pub ns_id: i64,
+    pub mark_id: i64,
+    pub row: i64,
+    pub col: i64,
+}
+#[derive(Debug, serde :: Deserialize)]
 pub struct PopupmenuShow {
     pub items: Vec<PopupmenuItem>,
     pub selected: i64,
@@ -295,6 +304,7 @@ pub enum UiEvent {
     WinClose(Vec<WinClose>),
     MsgSetPos(Vec<MsgSetPos>),
     WinViewport(Vec<WinViewport>),
+    WinExtmark(Vec<WinExtmark>),
     PopupmenuShow(Vec<PopupmenuShow>),
     PopupmenuHide,
     PopupmenuSelect(Vec<PopupmenuSelect>),
@@ -315,6 +325,7 @@ pub enum UiEvent {
     MsgShowmode(Vec<MsgShowmode>),
     MsgRuler(Vec<MsgRuler>),
     MsgHistoryShow(Vec<MsgHistoryShow>),
+    MsgHistoryClear,
 }
 impl Display for UiEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -361,6 +372,7 @@ impl Display for UiEvent {
             Self::WinClose(_) => write!(f, "win_close"),
             Self::MsgSetPos(_) => write!(f, "msg_set_pos"),
             Self::WinViewport(_) => write!(f, "win_viewport"),
+            Self::WinExtmark(_) => write!(f, "win_extmark"),
             Self::PopupmenuShow(_) => write!(f, "popupmenu_show"),
             Self::PopupmenuHide => write!(f, "popupmenu_hide"),
             Self::PopupmenuSelect(_) => write!(f, "popupmenu_select"),
@@ -381,6 +393,7 @@ impl Display for UiEvent {
             Self::MsgShowmode(_) => write!(f, "msg_showmode"),
             Self::MsgRuler(_) => write!(f, "msg_ruler"),
             Self::MsgHistoryShow(_) => write!(f, "msg_history_show"),
+            Self::MsgHistoryClear => write!(f, "msg_history_clear"),
         }
     }
 }
@@ -624,6 +637,13 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
+            (Some("win_extmark"), Some(params)) => UiEvent::WinExtmark({
+                params
+                    .into_iter()
+                    .map(WinExtmark::deserialize)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(serde::de::Error::custom)?
+            }),
             (Some("popupmenu_show"), Some(params)) => UiEvent::PopupmenuShow({
                 params
                     .into_iter()
@@ -740,6 +760,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(serde::de::Error::custom)?
             }),
+            (Some("msg_history_clear"), None) => UiEvent::MsgHistoryClear,
             v => panic!("failed to decode message {:?}", v),
         })
     }
