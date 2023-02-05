@@ -1,7 +1,6 @@
 use std::cell::{Cell, RefCell};
 
 use gtk::{
-    gio,
     glib::{self, clone, subclass::InitializingObject},
     prelude::*,
     subclass::prelude::*,
@@ -22,8 +21,7 @@ pub struct Popupmenu {
     pub max_height: Cell<i32>,
     pub max_width: Cell<i32>,
 
-    pub selection_model: gtk::SingleSelection,
-    pub store: RefCell<gio::ListStore>,
+    pub store: super::Model,
     pub font: RefCell<Font>,
     // TODO(ville): This should probably be a gobject property of the font it self.
     pub font_char_width: Cell<f32>,
@@ -49,10 +47,6 @@ impl ObjectSubclass for Popupmenu {
 impl ObjectImpl for Popupmenu {
     fn constructed(&self, obj: &Self::Type) {
         self.parent_constructed(obj);
-
-        // TODO(ville): Would it be better to use our own custom type here?
-        self.store
-            .replace(gio::ListStore::new(glib::BoxedAnyObject::static_type()));
 
         let factory = gtk::SignalListItemFactory::new();
 
@@ -90,10 +84,7 @@ impl ObjectImpl for Popupmenu {
             row.set_item(&item.borrow());
         });
 
-        self.selection_model.set_autoselect(false);
-        self.selection_model.set_can_unselect(true);
-        self.selection_model.set_model(Some(&*self.store.borrow()));
-        self.listview.set_model(Some(&self.selection_model));
+        self.listview.set_model(Some(&self.store));
         self.listview.set_factory(Some(&factory));
     }
 

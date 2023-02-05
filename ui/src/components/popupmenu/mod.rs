@@ -2,7 +2,10 @@ use glib::clone;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 
 mod imp;
+mod model;
 mod row;
+
+pub use model::Model;
 
 use nvim::types::PopupmenuItem;
 use row::Row;
@@ -19,12 +22,12 @@ impl Popupmenu {
     pub fn set_items(&self, items: Vec<PopupmenuItem>) {
         let imp = self.imp();
 
-        let store = imp.store.borrow();
-        store.remove_all();
+        let items = items
+            .into_iter()
+            .map(glib::BoxedAnyObject::new)
+            .collect::<Vec<_>>();
 
-        for item in items {
-            store.append(&glib::BoxedAnyObject::new(item));
-        }
+        imp.store.set_items(items);
     }
 
     pub fn get_padding_x(&self) -> f32 {
@@ -40,15 +43,10 @@ impl Popupmenu {
         let imp = self.imp();
 
         if n < 0 {
-            // NOTE(ville): unselect_all is not supported on gtk::SingleSelection model,
-            // so we'll have to unselected the selected item manually.
-            let selected = imp.selection_model.selected();
-            if selected != gtk::INVALID_LIST_POSITION {
-                imp.selection_model.unselect_item(selected);
-            }
+            imp.store.unselect_all();
         } else {
             let n = n as u32;
-            imp.selection_model.select_item(n, true);
+            imp.store.select_item(n, true);
             imp.listview
                 .activate_action("list.scroll-to-item", Some(&n.to_variant()))
                 .expect("failed to activate list.scroll-to-item action");
