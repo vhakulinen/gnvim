@@ -11,6 +11,10 @@ Gnvim, opinionated Neovim GUI.
 
 _For previous gtk3 version, checkout the `legacy` branch._
 
+# Prerequisite 
+
+Before building the application, install `gtk4` following instructions from https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html
+
 # Install
 
 ```
