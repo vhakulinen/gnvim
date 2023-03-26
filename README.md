@@ -15,10 +15,13 @@ _For previous gtk3 version, checkout the `legacy` branch._
 
 ```
 $ # Install cargo (e.g. the rust toolchain)
-$ # Install gtk4 dev files, e.g. apt install libgtk-4-dev
+$ # Install gtk4 dev files, e.g. apt install libgtk-4-dev (see below)
 $ make build
 $ sudo make install
 ```
+
+More detailed instructions regarding gtk4 requirements, see the gtk-rs book's
+[instructions](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html)).
 
 # Development
 
