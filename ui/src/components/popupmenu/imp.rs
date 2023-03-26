@@ -119,7 +119,7 @@ impl ObjectImpl for Popupmenu {
         match pspec.name() {
             "font" => {
                 let font: Font = value.get().expect("font value must be object Font");
-                let char_width = font.char_width() as f32 / SCALE;
+                let char_width = font.char_width() / SCALE;
                 self.font.replace(font);
                 self.obj().set_property("font-char-width", char_width);
             }

@@ -86,8 +86,8 @@ impl Grid {
             y: f64,
         | {
             let font = obj.font();
-            let col = font.scale_to_col(x) as usize;
-            let row = font.scale_to_row(y) as usize;
+            let col = font.scale_to_col(x);
+            let row = font.scale_to_row(y);
 
             let modifier = crate::input::modifier_to_nvim(&gst.current_event_state());
             let mouse = Mouse::from(gst);

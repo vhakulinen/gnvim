@@ -27,7 +27,7 @@ pub fn render_text(
 
         let node = gsk::TextNode::new(
             &a.font(),
-            &mut glyphs,
+            &glyphs,
             color,
             &graphene::Point::new(x + width / SCALE, baseline),
         );

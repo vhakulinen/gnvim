@@ -65,7 +65,7 @@ impl Function {
     pub fn param_type_for(&self, param: &Parameter) -> TokenStream {
         match (self.name.as_ref(), param.name.as_ref()) {
             ("nvim_ui_attach", "options") => quote! { UiOptions },
-            _ => return self.param_type(&param.r#type),
+            _ => self.param_type(&param.r#type),
         }
     }
 
@@ -280,7 +280,7 @@ impl UiEvent {
             ("cmdline_show", "content") => quote! { Vec<CmdlineContent> },
             ("cmdline_block_show", "lines") => quote! { Vec<Vec<CmdlineContent>> },
             ("cmdline_block_append", "lines") => quote! { Vec<CmdlineContent> },
-            _ => return self.field_type(ty),
+            _ => self.field_type(ty),
         }
     }
 

@@ -136,7 +136,7 @@ impl WidgetImpl for ExternalWindow {
         // end up in a infinite loop.
         if prev != (width, height) {
             self.prev_win_size.set((width, height));
-            self.resize_nvim(&*self.obj());
+            self.resize_nvim(&self.obj());
         }
     }
 

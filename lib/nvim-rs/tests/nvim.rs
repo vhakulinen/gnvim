@@ -27,7 +27,7 @@ async fn smoke_test() {
 
     let mut client = Client::new(writer);
 
-    let result = client.nvim_get_vvar("argv".into()).await.unwrap();
+    let result = client.nvim_get_vvar("argv").await.unwrap();
 
     let handle = tokio::task::spawn(async move {
         let v = reader.recv().await.unwrap();

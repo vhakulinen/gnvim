@@ -178,7 +178,7 @@ impl AppWindow {
                     let res = nvim
                         .client()
                         .await
-                        .nvim_echo(msg.into(), false, &dict![])
+                        .nvim_echo(msg, false, &dict![])
                         .await
                         .unwrap();
 

@@ -68,15 +68,13 @@ mod imp {
                 .map(|child| child.measure(orientation, for_size))
                 .unwrap_or_else(|| self.parent_measure(orientation, for_size));
 
-            let m = match orientation {
+            match orientation {
                 gtk::Orientation::Vertical => {
                     let h = self.height.get();
                     (h, h, -1, -1)
                 }
                 _ => m,
-            };
-
-            m
+            }
         }
 
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {

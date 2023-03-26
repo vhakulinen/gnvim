@@ -23,7 +23,7 @@ impl Model {
     fn lazy_add(&self, removed: u32) {
         let imp = self.imp();
 
-        let index = self.n_items() as u32;
+        let index = self.n_items();
         let mut to_add = imp.to_add.borrow_mut();
 
         let n = 40.min(to_add.len());

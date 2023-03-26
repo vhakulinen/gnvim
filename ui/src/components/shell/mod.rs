@@ -257,13 +257,12 @@ impl Shell {
 
         let (req, _) = grid.preferred_size();
         // TODO(ville): Resize the grid if it doesn't fit the screen?
-        let x = pos.x().min((max_x - req.width()) as f32).max(0.0);
+        let x = pos.x().clamp(0.0, (max_x - req.width()) as f32);
         let y = pos
             .y()
             // NOTE(ville): Not 100% the substraction of one cell height is
             // required.
-            .min((max_y - req.height()) as f32 - font.height() / SCALE)
-            .max(0.0);
+            .clamp(0.0, (max_y - req.height()) as f32 - font.height() / SCALE);
 
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);

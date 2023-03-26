@@ -48,16 +48,14 @@ impl ObjectImpl for Tab {
                     let page = obj
                         .imp()
                         .tabpage
-                        .borrow();
-                    let page = page
-                        .as_ref()
+                        .borrow()
+                        .clone()
                         .expect("tabpage not set");
                     let res = nvim
                         .client()
                         .await
-                        .nvim_set_current_tabpage(
-                            page
-                        ).await.expect("call to nvim failed");
+                        .nvim_set_current_tabpage(&page)
+                        .await.expect("call to nvim failed");
 
                     res.await.expect("nvim_set_current_tabpage failed");
                 });

@@ -176,7 +176,7 @@ impl GridBuffer {
                     let imp = this.imp();
                     if now < end_time {
                         let t =
-                            ease_out_cubic(((now - start_time) / (end_time - start_time)) as f64)
+                            ease_out_cubic((now - start_time) / (end_time - start_time))
                                 as f32;
                         let y = start_y + ((target_y - start_y) * t);
 

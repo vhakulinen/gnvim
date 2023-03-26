@@ -84,7 +84,7 @@ fn dup_stdin() -> Option<i32> {
                 Some(fd_dup)
             };
 
-            return fd;
+            fd
         } else {
             println!("ERR: stdin pipe not supported on this platform");
             return None;

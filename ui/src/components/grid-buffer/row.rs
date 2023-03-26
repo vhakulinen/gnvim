@@ -50,10 +50,8 @@ impl Cell {
     pub fn width(&self) -> i64 {
         if self.double_width {
             2
-        } else if self.text.is_empty() {
-            0
         } else {
-            1
+            i64::from(!self.text.is_empty())
         }
     }
 }

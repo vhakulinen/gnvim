@@ -23,7 +23,7 @@ impl Tabline {
         let nvim = imp.nvim.borrow();
         for tab in event.tabs.into_iter() {
             let current = tab.tab == event.current;
-            let child = tab::Tab::new(&*nvim, &tab.name, Tabpage(tab.tab));
+            let child = tab::Tab::new(&nvim, &tab.name, Tabpage(tab.tab));
 
             if current {
                 child.add_css_class("selected");
