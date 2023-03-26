@@ -149,7 +149,7 @@ impl Function {
 
         Some(quote! {
             pub async fn #fname(&mut self, #(#args_in),*) -> Result<CallResponse<#output>, WriteError> {
-                self.call(#method, args![#(#args_out),*]).await
+                self.call(#method, (#(#args_out,)*)).await
             }
         })
     }

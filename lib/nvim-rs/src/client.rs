@@ -14,13 +14,6 @@ use crate::rpc::{
 };
 
 #[macro_export]
-macro_rules! args {
-    ($($x:expr),*) => {{
-        ($($x,)*)
-    }};
-}
-
-#[macro_export]
 macro_rules! dict {
     ($($key:expr => $val:expr),*) => {{
         use $crate::types::Dictionary;

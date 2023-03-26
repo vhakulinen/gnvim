@@ -17,7 +17,7 @@ fn functions(res: ApiMetadata) {
 
     let out = quote! {
         use crate::rpc::{RpcWriter, WriteError};
-        use crate::{args, Client, CallResponse, types::{UiOptions, Window, Tabpage, Buffer, Dictionary, LuaRef, Object}};
+        use crate::{Client, CallResponse, types::{UiOptions, Window, Tabpage, Buffer, Dictionary, LuaRef, Object}};
 
         impl<W: RpcWriter> Client<W> {
             #(#functions)*

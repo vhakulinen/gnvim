@@ -1,7 +1,7 @@
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use nvim_rs::rpc::{Message, RpcReader, RpcWriter};
-use nvim_rs::{args, Client};
+use nvim_rs::Client;
 
 #[tokio::test]
 async fn void_response_decodes_correctly() {
@@ -38,7 +38,7 @@ async fn void_response_decodes_correctly() {
 
                 let mut client = Client::new(writer);
 
-                let res = client.call::<(), _, _>("get_nil", args![]).await.unwrap();
+                let res = client.call::<(), _, _>("get_nil", ()).await.unwrap();
 
                 let handle = tokio::task::spawn(async move {
                     let v = reader.recv().await.unwrap();
@@ -56,11 +56,4 @@ async fn void_response_decodes_correctly() {
             tokio::try_join!(server_handle, client_handle).unwrap();
         })
         .await;
-}
-
-#[test]
-fn args_macro() {
-    let args = args!(3, 5, "foobar".to_string());
-
-    assert_eq!(args, (3, 5, "foobar".to_string()))
 }
