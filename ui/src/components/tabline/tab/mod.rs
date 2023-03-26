@@ -12,8 +12,11 @@ glib::wrapper! {
 
 impl Tab {
     pub fn new(nvim: &Neovim, label: &str, tabpage: Tabpage) -> Self {
-        glib::Object::new(&[("nvim", nvim), ("label", &label), ("tabpage", &tabpage)])
-            .expect("Failed to create a Tab")
+        glib::Object::builder()
+            .property("nvim", nvim)
+            .property("label", &label)
+            .property("tabpage", &tabpage)
+            .build()
     }
 
     fn nvim(&self) -> Neovim {

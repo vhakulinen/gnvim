@@ -45,13 +45,14 @@ impl ObjectSubclass for Popupmenu {
 }
 
 impl ObjectImpl for Popupmenu {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
         let factory = gtk::SignalListItemFactory::new();
 
-        factory.connect_setup(clone!(@weak obj => move |_, listitem| {
+        factory.connect_setup(clone!(@weak self as imp => move |_, listitem| {
             let item = Row::default();
+            let obj = imp.obj();
             obj.bind_property("font", &item, "font")
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
@@ -92,7 +93,7 @@ impl ObjectImpl for Popupmenu {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecFloat::builder("font-char-width")
@@ -106,7 +107,7 @@ impl ObjectImpl for Popupmenu {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "font-char-width" => self.font_char_width.get().to_value(),
@@ -114,19 +115,13 @@ impl ObjectImpl for Popupmenu {
         }
     }
 
-    fn set_property(
-        &self,
-        obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 let font: Font = value.get().expect("font value must be object Font");
                 let char_width = font.char_width() as f32 / SCALE;
                 self.font.replace(font);
-                obj.set_property("font-char-width", char_width);
+                self.obj().set_property("font-char-width", char_width);
             }
             "font-char-width" => {
                 self.font_char_width
@@ -138,12 +133,7 @@ impl ObjectImpl for Popupmenu {
 }
 
 impl WidgetImpl for Popupmenu {
-    fn measure(
-        &self,
-        widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         // Use the listview's measurement for our size.
         let (_, n, _, _) = self.listview.measure(orientation, for_size);
 
@@ -156,12 +146,12 @@ impl WidgetImpl for Popupmenu {
                 let h = n.min(self.max_height.get());
                 (h, h, -1, -1)
             }
-            _ => self.parent_measure(widget, orientation, for_size),
+            _ => self.parent_measure(orientation, for_size),
         }
     }
 
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
         self.scrolledwindow.allocate(width, height, baseline, None);
     }

@@ -39,10 +39,10 @@ impl ObjectImpl for Tabline {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                glib::ParamSpecObject::builder::<Neovim>("nvim")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecBoxed::builder("show", ShowTabline::static_type())
+                glib::ParamSpecBoxed::builder::<ShowTabline>("show")
                     .flags(glib::ParamFlags::WRITABLE)
                     .build(),
             ]
@@ -51,20 +51,14 @@ impl ObjectImpl for Tabline {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "nvim" => self.nvim.borrow().to_value(),
             _ => unimplemented!(),
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "nvim" => {
                 self.nvim.replace(

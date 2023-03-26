@@ -18,7 +18,7 @@ glib::wrapper! {
 
 impl GridBuffer {
     fn new() -> Self {
-        glib::Object::new(&[]).expect("Failed to create GridBuffer")
+        glib::Object::new()
     }
 
     pub fn set_font(&self, font: Font) {
@@ -157,7 +157,7 @@ impl GridBuffer {
             .frame_time() as f64;
 
         let snapshot = gtk::Snapshot::new();
-        imp.snapshot(self, &snapshot);
+        imp.snapshot(&snapshot);
         imp.scroll_node.replace(snapshot.to_node());
 
         let target_y = 0.0;

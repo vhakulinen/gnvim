@@ -21,16 +21,14 @@ impl LayoutManagerImpl for LayoutManager {
 
     fn create_layout_child(
         &self,
-        layout_manager: &Self::Type,
         _widget: &gtk::Widget,
         for_child: &gtk::Widget,
     ) -> gtk::LayoutChild {
-        fixedz::Child::new(layout_manager, for_child).upcast()
+        fixedz::Child::new(&self.obj(), for_child).upcast()
     }
 
     fn measure(
         &self,
-        layout_manager: &Self::Type,
         widget: &gtk::Widget,
         orientation: gtk::Orientation,
         _for_size: i32,
@@ -67,7 +65,7 @@ impl LayoutManagerImpl for LayoutManager {
                 _ => unimplemented!(),
             };
 
-            let layout_child = layout_manager.layout_child(&child);
+            let layout_child = self.obj().layout_child(&child);
             let child_pos = layout_child.position();
 
             let min = child_pos.transform_bounds(&min);
@@ -89,15 +87,8 @@ impl LayoutManagerImpl for LayoutManager {
         (self_min.ceil() as i32, self_nat.ceil() as i32, -1, -1)
     }
 
-    fn allocate(
-        &self,
-        layout_manager: &Self::Type,
-        widget: &gtk::Widget,
-        width: i32,
-        height: i32,
-        baseline: i32,
-    ) {
-        self.parent_allocate(layout_manager, widget, width, height, baseline);
+    fn allocate(&self, widget: &gtk::Widget, width: i32, height: i32, baseline: i32) {
+        self.parent_allocate(widget, width, height, baseline);
 
         for child in widget.iter_children() {
             if !child.should_layout() {
@@ -109,7 +100,7 @@ impl LayoutManagerImpl for LayoutManager {
                 req.width(),
                 req.height(),
                 -1,
-                Some(&layout_manager.layout_child(&child).position()),
+                Some(self.obj().layout_child(&child).position().clone()),
             );
         }
     }

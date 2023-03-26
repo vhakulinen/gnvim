@@ -17,7 +17,7 @@ glib::wrapper! {
 
 impl Model {
     pub fn new() -> Self {
-        glib::Object::new(&[]).expect("failed to create PopupmenuModel")
+        glib::Object::new()
     }
 
     fn lazy_add(&self, removed: u32) {

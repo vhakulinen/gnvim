@@ -12,14 +12,14 @@ glib::wrapper! {
 
 impl Child {
     pub fn new(manager: &super::layout_manager::LayoutManager, for_child: &gtk::Widget) -> Self {
-        glib::Object::new(&[("layout-manager", manager), ("child-widget", for_child)])
-            .expect("faield to create FixedzChild")
+        glib::Object::builder()
+            .property("layout-manager", manager)
+            .property("child-widget", for_child)
+            .build()
     }
 
     pub fn set_position(&self, x: f32, y: f32) {
-        let transform = gsk::Transform::new()
-            .translate(&graphene::Point::new(x, y))
-            .expect("faield to translate transform");
+        let transform = gsk::Transform::new().translate(&graphene::Point::new(x, y));
 
         self.set_property("position", transform);
     }

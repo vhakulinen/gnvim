@@ -13,13 +13,12 @@ glib::wrapper! {
 
 impl ExternalWindow {
     pub fn new(parent: &gtk::Window, grid: &Grid) -> Self {
-        glib::Object::new(&[
-            ("main-window", &parent),
-            ("transient-for", &parent),
-            ("grid", &grid),
-            ("deletable", &false),
-        ])
-        .expect("failed to create ExternalWindow")
+        glib::Object::builder()
+            .property("main-window", &parent)
+            .property("transient-for", &parent)
+            .property("grid", &grid)
+            .property("deletable", &false)
+            .build()
     }
 
     fn nvim(&self) -> Neovim {

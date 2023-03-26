@@ -69,8 +69,9 @@ impl ObjectSubclass for ExternalWindow {
 }
 
 impl ObjectImpl for ExternalWindow {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
+        let obj = self.obj();
 
         // Override css classes.
         obj.set_property("css-classes", vec!["external-window"].to_value());
@@ -86,10 +87,10 @@ impl ObjectImpl for ExternalWindow {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("main-window", gtk::Window::static_type())
+                glib::ParamSpecObject::builder::<gtk::Window>("main-window")
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
                     .build(),
-                glib::ParamSpecObject::builder("grid", Grid::static_type())
+                glib::ParamSpecObject::builder::<Grid>("grid")
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
                     .build(),
             ]
@@ -98,7 +99,7 @@ impl ObjectImpl for ExternalWindow {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "grid" => self.grid.borrow().to_value(),
             "main-window" => self.main_window.borrow().to_value(),
@@ -106,17 +107,11 @@ impl ObjectImpl for ExternalWindow {
         }
     }
 
-    fn set_property(
-        &self,
-        obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "grid" => {
                 let grid = value.get().expect("grid value must be an Grid object");
-                obj.set_child(Some(&grid));
+                self.obj().set_child(Some(&grid));
                 self.grid.replace(grid);
             }
             "main-window" => {
@@ -132,8 +127,8 @@ impl ObjectImpl for ExternalWindow {
 }
 
 impl WidgetImpl for ExternalWindow {
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
         let prev = self.prev_win_size.get();
         // TODO(ville): Check for rows/col instead.
@@ -141,16 +136,11 @@ impl WidgetImpl for ExternalWindow {
         // end up in a infinite loop.
         if prev != (width, height) {
             self.prev_win_size.set((width, height));
-            self.resize_nvim(widget);
+            self.resize_nvim(&*self.obj());
         }
     }
 
-    fn measure(
-        &self,
-        _widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         let (mw, nw, mb, nb) = self.grid.borrow().measure(orientation, for_size);
         (mw.min(1), nw, mb, nb)
     }

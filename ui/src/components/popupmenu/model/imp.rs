@@ -22,15 +22,15 @@ impl ObjectSubclass for Model {
 impl ObjectImpl for Model {}
 
 impl ListModelImpl for Model {
-    fn item_type(&self, _: &Self::Type) -> glib::Type {
+    fn item_type(&self) -> glib::Type {
         glib::BoxedAnyObject::static_type()
     }
 
-    fn n_items(&self, _: &Self::Type) -> u32 {
+    fn n_items(&self) -> u32 {
         self.items.borrow().len() as u32
     }
 
-    fn item(&self, _: &Self::Type, position: u32) -> Option<glib::Object> {
+    fn item(&self, position: u32) -> Option<glib::Object> {
         self.items
             .borrow()
             .get(position as usize)
@@ -39,8 +39,9 @@ impl ListModelImpl for Model {
 }
 
 impl SelectionModelImpl for Model {
-    fn select_item(&self, model: &Self::Type, position: u32, _unselect_rest: bool) -> bool {
+    fn select_item(&self, position: u32, _unselect_rest: bool) -> bool {
         let old = self.selected_item.replace(Some(position));
+        let model = self.obj();
         // NOTE(ville): We need to notify selection-changed on our old item too.
         model.do_selection_changed(old);
         model.do_selection_changed(Some(position));
@@ -48,56 +49,40 @@ impl SelectionModelImpl for Model {
         true
     }
 
-    fn unselect_all(&self, model: &Self::Type) -> bool {
+    fn unselect_all(&self) -> bool {
         let prev = self.selected_item.replace(None);
-        model.do_selection_changed(prev);
+        self.obj().do_selection_changed(prev);
         true
     }
 
-    fn selection_in_range(
-        &self,
-        _model: &Self::Type,
-        _position: u32,
-        _n_items: u32,
-    ) -> gtk::Bitset {
+    fn selection_in_range(&self, _position: u32, _n_items: u32) -> gtk::Bitset {
         unimplemented!("selection_in_range not supported");
     }
 
-    fn is_selected(&self, _model: &Self::Type, position: u32) -> bool {
+    fn is_selected(&self, position: u32) -> bool {
         self.selected_item
             .get()
             .map(|i| i == position)
             .unwrap_or(false)
     }
 
-    fn select_all(&self, _model: &Self::Type) -> bool {
+    fn select_all(&self) -> bool {
         false
     }
 
-    fn select_range(
-        &self,
-        _model: &Self::Type,
-        _position: u32,
-        _n_items: u32,
-        _unselect_rest: bool,
-    ) -> bool {
+    fn select_range(&self, _position: u32, _n_items: u32, _unselect_rest: bool) -> bool {
         false
     }
 
-    fn set_selection(
-        &self,
-        _model: &Self::Type,
-        _selected: &gtk::Bitset,
-        _mask: &gtk::Bitset,
-    ) -> bool {
+    fn set_selection(&self, _selected: &gtk::Bitset, _mask: &gtk::Bitset) -> bool {
         false
     }
 
-    fn unselect_item(&self, _model: &Self::Type, _position: u32) -> bool {
+    fn unselect_item(&self, _position: u32) -> bool {
         false
     }
 
-    fn unselect_range(&self, _model: &Self::Type, _position: u32, _n_items: u32) -> bool {
+    fn unselect_range(&self, _position: u32, _n_items: u32) -> bool {
         false
     }
 }

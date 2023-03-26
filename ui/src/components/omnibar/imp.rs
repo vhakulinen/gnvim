@@ -52,14 +52,14 @@ impl ObjectImpl for Omnibar {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "title" => self.title.label().to_value(),
             "max-height" => self.cmdline.max_height().to_value(),
             "title-height" => {
                 let h = self.title.preferred_size().1.height();
 
-                let style_ctx = obj.style_context();
+                let style_ctx = self.obj().style_context();
                 let border = style_ctx.border();
                 let margin = style_ctx.margin();
 
@@ -76,13 +76,7 @@ impl ObjectImpl for Omnibar {
         }
     }
 
-    fn set_property(
-        &self,
-        obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "title" => {
                 self.title
@@ -91,7 +85,7 @@ impl ObjectImpl for Omnibar {
             "max-height" => {
                 let h: i32 = value.get().expect("max-height must be a i32");
 
-                let style_ctx = obj.style_context();
+                let style_ctx = self.obj().style_context();
                 let border = style_ctx.border();
                 let margin = style_ctx.margin();
 
@@ -110,38 +104,34 @@ impl ObjectImpl for Omnibar {
 }
 
 impl WidgetImpl for Omnibar {
-    fn measure(
-        &self,
-        widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         match orientation {
             gtk::Orientation::Horizontal => {
-                let (mw, _nw, mb, nb) = self.parent_measure(widget, orientation, for_size);
+                let (mw, _nw, mb, nb) = self.parent_measure(orientation, for_size);
 
                 // TODO(ville): Make the width smarter/configurable?
                 (mw, 800, mb, nb)
             }
-            gtk::Orientation::Vertical => widget.iter_children().fold(
-                self.parent_measure(widget, orientation, for_size),
+            gtk::Orientation::Vertical => self.obj().iter_children().fold(
+                self.parent_measure(orientation, for_size),
                 |acc, child| {
                     let (child_min, child_nat, _, _) = child.measure(orientation, for_size);
 
                     (acc.0.max(child_min), acc.1.max(child_nat), acc.2, acc.3)
                 },
             ),
-            _ => self.parent_measure(widget, orientation, for_size),
+            _ => self.parent_measure(orientation, for_size),
         }
     }
 
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
-        widget.iter_children().for_each(|child| {
+        let obj = self.obj();
+        obj.iter_children().for_each(|child| {
             child.allocate(width, height, -1, None);
         });
 
-        widget.notify("title-height");
+        obj.notify("title-height");
     }
 }

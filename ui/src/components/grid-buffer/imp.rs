@@ -42,7 +42,7 @@ impl ObjectImpl for GridBuffer {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecDouble::builder("scroll-transition")
@@ -55,20 +55,14 @@ impl ObjectImpl for GridBuffer {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             _ => unimplemented!(),
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 self.font
@@ -89,8 +83,8 @@ impl ObjectImpl for GridBuffer {
 }
 
 impl WidgetImpl for GridBuffer {
-    fn snapshot(&self, widget: &Self::Type, snapshot: &gtk::Snapshot) {
-        let (_, req) = widget.preferred_size();
+    fn snapshot(&self, snapshot: &gtk::Snapshot) {
+        let (_, req) = self.obj().preferred_size();
 
         snapshot.push_clip(&graphene::Rect::new(
             0.0,
@@ -128,12 +122,7 @@ impl WidgetImpl for GridBuffer {
         snapshot.pop();
     }
 
-    fn measure(
-        &self,
-        widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         match orientation {
             gtk::Orientation::Horizontal => {
                 let w = if let Some(row) = self.rows.borrow().first() {
@@ -154,7 +143,7 @@ impl WidgetImpl for GridBuffer {
 
                 (h, h, -1, -1)
             }
-            _ => self.parent_measure(widget, orientation, for_size),
+            _ => self.parent_measure(orientation, for_size),
         }
     }
 }

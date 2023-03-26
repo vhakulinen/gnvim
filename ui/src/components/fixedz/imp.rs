@@ -15,16 +15,18 @@ impl ObjectSubclass for Fixedz {
 }
 
 impl ObjectImpl for Fixedz {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
-        obj.set_layout_manager(Some(&self.layout_manager));
+        self.obj()
+            .set_layout_manager(Some(self.layout_manager.clone()));
     }
 }
 
 impl WidgetImpl for Fixedz {
-    fn snapshot(&self, widget: &Self::Type, snapshot: &gtk::Snapshot) {
-        let mut children = widget
+    fn snapshot(&self, snapshot: &gtk::Snapshot) {
+        let obj = self.obj();
+        let mut children = obj
             .iter_children()
             .map(|c| self.layout_manager.layout_child(&c))
             .collect::<Vec<super::Child>>();
@@ -32,16 +34,16 @@ impl WidgetImpl for Fixedz {
         children.sort_by_key(|c| c.zindex());
 
         for child in children.iter() {
-            widget.snapshot_child(&child.child_widget(), snapshot);
+            obj.snapshot_child(&child.child_widget(), snapshot);
         }
     }
 
-    fn contains(&self, widget: &Self::Type, x: f64, y: f64) -> bool {
+    fn contains(&self, x: f64, y: f64) -> bool {
         /* NOTE(ville): Implement `contains` manually, because we have
          * holes/gaps within our content.
          */
 
-        widget
+        self.obj()
             .iter_children()
             .map(|c| self.layout_manager.layout_child(&c))
             .any(|c| {

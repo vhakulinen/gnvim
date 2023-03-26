@@ -33,14 +33,14 @@ impl ObjectSubclass for Row {
 }
 
 impl ObjectImpl for Row {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::builder("font", Font::static_type())
+            vec![glib::ParamSpecObject::builder::<Font>("font")
                 .flags(glib::ParamFlags::WRITABLE)
                 .build()]
         });
@@ -48,27 +48,21 @@ impl ObjectImpl for Row {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, _pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, _pspec: &glib::ParamSpec) -> glib::Value {
         // NOTE(ville): Our only property is write only, so it shouldn't be read.
         unimplemented!()
     }
 
-    fn set_property(
-        &self,
-        obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 let font: Font = value.get().expect("font value must be object Font");
 
                 // Propagate the font onwards.
-                obj.iter_children().for_each(|child| {
+                self.obj().iter_children().for_each(|child| {
                     child
                         .pango_context()
-                        .set_font_description(&font.font_desc());
+                        .set_font_description(Some(&font.font_desc()));
                 });
             }
             _ => unimplemented!(),

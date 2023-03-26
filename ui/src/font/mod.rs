@@ -23,8 +23,10 @@ impl Font {
     ///               `pango::FontDescription::from_value` knows.
     /// * `linespace` - The neovim linespace value.
     pub fn new(guifont: &str, linespace: f32) -> Self {
-        glib::Object::new(&[("guifont", &guifont), ("linespace", &linespace)])
-            .expect("Failed to create Font")
+        glib::Object::builder()
+            .property("guifont", &guifont)
+            .property("linespace", &linespace)
+            .build()
     }
 
     /// Pango font description for this font.

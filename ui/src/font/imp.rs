@@ -32,9 +32,7 @@ impl ObjectSubclass for Font {
 
 impl Font {
     pub fn update_metrics(&self, ctx: pango::Context) {
-        let font_metrics = ctx
-            .metrics(Some(&self.font_desc.borrow()), None)
-            .expect("can't get font metrics");
+        let font_metrics = ctx.metrics(Some(&self.font_desc.borrow()), None);
 
         self.ascent.set(font_metrics.ascent() as f32);
         self.descent.set(font_metrics.descent() as f32);
@@ -71,10 +69,10 @@ impl Font {
 }
 
 impl ObjectImpl for Font {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
-        let ctx = obj.pango_context();
+        let ctx = self.obj().pango_context();
         self.update_metrics(ctx);
     }
 
@@ -97,7 +95,7 @@ impl ObjectImpl for Font {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "guifont" => self.guifont.borrow().to_value(),
             "linespace" => self.linespace.get().to_value(),
@@ -105,13 +103,7 @@ impl ObjectImpl for Font {
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "guifont" => {
                 let font_str = value

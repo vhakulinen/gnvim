@@ -65,8 +65,8 @@ impl ObjectSubclass for Grid {
 }
 
 impl ObjectImpl for Grid {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
         self.gesture_click.set_button(0);
         self.gesture_drag.set_button(0);
@@ -76,12 +76,15 @@ impl ObjectImpl for Grid {
         self.event_controller_scroll.set_flags(flags);
 
         // Add our event handlers to the buffer widget.
-        self.buffer.add_controller(&self.gesture_click);
-        self.buffer.add_controller(&self.gesture_drag);
-        self.buffer.add_controller(&self.event_controller_scroll);
-        self.buffer.add_controller(&self.event_controller_motion);
+        self.buffer.add_controller(self.gesture_click.clone());
+        self.buffer.add_controller(self.gesture_drag.clone());
+        self.buffer
+            .add_controller(self.event_controller_scroll.clone());
+        self.buffer
+            .add_controller(self.event_controller_motion.clone());
 
         // Connect mouse events.
+        let obj = self.obj();
         obj.connect_mouse(
             clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
@@ -105,7 +108,7 @@ impl ObjectImpl for Grid {
         )
     }
 
-    fn dispose(&self, _obj: &Self::Type) {
+    fn dispose(&self) {
         self.buffer.unparent();
         self.cursor.unparent();
     }
@@ -118,10 +121,10 @@ impl ObjectImpl for Grid {
                     .default_value(0)
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
                     .build(),
-                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                glib::ParamSpecObject::builder::<Neovim>("nvim")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecBoolean::builder("busy")
@@ -132,7 +135,7 @@ impl ObjectImpl for Grid {
                     .default_value(false)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecBoxed::builder("mode-info", ModeInfo::static_type())
+                glib::ParamSpecBoxed::builder::<ModeInfo>("mode-info")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecDouble::builder("cursor-blink-transition")
@@ -153,7 +156,7 @@ impl ObjectImpl for Grid {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "grid-id" => self.id.get().to_value(),
             "font" => self.font.borrow().to_value(),
@@ -168,13 +171,7 @@ impl ObjectImpl for Grid {
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "grid-id" => {
                 let id = value.get().expect("property `grid-id` needs to be i64");
@@ -222,22 +219,17 @@ impl ObjectImpl for Grid {
 }
 
 impl WidgetImpl for Grid {
-    fn measure(
-        &self,
-        _widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         // NOTE(ville): Currently, our size is always the same as our buffer's
         // size. This manual measure implementation is to avoid issues where
         // the buffer's sibling, gtkfixed, has "old" size on flush.
         self.buffer.measure(orientation, for_size)
     }
 
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
-        let mut child: Option<gtk::Widget> = widget.first_child();
+        let mut child: Option<gtk::Widget> = self.obj().first_child();
         while let Some(sib) = child {
             if sib.should_layout() {
                 let (req, _) = sib.preferred_size();

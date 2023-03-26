@@ -15,15 +15,15 @@ cfg-if = "1.0"
 
 [dependencies.gtk]
 package = "gtk4"
-version = "0.4"
+version = "0.6"
 features = ["v4_4"]
 
 [dependencies.glib]
-version = "0.15"
+version = "0.17"
 features = ["log_macros"]
 
 [dependencies.pango]
-version = "0.15"
+version = "0.17"
 features = ["v1_50"]
 
 [dependencies.nvim]
@@ -33,7 +33,5 @@ path = "../lib/nvim-rs"
 [dependencies.gio-compat]
 path = "../lib/gio-compat"
 
-[build-dependencies.gtk]
-package = "gtk4"
-version = "0.4.7"
-features = ["v4_4"]
+[build-dependencies]
+glib-build-tools = "0.17.0"

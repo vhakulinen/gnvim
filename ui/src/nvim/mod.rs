@@ -16,7 +16,7 @@ pub type MutexGuardedNeovim<'a> =
 
 impl Neovim {
     fn new() -> Self {
-        glib::Object::new(&[]).expect("failed to create Neovim")
+        glib::Object::new()
     }
 
     /// Locks the internal client for the caller. The lock should not be held

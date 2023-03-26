@@ -86,8 +86,8 @@ impl Cursor {
 }
 
 impl ObjectImpl for Cursor {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
         // Set the default width.
         self.width_percentage.replace(1.0);
@@ -97,7 +97,7 @@ impl ObjectImpl for Cursor {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecBoolean::builder("active")
@@ -108,7 +108,7 @@ impl ObjectImpl for Cursor {
                     .default_value(false)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecBoxed::builder("mode-info", ModeInfo::static_type())
+                glib::ParamSpecBoxed::builder::<ModeInfo>("mode-info")
                     .flags(glib::ParamFlags::WRITABLE)
                     .build(),
                 glib::ParamSpecDouble::builder("blink-transition")
@@ -125,7 +125,7 @@ impl ObjectImpl for Cursor {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "active" => self.active.get().to_value(),
@@ -134,27 +134,21 @@ impl ObjectImpl for Cursor {
         }
     }
 
-    fn set_property(
-        &self,
-        obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 self.font
                     .replace(value.get().expect("font value must be object Font"));
-                obj.queue_draw();
+                self.obj().queue_draw();
             }
             "active" => {
                 self.active
                     .set(value.get().expect("active must be a boolean"));
-                obj.queue_draw();
+                self.obj().queue_draw();
             }
             "busy" => {
                 self.busy.set(value.get().expect("busy must be a boolean"));
-                obj.queue_draw();
+                self.obj().queue_draw();
             }
             "mode-info" => {
                 let mode: ModeInfo = value.get().expect("mode-info must be an ModeInfo object");
@@ -169,8 +163,9 @@ impl ObjectImpl for Cursor {
                 self.width_percentage.replace(cell_percentage);
                 self.attr_id.replace(mode.attr_id.unwrap_or(0) as i64);
 
+                let obj = self.obj();
                 self.set_blink(
-                    obj,
+                    &obj,
                     Blink::new(
                         mode.blinkwait.unwrap_or(0) as f64 * 1000.0,
                         mode.blinkon.unwrap_or(0) as f64 * 1000.0,
@@ -195,9 +190,10 @@ impl ObjectImpl for Cursor {
                     .map(|blink| (blink.wait(), blink.on(), blink.off()))
                     .unwrap_or_default();
 
+                let obj = self.obj();
                 self.blink_transition.set(transition);
                 self.set_blink(
-                    obj,
+                    &obj,
                     Blink::new(
                         wait,
                         on,
@@ -222,7 +218,7 @@ impl ObjectImpl for Cursor {
 }
 
 impl WidgetImpl for Cursor {
-    fn snapshot(&self, _widget: &Self::Type, snapshot: &gtk::Snapshot) {
+    fn snapshot(&self, snapshot: &gtk::Snapshot) {
         if self.busy.get() || !self.active.get() {
             return;
         }
@@ -244,12 +240,7 @@ impl WidgetImpl for Cursor {
         }
     }
 
-    fn measure(
-        &self,
-        widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         match orientation {
             gtk::Orientation::Horizontal => {
                 // width
@@ -268,7 +259,7 @@ impl WidgetImpl for Cursor {
 
                 (h, h, -1, -1)
             }
-            _ => self.parent_measure(widget, orientation, for_size),
+            _ => self.parent_measure(orientation, for_size),
         }
     }
 }

@@ -35,10 +35,11 @@ impl ObjectSubclass for Tab {
 }
 
 impl ObjectImpl for Tab {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
-        obj.add_controller(&self.gesture_click);
+        let obj = self.obj();
+        obj.add_controller(self.gesture_click.clone());
 
         self.gesture_click
             .connect_pressed(clone!(@weak obj => move |_, _, _, _| {
@@ -63,7 +64,7 @@ impl ObjectImpl for Tab {
             }));
     }
 
-    fn dispose(&self, _obj: &Self::Type) {
+    fn dispose(&self) {
         self.content.unparent();
     }
 
@@ -74,10 +75,10 @@ impl ObjectImpl for Tab {
                 glib::ParamSpecString::builder("label")
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT)
                     .build(),
-                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                glib::ParamSpecObject::builder::<Neovim>("nvim")
                     .flags(glib::ParamFlags::WRITABLE | glib::ParamFlags::CONSTRUCT)
                     .build(),
-                glib::ParamSpecBoxed::builder("tabpage", Tabpage::static_type())
+                glib::ParamSpecBoxed::builder::<Tabpage>("tabpage")
                     .flags(glib::ParamFlags::WRITABLE | glib::ParamFlags::CONSTRUCT)
                     .build(),
             ]
@@ -86,20 +87,14 @@ impl ObjectImpl for Tab {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "label" => self.content.label().to_value(),
             _ => unimplemented!(),
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "nvim" => {
                 self.nvim

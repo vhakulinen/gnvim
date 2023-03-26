@@ -15,7 +15,7 @@ glib::wrapper! {
 
 impl Cursor {
     fn new() -> Self {
-        glib::Object::new(&[]).expect("Failed to create Cursor")
+        glib::Object::new()
     }
 
     pub fn flush(&self, colors: &Colors) {

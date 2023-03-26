@@ -18,7 +18,7 @@ use gtk::{
 };
 
 use gio_compat::CompatRead;
-use nvim::rpc::RpcReader;
+use nvim::rpc::{message::Notification, Message, RpcReader};
 
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
@@ -60,49 +60,58 @@ pub struct AppWindow {
 }
 
 impl AppWindow {
-    async fn io_loop(&self, obj: super::AppWindow, reader: CompatRead) {
-        use nvim::rpc::{message::Notification, Message};
+    async fn process_nvim_event(&self, msg: Message) {
+        match msg {
+            Message::Response(res) => {
+                self.nvim
+                    .client()
+                    .await
+                    .handle_response(res)
+                    .expect("failed to handle nvim response");
+            }
+            Message::Request(req) => {
+                println!("Got request from nvim: {:?}", req);
+            }
+            Message::Notification(Notification { method, params, .. }) => match method.as_ref() {
+                "redraw" => {
+                    let events = nvim::decode_redraw_params(params)
+                        .expect("failed to decode redraw notification");
+
+                    events
+                        .into_iter()
+                        .for_each(|event| self.handle_ui_event(event))
+                }
+                "gnvim" => match params {
+                    rmpv::Value::Array(params) => params
+                        .into_iter()
+                        .map(GnvimEvent::deserialize)
+                        .for_each(|res| match res {
+                            Ok(event) => self.handle_gnvim_event(event),
+                            Err(err) => warn!("failed to parse gnvim event: {:?}", err),
+                        }),
+                    params => warn!("unexpected gnvim params: {:?}", params),
+                },
+                _ => {
+                    println!("Unexpected notification: {}", method);
+                }
+            },
+        }
+    }
+
+    async fn io_loop(&self, reader: CompatRead) {
         let mut reader: RpcReader<CompatRead> = reader.into();
 
         loop {
-            let msg = reader.recv().await.unwrap();
-            match msg {
-                Message::Response(res) => {
-                    self.nvim
-                        .client()
-                        .await
-                        .handle_response(res)
-                        .expect("failed to handle nvim response");
+            match reader.recv().await {
+                Ok(msg) => self.process_nvim_event(msg).await,
+                Err(_) => {
+                    self.obj()
+                        .application()
+                        .expect("application not set")
+                        .quit();
+                    break;
                 }
-                Message::Request(req) => {
-                    println!("Got request from nvim: {:?}", req);
-                }
-                Message::Notification(Notification { method, params, .. }) => {
-                    match method.as_ref() {
-                        "redraw" => {
-                            let events = nvim::decode_redraw_params(params)
-                                .expect("failed to decode redraw notification");
-
-                            events
-                                .into_iter()
-                                .for_each(|event| self.handle_ui_event(&obj, event))
-                        }
-                        "gnvim" => match params {
-                            rmpv::Value::Array(params) => params
-                                .into_iter()
-                                .map(GnvimEvent::deserialize)
-                                .for_each(|res| match res {
-                                    Ok(event) => self.handle_gnvim_event(&obj, event),
-                                    Err(err) => warn!("failed to parse gnvim event: {:?}", err),
-                                }),
-                            params => warn!("unexpected gnvim params: {:?}", params),
-                        },
-                        _ => {
-                            println!("Unexpected notification: {}", method);
-                        }
-                    }
-                }
-            }
+            };
         }
     }
 
@@ -157,7 +166,7 @@ impl AppWindow {
         }
     }
 
-    fn handle_gnvim_event(&self, obj: &super::AppWindow, event: GnvimEvent) {
+    fn handle_gnvim_event(&self, event: GnvimEvent) {
         match event {
             GnvimEvent::EchoRepeat(echo_repeat) => {
                 let msg = vec![
@@ -177,7 +186,7 @@ impl AppWindow {
                 }));
             }
             GnvimEvent::GtkDebugger => {
-                self.enable_debugging(obj, true);
+                self.enable_debugging(true);
             }
             GnvimEvent::CursorBlinkTransition(t) => {
                 self.shell.set_cursor_blink_transition(t);
@@ -191,11 +200,11 @@ impl AppWindow {
         }
     }
 
-    fn handle_ui_event(&self, obj: &super::AppWindow, event: UiEvent) {
+    fn handle_ui_event(&self, event: UiEvent) {
         match event {
             // Global events
             UiEvent::SetTitle(events) => events.into_iter().for_each(|event| {
-                obj.set_title(Some(&event.title));
+                self.obj().set_title(Some(&event.title));
             }),
             UiEvent::SetIcon(_) => {}
             UiEvent::ModeInfoSet(events) => events.into_iter().for_each(|event| {
@@ -203,7 +212,7 @@ impl AppWindow {
                     .replace(event.cursor_styles.into_iter().map(Into::into).collect());
             }),
             UiEvent::OptionSet(events) => events.into_iter().for_each(|event| {
-                self.handle_option_set(obj, event);
+                self.handle_option_set(event);
             }),
             UiEvent::ModeChange(events) => events.into_iter().for_each(|event| {
                 let modes = self.mode_infos.borrow();
@@ -249,117 +258,114 @@ impl AppWindow {
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
                     // property) was added as recently as gtk version 4.6.
-                    self.css_provider.load_from_data(
-                        format!(
-                            r#"
-                                * {{
-                                    {font}
-                                }}
+                    self.css_provider.load_from_data(&format!(
+                        r#"
+                        * {{
+                            {font}
+                        }}
 
-                                .app-window, .external-window {{
-                                    background-color: #{bg};
-                                }}
+                        .app-window, .external-window {{
+                            background-color: #{bg};
+                        }}
 
-                                .msg-win.scrolled {{
-                                    border-top: 1px solid #{msgsep};
-                                }}
+                        .msg-win.scrolled {{
+                            border-top: 1px solid #{msgsep};
+                        }}
 
-                                .popupmenu-listview,
-                                .popupmenu-row {{
-                                    color: #{pmenu_fg};
-                                    background-color: #{pmenu_bg};
+                        .popupmenu-listview,
+                        .popupmenu-row {{
+                            color: #{pmenu_fg};
+                            background-color: #{pmenu_bg};
 
-                                    padding-top: {linespace_top}px;
-                                    padding-bottom: {linespace_bottom}px;
-                                }}
+                            padding-top: {linespace_top}px;
+                            padding-bottom: {linespace_bottom}px;
+                        }}
 
-                                .popupmenu-listview > :selected,
-                                .popupmenu-listview > :selected > .popupmenu-row {{
-                                    color: #{pmenu_sel_fg};
-                                    background-color: #{pmenu_sel_bg};
-                                }}
+                        .popupmenu-listview > :selected,
+                        .popupmenu-listview > :selected > .popupmenu-row {{
+                            color: #{pmenu_sel_fg};
+                            background-color: #{pmenu_sel_bg};
+                        }}
 
-                                .popupmenu scrollbar {{
-                                    background-color: #{pmenusbar_bg};
-                                }}
+                        .popupmenu scrollbar {{
+                            background-color: #{pmenusbar_bg};
+                        }}
 
-                                .popupmenu slider {{
-                                    background-color: #{pmenuthumb_bg};
-                                    border-color: #{pmenuthumb_bg};
-                                }}
+                        .popupmenu slider {{
+                            background-color: #{pmenuthumb_bg};
+                            border-color: #{pmenuthumb_bg};
+                        }}
 
-                                tabline {{
-                                    background-color: #{tablinefill_bg};
-                                    box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
-                                }}
+                        tabline {{
+                            background-color: #{tablinefill_bg};
+                            box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
+                        }}
 
-                                tabline tab label {{
-                                    background-color: #{tabline_bg};
-                                    color: #{tabline_fg};
-                                    box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
-                                    padding: 0.5rem 1rem;
-                                }}
+                        tabline tab label {{
+                            background-color: #{tabline_bg};
+                            color: #{tabline_fg};
+                            box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
+                            padding: 0.5rem 1rem;
+                        }}
 
-                                tabline tab.selected label {{
-                                    background-color: #{tablinesel_bg};
-                                    color: #{tablinesel_fg};
-                                }}
+                        tabline tab.selected label {{
+                            background-color: #{tablinesel_bg};
+                            color: #{tablinesel_fg};
+                        }}
 
-                                headerbar {{
-                                    background-color: #{menu_bg};
-                                    color: #{menu_fg};
-                                    border: 0;
-                                    min-height: 0;
-                                }}
+                        headerbar {{
+                            background-color: #{menu_bg};
+                            color: #{menu_fg};
+                            border: 0;
+                            min-height: 0;
+                        }}
 
-                                omnibar {{
-                                    background-color: #{menu_bg};
-                                    margin: 5px;
-                                    border: 1px solid shade(#{menu_fg}, 0.8);
-                                    border-radius: 3px;
-                                }}
+                        omnibar {{
+                            background-color: #{menu_bg};
+                            margin: 5px;
+                            border: 1px solid shade(#{menu_fg}, 0.8);
+                            border-radius: 3px;
+                        }}
 
-                                omnibar label {{
-                                    padding:
-                                        calc({omnibar_pad}px + {linespace_top}px)
-                                        {omnibar_pad}px
-                                        calc({omnibar_pad}px + {linespace_bottom}px)
-                                        {omnibar_pad}px;
-                                }}
+                        omnibar label {{
+                            padding:
+                                calc({omnibar_pad}px + {linespace_top}px)
+                                {omnibar_pad}px
+                                calc({omnibar_pad}px + {linespace_bottom}px)
+                                {omnibar_pad}px;
+                        }}
 
-                                omnibar cmdline {{
-                                    padding: {omnibar_pad}px;
-                                }}
+                        omnibar cmdline {{
+                            padding: {omnibar_pad}px;
+                        }}
 
-                                cmdline textview, cmdline text {{
-                                    background-color: #{bg};
-                                    color: #{fg};
-                                    caret-color: #{fg};
-                                }}
-                            "#,
-                            bg = colors.bg.as_hex(),
-                            fg = colors.fg.as_hex(),
-                            msgsep = msgsep.fg().as_hex(),
-                            pmenu_fg = pmenu.fg().as_hex(),
-                            pmenu_bg = pmenu.bg().as_hex(),
-                            pmenu_sel_fg = pmenu_sel.fg().as_hex(),
-                            pmenu_sel_bg = pmenu_sel.bg().as_hex(),
-                            pmenusbar_bg = pmenu_bar.bg().as_hex(),
-                            pmenuthumb_bg = pmenu_thumb.bg().as_hex(),
-                            tabline_bg = tabline.bg().as_hex(),
-                            tabline_fg = tabline.fg().as_hex(),
-                            tablinefill_bg = tablinefill.bg().as_hex(),
-                            tablinesel_bg = tablinesel.bg().as_hex(),
-                            tablinesel_fg = tablinesel.fg().as_hex(),
-                            linespace_top = (linespace / 2.0).ceil().max(0.0),
-                            linespace_bottom = (linespace / 2.0).floor().max(0.0),
-                            menu_bg = menu.bg().as_hex(),
-                            menu_fg = menu.fg().as_hex(),
-                            omnibar_pad = 5,
-                            font = self.font.borrow().to_css(),
-                        )
-                        .as_bytes(),
-                    );
+                        cmdline textview, cmdline text {{
+                            background-color: #{bg};
+                            color: #{fg};
+                            caret-color: #{fg};
+                        }}
+                    "#,
+                        bg = colors.bg.as_hex(),
+                        fg = colors.fg.as_hex(),
+                        msgsep = msgsep.fg().as_hex(),
+                        pmenu_fg = pmenu.fg().as_hex(),
+                        pmenu_bg = pmenu.bg().as_hex(),
+                        pmenu_sel_fg = pmenu_sel.fg().as_hex(),
+                        pmenu_sel_bg = pmenu_sel.bg().as_hex(),
+                        pmenusbar_bg = pmenu_bar.bg().as_hex(),
+                        pmenuthumb_bg = pmenu_thumb.bg().as_hex(),
+                        tabline_bg = tabline.bg().as_hex(),
+                        tabline_fg = tabline.fg().as_hex(),
+                        tablinefill_bg = tablinefill.bg().as_hex(),
+                        tablinesel_bg = tablinesel.bg().as_hex(),
+                        tablinesel_fg = tablinesel.fg().as_hex(),
+                        linespace_top = (linespace / 2.0).ceil().max(0.0),
+                        linespace_bottom = (linespace / 2.0).floor().max(0.0),
+                        menu_bg = menu.bg().as_hex(),
+                        menu_fg = menu.fg().as_hex(),
+                        omnibar_pad = 5,
+                        font = self.font.borrow().to_css(),
+                    ));
                 }
             }
 
@@ -400,9 +406,10 @@ impl AppWindow {
             UiEvent::WinFloatPos(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_float_pos(event, &self.font.borrow())),
-            UiEvent::WinExternalPos(events) => events
-                .into_iter()
-                .for_each(|event| self.shell.handle_win_external_pos(event, obj.upcast_ref())),
+            UiEvent::WinExternalPos(events) => events.into_iter().for_each(|event| {
+                self.shell
+                    .handle_win_external_pos(event, self.obj().upcast_ref())
+            }),
             UiEvent::WinHide(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_win_hide(event)),
@@ -457,11 +464,11 @@ impl AppWindow {
         }
     }
 
-    fn handle_option_set(&self, obj: &super::AppWindow, event: OptionSet) {
+    fn handle_option_set(&self, event: OptionSet) {
         match event {
             OptionSet::Linespace(linespace) => {
                 let font = Font::new(&self.font.borrow().guifont(), linespace as f32);
-                obj.set_property("font", &font);
+                self.obj().set_property("font", &font);
 
                 self.resize_on_flush.set(true);
                 self.css_on_flush.set(true);
@@ -470,13 +477,14 @@ impl AppWindow {
             }
             OptionSet::Guifont(guifont) => {
                 let font = Font::new(&guifont, self.font.borrow().linespace() / SCALE);
-                obj.set_property("font", &font);
+                self.obj().set_property("font", &font);
 
                 self.resize_on_flush.set(true);
                 self.css_on_flush.set(true);
             }
             OptionSet::ShowTabline(show) => {
-                obj.set_property("show-tabline", ShowTabline::from(show).to_value());
+                self.obj()
+                    .set_property("show-tabline", ShowTabline::from(show).to_value());
 
                 self.resize_on_flush.set(true);
                 self.css_on_flush.set(true);
@@ -567,8 +575,9 @@ impl ObjectSubclass for AppWindow {
 }
 
 impl ObjectImpl for AppWindow {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
+        let obj = self.obj();
 
         gtk::StyleContext::add_provider_for_display(
             &gdk::Display::default().expect("couldn't get display"),
@@ -592,7 +601,7 @@ impl ObjectImpl for AppWindow {
 
         // Start io loop.
         spawn_local!(clone!(@strong obj as app => async move {
-            app.imp().io_loop(app.clone(), reader).await;
+            app.imp().io_loop(reader).await;
         }));
 
         // Call nvim_ui_attach.
@@ -642,23 +651,23 @@ impl ObjectImpl for AppWindow {
                 obj.imp().key_released(eck)
             }));
 
-        obj.add_controller(&self.event_controller_key);
+        obj.add_controller(self.event_controller_key.clone());
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                glib::ParamSpecObject::builder::<Neovim>("nvim")
                     .flags(glib::ParamFlags::READABLE)
                     .build(),
-                glib::ParamSpecBoxed::builder("args", BoxedArguments::static_type())
+                glib::ParamSpecBoxed::builder::<BoxedArguments>("args")
                     .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
                     .build(),
-                glib::ParamSpecBoxed::builder("show-tabline", ShowTabline::static_type())
+                glib::ParamSpecBoxed::builder::<ShowTabline>("show-tabline")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
             ]
@@ -667,7 +676,7 @@ impl ObjectImpl for AppWindow {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "nvim" => self.nvim.to_value(),
@@ -677,13 +686,7 @@ impl ObjectImpl for AppWindow {
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 self.font
@@ -706,8 +709,8 @@ impl ObjectImpl for AppWindow {
 }
 
 impl WidgetImpl for AppWindow {
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
         self.omnibar.set_max_height(height);
     }

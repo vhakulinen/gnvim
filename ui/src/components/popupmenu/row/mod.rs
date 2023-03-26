@@ -11,7 +11,7 @@ glib::wrapper! {
 
 impl Row {
     fn new() -> Self {
-        glib::Object::new(&[]).expect("failed to create PopupmenuItem")
+        glib::Object::new()
     }
 
     pub fn set_item(&self, item: &PopupmenuItem) {

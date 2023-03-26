@@ -14,6 +14,9 @@ glib::wrapper! {
 
 impl AppWindow {
     pub fn new(app: &gtk::Application, args: &BoxedArguments) -> Self {
-        Object::new(&[("application", app), ("args", args)]).expect("Failed to create Window")
+        Object::builder()
+            .property("application", app)
+            .property("args", args)
+            .build()
     }
 }

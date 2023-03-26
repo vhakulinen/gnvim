@@ -1,3 +1,4 @@
+use glib::ExitCode;
 use gtk::{gio, pango, prelude::*};
 
 mod api;
@@ -18,7 +19,7 @@ use components::appwindow::AppWindow;
 pub const SCALE: f32 = pango::SCALE as f32;
 pub const WINDOW_RESIZE_DEBOUNCE_MS: u64 = 10;
 
-fn main() {
+fn main() -> ExitCode {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");
 
     let args = arguments::Arguments::parse();
@@ -35,7 +36,7 @@ fn main() {
 
     app.connect_activate(move |app| build_ui(app, &args));
 
-    app.run_with_args::<&str>(&[]);
+    app.run()
 }
 
 fn build_ui(app: &gtk::Application, args: &arguments::BoxedArguments) {

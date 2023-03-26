@@ -9,7 +9,7 @@ glib::wrapper! {
 
 impl LayoutManager {
     pub fn new() -> Self {
-        glib::Object::new(&[]).expect("failed to create FixedzLayoutManager")
+        glib::Object::new()
     }
 
     pub fn layout_child(&self, child: &impl IsA<gtk::Widget>) -> super::Child {

@@ -31,8 +31,10 @@ glib::wrapper! {
 
 impl Grid {
     pub fn new(id: i64, font: &Font) -> Self {
-        let grid: Grid =
-            glib::Object::new(&[("grid-id", &id), ("font", font)]).expect("Failed to create Grid");
+        let grid: Grid = glib::Object::builder()
+            .property("grid-id", &id)
+            .property("font", font)
+            .build();
         grid
     }
 

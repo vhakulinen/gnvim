@@ -42,24 +42,18 @@ mod imp {
             PROPERTIES.as_ref()
         }
 
-        fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
             match pspec.name() {
                 "height" => self.height.get().to_value(),
                 _ => unimplemented!(),
             }
         }
 
-        fn set_property(
-            &self,
-            obj: &Self::Type,
-            _id: usize,
-            value: &glib::Value,
-            pspec: &glib::ParamSpec,
-        ) {
+        fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
             match pspec.name() {
                 "height" => {
                     self.height.set(value.get().expect("height must be a i32"));
-                    obj.queue_resize();
+                    self.obj().queue_resize();
                 }
                 _ => unimplemented!(),
             };
@@ -67,16 +61,12 @@ mod imp {
     }
 
     impl WidgetImpl for Overflower {
-        fn measure(
-            &self,
-            widget: &Self::Type,
-            orientation: gtk::Orientation,
-            for_size: i32,
-        ) -> (i32, i32, i32, i32) {
-            let m = widget
+        fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
+            let m = self
+                .obj()
                 .first_child()
                 .map(|child| child.measure(orientation, for_size))
-                .unwrap_or_else(|| self.parent_measure(widget, orientation, for_size));
+                .unwrap_or_else(|| self.parent_measure(orientation, for_size));
 
             let m = match orientation {
                 gtk::Orientation::Vertical => {
@@ -89,10 +79,10 @@ mod imp {
             m
         }
 
-        fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-            self.parent_size_allocate(widget, width, height, baseline);
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
 
-            if let Some(child) = widget.first_child() {
+            if let Some(child) = self.obj().first_child() {
                 let (_, req) = child.preferred_size();
 
                 // NOTE(ville): Using the child's preferred natural height,

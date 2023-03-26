@@ -33,7 +33,7 @@ glib::wrapper! {
 
 impl Shell {
     pub fn new() -> Self {
-        glib::Object::new(&[]).expect("Failed to create Shell")
+        glib::Object::new()
     }
 
     fn nvim(&self) -> Neovim {

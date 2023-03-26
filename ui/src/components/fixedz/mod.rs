@@ -17,7 +17,7 @@ glib::wrapper! {
 
 impl Fixedz {
     pub fn new() -> Self {
-        glib::Object::new(&[]).expect("failed to create Fixedz")
+        glib::Object::new()
     }
 
     pub fn child_position(&self, child: &impl IsA<gtk::Widget>) -> gsk::Transform {

@@ -17,24 +17,19 @@ impl ObjectSubclass for MsgWin {
 }
 
 impl ObjectImpl for MsgWin {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
-        obj.set_property("overflow", gtk::Overflow::Hidden);
+        self.obj().set_property("overflow", gtk::Overflow::Hidden);
     }
 }
 
 impl WidgetImpl for MsgWin {
-    fn measure(
-        &self,
-        widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
-        let m = if let Some(child) = widget.first_child() {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
+        let m = if let Some(child) = self.obj().first_child() {
             child.measure(orientation, for_size)
         } else {
-            self.parent_measure(widget, orientation, for_size)
+            self.parent_measure(orientation, for_size)
         };
 
         match orientation {
@@ -46,10 +41,10 @@ impl WidgetImpl for MsgWin {
         }
     }
 
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
-        for child in widget.iter_children() {
+        for child in self.obj().iter_children() {
             if child.should_layout() {
                 child.allocate(width, height, -1, None);
             }

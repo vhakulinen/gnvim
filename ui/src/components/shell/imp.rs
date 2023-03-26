@@ -72,8 +72,8 @@ impl ObjectSubclass for Shell {
 }
 
 impl ObjectImpl for Shell {
-    fn constructed(&self, obj: &Self::Type) {
-        self.parent_constructed(obj);
+    fn constructed(&self) {
+        self.parent_constructed();
 
         // TODO(ville): To avoid duplication of the property binding code
         // between the ui file and the grid creation code, perhaps the root
@@ -86,17 +86,17 @@ impl ObjectImpl for Shell {
         use once_cell::sync::Lazy;
         static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecObject::builder("font", Font::static_type())
+                glib::ParamSpecObject::builder::<Font>("font")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecObject::builder("nvim", Neovim::static_type())
+                glib::ParamSpecObject::builder::<Neovim>("nvim")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecBoolean::builder("busy")
                     .default_value(false)
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
-                glib::ParamSpecBoxed::builder("current-mode-info", ModeInfo::static_type())
+                glib::ParamSpecBoxed::builder::<ModeInfo>("current-mode-info")
                     .flags(glib::ParamFlags::READWRITE)
                     .build(),
                 glib::ParamSpecDouble::builder("cursor-blink-transition")
@@ -117,7 +117,7 @@ impl ObjectImpl for Shell {
         PROPERTIES.as_ref()
     }
 
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
         match pspec.name() {
             "font" => self.font.borrow().to_value(),
             "busy" => self.busy.get().to_value(),
@@ -130,13 +130,7 @@ impl ObjectImpl for Shell {
         }
     }
 
-    fn set_property(
-        &self,
-        _obj: &Self::Type,
-        _id: usize,
-        value: &glib::Value,
-        pspec: &glib::ParamSpec,
-    ) {
+    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
         match pspec.name() {
             "font" => {
                 self.font
@@ -178,12 +172,7 @@ impl ObjectImpl for Shell {
 }
 
 impl WidgetImpl for Shell {
-    fn measure(
-        &self,
-        _widget: &Self::Type,
-        orientation: gtk::Orientation,
-        for_size: i32,
-    ) -> (i32, i32, i32, i32) {
+    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         // Currently, the shell's size is the same as the root grid's size.
         // Note that for the min width we need to report something smaller so
         // that the top level window remains resizable (since its using the
@@ -192,8 +181,8 @@ impl WidgetImpl for Shell {
         (mw.min(1), nw, mb, nb)
     }
 
-    fn size_allocate(&self, widget: &Self::Type, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(widget, width, height, baseline);
+    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+        self.parent_size_allocate(width, height, baseline);
 
         self.root_grid.allocate(width, height, -1, None);
         self.fixed.allocate(width, height, -1, None);
@@ -204,7 +193,7 @@ impl WidgetImpl for Shell {
         // end up in a infinite loop.
         if prev != (width, height) {
             self.prev_size.set((width, height));
-            widget.resize_nvim();
+            self.obj().resize_nvim();
         }
     }
 }
