@@ -5,17 +5,17 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-rmp-serde = "1.0.0"
-rmpv = { version = "1.0.0", features = ["with-serde"] }
-futures = "0.3.21"
-async-trait = "0.1.53"
+rmp-serde = "1.1"
+rmpv = { version = "1.0", features = ["with-serde"] }
+futures = "0.3"
+async-trait = "0.1"
 quote = "1.0"
 syn = "1.0"
 proc-macro2 = "1.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7.1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["full"] }
 
 [[bin]]
 name = "apigen"
