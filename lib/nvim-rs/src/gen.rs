@@ -314,6 +314,12 @@ impl<W: RpcWriter> Client<W> {
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_buf_get_commands", (buffer, opts)).await
     }
+    pub async fn nvim_get_option_info(
+        &mut self,
+        name: &str,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
+        self.call("nvim_get_option_info", (name,)).await
+    }
     pub async fn nvim_create_namespace(
         &mut self,
         name: &str,
@@ -420,11 +426,12 @@ impl<W: RpcWriter> Client<W> {
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_get_all_options_info", ()).await
     }
-    pub async fn nvim_get_option_info(
+    pub async fn nvim_get_option_info2(
         &mut self,
         name: &str,
+        opts: &Dictionary,
     ) -> Result<CallResponse<Dictionary>, WriteError> {
-        self.call("nvim_get_option_info", (name,)).await
+        self.call("nvim_get_option_info2", (name, opts)).await
     }
     pub async fn nvim_set_option(
         &mut self,
@@ -526,6 +533,12 @@ impl<W: RpcWriter> Client<W> {
     ) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_ui_attach", (width, height, options)).await
     }
+    pub async fn nvim_ui_set_focus(
+        &mut self,
+        gained: bool,
+    ) -> Result<CallResponse<()>, WriteError> {
+        self.call("nvim_ui_set_focus", (gained,)).await
+    }
     pub async fn nvim_ui_detach(&mut self) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_ui_detach", ()).await
     }
@@ -568,25 +581,18 @@ impl<W: RpcWriter> Client<W> {
         self.call("nvim_ui_pum_set_bounds", (width, height, row, col))
             .await
     }
-    pub async fn nvim_get_hl_by_name(
-        &mut self,
-        name: &str,
-        rgb: bool,
-    ) -> Result<CallResponse<Dictionary>, WriteError> {
-        self.call("nvim_get_hl_by_name", (name, rgb)).await
-    }
-    pub async fn nvim_get_hl_by_id(
-        &mut self,
-        hl_id: i64,
-        rgb: bool,
-    ) -> Result<CallResponse<Dictionary>, WriteError> {
-        self.call("nvim_get_hl_by_id", (hl_id, rgb)).await
-    }
     pub async fn nvim_get_hl_id_by_name(
         &mut self,
         name: &str,
     ) -> Result<CallResponse<i64>, WriteError> {
         self.call("nvim_get_hl_id_by_name", (name,)).await
+    }
+    pub async fn nvim_get_hl(
+        &mut self,
+        ns_id: i64,
+        opts: &Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
+        self.call("nvim_get_hl", (ns_id, opts)).await
     }
     pub async fn nvim_set_hl(
         &mut self,
@@ -928,12 +934,12 @@ impl<W: RpcWriter> Client<W> {
     ) -> Result<CallResponse<Dictionary>, WriteError> {
         self.call("nvim_eval_statusline", (str, opts)).await
     }
-    pub async fn nvim_exec(
+    pub async fn nvim_exec2(
         &mut self,
         src: &str,
-        output: bool,
-    ) -> Result<CallResponse<String>, WriteError> {
-        self.call("nvim_exec", (src, output)).await
+        opts: &Dictionary,
+    ) -> Result<CallResponse<Dictionary>, WriteError> {
+        self.call("nvim_exec2", (src, opts)).await
     }
     pub async fn nvim_command(&mut self, command: &str) -> Result<CallResponse<()>, WriteError> {
         self.call("nvim_command", (command,)).await

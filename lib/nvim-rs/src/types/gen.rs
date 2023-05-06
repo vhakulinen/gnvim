@@ -169,6 +169,7 @@ pub struct WinViewport {
     pub curline: i64,
     pub curcol: i64,
     pub line_count: i64,
+    pub scroll_delta: i64,
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct WinExtmark {
