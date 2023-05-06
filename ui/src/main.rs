@@ -36,7 +36,9 @@ fn main() -> ExitCode {
 
     app.connect_activate(move |app| build_ui(app, &args));
 
-    app.run()
+    // NOTE(ville): Pass empty arguments to the gtk application. We handle
+    // those manually.
+    app.run_with_args::<&str>(&[])
 }
 
 fn build_ui(app: &gtk::Application, args: &arguments::BoxedArguments) {
