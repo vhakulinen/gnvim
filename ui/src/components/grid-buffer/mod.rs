@@ -1,9 +1,9 @@
 use std::cell::{Ref, RefMut};
 
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
-use nvim::types::uievents::GridScroll;
+use nvim::types::uievents::{GridLine, GridScroll};
 
-use crate::{colors::Colors, font::Font, math::ease_out_cubic, warn};
+use crate::colors::Colors;
 
 mod imp;
 pub mod row;
@@ -21,10 +21,6 @@ impl GridBuffer {
         glib::Object::new()
     }
 
-    pub fn set_font(&self, font: Font) {
-        self.imp().font.replace(font);
-    }
-
     /// Returns the size of the grid, in rows and columns.
     ///
     /// Returns (cols, rows).
@@ -40,8 +36,17 @@ impl GridBuffer {
         self.imp().rows.borrow()
     }
 
-    pub fn get_rows_mut(&self) -> RefMut<'_, Vec<Row>> {
+    fn get_rows_mut(&self) -> RefMut<'_, Vec<Row>> {
         self.imp().rows.borrow_mut()
+    }
+
+    pub fn update_row(&self, event: &GridLine) {
+        let mut rows = self.get_rows_mut();
+        let row = rows.get_mut(event.row as usize).expect("invalid row");
+
+        row.update(event);
+
+        self.set_dirty(true);
     }
 
     pub fn resize(&self, width: usize, height: usize) {
@@ -62,6 +67,7 @@ impl GridBuffer {
             }
         }
 
+        self.set_dirty(true);
         self.queue_resize();
     }
 
@@ -69,6 +75,8 @@ impl GridBuffer {
         for row in self.imp().rows.borrow_mut().iter_mut() {
             row.clear();
         }
+
+        self.set_dirty(true);
     }
 
     pub fn flush(&self, colors: &Colors) {
@@ -77,8 +85,8 @@ impl GridBuffer {
         let ctx = self.pango_context();
 
         let font = imp.font.borrow();
-        for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
-            row.generate_nodes(&ctx, colors, &font, i as f32);
+        for row in imp.rows.borrow_mut().iter_mut() {
+            row.generate_nodes(&ctx, colors, &font);
         }
 
         let (alloc, _) = self.preferred_size();
@@ -92,6 +100,7 @@ impl GridBuffer {
             .upcast(),
         );
 
+        self.set_dirty(false);
         self.queue_draw();
     }
 
@@ -114,10 +123,6 @@ impl GridBuffer {
             event.cols, 0,
             "at the moment of writing, grid_scroll event documents cols to be always zero"
         );
-
-        // The scroll animation requires a snapshot of our current buffer,
-        // so start it before making changes to our content.
-        self.scroll_transition(&event);
 
         let left = event.left as usize;
         let right = event.right as usize;
@@ -146,55 +151,8 @@ impl GridBuffer {
 
             dst.cells[left..right].swap_with_slice(&mut src.cells[left..right]);
         }
-    }
 
-    /// Creates a scrolling effect based on grid scroll event.
-    fn scroll_transition(&self, event: &GridScroll) {
-        let imp = self.imp();
-        let start_time = self
-            .frame_clock()
-            .expect("failed to get frame clock")
-            .frame_time() as f64;
-
-        let snapshot = gtk::Snapshot::new();
-        imp.snapshot(&snapshot);
-        imp.scroll_node.replace(snapshot.to_node());
-
-        let target_y = 0.0;
-        let start_y = imp.y_offset.get() + imp.font.borrow().row_to_y(event.rows as f64) as f32;
-        let end_time = start_time + imp.scroll_transition.get();
-        let old_id =
-            imp.scroll_tick
-                .borrow_mut()
-                .replace(self.add_tick_callback(move |this, clock| {
-                    let now = clock.frame_time() as f64;
-                    if now < start_time {
-                        warn!("Clock going backwards");
-                        return Continue(true);
-                    }
-
-                    let imp = this.imp();
-                    if now < end_time {
-                        let t = ease_out_cubic((now - start_time) / (end_time - start_time)) as f32;
-                        let y = start_y + ((target_y - start_y) * t);
-
-                        imp.y_offset_scroll.set(y - start_y);
-                        imp.y_offset.set(y);
-                        this.queue_draw();
-
-                        Continue(true)
-                    } else {
-                        imp.y_offset.set(target_y);
-                        imp.scroll_node.replace(None);
-                        this.queue_draw();
-
-                        Continue(false)
-                    }
-                }));
-
-        if let Some(old_id) = old_id {
-            old_id.remove();
-        }
+        self.set_dirty(true);
     }
 }
 

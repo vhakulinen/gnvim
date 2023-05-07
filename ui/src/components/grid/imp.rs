@@ -14,7 +14,8 @@ use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::spawn_local;
 
-#[derive(gtk::CompositeTemplate, Default)]
+#[derive(gtk::CompositeTemplate, glib::Properties, Default)]
+#[properties(wrapper_type = super::Grid)]
 #[template(resource = "/com/github/vhakulinen/gnvim/grid.ui")]
 pub struct Grid {
     /// Our cursor on the screen.
@@ -24,16 +25,22 @@ pub struct Grid {
     #[template_child(id = "buffer")]
     pub buffer: TemplateChild<GridBuffer>,
 
+    #[property(get, set)]
     pub font: RefCell<Font>,
 
     /// The grid id from neovim.
+    #[property(name = "grid-id", construct_only, get, set, default = 0)]
     pub id: Cell<i64>,
     /// Neovim window associated to this grid.
     pub nvim_window: RefCell<Option<Window>>,
+    #[property(get, set)]
     pub nvim: RefCell<Neovim>,
     /// If grid is the active grid or not.
+    #[property(get, set, default = false)]
     pub active: Cell<bool>,
+    #[property(get, set, default = false)]
     pub busy: Cell<bool>,
+    #[property(get, set)]
     pub mode_info: RefCell<ModeInfo>,
 
     pub external_win: RefCell<Option<ExternalWindow>>,
@@ -41,9 +48,19 @@ pub struct Grid {
     pub gesture_drag: gtk::GestureDrag,
     pub event_controller_scroll: gtk::EventControllerScroll,
     pub event_controller_motion: gtk::EventControllerMotion,
+
+    /// The cursor blink animation speed.
+    #[property(get, set, minimum = 0.0)]
     pub cursor_blink_transition: Cell<f64>,
+    /// The cursor position animation speed.
+    #[property(get, set, minimum = 0.0)]
     pub cursor_position_transition: Cell<f64>,
+    /// The scroll animation speed.
+    #[property(get, set, minimum = 0.0)]
     pub scroll_transition: Cell<f64>,
+
+    #[property(get, set)]
+    pub viewport_delta: Cell<f64>,
 }
 
 #[glib::object_subclass]
@@ -114,107 +131,15 @@ impl ObjectImpl for Grid {
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecInt64::builder("grid-id")
-                    .default_value(0)
-                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
-                    .build(),
-                glib::ParamSpecObject::builder::<Neovim>("nvim")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecObject::builder::<Font>("font")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecBoolean::builder("busy")
-                    .default_value(false)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecBoolean::builder("active")
-                    .default_value(false)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecBoxed::builder::<ModeInfo>("mode-info")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecDouble::builder("cursor-blink-transition")
-                    .minimum(0.0)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecDouble::builder("cursor-position-transition")
-                    .minimum(0.0)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecDouble::builder("scroll-transition")
-                    .minimum(0.0)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-            ]
-        });
-
-        PROPERTIES.as_ref()
+        Self::derived_properties()
     }
 
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "grid-id" => self.id.get().to_value(),
-            "font" => self.font.borrow().to_value(),
-            "nvim" => self.nvim.borrow().to_value(),
-            "busy" => self.busy.get().to_value(),
-            "active" => self.active.get().to_value(),
-            "mode-info" => self.mode_info.borrow().to_value(),
-            "cursor-blink-transition" => self.cursor_blink_transition.get().to_value(),
-            "cursor-position-transition" => self.cursor_position_transition.get().to_value(),
-            "scroll-transition" => self.scroll_transition.get().to_value(),
-            _ => unimplemented!(),
-        }
+    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        self.derived_set_property(id, value, pspec)
     }
 
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "grid-id" => {
-                let id = value.get().expect("property `grid-id` needs to be i64");
-                self.id.replace(id);
-            }
-            "font" => {
-                self.font
-                    .replace(value.get().expect("font value must be object Font"));
-            }
-            "nvim" => {
-                self.nvim
-                    .replace(value.get().expect("font value must be object Neovim"));
-            }
-            "busy" => self
-                .busy
-                .set(value.get().expect("busy value must be a boolean")),
-            "active" => self
-                .active
-                .set(value.get().expect("active value must be a boolean")),
-            "mode-info" => {
-                self.mode_info.replace(
-                    value
-                        .get()
-                        .expect("mode-info needs to be an ModeInfo object"),
-                );
-            }
-            "cursor-blink-transition" => self.cursor_blink_transition.set(
-                value
-                    .get()
-                    .expect("cursor-blink-transition value needs to be a f64"),
-            ),
-            "cursor-position-transition" => self.cursor_position_transition.set(
-                value
-                    .get()
-                    .expect("cursor-position-transition value needs to be a f64"),
-            ),
-            "scroll-transition" => self.scroll_transition.set(
-                value
-                    .get()
-                    .expect("scroll-transition value needs to be a f64"),
-            ),
-            _ => unimplemented!(),
-        }
+    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        self.derived_property(id, pspec)
     }
 }
 

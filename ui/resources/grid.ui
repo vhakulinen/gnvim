@@ -10,6 +10,11 @@
                     bind-flags="sync-create"
                 />
                 <property
+                    name="scroll-delta"
+                    bind-source="Grid"
+                    bind-property="viewport-delta"
+                />
+                <property
                     name="scroll-transition"
                     bind-source="Grid"
                     bind-property="scroll-transition"

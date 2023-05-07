@@ -20,6 +20,18 @@ macro_rules! some_or_return {
 }
 
 #[macro_export]
+macro_rules! some_or_return_val {
+    ($opt:expr, $val:expr, $msgformat:literal $(,$arg:expr)* $(,)?) => {
+        if let Some(some) = $opt {
+            some
+        } else {
+            $crate::warn!($msgformat, $($arg),*);
+            return $val;
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! log {
     ($level:expr, $format:literal $(,$arg:expr)* $(,)?) => {
         glib::g_log!(

@@ -112,13 +112,7 @@ impl Row {
         }
     }
 
-    pub fn generate_nodes(
-        &mut self,
-        ctx: &pango::Context,
-        colors: &Colors,
-        font: &Font,
-        row_num: f32,
-    ) {
+    pub fn generate_nodes(&mut self, ctx: &pango::Context, colors: &Colors, font: &Font) {
         // Gather cells into continuous segments based on hl ids.
         let mut segments = self
             .cells
@@ -169,11 +163,8 @@ impl Row {
                 acc
             });
 
-        let height = font.height();
-        let baseline = (row_num * height + font.baseline()) / SCALE;
-        let bg_y = (row_num * height) / SCALE;
-        let bg_h = height / SCALE;
-
+        let baseline = font.baseline() / SCALE;
+        let bg_h = font.height() / SCALE;
         let ch = font.char_width();
         let mut x = 0.0_f32;
         for segment in segments.iter_mut() {
@@ -237,7 +228,7 @@ impl Row {
 
             // Create background.
             snapshot_bg.append_node(
-                gsk::ColorNode::new(bg, &graphene::Rect::new(x, bg_y, width, bg_h)).upcast(),
+                gsk::ColorNode::new(bg, &graphene::Rect::new(x, 0.0, width, bg_h)).upcast(),
             );
 
             let nodes = Rc::new(RefCell::new(Some(CellNodes {

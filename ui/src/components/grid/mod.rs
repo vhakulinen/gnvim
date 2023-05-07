@@ -1,7 +1,4 @@
-use std::{
-    cell::{Ref, RefCell},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
 use gtk::{glib, glib::clone, prelude::*, subclass::prelude::*};
 
@@ -15,7 +12,6 @@ use crate::{
     colors::Colors,
     font::Font,
     input::{Action, Mouse},
-    nvim::Neovim,
     some_or_return,
 };
 
@@ -43,7 +39,7 @@ impl Grid {
     }
 
     pub fn id(&self) -> i64 {
-        self.imp().id.get()
+        self.grid_id()
     }
 
     pub fn unparent(&self) {
@@ -52,10 +48,6 @@ impl Grid {
         if let Some(external) = self.imp().external_win.borrow_mut().take() {
             external.destroy();
         }
-    }
-
-    pub fn nvim(&self) -> Neovim {
-        self.imp().nvim.borrow().clone()
     }
 
     pub fn make_external(&self, parent: &gtk::Window) {
@@ -164,26 +156,13 @@ impl Grid {
     }
 
     pub fn put(&self, event: GridLine) {
-        // TODO(ville): This function should be proxied to the buffer.
-
-        let mut rows = self.imp().buffer.get_rows_mut();
-        let row = rows.get_mut(event.row as usize).expect("invalid row");
-
-        row.update(&event);
+        self.imp().buffer.update_row(&event)
     }
 
     pub fn resize(&self, event: GridResize) {
         self.imp()
             .buffer
             .resize(event.width as usize, event.height as usize);
-    }
-
-    pub fn font(&self) -> Ref<'_, Font> {
-        self.imp().font.borrow()
-    }
-
-    pub fn set_active(&self, active: bool) {
-        self.set_property("active", active);
     }
 
     pub fn flush(&self, colors: &Colors) {
@@ -196,7 +175,7 @@ impl Grid {
             // doesn't move).
             // NOTE(ville): Sometimes the cursor position during a flush is not
             // valid. In those cases, set the cursor's text to empty string and
-            // hope that neovim will soon give us updated cusror position.
+            // hope that neovim will soon give us updated cursor position.
             let rows = imp.buffer.get_rows();
             let text = rows
                 .get(imp.cursor.row() as usize)

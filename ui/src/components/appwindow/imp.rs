@@ -420,7 +420,9 @@ impl AppWindow {
                 .into_iter()
                 .for_each(|event| self.shell.handle_msg_set_pos(event, &self.font.borrow())),
             // TODO(ville): Scrollbars?
-            UiEvent::WinViewport(_) => {}
+            UiEvent::WinViewport(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_viewport(event)),
 
             // popupmenu events
             UiEvent::PopupmenuShow(events) => events

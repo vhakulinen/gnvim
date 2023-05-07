@@ -5,6 +5,7 @@ use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{
     GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
     PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
+    WinViewport,
 };
 
 use crate::{boxed::ModeInfo, colors::Colors, font::Font, nvim::Neovim, spawn_local, warn, SCALE};
@@ -113,7 +114,7 @@ impl Shell {
     }
 
     pub fn font(&self) -> Font {
-        self.imp().root_grid.font().clone()
+        self.imp().root_grid.font()
     }
 
     pub fn handle_grid_resize(&self, event: GridResize) {
@@ -295,6 +296,15 @@ impl Shell {
         let grid = find_grid_or_return!(self, event.grid);
         grid.set_nvim_window(Some(event.win));
         grid.make_external(parent);
+    }
+
+    pub fn handle_win_viewport(&self, event: WinViewport) {
+        assert!(event.grid != 1, "cant do win_viewport for grid 1");
+
+        let grid = find_grid_or_return!(self, event.grid);
+        grid.set_nvim_window(Some(event.win));
+
+        grid.set_viewport_delta(event.scroll_delta as f64);
     }
 
     pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {
