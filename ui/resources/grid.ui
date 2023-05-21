@@ -14,12 +14,13 @@
                     bind-source="Grid"
                     bind-property="viewport-delta"
                 />
-                <property
-                    name="scroll-transition"
-                    bind-source="Grid"
-                    bind-property="scroll-transition"
-                    bind-flags="sync-create"
-                />
+
+                <binding name="scroll-transition">
+                    <closure type="gdouble" function="multiply">
+                        <lookup type="Grid" name="scroll-transition" />
+                        <constant type="gdouble">1000.0</constant>
+                    </closure>
+                </binding>
             </object>
         </child>
         <child>
@@ -42,24 +43,32 @@
                     bind-property="active"
                     bind-flags="sync-create"
                 />
-                <property
-                    name="mode-info"
-                    bind-source="Grid"
-                    bind-property="mode-info"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="blink-transition"
-                    bind-source="Grid"
-                    bind-property="cursor-blink-transition"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="position-transition"
-                    bind-source="Grid"
-                    bind-property="cursor-position-transition"
-                    bind-flags="sync-create"
-                />
+
+                <binding name="position-transition">
+                    <closure type="gdouble" function="multiply">
+                        <lookup type="Grid" name="cursor-position-transition" />
+                        <constant type="gdouble">1000.0</constant>
+                    </closure>
+                </binding>
+
+                <binding name="width-percentage">
+                    <closure type="gfloat" function="cursor_width">
+                        <lookup type="Grid" name="mode-info" />
+                    </closure>
+                </binding>
+
+                <binding name="attr-id">
+                    <closure type="gint64" function="cursor_attr_id">
+                        <lookup type="Grid" name="mode-info" />
+                    </closure>
+                </binding>
+
+                <binding name="blink">
+                    <closure type="CursorBlink" function="cursor_blink">
+                        <lookup type="Grid" name="mode-info" />
+                        <lookup type="Grid" name="cursor-blink-transition" />
+                    </closure>
+                </binding>
             </object>
         </child>
     </template>

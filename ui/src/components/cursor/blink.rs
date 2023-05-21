@@ -2,7 +2,8 @@ use crate::warn;
 
 use super::ease_out_cubic;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, glib::Boxed)]
+#[boxed_type(name = "CursorBlink", nullable)]
 pub struct Blink {
     wait: f64,
     on: f64,
@@ -15,7 +16,7 @@ pub struct Blink {
     pub alpha: f64,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 enum Stage {
     #[default]
     Wait,

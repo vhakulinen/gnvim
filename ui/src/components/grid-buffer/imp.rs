@@ -23,7 +23,7 @@ pub struct GridBuffer {
     /// Callback id for scroll animation.
     pub scroll_tick: RefCell<Option<gtk::TickCallbackId>>,
     /// Scroll transition time.
-    #[property(set = Self::set_scroll_transition, minimum = 0.0)]
+    #[property(set, minimum = 0.0)]
     pub scroll_transition: cell::Cell<f64>,
     /// Y offset for the main buffer.
     pub y_offset: cell::Cell<f32>,
@@ -82,10 +82,6 @@ impl GridBuffer {
             .borrow_mut()
             .iter_mut()
             .for_each(|row| row.cells.iter_mut().for_each(Cell::clear_nodes));
-    }
-
-    fn set_scroll_transition(&self, value: f64) {
-        self.scroll_transition.set(value * 1000.0);
     }
 
     fn scroll_delta_to_range(&self, delta: f64) -> (usize, usize) {

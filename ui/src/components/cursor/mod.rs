@@ -7,6 +7,8 @@ use super::grid_buffer::row::Cell;
 mod blink;
 mod imp;
 
+pub use blink::Blink;
+
 glib::wrapper! {
     pub struct Cursor(ObjectSubclass<imp::Cursor>)
         @extends gtk::Widget,

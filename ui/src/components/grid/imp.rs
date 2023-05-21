@@ -9,7 +9,7 @@ use gtk::{
 use nvim::types::Window;
 
 use crate::boxed::ModeInfo;
-use crate::components::{Cursor, ExternalWindow, GridBuffer};
+use crate::components::{cursor, Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::spawn_local;
@@ -63,6 +63,42 @@ pub struct Grid {
     pub viewport_delta: Cell<f64>,
 }
 
+#[gtk::template_callbacks(functions)]
+impl Grid {
+    #[template_callback]
+    fn multiply(a: f64, b: f64) -> f64 {
+        a * b
+    }
+
+    #[template_callback]
+    fn cursor_width(mode: &ModeInfo) -> f32 {
+        mode.cell_percentage
+            // Make sure we have non 0 value.
+            .map(|v| if v == 0 { 100 } else { v })
+            .map(|v| v as f32 / 100.0)
+            .unwrap_or(100.0)
+    }
+
+    #[template_callback]
+    fn cursor_attr_id(mode: &ModeInfo) -> i64 {
+        mode.attr_id.unwrap_or(0) as i64
+    }
+
+    #[template_callback(function = false)]
+    fn cursor_blink(&self, mode: &ModeInfo, transition: f64) -> Option<cursor::Blink> {
+        cursor::Blink::new(
+            mode.blinkwait.unwrap_or(0) as f64 * 1000.0,
+            mode.blinkon.unwrap_or(0) as f64 * 1000.0,
+            mode.blinkoff.unwrap_or(0) as f64 * 1000.0,
+            transition * 1000.0,
+            self.obj()
+                .frame_clock()
+                .map(|clock| clock.frame_time() as f64)
+                .unwrap_or(0.0),
+        )
+    }
+}
+
 #[glib::object_subclass]
 impl ObjectSubclass for Grid {
     const NAME: &'static str = "Grid";
@@ -74,6 +110,7 @@ impl ObjectSubclass for Grid {
         Cursor::ensure_type();
 
         klass.bind_template();
+        klass.bind_template_callbacks();
     }
 
     fn instance_init(obj: &InitializingObject<Self>) {
