@@ -38,6 +38,13 @@
                     bind-flags="sync-create"
                 />
                 <property
+                    name="y-offset"
+                    bind-source="buffer"
+                    bind-property="y-offset"
+                    bind-flags="sync-create"
+                />
+
+                <property
                     name="active"
                     bind-source="Grid"
                     bind-property="active"

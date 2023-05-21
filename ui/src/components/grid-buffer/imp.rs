@@ -26,6 +26,7 @@ pub struct GridBuffer {
     #[property(set, minimum = 0.0)]
     pub scroll_transition: cell::Cell<f64>,
     /// Y offset for the main buffer.
+    #[property(get, set)]
     pub y_offset: cell::Cell<f32>,
     /// Y offset for the scroll/background buffer.
     pub y_offset_scroll: cell::Cell<f32>,
@@ -188,11 +189,13 @@ impl GridBuffer {
                     });
 
                     let y = start_y + ((target_y - start_y) * t);
-                    imp.y_offset.set(y);
+                    //imp.y_offset.set(y);
+                    this.set_y_offset(y);
 
                     Continue(true)
                 } else {
-                    imp.y_offset.set(target_y);
+                    //imp.y_offset.set(target_y);
+                    this.set_y_offset(target_y);
                     imp.scroll_nodes.borrow_mut().clear();
 
                     Continue(false)
@@ -221,8 +224,6 @@ impl ObjectImpl for GridBuffer {
 
 impl WidgetImpl for GridBuffer {
     fn snapshot(&self, real_snapshot: &gtk::Snapshot) {
-        let (_, req) = self.obj().preferred_size();
-
         if self.dirty.get() {
             if let Some(ref node) = self.backbuffer.borrow().as_ref() {
                 real_snapshot.append_node(node);
@@ -231,13 +232,6 @@ impl WidgetImpl for GridBuffer {
         }
 
         let snapshot = gtk::Snapshot::new();
-
-        snapshot.push_clip(&graphene::Rect::new(
-            0.0,
-            0.0,
-            req.width() as f32,
-            req.height() as f32,
-        ));
 
         for node in self.background_nodes.borrow().iter() {
             snapshot.append_node(node);
@@ -262,8 +256,6 @@ impl WidgetImpl for GridBuffer {
             .borrow()
             .render_to_snapshot(&snapshot, &self.font.borrow());
         snapshot.restore();
-
-        snapshot.pop();
 
         self.backbuffer.replace(snapshot.to_node());
 

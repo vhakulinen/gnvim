@@ -21,12 +21,15 @@ pub struct Position {
     /// If not, we must skip the transition animation to avoid jumpy cursor
     /// (for example, when opening splits).
     pub is_set: bool,
+    /// Additional offset to apply to the y coordinate.
+    pub y_offset: f64,
 }
 
 #[derive(Default, glib::Properties)]
 #[properties(wrapper_type = super::Cursor)]
 pub struct Cursor {
     #[property(set, name ="position-transition", member = transition, type = f64)]
+    #[property(set, name ="y-offset", member = y_offset, type = f64)]
     pub pos: RefCell<Position>,
 
     pub text: RefCell<String>,
@@ -124,7 +127,10 @@ impl WidgetImpl for Cursor {
 
         if let Some(ref node) = *self.node.borrow() {
             let pos = self.pos.borrow();
-            snapshot.translate(&graphene::Point::new(pos.pos.0 as f32, pos.pos.1 as f32));
+            snapshot.translate(&graphene::Point::new(
+                pos.pos.0 as f32,
+                (pos.pos.1 + pos.y_offset) as f32,
+            ));
             snapshot.push_opacity(
                 self.blink
                     .borrow()

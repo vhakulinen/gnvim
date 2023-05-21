@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
 
 use gtk::glib::subclass::InitializingObject;
+use gtk::graphene;
 use gtk::subclass::prelude::*;
 use gtk::{
     glib::{self, clone},
@@ -181,6 +182,21 @@ impl ObjectImpl for Grid {
 }
 
 impl WidgetImpl for Grid {
+    fn snapshot(&self, snapshot: &gtk::Snapshot) {
+        let (_, req) = self.obj().preferred_size();
+
+        snapshot.push_clip(&graphene::Rect::new(
+            0.0,
+            0.0,
+            req.width() as f32,
+            req.height() as f32,
+        ));
+
+        self.parent_snapshot(snapshot);
+
+        snapshot.pop();
+    }
+
     fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         // NOTE(ville): Currently, our size is always the same as our buffer's
         // size. This manual measure implementation is to avoid issues where
