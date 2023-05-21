@@ -1,6 +1,4 @@
-use std::cell::Ref;
-
-use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
+use gtk::{glib, graphene, gsk};
 
 mod imp;
 
@@ -18,21 +16,8 @@ impl Child {
             .build()
     }
 
-    pub fn set_position(&self, x: f32, y: f32) {
+    pub fn set_position_xy(&self, x: f32, y: f32) {
         let transform = gsk::Transform::new().translate(&graphene::Point::new(x, y));
-
-        self.set_property("position", transform);
-    }
-
-    pub fn set_zindex(&self, z: i64) {
-        self.set_property("z-index", z);
-    }
-
-    pub fn position(&self) -> Ref<'_, gsk::Transform> {
-        self.imp().position.borrow()
-    }
-
-    pub fn zindex(&self) -> i64 {
-        self.imp().zindex.get()
+        self.set_position(transform);
     }
 }

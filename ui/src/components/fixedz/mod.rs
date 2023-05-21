@@ -29,14 +29,17 @@ impl Fixedz {
     }
 
     pub fn set_zindex(&self, widget: &impl IsA<gtk::Widget>, z: i64) {
-        self.imp().layout_manager.layout_child(widget).set_zindex(z);
+        self.imp()
+            .layout_manager
+            .layout_child(widget)
+            .set_z_index(z);
     }
 
     pub fn move_(&self, widget: &impl IsA<gtk::Widget>, x: f32, y: f32) {
         self.imp()
             .layout_manager
             .layout_child(widget)
-            .set_position(x, y);
+            .set_position_xy(x, y);
     }
 
     pub fn put(&self, widget: &impl IsA<gtk::Widget>, x: f32, y: f32) {
@@ -45,7 +48,7 @@ impl Fixedz {
         self.imp()
             .layout_manager
             .layout_child(widget)
-            .set_position(x, y);
+            .set_position_xy(x, y);
     }
 }
 

@@ -3,9 +3,12 @@ use std::cell::{Cell, RefCell};
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk, prelude::*};
 
-#[derive(Default)]
+#[derive(Default, glib::Properties)]
+#[properties(wrapper_type = super::Child)]
 pub struct Child {
+    #[property(get, set)]
     pub position: RefCell<gsk::Transform>,
+    #[property(get, set, name = "z-index")]
     pub zindex: Cell<i64>,
 }
 
@@ -17,47 +20,28 @@ impl ObjectSubclass for Child {
 }
 
 impl ObjectImpl for Child {
-    fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecBoxed::builder::<gsk::Transform>("position")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecInt64::builder("z-index")
-                    .default_value(0)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-            ]
+    fn constructed(&self) {
+        self.parent_constructed();
+
+        self.obj().connect_position_notify(|this| {
+            gtk::prelude::LayoutChildExt::layout_manager(this).layout_changed();
         });
 
-        PROPERTIES.as_ref()
+        self.obj().connect_z_index_notify(|this| {
+            gtk::prelude::LayoutChildExt::layout_manager(this).layout_changed();
+        });
     }
 
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "position" => self.position.borrow().to_value(),
-            "z-index" => self.zindex.get().to_value(),
-            _ => unimplemented!(),
-        }
+    fn properties() -> &'static [glib::ParamSpec] {
+        Self::derived_properties()
     }
 
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "position" => {
-                self.position
-                    .replace(value.get().expect("position must be object gsk::Transform"));
+    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        self.derived_property(id, pspec)
+    }
 
-                gtk::prelude::LayoutChildExt::layout_manager(&*self.obj()).layout_changed();
-            }
-            "z-index" => {
-                self.zindex
-                    .replace(value.get().expect("font value must be i64"));
-
-                gtk::prelude::LayoutChildExt::layout_manager(&*self.obj()).layout_changed();
-            }
-            _ => unimplemented!(),
-        }
+    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        self.derived_set_property(id, value, pspec)
     }
 }
 

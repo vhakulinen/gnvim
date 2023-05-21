@@ -31,7 +31,7 @@ impl WidgetImpl for Fixedz {
             .map(|c| self.layout_manager.layout_child(&c))
             .collect::<Vec<super::Child>>();
 
-        children.sort_by_key(|c| c.zindex());
+        children.sort_by_key(|c| c.z_index());
 
         for child in children.iter() {
             obj.snapshot_child(&child.child_widget(), snapshot);
