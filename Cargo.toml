@@ -4,3 +4,30 @@ members = [
     "lib/nvim-rs",
     "lib/gio-compat",
 ]
+
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+
+# Release build with full debug symbols for backtraces and interactive
+# debugger sessions etc.
+[profile.release-debug]
+inherits = "release"
+debug = true
+
+# When compared to the 'release' profile, this reduces the code size by ~45% at
+# the cost of increasing build times by ~10%. Should increase runtime
+# performance somewhat too.
+[profile.optimized]
+inherits = "release"
+lto = true
+codegen-units = 1
+
+# Full debug info and runtime checks, but otherwise with max code performance.
+# This can be useful for debugging issues if the normal 'dev' build profile
+# generates code which is either too slow to use, or which changes behaviour
+# with respect to runtime race conditions.
+[profile.optimized-debug]
+inherits = "dev"
+opt-level = 3
+lto = true
+codegen-units = 1
+incremental = false
