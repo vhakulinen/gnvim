@@ -96,6 +96,8 @@ impl ObjectImpl for Cursor {
     fn constructed(&self) {
         self.parent_constructed();
 
+        // TODO(ville): Use custom setter instead of signals.
+
         self.obj().connect_font_notify(|this| this.queue_draw());
         self.obj().connect_active_notify(|this| this.queue_draw());
         self.obj().connect_busy_notify(|this| this.queue_draw());

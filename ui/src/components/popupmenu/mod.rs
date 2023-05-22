@@ -31,7 +31,7 @@ impl Popupmenu {
     }
 
     pub fn get_padding_x(&self) -> f32 {
-        self.imp().font_char_width.get()
+        self.font().char_width() / SCALE
     }
 
     /// Proxy to get the internal listview's preferred size.
@@ -51,14 +51,6 @@ impl Popupmenu {
                 .activate_action("list.scroll-to-item", Some(&n.to_variant()))
                 .expect("failed to activate list.scroll-to-item action");
         }
-    }
-
-    pub fn set_max_height(&self, h: i32) {
-        self.imp().max_height.set(h);
-    }
-
-    pub fn set_max_width(&self, w: i32) {
-        self.imp().max_width.set(w);
     }
 
     pub fn report_pum_bounds(&self, nvim: &Neovim, x: f32, y: f32) {

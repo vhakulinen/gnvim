@@ -6,11 +6,12 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::{font::Font, SCALE};
+use crate::font::Font;
 
 use super::Row;
 
-#[derive(gtk::CompositeTemplate, Default)]
+#[derive(gtk::CompositeTemplate, glib::Properties, Default)]
+#[properties(wrapper_type = super::Popupmenu)]
 #[template(resource = "/com/github/vhakulinen/gnvim/popupmenu.ui")]
 pub struct Popupmenu {
     #[template_child(id = "scrolled-window")]
@@ -18,13 +19,14 @@ pub struct Popupmenu {
     #[template_child(id = "list-view")]
     pub listview: TemplateChild<gtk::ListView>,
 
+    #[property(get, set)]
     pub max_height: Cell<i32>,
+    #[property(get, set)]
     pub max_width: Cell<i32>,
 
     pub store: super::Model,
+    #[property(get, set)]
     pub font: RefCell<Font>,
-    // TODO(ville): This should probably be a gobject property of the font it self.
-    pub font_char_width: Cell<f32>,
 }
 
 #[glib::object_subclass]
@@ -56,15 +58,6 @@ impl ObjectImpl for Popupmenu {
             obj.bind_property("font", &item, "font")
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
-            obj.bind_property("font-char-width", &item, "margin-start")
-                .flags(glib::BindingFlags::SYNC_CREATE)
-                .build();
-            obj.bind_property("font-char-width", &item, "margin-end")
-                .flags(glib::BindingFlags::SYNC_CREATE)
-                .build();
-            obj.bind_property("font-char-width", &item, "spacing")
-                .flags(glib::BindingFlags::SYNC_CREATE)
-                .build();
 
             listitem.set_child(Some(&item));
         }));
@@ -90,45 +83,15 @@ impl ObjectImpl for Popupmenu {
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecObject::builder::<Font>("font")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecFloat::builder("font-char-width")
-                    .minimum(0.0)
-                    .default_value(0.0)
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-            ]
-        });
-
-        PROPERTIES.as_ref()
+        Self::derived_properties()
     }
 
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "font" => self.font.borrow().to_value(),
-            "font-char-width" => self.font_char_width.get().to_value(),
-            _ => unimplemented!(),
-        }
+    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        self.derived_property(id, pspec)
     }
 
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "font" => {
-                let font: Font = value.get().expect("font value must be object Font");
-                let char_width = font.char_width() / SCALE;
-                self.font.replace(font);
-                self.obj().set_property("font-char-width", char_width);
-            }
-            "font-char-width" => {
-                self.font_char_width
-                    .replace(value.get().expect("font-char-width value must be f32"));
-            }
-            _ => unimplemented!(),
-        };
+    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        self.derived_set_property(id, value, pspec)
     }
 }
 

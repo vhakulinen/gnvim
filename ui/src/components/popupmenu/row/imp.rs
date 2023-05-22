@@ -1,18 +1,44 @@
+use std::cell::RefCell;
+
 use gtk::{
     glib::{self, subclass::InitializingObject},
     prelude::*,
     subclass::prelude::*,
 };
 
-use crate::{child_iter::IterChildren, font::Font};
+use crate::{child_iter::IterChildren, font::Font, SCALE};
 
-#[derive(gtk::CompositeTemplate, Default)]
+#[derive(gtk::CompositeTemplate, glib::Properties, Default)]
+#[properties(wrapper_type = super::Row)]
 #[template(resource = "/com/github/vhakulinen/gnvim/popupmenu_row.ui")]
 pub struct Row {
     #[template_child(id = "word")]
     pub word: TemplateChild<gtk::Label>,
     #[template_child(id = "kind")]
     pub kind: TemplateChild<gtk::Label>,
+
+    #[property(set = Self::set_font)]
+    pub font: RefCell<Font>,
+}
+
+impl Row {
+    fn set_font(&self, font: Font) {
+        let w = (font.char_width() / SCALE).ceil() as i32;
+
+        // Adjust margins and spacing.
+        self.obj().set_margin_start(w);
+        self.obj().set_margin_end(w);
+        self.obj().set_spacing(w);
+
+        // Propagate the font onwards.
+        self.obj().iter_children().for_each(|child| {
+            child
+                .pango_context()
+                .set_font_description(Some(&font.font_desc()));
+        });
+
+        self.font.replace(font);
+    }
 }
 
 #[glib::object_subclass]
@@ -33,40 +59,16 @@ impl ObjectSubclass for Row {
 }
 
 impl ObjectImpl for Row {
-    fn constructed(&self) {
-        self.parent_constructed();
-    }
-
     fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecObject::builder::<Font>("font")
-                .flags(glib::ParamFlags::WRITABLE)
-                .build()]
-        });
-
-        PROPERTIES.as_ref()
+        Self::derived_properties()
     }
 
-    fn property(&self, _id: usize, _pspec: &glib::ParamSpec) -> glib::Value {
-        // NOTE(ville): Our only property is write only, so it shouldn't be read.
-        unimplemented!()
+    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        self.derived_property(id, pspec)
     }
 
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "font" => {
-                let font: Font = value.get().expect("font value must be object Font");
-
-                // Propagate the font onwards.
-                self.obj().iter_children().for_each(|child| {
-                    child
-                        .pango_context()
-                        .set_font_description(Some(&font.font_desc()));
-                });
-            }
-            _ => unimplemented!(),
-        };
+    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        self.derived_set_property(id, value, pspec)
     }
 }
 
