@@ -2,12 +2,17 @@ ifeq ($(PREFIX),)
     PREFIX := /usr/local
 endif
 
+# Rust build profile.  See Cargo.toml for alternatives.
+ifeq ($(PROFILE),)
+    PROFILE := optimized
+endif
+
 build:
-	cargo build --release
+	cargo build --profile $(PROFILE)
 
 install:
 	install -d "$(DESTDIR)$(PREFIX)/bin"
-	install ./target/release/gnvim "$(DESTDIR)$(PREFIX)/bin"
+	install ./target/$(PROFILE)/gnvim "$(DESTDIR)$(PREFIX)/bin"
 	install -d "$(DESTDIR)$(PREFIX)/share/gnvim"
 	cp -r ./runtime "$(DESTDIR)$(PREFIX)/share/gnvim"
 	install -d "$(DESTDIR)$(PREFIX)/share/applications"
