@@ -232,18 +232,22 @@ impl Shell {
             font.row_to_y(row) as f32,
         ));
 
-        let (_, req) = self.imp().root_grid.preferred_size();
-        let (max_x, max_y) = (req.width(), req.height());
-
+        let (_, root_req) = self.imp().root_grid.preferred_size();
         let (req, _) = grid.preferred_size();
-        // TODO(ville): Resize the grid if it doesn't fit the screen?
-        let x = pos.x().clamp(0.0, (max_x - req.width()) as f32);
-        let y = pos
-            .y()
-            // NOTE(ville): Not 100% the substraction of one cell height is
-            // required.
-            .clamp(0.0, (max_y - req.height()) as f32 - font.height() / SCALE);
 
+        let max_x = (root_req.width() - req.width())
+            // If the grid is wide large, it might underflow.
+            .max(0) as f32;
+
+        // NOTE(ville): Not 100% the substraction of one cell height is required.
+        let max_y = ((root_req.height() - req.height()) as f32 - font.height() / SCALE)
+            // If the grid is tall large, it might underflow.
+            .max(0.0);
+
+        let x = pos.x().clamp(0.0, max_x);
+        let y = pos.y().clamp(0.0, max_y);
+
+        // TODO(ville): Resize the grid if it doesn't fit the screen?
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);
         } else {
