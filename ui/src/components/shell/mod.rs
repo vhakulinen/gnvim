@@ -8,7 +8,7 @@ use nvim::types::uievents::{
     WinViewport,
 };
 
-use crate::{boxed::ModeInfo, colors::Colors, font::Font, nvim::Neovim, spawn_local, warn, SCALE};
+use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
 
 use super::Grid;
 
@@ -35,10 +35,6 @@ glib::wrapper! {
 impl Shell {
     pub fn new() -> Self {
         glib::Object::new()
-    }
-
-    fn nvim(&self) -> Neovim {
-        self.imp().nvim.borrow().clone()
     }
 
     fn find_grid(&self, id: i64) -> Option<Grid> {
@@ -85,22 +81,6 @@ impl Shell {
         }
     }
 
-    pub fn set_cursor_blink_transition(&self, t: f64) {
-        self.set_property("cursor-blink-transition", t);
-    }
-
-    pub fn set_cursor_position_transition(&self, t: f64) {
-        self.set_property("cursor-position-transition", t);
-    }
-
-    pub fn set_scroll_transition(&self, t: f64) {
-        self.set_property("scroll-transition", t);
-    }
-
-    fn set_busy(&self, busy: bool) {
-        self.set_property("busy", busy);
-    }
-
     pub fn busy_start(&self) {
         self.set_busy(true);
     }
@@ -111,10 +91,6 @@ impl Shell {
 
     pub fn handle_grid_line(&self, event: GridLine) {
         find_grid_or_return!(self, event.grid).put(event);
-    }
-
-    pub fn font(&self) -> Font {
-        self.imp().root_grid.font()
     }
 
     pub fn handle_grid_resize(&self, event: GridResize) {
