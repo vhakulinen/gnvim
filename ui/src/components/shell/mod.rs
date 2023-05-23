@@ -233,21 +233,48 @@ impl Shell {
         ));
 
         let (_, root_req) = self.imp().root_grid.preferred_size();
+        let (max_w, max_h) = (root_req.width(), root_req.height());
         let (req, _) = grid.preferred_size();
+        let (grid_w, grid_h) = (req.width(), req.height());
 
-        let max_x = (root_req.width() - req.width())
-            // If the grid is wide large, it might underflow.
+        let max_x = (max_w - grid_w)
+            // If the grid is very wide, it might underflow.
             .max(0) as f32;
 
         // NOTE(ville): Not 100% the substraction of one cell height is required.
-        let max_y = ((root_req.height() - req.height()) as f32 - font.height() / SCALE)
-            // If the grid is tall large, it might underflow.
+        let max_y = ((max_h - grid_h) as f32 - font.height() / SCALE)
+            // If the grid is very tall, it might underflow.
             .max(0.0);
 
         let x = pos.x().clamp(0.0, max_x);
         let y = pos.y().clamp(0.0, max_y);
 
-        // TODO(ville): Resize the grid if it doesn't fit the screen?
+        // If the grid doesn't fit the screen, clamp it.
+        let adj_w = max_w as f32 - (x + grid_w as f32);
+        let adj_h = max_h as f32 - (y + grid_h as f32);
+        if adj_w < 0.0 || adj_h < 0.0 {
+            let cols = font.scale_to_col(grid_w as f64 + adj_w.min(0.0) as f64)
+                // TODO(ville): Why is this needed?
+                - 1;
+            let rows = font.scale_to_row(grid_h as f64 + adj_h.min(0.0) as f64);
+
+            let grid_id = grid.grid_id();
+            spawn_local!(clone!(@weak self as obj => async move {
+                let res = obj.nvim()
+                    .client()
+                    .await
+                    .nvim_ui_try_resize_grid(
+                        grid_id,
+                        cols.max(1) as i64,
+                        rows.max(1) as i64
+                    )
+                    .await
+                    .unwrap();
+
+                res.await.expect("nvim_ui_try_resize failed");
+            }));
+        }
+
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
             fixed.move_(&grid, x, y);
         } else {
