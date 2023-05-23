@@ -12,6 +12,7 @@ use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCAL
 
 use super::Grid;
 
+#[macro_export]
 macro_rules! find_grid_or_return {
     ($self:expr, $grid:expr) => {
         crate::some_or_return!(
@@ -137,6 +138,8 @@ impl Shell {
             .borrow()
             .iter()
             .for_each(|grid| grid.flush(colors));
+
+        self.imp().adjust_pmenu();
     }
 
     pub fn handle_grid_clear(&self, event: GridClear) {
@@ -311,60 +314,13 @@ impl Shell {
     pub fn handle_popupmenu_show(&self, event: PopupmenuShow) {
         let imp = self.imp();
 
-        // NOTE(ville): Need to set the content and visibility before checking
-        // the size.
         imp.popupmenu.set_items(event.items);
         imp.popupmenu.select(event.selected);
-        imp.popupmenu.set_visible(true);
 
-        // TODO(ville): Would be nice to make the popupmenu to retain its
-        // placement (e.g. above vs. below) when the popupmenu is already
-        // shown and displayed in a way where it has enough space.
-
-        let font = imp.font.borrow();
-
-        let pos = if event.grid == 1 {
-            gsk::Transform::new()
-        } else {
-            imp.fixed
-                .child_position(&find_grid_or_return!(self, event.grid))
-        }
-        .transform_point(&graphene::Point::new(
-            font.col_to_x(event.col as f64) as f32,
-            font.row_to_y(event.row as f64 + 1.0) as f32,
-        ));
-
-        let (_, req) = imp.root_grid.preferred_size();
-        let max_w = req.width() as f32;
-        // Make sure the msg window and the popupmenu won't overlap.
-        let max_h = (req.height() - imp.msg_win.height()) as f32;
-        let (x, y) = (pos.x(), pos.y());
-        let below = max_h - y;
-        let above = max_h - below - font.height() / SCALE;
-
-        let (_, req) = imp.popupmenu.listview_preferred_size();
-        let (pmenu_w, pmenu_h) = (req.width() as f32, req.height() as f32);
-
-        let (y, max_h) = if pmenu_h > below && above > below {
-            // Place above.
-            ((y - font.height() / SCALE - pmenu_h).max(0.0), above)
-        } else {
-            // Place below.
-            (y, below)
-        };
-
-        let x = if x + pmenu_w > max_w {
-            (max_w - pmenu_w).max(0.0)
-        } else {
-            // Adjust for padding when not overflowing to the right.
-            x - imp.popupmenu.get_padding_x()
-        };
-
-        imp.popupmenu.set_max_width(max_w.floor() as i32);
-        imp.popupmenu.set_max_height(max_h.floor() as i32);
-        imp.fixed.move_(&*imp.popupmenu, x, y);
-
-        imp.popupmenu.report_pum_bounds(&imp.nvim.borrow(), x, y);
+        self.set_pmenu_row(event.row);
+        self.set_pmenu_col(event.col);
+        self.set_pmenu_grid(event.grid);
+        self.set_pmenu_visible(true);
     }
 
     pub fn handle_popupmenu_select(&self, event: PopupmenuSelect) {
@@ -372,8 +328,7 @@ impl Shell {
     }
 
     pub fn handle_popupmenu_hide(&self) {
-        let imp = self.imp();
-        imp.popupmenu.set_visible(false);
+        self.set_pmenu_visible(false)
     }
 }
 

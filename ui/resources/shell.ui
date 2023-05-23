@@ -65,7 +65,12 @@
 
                 <child>
                     <object class="Popupmenu" id="popupmenu">
-                        <property name="visible">false</property>
+                        <property
+                            name="visible"
+                            bind-source="Shell"
+                            bind-property="pmenu-visible"
+                            bind-flags="sync-create"
+                        />
                         <property
                             name="font"
                             bind-source="Shell"

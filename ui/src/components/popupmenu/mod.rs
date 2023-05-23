@@ -30,6 +30,10 @@ impl Popupmenu {
         imp.store.set_items(items);
     }
 
+    pub fn store(&self) -> &Model {
+        &self.imp().store
+    }
+
     pub fn get_padding_x(&self) -> f32 {
         self.font().char_width() / SCALE
     }
