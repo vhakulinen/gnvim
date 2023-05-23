@@ -21,11 +21,7 @@ impl Fixedz {
     }
 
     pub fn child_position(&self, child: &impl IsA<gtk::Widget>) -> gsk::Transform {
-        self.imp()
-            .layout_manager
-            .layout_child(child)
-            .position()
-            .clone()
+        self.imp().layout_manager.layout_child(child).position()
     }
 
     pub fn set_zindex(&self, widget: &impl IsA<gtk::Widget>, z: i64) {
