@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use gtk::gdk;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum HlGroup {
     MsgSeparator,
     Pmenu,
@@ -15,7 +15,7 @@ pub enum HlGroup {
     Menu,
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Colors {
     pub fg: Color,
     pub bg: Color,
@@ -144,7 +144,7 @@ impl<'a> Highlight<'a> {
 }
 
 /// Mapping from `nvim::HlAttr` that has the color fields converted to `Color`.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct HlAttr {
     pub foreground: Option<Color>,
     pub background: Option<Color>,
@@ -181,7 +181,7 @@ impl From<nvim::types::HlAttr> for HlAttr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Color(gdk::RGBA);
 
 impl Default for Color {

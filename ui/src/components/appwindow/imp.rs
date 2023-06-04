@@ -1,6 +1,5 @@
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
-use std::rc::Rc;
 
 use nvim::dict;
 use nvim::serde::Deserialize;
@@ -29,7 +28,8 @@ use crate::nvim::Neovim;
 use crate::warn;
 use crate::{arguments::BoxedArguments, spawn_local, SCALE};
 
-#[derive(CompositeTemplate, Default)]
+#[derive(CompositeTemplate, Default, glib::Properties)]
+#[properties(wrapper_type = super::AppWindow)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
 pub struct AppWindow {
     im_context: gtk::IMMulticontext,
@@ -43,12 +43,17 @@ pub struct AppWindow {
 
     css_provider: gtk::CssProvider,
 
+    #[property(get, set, construct_only)]
     args: RefCell<BoxedArguments>,
+    #[property(get)]
     nvim: Neovim,
 
-    colors: Rc<RefCell<Colors>>,
+    colors: RefCell<Colors>,
+
+    #[property(get, set)]
     font: RefCell<Font>,
     mode_infos: RefCell<Vec<ModeInfo>>,
+    #[property(get, set)]
     show_tabline: RefCell<ShowTabline>,
 
     /// When resize on flush is set, there were some operations on the previous
@@ -572,56 +577,15 @@ impl ObjectImpl for AppWindow {
     }
 
     fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecObject::builder::<Font>("font")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecObject::builder::<Neovim>("nvim")
-                    .flags(glib::ParamFlags::READABLE)
-                    .build(),
-                glib::ParamSpecBoxed::builder::<BoxedArguments>("args")
-                    .flags(glib::ParamFlags::READWRITE | glib::ParamFlags::CONSTRUCT_ONLY)
-                    .build(),
-                glib::ParamSpecBoxed::builder::<ShowTabline>("show-tabline")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-            ]
-        });
-
-        PROPERTIES.as_ref()
+        Self::derived_properties()
     }
 
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "font" => self.font.borrow().to_value(),
-            "nvim" => self.nvim.to_value(),
-            "args" => self.args.borrow().to_value(),
-            "show-tabline" => self.show_tabline.borrow().to_value(),
-            _ => unimplemented!(),
-        }
+    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
+        self.derived_property(id, pspec)
     }
 
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "font" => {
-                self.font
-                    .replace(value.get().expect("font value must be object Font"));
-            }
-            "args" => {
-                self.args.replace(
-                    value
-                        .get()
-                        .expect("font value must be object BoxedArguments"),
-                );
-            }
-            "show-tabline" => {
-                self.show_tabline
-                    .replace(value.get().expect("font value must be a ShowTabline"));
-            }
-            _ => unimplemented!(),
-        };
+    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
+        self.derived_set_property(id, value, pspec)
     }
 }
 
