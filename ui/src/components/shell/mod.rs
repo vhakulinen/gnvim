@@ -234,6 +234,8 @@ impl Shell {
 
         let (_, root_req) = self.imp().root_grid.preferred_size();
         let (max_w, max_h) = (root_req.width(), root_req.height());
+        // Don't overlap with the msg window since it has higher z index.
+        let max_h = max_h - self.imp().msg_win.height();
         let (req, _) = grid.preferred_size();
         let (grid_w, grid_h) = (req.width(), req.height());
 
@@ -253,9 +255,7 @@ impl Shell {
         let adj_w = max_w as f32 - (x + grid_w as f32);
         let adj_h = max_h as f32 - (y + grid_h as f32);
         if adj_w < 0.0 || adj_h < 0.0 {
-            let cols = font.scale_to_col(grid_w as f64 + adj_w.min(0.0) as f64)
-                // TODO(ville): Why is this needed?
-                - 1;
+            let cols = font.scale_to_col(grid_w as f64 + adj_w.min(0.0) as f64);
             let rows = font.scale_to_row(grid_h as f64 + adj_h.min(0.0) as f64);
 
             let grid_id = grid.grid_id();
