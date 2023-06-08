@@ -32,8 +32,10 @@ use crate::{arguments::BoxedArguments, spawn_local, SCALE};
 #[properties(wrapper_type = super::AppWindow)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
 pub struct AppWindow {
-    im_context: gtk::IMMulticontext,
-    event_controller_key: gtk::EventControllerKey,
+    #[property(get, set)]
+    im_context: RefCell<gtk::IMMulticontext>,
+    #[property(get, set)]
+    event_controller_key: RefCell<gtk::EventControllerKey>,
     #[template_child(id = "shell")]
     shell: TemplateChild<Shell>,
     #[template_child(id = "tabline")]
@@ -415,34 +417,41 @@ impl AppWindow {
         }
     }
 
-    fn send_nvim_input(&self, input: String) {
-        spawn_local!(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim
-                .client()
-                .await
-                .nvim_input(&input)
-                .await
-                .expect("call to nvim failed");
+    async fn send_nvim_input(&self, input: String) {
+        let res = self
+            .nvim
+            .client()
+            .await
+            .nvim_input(&input)
+            .await
+            .expect("call to nvim failed");
 
-            // TODO(ville): nvim_input handle the returned bytes written value.
-            res.await.expect("nvim_input failed");
-        }));
+        // TODO(ville): nvim_input handle the returned bytes written value.
+        res.await.expect("nvim_input failed");
     }
+}
 
-    fn im_commit(&self, input: &str) {
+#[gtk::template_callbacks]
+impl AppWindow {
+    #[template_callback]
+    async fn im_commit(&self, input: &str) {
         // NOTE(ville): "<" needs to be escaped for nvim_input (see `:h nvim_input`)
         let input = input.replace('<', "<lt>");
-        self.send_nvim_input(input);
+        self.send_nvim_input(input).await;
     }
 
+    #[template_callback]
     fn key_pressed(
         &self,
-        eck: &gtk::EventControllerKey,
         keyval: gdk::Key,
         _keycode: u32,
         state: gdk::ModifierType,
     ) -> gtk::Inhibit {
-        let evt = eck.current_event().expect("failed to get event");
+        let evt = self
+            .event_controller_key
+            .borrow()
+            .current_event()
+            .expect("failed to get event");
 
         // If the input is a modifier only event, ignore it.
         if evt
@@ -453,11 +462,14 @@ impl AppWindow {
             return gtk::Inhibit(false);
         }
 
-        if self.im_context.filter_keypress(&evt) {
+        if self.im_context.borrow().filter_keypress(&evt) {
             gtk::Inhibit(true)
         } else {
             if let Some(input) = event_to_nvim_input(keyval, state) {
-                self.send_nvim_input(input);
+                spawn_local!(clone!(@weak self as this => async move {
+                    this.send_nvim_input(input).await;
+                }));
+
                 return gtk::Inhibit(true);
             } else {
                 println!(
@@ -470,9 +482,14 @@ impl AppWindow {
         }
     }
 
-    fn key_released(&self, eck: &gtk::EventControllerKey) {
-        let evt = eck.current_event().expect("failed to get event");
-        self.im_context.filter_keypress(&evt);
+    #[template_callback]
+    fn key_released(&self) {
+        let evt = self
+            .event_controller_key
+            .borrow()
+            .current_event()
+            .expect("failed to get event");
+        self.im_context.borrow().filter_keypress(&evt);
     }
 }
 
@@ -489,6 +506,7 @@ impl ObjectSubclass for AppWindow {
         Tabline::ensure_type();
 
         klass.bind_template();
+        klass.bind_template_callbacks();
     }
 
     fn instance_init(obj: &InitializingObject<Self>) {
@@ -552,28 +570,13 @@ impl ObjectImpl for AppWindow {
         }));
 
         // TODO(ville): Figure out if we should use preedit or not.
-        self.im_context.set_use_preedit(false);
-        self.event_controller_key
-            .set_im_context(Some(&self.im_context));
-
-        self.im_context
-            .connect_commit(clone!(@weak obj => move |_, input| {
-                obj.imp().im_commit(input)
-            }));
-
-        self.event_controller_key.connect_key_pressed(clone!(
-        @weak obj,
-        => @default-return gtk::Inhibit(false),
-        move |eck, keyval, keycode, state| {
-            obj.imp().key_pressed(eck, keyval, keycode, state)
-        }));
+        self.im_context.borrow().set_use_preedit(false);
 
         self.event_controller_key
-            .connect_key_released(clone!(@weak obj => move |eck, _, _, _| {
-                obj.imp().key_released(eck)
-            }));
+            .borrow()
+            .set_im_context(Some(&*self.im_context.borrow()));
 
-        obj.add_controller(self.event_controller_key.clone());
+        obj.add_controller(self.event_controller_key.borrow().clone());
     }
 
     fn properties() -> &'static [glib::ParamSpec] {

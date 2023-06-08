@@ -4,6 +4,18 @@
         <property name="title">Gnvim</property>
         <property name="default-width">1280</property>
         <property name="default-height">720</property>
+        <property name="im-context">
+            <object class="GtkIMMulticontext">
+                <signal name="commit" handler="im_commit" swapped="true" />
+            </object>
+        </property>
+        <property name="event-controller-key">
+            <object class="GtkEventControllerKey">
+                <signal name="key-pressed" handler="key_pressed" swapped="true" />
+                <signal name="key-released" handler="key_released" swapped="true" />
+            </object>
+        </property>
+
         <style>
             <class name="app-window" />
         </style>
