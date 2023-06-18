@@ -2,6 +2,7 @@ use std::cell::RefCell;
 
 use glib::{clone, subclass::InitializingObject};
 use gtk::{glib, prelude::*, subclass::prelude::*};
+use nvim::NeovimApi;
 
 use crate::{boxed::Tabpage, nvim::Neovim, spawn_local};
 
@@ -52,8 +53,6 @@ impl ObjectImpl for Tab {
                         .clone()
                         .expect("tabpage not set");
                     let res = nvim
-                        .client()
-                        .await
                         .nvim_set_current_tabpage(&page)
                         .await.expect("call to nvim failed");
 

@@ -7,6 +7,7 @@ use nvim::types::uievents::{
     PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
     WinViewport,
 };
+use nvim::NeovimApi;
 
 use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
 
@@ -59,8 +60,6 @@ impl Shell {
             clone!(@weak self as obj => @default-return Continue(false), move || {
                 spawn_local!(clone!(@weak obj => async move {
                     let res = obj.nvim()
-                        .client()
-                        .await
                         .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
                         .await
                         .unwrap();
@@ -261,8 +260,6 @@ impl Shell {
             let grid_id = grid.grid_id();
             spawn_local!(clone!(@weak self as obj => async move {
                 let res = obj.nvim()
-                    .client()
-                    .await
                     .nvim_ui_try_resize_grid(
                         grid_id,
                         cols.max(1) as i64,

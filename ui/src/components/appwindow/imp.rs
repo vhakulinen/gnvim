@@ -2,10 +2,12 @@ use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
 
 use nvim::dict;
+use nvim::rpc::message::Message;
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet, PopupmenuSelect, PopupmenuShow};
 use nvim::types::UiEvent;
 use nvim::types::{OptionSet, UiOptions};
+use nvim::NeovimApi;
 
 use glib::subclass::InitializingObject;
 use gtk::prelude::*;
@@ -17,7 +19,7 @@ use gtk::{
 };
 
 use gio_compat::CompatRead;
-use nvim::rpc::{message::Notification, Message, RpcReader};
+use nvim::rpc::{message::Notification, RpcReader};
 
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
@@ -67,12 +69,10 @@ pub struct AppWindow {
 }
 
 impl AppWindow {
-    async fn process_nvim_event(&self, msg: Message) {
+    fn process_nvim_event(&self, msg: Message) {
         match msg {
             Message::Response(res) => {
                 self.nvim
-                    .client()
-                    .await
                     .handle_response(res)
                     .expect("failed to handle nvim response");
             }
@@ -110,7 +110,7 @@ impl AppWindow {
 
         loop {
             match reader.recv().await {
-                Ok(msg) => self.process_nvim_event(msg).await,
+                Ok(msg) => self.process_nvim_event(msg),
                 Err(_) => {
                     self.obj()
                         .application()
@@ -183,8 +183,6 @@ impl AppWindow {
 
                 spawn_local!(clone!(@weak self.nvim as nvim => async move {
                     let res = nvim
-                        .client()
-                        .await
                         .nvim_echo(msg, false, &dict![])
                         .await
                         .unwrap();
@@ -420,8 +418,6 @@ impl AppWindow {
     async fn send_nvim_input(&self, input: String) {
         let res = self
             .nvim
-            .client()
-            .await
             .nvim_input(&input)
             .await
             .expect("call to nvim failed");
@@ -547,8 +543,6 @@ impl ObjectImpl for AppWindow {
         // Call nvim_ui_attach.
         spawn_local!(clone!(@weak self.nvim as nvim => async move {
             let res = nvim
-                .client()
-                .await
                 .nvim_set_client_info(
                     "gnvim",
                     // TODO(ville): Tell the version in client info.
@@ -561,8 +555,6 @@ impl ObjectImpl for AppWindow {
             res.await.expect("nvim_set_client_info failed");
 
             let res = nvim
-                .client()
-                .await
                 .nvim_ui_attach(80, 30, uiopts)
                 .await.expect("call to nvim failed");
 

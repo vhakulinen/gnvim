@@ -1,8 +1,13 @@
 use std::ffi::OsStr;
 
-use futures::lock::{MappedMutexGuard, MutexGuard};
+use futures::channel::oneshot;
 use gio_compat::{CompatRead, CompatWrite};
 use gtk::{gio, glib, prelude::*, subclass::prelude::*};
+use nvim::{
+    async_trait,
+    rpc::{caller::Response, Caller, HandleError, RpcWriter, WriteError},
+    serde,
+};
 
 mod imp;
 
@@ -11,19 +16,9 @@ glib::wrapper! {
     pub struct Neovim(ObjectSubclass<imp::Neovim>);
 }
 
-pub type MutexGuardedNeovim<'a> =
-    MappedMutexGuard<'a, Option<nvim::Client<CompatWrite>>, nvim::Client<CompatWrite>>;
-
 impl Neovim {
     fn new() -> Self {
         glib::Object::new()
-    }
-
-    /// Locks the internal client for the caller. The lock should not be held
-    /// for too long to allow other parts of the application to access the
-    /// client too.
-    pub async fn client(&self) -> MutexGuardedNeovim<'_> {
-        MutexGuard::map(self.imp().nvim.lock().await, |opt| opt.as_mut().unwrap())
     }
 
     /// Open the neovim subprocess.
@@ -62,13 +57,58 @@ impl Neovim {
             .expect("covert to async read")
             .into();
 
-        let imp = self.imp();
-        imp.nvim
+        self.imp()
+            .writer
             .try_lock()
-            .expect("nvim already set")
-            .replace(nvim::Client::new(writer));
+            .expect("set rpc writer")
+            .replace(writer);
 
         reader
+    }
+
+    pub fn handle_response(&self, response: Response) -> Result<(), HandleError> {
+        let mut callbacks = self.imp().callbacks.borrow_mut();
+        let caller = callbacks
+            .iter()
+            .position(|(msgid, _)| *msgid == response.msgid)
+            .map(|index| callbacks.swap_remove(index));
+
+        match caller {
+            Some((_, recv)) => recv.send(response).map_err(HandleError::CallerDropped),
+            None => Err(HandleError::CallerMissing(response)),
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Caller for &Neovim {
+    async fn write<S: AsRef<str>, V: serde::Serialize>(
+        self,
+        msgid: u32,
+        method: S,
+        args: V,
+    ) -> Result<(), WriteError> {
+        self.imp()
+            .writer
+            .lock()
+            .await
+            .as_mut()
+            .expect("nvim writer not set")
+            .write_rpc_request(msgid, method.as_ref(), &args)
+            .await
+    }
+
+    fn next_msgid(&mut self) -> u32 {
+        let imp = self.imp();
+        let mut msgid_counter = imp.msgid_counter.borrow_mut();
+        let msgid = *msgid_counter;
+        *msgid_counter += 1;
+
+        msgid
+    }
+
+    fn store_handler(&mut self, msgid: u32, sender: oneshot::Sender<Response>) {
+        self.imp().callbacks.borrow_mut().push((msgid, sender));
     }
 }
 

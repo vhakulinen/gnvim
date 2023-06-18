@@ -1,5 +1,6 @@
 use glib::clone;
 use gtk::{glib, prelude::*, subclass::prelude::*};
+use nvim::NeovimApi;
 
 mod imp;
 mod model;
@@ -70,8 +71,7 @@ impl Popupmenu {
 
         spawn_local!(clone!(@weak nvim => async move {
             let res = nvim
-                .client()
-                .await
+                .clone()
                 .nvim_ui_pum_set_bounds(w, h, row, col)
                 .await
                 .unwrap();

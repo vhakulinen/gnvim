@@ -9,6 +9,7 @@ use gtk::{
     prelude::*,
     subclass::prelude::*,
 };
+use nvim::NeovimApi;
 
 use crate::{components::Grid, spawn_local};
 
@@ -35,8 +36,6 @@ impl ExternalWindow {
                 spawn_local!(clone!(@weak obj => async move {
                     let res = obj
                         .nvim()
-                        .client()
-                        .await
                         .nvim_ui_try_resize_grid(
                             obj.grid_id(),
                             cols.max(1) as i64, rows.max(1) as i64)

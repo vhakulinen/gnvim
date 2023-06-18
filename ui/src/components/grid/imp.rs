@@ -8,6 +8,7 @@ use gtk::{
     prelude::*,
 };
 use nvim::types::Window;
+use nvim::NeovimApi;
 
 use crate::boxed::ModeInfo;
 use crate::components::{cursor, Cursor, ExternalWindow, GridBuffer};
@@ -145,8 +146,6 @@ impl ObjectImpl for Grid {
                 spawn_local!(async move {
                     let res = obj
                         .nvim()
-                        .client()
-                        .await
                         .nvim_input_mouse(
                             mouse.as_nvim_input(),
                             action.as_nvim_action(),
