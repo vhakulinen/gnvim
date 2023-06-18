@@ -1,7 +1,7 @@
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
-use nvim_rs::rpc::{Message, RpcReader, RpcWriter};
-use nvim_rs::Client;
+use nvim_rs::rpc::{message::Message, RpcReader, RpcWriter};
+use nvim_rs::{rpc::Caller, Client};
 
 #[tokio::test]
 async fn void_response_decodes_correctly() {
@@ -13,7 +13,7 @@ async fn void_response_decodes_correctly() {
         .run_until(async move {
             let server_handle = tokio::task::spawn_local(async move {
                 let (reader, writer) = tokio::io::split(server);
-                let mut writer = writer.compat_write();
+                let writer = writer.compat_write();
                 let mut reader: RpcReader<_> = reader.compat().into();
 
                 let got = reader.recv().await.unwrap();

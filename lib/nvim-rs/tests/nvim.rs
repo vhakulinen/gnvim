@@ -5,8 +5,8 @@ use nvim_rs::types::{Object, UiOptions};
 use tokio::process::Command;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
-use nvim_rs::rpc::{Message, RpcReader};
-use nvim_rs::Client;
+use nvim_rs::rpc::{message::Message, RpcReader};
+use nvim_rs::{Client, NeovimApi};
 
 #[tokio::test]
 async fn smoke_test() {

@@ -2,7 +2,7 @@ use std::io;
 
 use futures::prelude::*;
 
-use super::Message;
+use super::message::Message;
 
 #[derive(Debug)]
 pub enum ReadError {

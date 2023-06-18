@@ -148,7 +148,7 @@ impl Function {
         let output = self.output_type_for(&self.return_type);
 
         Some(quote! {
-            pub async fn #fname(&mut self, #(#args_in),*) -> Result<CallResponse<#output>, WriteError> {
+            async fn #fname(self, #(#args_in),*) -> Result<CallResponse<#output>, WriteError> {
                 self.call(#method, (#(#args_out,)*)).await
             }
         })
