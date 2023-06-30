@@ -28,7 +28,7 @@ glib::wrapper! {
 impl Grid {
     pub fn new(id: i64, font: &Font) -> Self {
         let grid: Grid = glib::Object::builder()
-            .property("grid-id", &id)
+            .property("grid-id", id)
             .property("font", font)
             .build();
         grid

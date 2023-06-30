@@ -14,7 +14,7 @@ impl Tab {
     pub fn new(nvim: &Neovim, label: &str, tabpage: Tabpage) -> Self {
         glib::Object::builder()
             .property("nvim", nvim)
-            .property("label", &label)
+            .property("label", label)
             .property("tabpage", &tabpage)
             .build()
     }

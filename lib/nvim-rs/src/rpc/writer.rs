@@ -58,7 +58,7 @@ where
     }
 
     async fn write(mut self, buf: &[u8]) -> Result<(), WriteError> {
-        self.write_all(&buf).await?;
+        self.write_all(buf).await?;
         self.flush().await?;
 
         Ok(())

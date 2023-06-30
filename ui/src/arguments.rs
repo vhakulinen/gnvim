@@ -63,7 +63,9 @@ fn dup_stdin() -> Option<i32> {
         if #[cfg(unix)] {
             use std::os::unix::prelude::AsRawFd;
 
-            let fd = unsafe {
+            
+
+            unsafe {
                 // Duplicate the stdin fd.
                 let fd_dup = libc::dup(std::io::stdin().as_raw_fd());
 
@@ -82,9 +84,7 @@ fn dup_stdin() -> Option<i32> {
                     }
 
                 Some(fd_dup)
-            };
-
-            fd
+            }
         } else {
             println!("ERR: stdin pipe not supported on this platform");
             return None;

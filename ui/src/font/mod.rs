@@ -24,8 +24,8 @@ impl Font {
     /// * `linespace` - The neovim linespace value.
     pub fn new(guifont: &str, linespace: f32) -> Self {
         glib::Object::builder()
-            .property("guifont", &guifont)
-            .property("linespace", &linespace)
+            .property("guifont", guifont)
+            .property("linespace", linespace)
             .build()
     }
 

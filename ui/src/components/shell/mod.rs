@@ -16,7 +16,7 @@ use super::Grid;
 #[macro_export]
 macro_rules! find_grid_or_return {
     ($self:expr, $grid:expr) => {
-        crate::some_or_return!(
+        $crate::some_or_return!(
             $self.find_grid($grid),
             "grid {} not found in {}:{}",
             $grid,

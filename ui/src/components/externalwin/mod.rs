@@ -14,10 +14,10 @@ glib::wrapper! {
 impl ExternalWindow {
     pub fn new(parent: &gtk::Window, grid: &Grid) -> Self {
         glib::Object::builder()
-            .property("main-window", &parent)
-            .property("transient-for", &parent)
-            .property("grid", &grid)
-            .property("deletable", &false)
+            .property("main-window", parent)
+            .property("transient-for", parent)
+            .property("grid", grid)
+            .property("deletable", false)
             .build()
     }
 

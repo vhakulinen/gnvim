@@ -311,6 +311,7 @@ impl UiEvent {
     }
 
     pub fn has_manual_type(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro)]
         match self.name.as_ref() {
             "option_set" => true,
             _ => false,
