@@ -51,15 +51,15 @@ impl Grid {
     }
 
     pub fn make_external(&self, parent: &gtk::Window) {
-        let mut external_win = self.imp().external_win.borrow_mut();
-        if external_win.is_some() {
+        if self.imp().external_win.borrow().is_some() {
             // Already external.
             return;
         }
 
+        self.unparent();
         let external = ExternalWindow::new(parent, self);
         external.present();
-        *external_win = Some(external);
+        *self.imp().external_win.borrow_mut() = Some(external);
     }
 
     pub fn set_nvim_window(&self, window: Option<Window>) {
