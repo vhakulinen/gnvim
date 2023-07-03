@@ -1,10 +1,10 @@
 use std::ffi::OsString;
-use std::ops::Deref;
 
 use gtk::glib;
 
-#[derive(clap::Parser, Default, Debug, Clone)]
+#[derive(clap::Parser, Default, Debug, Clone, glib::Boxed)]
 #[clap(author, version)]
+#[boxed_type(name = "Arguments")]
 pub struct Arguments {
     /// Neovim binary.
     #[clap(long, name = "BIN", default_value = "nvim")]
@@ -63,7 +63,7 @@ fn dup_stdin() -> Option<i32> {
         if #[cfg(unix)] {
             use std::os::unix::prelude::AsRawFd;
 
-            
+
 
             unsafe {
                 // Duplicate the stdin fd.
@@ -89,17 +89,5 @@ fn dup_stdin() -> Option<i32> {
             println!("ERR: stdin pipe not supported on this platform");
             return None;
         }
-    }
-}
-
-#[derive(Default, Clone, glib::Boxed)]
-#[boxed_type(name = "Arguments")]
-pub struct BoxedArguments(pub Arguments);
-
-impl Deref for BoxedArguments {
-    type Target = Arguments;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }

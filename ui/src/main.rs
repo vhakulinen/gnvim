@@ -23,7 +23,6 @@ fn main() -> ExitCode {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");
 
     let args = arguments::Arguments::parse();
-    let args = arguments::BoxedArguments(args);
 
     let mut flags = gio::ApplicationFlags::empty();
     flags.insert(gio::ApplicationFlags::NON_UNIQUE);
@@ -41,7 +40,7 @@ fn main() -> ExitCode {
     app.run_with_args::<&str>(&[])
 }
 
-fn build_ui(app: &gtk::Application, args: &arguments::BoxedArguments) {
+fn build_ui(app: &gtk::Application, args: &arguments::Arguments) {
     let window = AppWindow::new(app, args);
     window.present();
 }

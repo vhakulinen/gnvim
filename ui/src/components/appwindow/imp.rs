@@ -28,7 +28,7 @@ use crate::components::{Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
-use crate::{arguments::BoxedArguments, spawn_local, SCALE};
+use crate::{arguments::Arguments, spawn_local, SCALE};
 
 #[derive(CompositeTemplate, Default, glib::Properties)]
 #[properties(wrapper_type = super::AppWindow)]
@@ -48,7 +48,7 @@ pub struct AppWindow {
     css_provider: gtk::CssProvider,
 
     #[property(get, set, construct_only)]
-    args: RefCell<BoxedArguments>,
+    args: RefCell<Arguments>,
     #[property(get)]
     nvim: Neovim,
 

@@ -3,7 +3,7 @@ mod imp;
 use glib::Object;
 use gtk::{gio, glib};
 
-use crate::arguments::BoxedArguments;
+use crate::arguments::Arguments;
 
 glib::wrapper! {
     pub struct AppWindow(ObjectSubclass<imp::AppWindow>)
@@ -13,7 +13,7 @@ glib::wrapper! {
 }
 
 impl AppWindow {
-    pub fn new(app: &gtk::Application, args: &BoxedArguments) -> Self {
+    pub fn new(app: &gtk::Application, args: &Arguments) -> Self {
         Object::builder()
             .property("application", app)
             .property("args", args)
