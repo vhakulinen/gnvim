@@ -185,6 +185,12 @@ pub struct PopupmenuItem {
     pub info: String,
 }
 
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct MsgShowContent {
+    pub attr_id: i64,
+    pub text_chunk: String,
+}
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(transparent)]
 pub struct Dictionary(rmpv::Value);

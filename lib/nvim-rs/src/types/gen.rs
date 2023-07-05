@@ -242,7 +242,7 @@ pub struct WildmenuSelect {
 #[derive(Debug, serde :: Deserialize)]
 pub struct MsgShow {
     pub kind: String,
-    pub content: Vec<rmpv::Value>,
+    pub content: Vec<MsgShowContent>,
     pub replace_last: bool,
 }
 #[derive(Debug, serde :: Deserialize)]
