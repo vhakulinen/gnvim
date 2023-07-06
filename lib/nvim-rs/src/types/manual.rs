@@ -191,6 +191,18 @@ pub struct MsgShowContent {
     pub text_chunk: String,
 }
 
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct MsgHistoryShowEntry {
+    pub kind: String,
+    pub content: Vec<MsgHistoryShowContent>,
+}
+
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct MsgHistoryShowContent {
+    pub attr_id: i64,
+    pub text_chunk: String,
+}
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(transparent)]
 pub struct Dictionary(rmpv::Value);

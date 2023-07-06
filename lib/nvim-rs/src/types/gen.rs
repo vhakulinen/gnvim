@@ -259,7 +259,7 @@ pub struct MsgRuler {
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct MsgHistoryShow {
-    pub entries: Vec<rmpv::Value>,
+    pub entries: Vec<MsgHistoryShowEntry>,
 }
 #[derive(Debug)]
 pub enum UiEvent {

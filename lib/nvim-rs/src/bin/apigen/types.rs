@@ -281,6 +281,7 @@ impl UiEvent {
             ("cmdline_block_show", "lines") => quote! { Vec<Vec<CmdlineContent>> },
             ("cmdline_block_append", "lines") => quote! { Vec<CmdlineContent> },
             ("msg_show", "content") => quote! { Vec<MsgShowContent> },
+            ("msg_history_show", "entries") => quote! { Vec<MsgHistoryShowEntry> },
             _ => self.field_type(ty),
         }
     }
