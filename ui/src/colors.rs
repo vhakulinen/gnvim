@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use gtk::gdk;
+use nvim::serde;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum HlGroup {
@@ -55,6 +56,10 @@ pub struct Highlight<'a> {
 }
 
 impl<'a> Highlight<'a> {
+    pub fn new(colors: &'a Colors, hl_attr: Option<&'a HlAttr>) -> Self {
+        Self { colors, hl_attr }
+    }
+
     pub fn fg(&self) -> &Color {
         if self.hl_attr.and_then(|hl| hl.reverse).unwrap_or(false) {
             self.hl_attr
@@ -144,10 +149,14 @@ impl<'a> Highlight<'a> {
 }
 
 /// Mapping from `nvim::HlAttr` that has the color fields converted to `Color`.
-#[derive(Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
 pub struct HlAttr {
+    #[serde(alias = "fg")]
     pub foreground: Option<Color>,
+    #[serde(alias = "bg")]
     pub background: Option<Color>,
+    #[serde(alias = "sp")]
     pub special: Option<Color>,
     pub reverse: Option<bool>,
     pub italic: Option<bool>,
@@ -163,6 +172,11 @@ pub struct HlAttr {
 
 impl From<nvim::types::HlAttr> for HlAttr {
     fn from(from: nvim::types::HlAttr) -> Self {
+        Self::from(&from)
+    }
+}
+impl From<&nvim::types::HlAttr> for HlAttr {
+    fn from(from: &nvim::types::HlAttr) -> Self {
         HlAttr {
             foreground: from.foreground.map(From::from),
             background: from.background.map(From::from),
@@ -187,6 +201,15 @@ pub struct Color(gdk::RGBA);
 impl Default for Color {
     fn default() -> Self {
         Self(gdk::RGBA::new(0.0, 0.0, 0.0, 1.0))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        i64::deserialize(deserializer).map(|v| Color::from(v))
     }
 }
 

@@ -82,3 +82,24 @@ cmdline textview, cmdline text {{
   color: #{fg};
   caret-color: #{fg};
 }}
+
+message {{
+  background-color: #{bg};
+  color: #{fg};
+
+  border: 1px solid #{fg};
+  border-radius: 0.3rem;
+  margin: 0 0.5rem 0.5rem 0.5rem;
+}}
+
+message > label {{
+  margin: 1.5rem;
+}}
+
+message > separator {{
+    margin: 1.0rem 0;
+}}
+
+message > separator {{
+  background-color: #{fg};
+}}

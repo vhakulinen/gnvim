@@ -6,6 +6,8 @@ pub mod fixedz;
 pub mod grid;
 #[path = "./grid-buffer/mod.rs"]
 pub mod grid_buffer;
+pub mod message;
+pub mod messages;
 pub mod msgwin;
 pub mod omnibar;
 pub mod overflower;
@@ -19,6 +21,8 @@ pub use externalwin::ExternalWindow;
 pub use fixedz::Fixedz;
 pub use grid::Grid;
 pub use grid_buffer::GridBuffer;
+pub use message::Message;
+pub use messages::Messages;
 pub use msgwin::MsgWin;
 pub use omnibar::Omnibar;
 pub use overflower::Overflower;

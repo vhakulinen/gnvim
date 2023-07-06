@@ -2,9 +2,11 @@ use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
 
 use nvim::dict;
-use nvim::rpc::message::Message;
+use nvim::rpc::Message;
 use nvim::serde::Deserialize;
-use nvim::types::uievents::{DefaultColorsSet, HlGroupSet, PopupmenuSelect, PopupmenuShow};
+use nvim::types::uievents::{
+    DefaultColorsSet, HlGroupSet, MsgHistoryShow, MsgShow, PopupmenuSelect, PopupmenuShow,
+};
 use nvim::types::UiEvent;
 use nvim::types::{OptionSet, UiOptions};
 use nvim::NeovimApi;
@@ -23,7 +25,7 @@ use nvim::rpc::{message::Notification, RpcReader};
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
-use crate::components::{Omnibar, Overflower, Shell, Tabline};
+use crate::components::{Messages, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
@@ -43,6 +45,10 @@ pub struct AppWindow {
     tabline: TemplateChild<Tabline>,
     #[template_child(id = "omnibar")]
     omnibar: TemplateChild<Omnibar>,
+    #[template_child(id = "messages")]
+    messages: TemplateChild<Messages>,
+    #[template_child(id = "messages-scrolledwindow")]
+    messages_scrolledwindow: TemplateChild<gtk::ScrolledWindow>,
 
     css_provider: gtk::CssProvider,
 
@@ -65,6 +71,9 @@ pub struct AppWindow {
     /// Set when attributes affecting our CSS changed, and we need to regenerate
     /// the css.
     css_on_flush: Cell<bool>,
+    /// Idle callback source id for scrolling the message view after msg_show
+    /// event,
+    scroll_messages_source_id: Cell<Option<glib::SourceId>>,
 }
 
 impl AppWindow {
@@ -200,6 +209,9 @@ impl AppWindow {
             }
             GnvimEvent::ScrollTransition(t) => {
                 self.shell.set_scroll_transition(t);
+            }
+            GnvimEvent::MessageKinds(event) => {
+                self.messages.set_kinds(event.kinds);
             }
         }
     }
@@ -381,8 +393,58 @@ impl AppWindow {
                     .handle_cmdline_block_append(event, &self.colors.borrow())
             }),
 
+            UiEvent::MsgShow(events) => self.handle_message_show(events),
+            UiEvent::MsgClear => self.messages.handle_message_clear(),
+            UiEvent::MsgShowmode(_events) => {
+                // Noop.
+            }
+            UiEvent::MsgShowcmd(_events) => {
+                // Noop.
+            }
+            UiEvent::MsgRuler(_events) => {
+                // Noop.
+            }
+            UiEvent::MsgHistoryShow(events) => self.handle_message_history_show(events),
+            UiEvent::MsgHistoryClear => {
+                self.messages.handle_message_history_clear();
+            }
+
             event => panic!("Unhandled ui event: {}", event),
         }
+    }
+
+    /// Scroll the messages window to the bottom on next idle callback, giving
+    /// any pending widget changes a chance to take place.
+    fn scroll_messages_to_bottom(&self) {
+        let id = glib::idle_add_local_once(clone!(@weak self as this => move || {
+            let adj = this.messages_scrolledwindow.vadjustment();
+            adj.set_value(adj.upper() - adj.page_size());
+
+            // Remove our source id.
+            this.scroll_messages_source_id.take();
+        }));
+
+        if let Some(prev) = self.scroll_messages_source_id.replace(Some(id)) {
+            prev.remove();
+        }
+    }
+
+    fn handle_message_history_show(&self, events: Vec<MsgHistoryShow>) {
+        let colors = self.colors.borrow();
+        events.into_iter().for_each(|event| {
+            self.messages.handle_message_history_show(event, &colors);
+        });
+
+        self.scroll_messages_to_bottom();
+    }
+
+    fn handle_message_show(&self, events: Vec<MsgShow>) {
+        let colors = self.colors.borrow();
+        events
+            .into_iter()
+            .for_each(|event| self.messages.handle_message_show(event, &colors));
+
+        self.scroll_messages_to_bottom();
     }
 
     fn handle_option_set(&self, event: OptionSet) {
@@ -499,6 +561,7 @@ impl ObjectSubclass for AppWindow {
         Omnibar::ensure_type();
         Shell::ensure_type();
         Tabline::ensure_type();
+        Messages::ensure_type();
 
         klass.bind_template();
         klass.bind_template_callbacks();
@@ -528,6 +591,7 @@ impl ObjectImpl for AppWindow {
             ext_popupmenu: true,
             ext_tabline: true,
             ext_cmdline: true,
+            ext_messages: true,
             stdin_fd: self.args.borrow().stdin_fd,
             ..Default::default()
         };

@@ -69,24 +69,38 @@
                 </child>
 
                 <child>
-                    <object class="Shell" id="shell">
-                        <property name="hexpand">true</property>
-                        <property name="vexpand">true</property>
-                        <property
-                            name="font"
-                            bind-source="AppWindow"
-                            bind-property="font"
-                            bind-flags="sync-create"
-                            />
-                        <property
-                            name="nvim"
-                            bind-source="AppWindow"
-                            bind-property="nvim"
-                            bind-flags="sync-create"
-                            />
-                        <property name="cursor-blink-transition">160</property>
-                        <property name="cursor-position-transition">150</property>
-                        <property name="scroll-transition">300</property>
+                    <object class="GtkOverlay">
+                        <child type="overlay">
+                            <object class="GtkScrolledWindow" id="messages-scrolledwindow">
+                                <child>
+                                    <object class="Messages" id="messages">
+                                        <property name="can-focus">false</property>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="Shell" id="shell">
+                                <property name="hexpand">true</property>
+                                <property name="vexpand">true</property>
+                                <property
+                                    name="font"
+                                    bind-source="AppWindow"
+                                    bind-property="font"
+                                    bind-flags="sync-create"
+                                    />
+                                <property
+                                    name="nvim"
+                                    bind-source="AppWindow"
+                                    bind-property="nvim"
+                                    bind-flags="sync-create"
+                                    />
+                                <property name="cursor-blink-transition">160</property>
+                                <property name="cursor-position-transition">150</property>
+                                <property name="scroll-transition">300</property>
+                            </object>
+                        </child>
                     </object>
                 </child>
             </object>

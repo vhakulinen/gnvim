@@ -53,4 +53,8 @@ function M.set_scroll_transition(t)
   M.notify('scroll_transition', t)
 end
 
+function M.set_message_kinds(kinds)
+  M.notify('message_kinds', kinds)
+end
+
 return M

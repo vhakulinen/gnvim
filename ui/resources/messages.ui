@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Messages" parent="GtkWidget">
+        <property name="valign">end</property>
+        <property name="halign">end</property>
+
+        <property name="layout-manager">
+            <object class="GtkBoxLayout">
+                <property name="orientation">vertical</property>
+            </object>
+        </property>
+    </template>
+</interface>

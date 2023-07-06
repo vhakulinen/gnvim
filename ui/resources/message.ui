@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="Message" parent="GtkWidget">
+        <property name="layout-manager">
+            <object class="GtkBoxLayout">
+                <property name="orientation">horizontal</property>
+            </object>
+        </property>
+
+        <child>
+            <object class="GtkLabel" id="kind">
+                <property
+                    name="label"
+                    bind-source="Message"
+                    bind-property="kind"
+                    bind-flags="sync-create"
+                />
+                <property name="use-markup">true</property>
+                <property name="wrap">true</property>
+                <property name="yalign">0</property>
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkSeparator">
+                <property name="orientation">vertical</property>
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkLabel" id="content">
+                <property
+                    name="label"
+                    bind-source="Message"
+                    bind-property="content"
+                    bind-flags="sync-create"
+                />
+                <property name="use-markup">true</property>
+                <property name="wrap">true</property>
+                <property name="xalign">0</property>
+            </object>
+        </child>
+    </template>
+</interface>
