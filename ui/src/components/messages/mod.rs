@@ -6,9 +6,13 @@ use std::{
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{MsgHistoryShow, MsgShow};
 
-use crate::{api::MessageKind, child_iter::IterChildren, colors::Colors};
+use crate::{api::MessageKind, colors::Colors};
 
 use super::Message;
+
+mod object;
+
+pub use object::MessageObject;
 
 glib::wrapper! {
     pub struct Messages(ObjectSubclass<imp::Messages>)
@@ -18,34 +22,55 @@ glib::wrapper! {
 
 impl Messages {
     pub fn handle_message_clear(&self) {
-        self.iter_children().for_each(|child| child.unparent());
+        self.imp().store.remove_all();
     }
 
     pub fn handle_message_history_clear(&self) {
         self.handle_message_clear();
     }
 
-    pub fn handle_message_show(&self, event: MsgShow, colors: &Colors) {
-        if event.replace_last {
-            if let Some(child) = self.last_child() {
-                child.unparent();
-            }
-        }
+    pub fn handle_message_show(&self, events: Vec<MsgShow>, colors: &Colors) {
+        let imp = self.imp();
+        let kinds = imp.kinds.borrow();
+        let n = events.len();
+        let objs = events
+            .into_iter()
+            .fold(Vec::with_capacity(n), |mut acc, item| {
+                if item.replace_last {
+                    acc.pop();
+                }
 
-        let child = Message::new(event, colors, &self.imp().kinds.borrow());
-        child.set_parent(&*self);
+                acc.push(MessageObject::new(item, colors, &kinds));
+
+                acc
+            });
+        imp.store.splice(imp.store.n_items(), 0, &objs);
     }
 
     pub fn handle_message_history_show(&self, event: MsgHistoryShow, colors: &Colors) {
-        let kinds = self.imp().kinds.borrow();
-        event.entries.into_iter().for_each(|entry| {
-            let child = Message::new_history(entry, colors, &kinds);
-            child.set_parent(&*self);
-        });
+        let imp = self.imp();
+        let kinds = imp.kinds.borrow();
+        let objs = event
+            .entries
+            .into_iter()
+            .map(|entry| MessageObject::new_history(entry, colors, &kinds))
+            .collect::<Vec<_>>();
+
+        imp.store.splice(0, 0, &objs);
     }
 
     pub fn set_kinds(&self, kinds: HashMap<String, MessageKind>) {
         self.imp().kinds.replace(Kinds(kinds));
+    }
+
+    pub fn scroll_to_bottom(&self) {
+        let imp = self.imp();
+        let n = imp.store.n_items();
+        if n > 0 {
+            imp.listview
+                .activate_action("list.scroll-to-item", Some(&(n - 1).to_variant()))
+                .expect("failed to activate list.scroll-to-item action");
+        }
     }
 }
 
@@ -69,10 +94,10 @@ impl DerefMut for Kinds {
 mod imp {
     use std::cell::RefCell;
 
-    use glib::subclass::InitializingObject;
-    use gtk::{glib, prelude::*, subclass::prelude::*};
+    use glib::{clone, subclass::InitializingObject};
+    use gtk::{gio, glib, prelude::*, subclass::prelude::*};
 
-    use crate::child_iter::IterChildren;
+    use crate::{child_iter::IterChildren, components::Message};
 
     use super::Kinds;
 
@@ -81,6 +106,11 @@ mod imp {
     pub struct Messages {
         // NOTE(ville): HashMap is not supported by the glib::Properties derive.
         pub kinds: RefCell<Kinds>,
+
+        #[template_child(id = "messages-list")]
+        pub listview: TemplateChild<gtk::ListView>,
+
+        pub store: gio::ListStore,
     }
 
     #[glib::object_subclass]
@@ -100,6 +130,40 @@ mod imp {
     }
 
     impl ObjectImpl for Messages {
+        fn constructed(&self) {
+            let factory = gtk::SignalListItemFactory::new();
+
+            factory.connect_setup(clone!(@weak self as this => move |_, listitem| {
+                 let child = Message::default();
+
+                 listitem.set_child(Some(&child));
+            }));
+
+            factory.connect_bind(|_, listitem| {
+                let msg_object = listitem
+                    .item()
+                    .and_downcast::<super::MessageObject>()
+                    .expect("item must be MessageObject");
+
+                let msg_widget = listitem
+                    .child()
+                    .and_downcast::<super::Message>()
+                    .expect("child must be Message");
+
+                msg_widget.set_kind(msg_object.kind_markup());
+                msg_widget.set_content(msg_object.content_markup());
+            });
+
+            let model = gtk::NoSelection::new(Some(self.store.clone()));
+            self.listview.set_model(Some(&model));
+            self.listview.set_factory(Some(&factory));
+
+            self.store
+                .connect_items_changed(clone!(@weak self as this => move |store, _, _, _| {
+                    this.obj().set_visible(store.n_items() > 0);
+                }));
+        }
+
         fn dispose(&self) {
             self.obj()
                 .iter_children()

@@ -71,12 +71,8 @@
                 <child>
                     <object class="GtkOverlay">
                         <child type="overlay">
-                            <object class="GtkScrolledWindow" id="messages-scrolledwindow">
-                                <child>
-                                    <object class="Messages" id="messages">
-                                        <property name="can-focus">false</property>
-                                    </object>
-                                </child>
+                            <object class="Messages" id="messages">
+                                <property name="can-focus">false</property>
                             </object>
                         </child>
 

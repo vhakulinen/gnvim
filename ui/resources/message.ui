@@ -16,7 +16,6 @@
                     bind-flags="sync-create"
                 />
                 <property name="use-markup">true</property>
-                <property name="wrap">true</property>
                 <property name="yalign">0</property>
             </object>
         </child>
@@ -36,7 +35,6 @@
                     bind-flags="sync-create"
                 />
                 <property name="use-markup">true</property>
-                <property name="wrap">true</property>
                 <property name="xalign">0</property>
             </object>
         </child>

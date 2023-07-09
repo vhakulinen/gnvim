@@ -83,6 +83,10 @@ cmdline textview, cmdline text {{
   caret-color: #{fg};
 }}
 
+messages listview {{
+    background-color: transparent;
+}}
+
 message {{
   background-color: #{bg};
   color: #{fg};
@@ -97,9 +101,6 @@ message > label {{
 }}
 
 message > separator {{
-    margin: 1.0rem 0;
-}}
-
-message > separator {{
+  margin: 1.0rem 0;
   background-color: #{fg};
 }}

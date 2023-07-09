@@ -3,11 +3,23 @@
     <template class="Messages" parent="GtkWidget">
         <property name="valign">end</property>
         <property name="halign">end</property>
+        <!-- NOTE(ville): We're adjusting visible property through code. -->
+        <property name="visible">false</property>
 
         <property name="layout-manager">
             <object class="GtkBoxLayout">
-                <property name="orientation">vertical</property>
             </object>
         </property>
+
+        <child>
+            <object class="GtkScrolledWindow" id="messages-scrolledwindow">
+                <property name="propagate-natural-width">true</property>
+                <property name="propagate-natural-height">true</property>
+
+                <child>
+                    <object class="GtkListView" id="messages-list" />
+                </child>
+            </object>
+        </child>
     </template>
 </interface>

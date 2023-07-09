@@ -47,8 +47,6 @@ pub struct AppWindow {
     omnibar: TemplateChild<Omnibar>,
     #[template_child(id = "messages")]
     messages: TemplateChild<Messages>,
-    #[template_child(id = "messages-scrolledwindow")]
-    messages_scrolledwindow: TemplateChild<gtk::ScrolledWindow>,
 
     css_provider: gtk::CssProvider,
 
@@ -413,12 +411,11 @@ impl AppWindow {
         }
     }
 
-    /// Scroll the messages window to the bottom on next idle callback, giving
-    /// any pending widget changes a chance to take place.
+    /// Scroll the messages to the bottom on next idle callback, giving any
+    /// pending widget changes a chance to take place.
     fn scroll_messages_to_bottom(&self) {
         let id = glib::idle_add_local_once(clone!(@weak self as this => move || {
-            let adj = this.messages_scrolledwindow.vadjustment();
-            adj.set_value(adj.upper() - adj.page_size());
+            this.messages.scroll_to_bottom();
 
             // Remove our source id.
             this.scroll_messages_source_id.take();
@@ -440,10 +437,7 @@ impl AppWindow {
 
     fn handle_message_show(&self, events: Vec<MsgShow>) {
         let colors = self.colors.borrow();
-        events
-            .into_iter()
-            .for_each(|event| self.messages.handle_message_show(event, &colors));
-
+        self.messages.handle_message_show(events, &colors);
         self.scroll_messages_to_bottom();
     }
 
