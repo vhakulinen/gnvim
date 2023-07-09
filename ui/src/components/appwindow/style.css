@@ -104,3 +104,5 @@ message > separator {{
   margin: 1.0rem 0;
   background-color: #{fg};
 }}
+
+{message_kinds}

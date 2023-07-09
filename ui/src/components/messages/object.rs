@@ -22,6 +22,7 @@ impl MessageObject {
         glib::Object::builder()
             .property("content-markup", content)
             .property("kind-markup", kind)
+            .property("kind", event.kind)
             .build()
     }
 
@@ -37,6 +38,7 @@ impl MessageObject {
         glib::Object::builder()
             .property("content-markup", content)
             .property("kind-markup", kind)
+            .property("kind", entry.kind)
             .build()
     }
 }
@@ -55,6 +57,8 @@ mod imp {
     #[derive(Default, glib::Properties)]
     #[properties(wrapper_type = super::MessageObject)]
     pub struct MessageObject {
+        #[property(get, set)]
+        pub kind: RefCell<String>,
         #[property(get, set)]
         pub kind_markup: RefCell<String>,
         #[property(get, set)]

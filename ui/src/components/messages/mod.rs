@@ -1,4 +1,5 @@
 use std::{
+    cell::Ref,
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
@@ -21,6 +22,10 @@ glib::wrapper! {
 }
 
 impl Messages {
+    pub fn kinds(&self) -> Ref<Kinds> {
+        self.imp().kinds.borrow()
+    }
+
     pub fn handle_message_clear(&self) {
         self.imp().store.remove_all();
     }
@@ -152,6 +157,7 @@ mod imp {
 
                 msg_widget.set_kind(msg_object.kind_markup());
                 msg_widget.set_content(msg_object.content_markup());
+                msg_widget.set_css_classes(&[&format!("kind-{}", msg_object.kind())]);
             });
 
             let model = gtk::NoSelection::new(Some(self.store.clone()));

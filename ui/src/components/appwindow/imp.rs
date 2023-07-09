@@ -24,7 +24,7 @@ use nvim::rpc::{message::Notification, RpcReader};
 
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
-use crate::colors::{Color, Colors, HlGroup};
+use crate::colors::{Color, Colors, Highlight, HlGroup};
 use crate::components::{Messages, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
@@ -210,6 +210,7 @@ impl AppWindow {
             }
             GnvimEvent::MessageKinds(event) => {
                 self.messages.set_kinds(event.kinds);
+                self.css_on_flush.set(true);
             }
         }
     }
@@ -268,6 +269,23 @@ impl AppWindow {
                     let tablinesel = colors.get_hl_group(&HlGroup::TabLineSel);
                     // TODO(ville): Figure out better headerbar colors.
                     let menu = colors.get_hl_group(&HlGroup::Menu);
+
+                    let message_kinds = self
+                        .messages
+                        .kinds()
+                        .iter()
+                        .map(|(k, v)| {
+                            format!(
+                                "
+                                message.kind-{kind} {{
+                                    border: 1px solid #{border};
+                                }}",
+                                kind = k,
+                                border = Highlight::new(&colors, v.hl_attr.as_ref()).fg().as_hex()
+                            )
+                        })
+                        .collect::<String>();
+
                     // TODO(ville): It might be possible to make the font
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
@@ -294,6 +312,7 @@ impl AppWindow {
                         menu_fg = menu.fg().as_hex(),
                         omnibar_pad = 5,
                         font = self.font.borrow().to_css(),
+                        message_kinds = message_kinds,
                     ));
                 }
             }
