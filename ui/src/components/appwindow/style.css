@@ -94,15 +94,11 @@ message {{
   border: 1px solid #{fg};
   border-radius: 0.3rem;
   margin: 0 0.5rem 0.5rem 0.5rem;
+  padding: 1rem;
 }}
 
 message > label {{
-  margin: 1.5rem;
-}}
-
-message > separator {{
-  margin: 1.0rem 0;
-  background-color: #{fg};
+  margin: 0.5rem;
 }}
 
 {message_kinds}

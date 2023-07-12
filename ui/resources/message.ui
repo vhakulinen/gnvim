@@ -21,12 +21,6 @@
         </child>
 
         <child>
-            <object class="GtkSeparator">
-                <property name="orientation">vertical</property>
-            </object>
-        </child>
-
-        <child>
             <object class="GtkLabel" id="content">
                 <property
                     name="label"
