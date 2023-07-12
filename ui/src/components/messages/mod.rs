@@ -42,7 +42,13 @@ impl Messages {
             .into_iter()
             .fold(Vec::with_capacity(n), |mut acc, item| {
                 if item.replace_last {
-                    acc.pop();
+                    // If our accumulator doesn't have any values in it, we'll
+                    // have to remove actual previous item.
+                    if acc.len() > 0 {
+                        acc.pop();
+                    } else {
+                        imp.store.remove(imp.store.n_items() - 1);
+                    }
                 }
 
                 acc.push(MessageObject::new(item, colors, &kinds));
