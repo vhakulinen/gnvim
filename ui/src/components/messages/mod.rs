@@ -46,7 +46,7 @@ impl Messages {
                     // have to remove actual previous item.
                     if acc.len() > 0 {
                         acc.pop();
-                    } else {
+                    } else if imp.store.n_items() > 0 {
                         imp.store.remove(imp.store.n_items() - 1);
                     }
                 }
