@@ -75,10 +75,10 @@ pub struct HlAttr {
     pub bold: Option<bool>,
     pub strikethrough: Option<bool>,
     pub underline: Option<bool>,
-    pub underlineline: Option<bool>,
+    pub underdouble: Option<bool>,
     pub undercurl: Option<bool>,
-    pub underdot: Option<bool>,
-    pub underdash: Option<bool>,
+    pub underdotted: Option<bool>,
+    pub underdashed: Option<bool>,
     pub blend: Option<i64>,
 }
 

@@ -17,7 +17,7 @@ vim.api.nvim_set_hl(0, 'AttrTestUnderline', {
 })
 
 vim.api.nvim_set_hl(0, 'AttrTestUnderlineline', {
-  underlineline = true,
+  underdouble = true,
   sp = 'cyan',
 })
 
@@ -32,12 +32,12 @@ vim.api.nvim_set_hl(0, 'AttrTestUndercurl', {
 })
 
 vim.api.nvim_set_hl(0, 'AttrTestUnderdot', {
-  underdot = true,
+  underdotted = true,
   sp = 'cyan',
 })
 
 vim.api.nvim_set_hl(0, 'AttrTestUnderdash', {
-  underdash = true,
+  underdashed = true,
   sp = 'cyan',
 })
 

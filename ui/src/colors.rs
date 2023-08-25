@@ -172,10 +172,10 @@ impl From<nvim::types::HlAttr> for HlAttr {
             bold: from.bold,
             strikethrough: from.strikethrough,
             underline: from.underline,
-            underlineline: from.underline,
+            underlineline: from.underdouble,
             undercurl: from.undercurl,
-            underdot: from.underdot,
-            underdash: from.underdash,
+            underdot: from.underdotted,
+            underdash: from.underdashed,
             blend: from.blend.map(From::from),
         }
     }
