@@ -37,8 +37,6 @@ impl Cursor {
         let height = font.height();
         let ch = font.char_width();
 
-        let snapshot = gtk::Snapshot::new();
-
         let width = if *imp.double_width.borrow() {
             ch * 2.0 / SCALE
         } else {
@@ -47,17 +45,10 @@ impl Cursor {
         let width = width * *imp.width_percentage.borrow();
         let rect = graphene::Rect::new(0.0, 0.0, width, height / SCALE);
 
-        // Clip the area where we're drawing. This avoids a issue when the cursor
-        // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
-        // _our_ render node to our _width_ and thus' the underlying grid cell
-        // will be visible instead.
-        snapshot.push_clip(&rect);
-
-        snapshot.append_node(gsk::ColorNode::new(bg, &rect).upcast());
+        let bg_node = gsk::ColorNode::new(bg, &rect).upcast();
 
         let attrs = crate::render::create_hl_attrs(&hl_id, colors, &font);
-        crate::render::render_text(
-            &snapshot,
+        let fg_node = crate::render::render_text(
             &self.pango_context(),
             &imp.text.borrow(),
             fg,
@@ -66,13 +57,13 @@ impl Cursor {
             font.baseline() / SCALE,
         );
 
-        snapshot.pop();
+        // Clip the area where we're drawing. This avoids a issue when the cursor
+        // is narrow, yet we're drawing our own _whole_ cell. Clipping clips
+        // _our_ render node to our _width_ and thus' the underlying grid cell
+        // will be visible instead.
+        let node = gsk::ClipNode::new(gsk::ContainerNode::new(&[bg_node, fg_node]), &rect);
 
-        let node = snapshot
-            .to_node()
-            .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast());
-
-        imp.node.replace(Some(node));
+        imp.node.replace(Some(node.upcast()));
 
         self.queue_draw();
     }

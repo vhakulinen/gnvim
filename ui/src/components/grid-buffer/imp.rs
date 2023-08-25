@@ -119,15 +119,14 @@ impl GridBuffer {
         let rows = self.rows.borrow();
         let rows = &rows[from..to];
 
-        let snapshot = gtk::Snapshot::new();
-        rows.render_to_snapshot(&snapshot, &self.font.borrow());
+        let node = rows.to_render_node(&self.font.borrow());
 
         let font = self.font.borrow();
 
         let start = self.y_offset.get() + font.row_to_y(from as f64) as f32;
         let target = font.row_to_y(from as f64 - delta) as f32;
         let scroll_node = ScrollNode {
-            node: snapshot.to_node(),
+            node: Some(node),
             offset: 0.0,
             target,
             start,
@@ -223,45 +222,51 @@ impl ObjectImpl for GridBuffer {
 }
 
 impl WidgetImpl for GridBuffer {
-    fn snapshot(&self, real_snapshot: &gtk::Snapshot) {
+    fn snapshot(&self, snapshot: &gtk::Snapshot) {
         if self.dirty.get() {
             if let Some(ref node) = self.backbuffer.borrow().as_ref() {
-                real_snapshot.append_node(node);
+                snapshot.append_node(node);
             }
             return;
         }
 
-        let snapshot = gtk::Snapshot::new();
+        let background = gsk::ContainerNode::new(&self.background_nodes.borrow());
 
-        for node in self.background_nodes.borrow().iter() {
-            snapshot.append_node(node);
-        }
-
-        // Render the scroll nodes.
-        self.scroll_nodes.borrow().iter().for_each(|s| {
-            if !s.reached_view {
-                return;
-            }
-            let node = some_or_return!(&s.node, "grid-buffer: scroll node missing node");
-
-            snapshot.save();
-            snapshot.translate(&graphene::Point::new(0.0, s.start + s.offset));
-            snapshot.append_node(node);
-            snapshot.restore();
-        });
-
-        snapshot.save();
-        snapshot.translate(&graphene::Point::new(0.0, self.y_offset.get()));
-        self.rows
+        let scroll_nodes = self
+            .scroll_nodes
             .borrow()
-            .render_to_snapshot(&snapshot, &self.font.borrow());
-        snapshot.restore();
+            .iter()
+            .filter_map(|s| {
+                if !s.reached_view {
+                    return None;
+                }
 
-        self.backbuffer.replace(snapshot.to_node());
+                let node =
+                    some_or_return_val!(&s.node, None, "grid-buffer: scroll node missing node");
 
-        if let Some(ref node) = self.backbuffer.borrow().as_ref() {
-            real_snapshot.append_node(node);
-        }
+                Some(
+                    gsk::TransformNode::new(
+                        node,
+                        &gsk::Transform::new()
+                            .translate(&graphene::Point::new(0.0, s.start + s.offset)),
+                    )
+                    .upcast(),
+                )
+            })
+            .collect::<Vec<gsk::RenderNode>>();
+
+        let scroll = gsk::ContainerNode::new(&scroll_nodes);
+
+        let forebround = gsk::TransformNode::new(
+            &self.rows.borrow().to_render_node(&self.font.borrow()),
+            &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
+        );
+
+        let node =
+            gsk::ContainerNode::new(&[background.upcast(), scroll.upcast(), forebround.upcast()]);
+
+        snapshot.append_node(&node);
+        self.backbuffer.replace(Some(node.upcast()));
     }
 
     fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
@@ -290,32 +295,43 @@ impl WidgetImpl for GridBuffer {
     }
 }
 
-trait RenderRows {
-    fn render_to_snapshot(&self, snapshot: &gtk::Snapshot, font: &Font);
+trait ToRenderNode {
+    fn to_render_node(&self, font: &Font) -> gsk::RenderNode;
 }
 
-impl<T> RenderRows for T
+impl<T> ToRenderNode for T
 where
     T: AsRef<[Row]>,
 {
-    fn render_to_snapshot(&self, snapshot: &gtk::Snapshot, font: &Font) {
+    fn to_render_node(&self, font: &Font) -> gsk::RenderNode {
+        let mut nodes: Vec<gsk::RenderNode> = Vec::with_capacity(self.as_ref().len());
+
         for (i, row) in self.as_ref().iter().enumerate() {
             let y = font.row_to_y(i as f64);
-
-            snapshot.save();
-            snapshot.translate(&graphene::Point::new(0.0, y as f32));
+            let mut bg_nodes = vec![];
+            let mut fg_nodes = vec![];
 
             for nodes in row.render_node_iter() {
                 if let Some(ref nodes) = *nodes {
-                    snapshot.append_node(&nodes.bg);
+                    bg_nodes.push(nodes.bg.clone());
+                    fg_nodes.push(nodes.fg.clone());
                 }
             }
-            for nodes in row.render_node_iter() {
-                if let Some(ref nodes) = *nodes {
-                    snapshot.append_node(&nodes.fg);
-                }
-            }
-            snapshot.restore();
+
+            let translate = gsk::Transform::new().translate(&graphene::Point::new(0.0, y as f32));
+
+            nodes.push(
+                gsk::TransformNode::new(
+                    &gsk::ContainerNode::new(&[
+                        gsk::ContainerNode::new(&bg_nodes).upcast(),
+                        gsk::ContainerNode::new(&fg_nodes).upcast(),
+                    ]),
+                    &translate,
+                )
+                .upcast(),
+            )
         }
+
+        gsk::ContainerNode::new(&nodes).upcast()
     }
 }

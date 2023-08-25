@@ -175,8 +175,6 @@ impl Row {
                 continue;
             }
 
-            let snapshot_fg = gtk::Snapshot::new();
-            let snapshot_bg = gtk::Snapshot::new();
             let attrs = crate::render::create_hl_attrs(&segment.hl_id, colors, font);
 
             let text = segment
@@ -192,52 +190,53 @@ impl Row {
             let hl = hl.hl_attr();
 
             // Create glyphs.
-            crate::render::render_text(&snapshot_fg, ctx, &text, fg, &attrs, x, baseline);
+            let mut nodes = vec![];
+            nodes.push(crate::render::render_text(
+                ctx, &text, fg, &attrs, x, baseline,
+            ));
 
             if hl.and_then(|hl| hl.underline).unwrap_or(false) {
-                crate::render::render_underline(&snapshot_fg, font, sp, x, baseline, width)
+                nodes.push(crate::render::render_underline(
+                    font, sp, x, baseline, width,
+                ));
             }
 
             if hl.and_then(|hl| hl.underlineline).unwrap_or(false) {
-                crate::render::render_underlineline(&snapshot_fg, font, sp, x, baseline, width)
+                nodes.extend(crate::render::render_underlineline(
+                    font, sp, x, baseline, width,
+                ));
             }
 
             if hl.and_then(|hl| hl.strikethrough).unwrap_or(false) {
-                crate::render::render_strikethrough(&snapshot_fg, font, fg, x, baseline, width)
+                nodes.push(crate::render::render_strikethrough(
+                    font, fg, x, baseline, width,
+                ));
             }
 
             if hl.and_then(|hl| hl.undercurl).unwrap_or(false) {
-                crate::render::render_undercurl(
-                    &snapshot_fg,
+                nodes.push(crate::render::render_undercurl(
                     font,
                     sp,
                     x,
                     baseline,
                     width,
                     segment.width,
-                )
+                ));
             }
 
             if hl.and_then(|hl| hl.underdot).unwrap_or(false) {
-                crate::render::render_underdot(&snapshot_fg, font, sp, x, baseline, width)
+                nodes.push(crate::render::render_underdot(font, sp, x, baseline, width));
             }
 
             if hl.and_then(|hl| hl.underdash).unwrap_or(false) {
-                crate::render::render_underdash(&snapshot_fg, font, sp, x, baseline, width)
+                nodes.push(crate::render::render_underdash(
+                    font, sp, x, baseline, width,
+                ));
             }
 
-            // Create background.
-            snapshot_bg.append_node(
-                gsk::ColorNode::new(bg, &graphene::Rect::new(x, 0.0, width, bg_h)).upcast(),
-            );
-
             let nodes = Rc::new(RefCell::new(Some(CellNodes {
-                fg: snapshot_fg
-                    .to_node()
-                    .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast()),
-                bg: snapshot_bg
-                    .to_node()
-                    .unwrap_or_else(|| gsk::ContainerNode::new(&[]).upcast()),
+                fg: gsk::ContainerNode::new(&nodes).upcast(),
+                bg: gsk::ColorNode::new(bg, &graphene::Rect::new(x, 0.0, width, bg_h)).upcast(),
             })));
             segment.cells.iter_mut().for_each(|cell| {
                 cell.nodes = nodes.clone();

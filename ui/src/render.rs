@@ -4,51 +4,53 @@ use crate::colors::{Color, Colors};
 use crate::font::Font;
 use crate::SCALE;
 
-/// Creates text render nodes for `text`, and adds the to `snapshot`.
+/// Creates text render nodes for `text`.
 pub fn render_text(
-    snapshot: &gtk::Snapshot,
     ctx: &pango::Context,
     text: &str,
     color: &Color,
     attrs: &pango::AttrList,
     x: f32,
     baseline: f32,
-) {
+) -> gsk::RenderNode {
     let items = pango::itemize(ctx, text, 0, text.len() as i32, attrs, None);
 
-    items.iter().fold(0.0_f32, |width, item| {
-        let a = item.analysis();
-        let offset = item.offset() as usize;
-        let len = item.length() as usize;
-        let mut glyphs = pango::GlyphString::new();
-        let text = &text[offset..offset + len];
+    let mut width = 0.0_f32;
+    let nodes = items
+        .iter()
+        .filter_map(|item| {
+            let a = item.analysis();
+            let offset = item.offset() as usize;
+            let len = item.length() as usize;
+            let mut glyphs = pango::GlyphString::new();
+            let text = &text[offset..offset + len];
 
-        pango::shape(text, a, &mut glyphs);
+            pango::shape(text, a, &mut glyphs);
 
-        let node = gsk::TextNode::new(
-            &a.font(),
-            &glyphs,
-            color,
-            &graphene::Point::new(x + width / SCALE, baseline),
-        );
+            let node = gsk::TextNode::new(
+                &a.font(),
+                &glyphs,
+                color,
+                &graphene::Point::new(x + width / SCALE, baseline),
+            );
 
-        // Empty glyphs (e.g. whitespace) won't get any nodes.
-        if let Some(node) = node {
-            snapshot.append_node(node.upcast());
-        }
+            width += glyphs.width() as f32;
 
-        width + glyphs.width() as f32
-    });
+            // Empty glyphs (e.g. whitespace) won't get any nodes.
+            node.map(|node| node.upcast())
+        })
+        .collect::<Vec<gsk::RenderNode>>();
+
+    gsk::ContainerNode::new(&nodes).upcast()
 }
 
 pub fn render_underline(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
-) {
+) -> gsk::RenderNode {
     let y = baseline - font.underline_position() / SCALE;
 
     let node = gsk::ColorNode::new(
@@ -56,31 +58,34 @@ pub fn render_underline(
         &graphene::Rect::new(x, y, width, font.underline_thickness() / SCALE),
     );
 
-    snapshot.append_node(node.upcast());
+    node.upcast()
 }
 
 pub fn render_underlineline(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
-) {
-    render_underline(snapshot, font, color, x, baseline, width);
+) -> [gsk::RenderNode; 2] {
+    render_underline(font, color, x, baseline, width);
 
     let baseline2 = baseline + font.underline_thickness() / SCALE * 2.0;
-    render_underline(snapshot, font, color, x, baseline2, width);
+    render_underline(font, color, x, baseline2, width);
+
+    [
+        render_underline(font, color, x, baseline, width),
+        render_underline(font, color, x, baseline2, width),
+    ]
 }
 
 pub fn render_strikethrough(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
-) {
+) -> gsk::RenderNode {
     let y = baseline - font.strikethrough_position() / SCALE;
 
     let node = gsk::ColorNode::new(
@@ -88,23 +93,23 @@ pub fn render_strikethrough(
         &graphene::Rect::new(x, y, width, font.strikethrough_thickness() / SCALE),
     );
 
-    snapshot.append_node(node.upcast());
+    node.upcast()
 }
 
 pub fn render_underdash(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
-) {
+) -> gsk::RenderNode {
     let y = baseline - font.underline_position() / SCALE;
     let h = font.descent() / SCALE;
     let dash_width = (font.char_width() * 0.3 / SCALE) as f64;
     let thickness = font.underline_thickness() / SCALE;
 
-    let ctx = snapshot.append_cairo(&graphene::Rect::new(x, y, width, h));
+    let node = gsk::CairoNode::new(&graphene::Rect::new(x, y, width, h));
+    let ctx = node.draw_context();
 
     let x = x as f64;
     let y = (y + thickness) as f64;
@@ -119,55 +124,59 @@ pub fn render_underdash(
         color.alpha() as f64,
     );
     ctx.stroke().expect("failed to draw with cairo");
+
+    node.upcast()
 }
 
 pub fn render_underdot(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
-) {
+) -> gsk::RenderNode {
     let y = baseline - font.underline_position() / SCALE;
     // NOTE(ville): The dot line is significatly harder to make out compared to
     // a solid line, so make the dot size bigger (compared to plain underline).
     let h = 2.0 * font.underline_thickness() / SCALE;
 
-    // Repeat our dot across the given area.
-    let bounds = graphene::Rect::new(x, y, width, h);
-    snapshot.push_repeat(&bounds, None);
-
     // Create a dot, and color it.
     let bounds = graphene::Rect::new(x, y, h, h);
-    let dot = gsk::RoundedRect::from_rect(bounds, h);
-    snapshot.push_rounded_clip(&dot);
-    snapshot.append_color(color, dot.bounds());
-    snapshot.pop();
+    let dot_node = gsk::RoundedClipNode::new(
+        &gsk::ColorNode::new(color, &bounds),
+        &gsk::RoundedRect::from_rect(bounds, h),
+    );
 
     // Add transparent "dummy" block so we can add some spacing between dots.
-    snapshot.append_color(
+    let space_node = gsk::ColorNode::new(
         &gdk::RGBA::new(0.0, 0.0, 0.0, 0.0),
         &graphene::Rect::new(x, y, h * 1.5, h),
     );
 
-    snapshot.pop();
+    // Repeat our dot across the given area.
+    let node = gsk::RepeatNode::new(
+        &graphene::Rect::new(x, y, width, h),
+        &gsk::ContainerNode::new(&[dot_node.upcast(), space_node.upcast()]),
+        None,
+    );
+
+    node.upcast()
 }
 
 pub fn render_undercurl(
-    snapshot: &gtk::Snapshot,
     font: &Font,
     color: &Color,
     x: f32,
     baseline: f32,
     width: f32,
     cell_count: i64,
-) {
+) -> gsk::RenderNode {
     let y = baseline - font.underline_position() / SCALE;
     let h = font.descent() / SCALE;
 
     let bounds = graphene::Rect::new(x, y, width, h);
-    let ctx = snapshot.append_cairo(&bounds);
+    let node = gsk::CairoNode::new(&bounds);
+    let ctx = node.draw_context();
 
     let x = x as f64;
     let y = y as f64;
@@ -209,6 +218,8 @@ pub fn render_undercurl(
     );
     ctx.set_line_cap(cairo::LineCap::Square);
     ctx.stroke().expect("failed to draw with cairo");
+
+    node.upcast()
 }
 
 pub fn create_hl_attrs(hl_id: &i64, colors: &Colors, font: &Font) -> pango::AttrList {
