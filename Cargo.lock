@@ -338,14 +338,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gio-compat"
-version = "0.1.0"
-dependencies = [
- "futures",
- "gio",
-]
-
-[[package]]
 name = "gio-sys"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -419,7 +411,6 @@ dependencies = [
  "cfg-if",
  "clap",
  "futures",
- "gio-compat",
  "glib",
  "glib-build-tools",
  "gtk4",

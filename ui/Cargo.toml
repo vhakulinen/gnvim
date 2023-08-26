@@ -29,8 +29,5 @@ features = ["v1_50"]
 package = "nvim-rs"
 path = "../lib/nvim-rs"
 
-[dependencies.gio-compat]
-path = "../lib/gio-compat"
-
 [build-dependencies]
 glib-build-tools = "0.18"

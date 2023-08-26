@@ -2,7 +2,6 @@
 members = [
     "ui",
     "lib/nvim-rs",
-    "lib/gio-compat",
 ]
 
 # For addition information about build profies, see
