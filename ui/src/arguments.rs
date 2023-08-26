@@ -66,6 +66,10 @@ fn dup_stdin() -> Option<i32> {
             unsafe {
                 // Duplicate the stdin fd.
                 let fd_dup = libc::dup(std::io::stdin().as_raw_fd());
+                if fd_dup < 0 {
+                    println!("ERR: couldn't duplicate stdin");
+                    return None;
+                }
 
                 let fdflags = libc::fcntl(fd_dup, libc::F_GETFD);
                 if fdflags < 0 {
