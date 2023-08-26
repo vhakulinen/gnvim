@@ -1,8 +1,4 @@
-use std::{
-    cell::Ref,
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
+use std::{cell::Ref, collections::HashMap};
 
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{MsgHistoryShow, MsgShow};
@@ -70,8 +66,8 @@ impl Messages {
         imp.store.splice(0, 0, &objs);
     }
 
-    pub fn set_kinds(&self, kinds: HashMap<String, MessageKind>) {
-        self.imp().kinds.replace(Kinds(kinds));
+    pub fn set_kinds(&self, kinds: Kinds) {
+        self.imp().kinds.replace(kinds);
     }
 
     pub fn scroll_to_bottom(&self) {
@@ -85,22 +81,7 @@ impl Messages {
     }
 }
 
-#[derive(Default)]
-pub struct Kinds(HashMap<String, MessageKind>);
-
-impl Deref for Kinds {
-    type Target = HashMap<String, MessageKind>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Kinds {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+pub type Kinds = HashMap<String, MessageKind>;
 
 mod imp {
     use std::cell::RefCell;
@@ -110,13 +91,11 @@ mod imp {
 
     use crate::{child_iter::IterChildren, components::Message};
 
-    use super::{Kinds, MessageObject};
-
     #[derive(gtk::CompositeTemplate)]
     #[template(resource = "/com/github/vhakulinen/gnvim/messages.ui")]
     pub struct Messages {
         // NOTE(ville): HashMap is not supported by the glib::Properties derive.
-        pub kinds: RefCell<Kinds>,
+        pub kinds: RefCell<super::Kinds>,
 
         #[template_child(id = "messages-list")]
         pub listview: TemplateChild<gtk::ListView>,
@@ -129,7 +108,7 @@ mod imp {
             Self {
                 kinds: Default::default(),
                 listview: Default::default(),
-                store: gio::ListStore::new::<MessageObject>(),
+                store: gio::ListStore::new::<super::MessageObject>(),
             }
         }
     }
