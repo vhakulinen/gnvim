@@ -88,8 +88,8 @@ mod imp {
 }
 
 pub trait Chunk {
-    fn text_chunk<'a>(&'a self) -> &'a str;
-    fn attr_id<'a>(&'a self) -> &'a i64;
+    fn text_chunk(&self) -> &str;
+    fn attr_id(&self) -> &i64;
 
     fn chunk_markup(&self, colors: &Colors) -> String {
         let hl = colors.get_hl(self.attr_id());
@@ -98,27 +98,27 @@ pub trait Chunk {
 }
 
 impl Chunk for &MsgShowContent {
-    fn text_chunk<'a>(&'a self) -> &'a str {
+    fn text_chunk(&self) -> &str {
         &self.text_chunk
     }
 
-    fn attr_id<'a>(&'a self) -> &'a i64 {
+    fn attr_id(&self) -> &i64 {
         &self.attr_id
     }
 }
 
 impl Chunk for &MsgHistoryShowContent {
-    fn text_chunk<'a>(&'a self) -> &'a str {
+    fn text_chunk(&self) -> &str {
         &self.text_chunk
     }
 
-    fn attr_id<'a>(&'a self) -> &'a i64 {
+    fn attr_id(&self) -> &i64 {
         &self.attr_id
     }
 }
 
 pub trait Kind {
-    fn kind<'a>(&'a self) -> &'a str;
+    fn kind(&self) -> &str;
 
     fn kind_markup(&self, colors: &Colors, kinds: &Kinds) -> String {
         let kind = self.kind();
@@ -133,13 +133,13 @@ pub trait Kind {
 }
 
 impl Kind for MsgShow {
-    fn kind<'a>(&'a self) -> &'a str {
+    fn kind(&self) -> &str {
         &self.kind
     }
 }
 
 impl Kind for MsgHistoryShowEntry {
-    fn kind<'a>(&'a self) -> &'a str {
+    fn kind(&self) -> &str {
         &self.kind
     }
 }

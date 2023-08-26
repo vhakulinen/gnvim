@@ -209,7 +209,7 @@ impl<'de> serde::Deserialize<'de> for Color {
     where
         D: serde::Deserializer<'de>,
     {
-        i64::deserialize(deserializer).map(|v| Color::from(v))
+        i64::deserialize(deserializer).map(Color::from)
     }
 }
 

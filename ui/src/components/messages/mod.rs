@@ -44,7 +44,7 @@ impl Messages {
                 if item.replace_last {
                     // If our accumulator doesn't have any values in it, we'll
                     // have to remove actual previous item.
-                    if acc.len() > 0 {
+                    if !acc.is_empty() {
                         acc.pop();
                     } else if imp.store.n_items() > 0 {
                         imp.store.remove(imp.store.n_items() - 1);
