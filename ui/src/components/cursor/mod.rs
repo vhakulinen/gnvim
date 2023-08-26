@@ -106,7 +106,7 @@ impl Cursor {
                     let now = clock.frame_time() as f64;
                     if now < start {
                         warn!("Clock going backwards");
-                        return Continue(true);
+                        return glib::ControlFlow::Continue;
                     }
 
                     let imp = this.imp();
@@ -117,12 +117,12 @@ impl Cursor {
                         imp.pos.borrow_mut().pos = (col, row);
                         this.queue_draw();
 
-                        Continue(true)
+                        glib::ControlFlow::Continue
                     } else {
                         imp.pos.borrow_mut().pos = target;
                         this.queue_draw();
 
-                        Continue(false)
+                        glib::ControlFlow::Break
                     }
                 }));
 

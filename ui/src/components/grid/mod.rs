@@ -131,7 +131,7 @@ impl Grid {
             }));
 
         imp.event_controller_scroll.connect_scroll(
-            clone!(@weak self as obj, @strong mouse_pos => @default-return gtk::Inhibit(false), move |evt, dx, dy| {
+            clone!(@weak self as obj, @strong mouse_pos => @default-return glib::Propagation::Proceed, move |evt, dx, dy| {
                 let modifier = crate::input::modifier_to_nvim(&evt.current_event_state());
                 let pos = mouse_pos.borrow();
                 let font = obj.font();
@@ -150,7 +150,7 @@ impl Grid {
                     f(id, Mouse::Wheel, Action::ScrollUp, modifier, row, col);
                 }
 
-                gtk::Inhibit(true)
+                glib::Propagation::Stop
             }),
         );
     }

@@ -1,7 +1,6 @@
 use std::ffi::OsStr;
 
 use futures::channel::oneshot;
-use gio_compat::{CompatRead, CompatWrite};
 use gtk::{gio, glib, prelude::*, subclass::prelude::*};
 use nvim::{
     async_trait,
@@ -28,7 +27,11 @@ impl Neovim {
     /// * `args` - Arguments (including the nvim command) for the subprocess.
     /// * `inherit_fds` - If the fds should be shared with the subprocess. Required
     /// for the stdin_fd uiattach option.
-    pub fn open(&self, args: &[&OsStr], inherit_fds: bool) -> CompatRead {
+    pub fn open(
+        &self,
+        args: &[&OsStr],
+        inherit_fds: bool,
+    ) -> gio::InputStreamAsyncRead<gio::PollableInputStream> {
         let mut flags = gio::SubprocessFlags::empty();
         flags.insert(gio::SubprocessFlags::STDIN_PIPE);
         flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
@@ -39,23 +42,21 @@ impl Neovim {
 
         let p = gio::Subprocess::newv(args, flags).expect("failed to open nvim subprocess");
 
-        let writer: CompatWrite = p
+        let writer = p
             .stdin_pipe()
             .expect("get stdin pipe")
             .dynamic_cast::<gio::PollableOutputStream>()
             .expect("cast to PollableOutputStream")
             .into_async_write()
-            .expect("convert to async write")
-            .into();
+            .expect("convert to async write");
 
-        let reader: CompatRead = p
+        let reader = p
             .stdout_pipe()
             .expect("get stdout pipe")
             .dynamic_cast::<gio::PollableInputStream>()
             .expect("cast to PollableInputStream")
             .into_async_read()
-            .expect("covert to async read")
-            .into();
+            .expect("covert to async read");
 
         self.imp()
             .writer

@@ -18,7 +18,6 @@ use gtk::{
     glib::{self, clone},
 };
 
-use gio_compat::CompatRead;
 use nvim::rpc::{message::Notification, RpcReader};
 
 use crate::api::GnvimEvent;
@@ -105,8 +104,8 @@ impl AppWindow {
         }
     }
 
-    async fn io_loop(&self, reader: CompatRead) {
-        let mut reader: RpcReader<CompatRead> = reader.into();
+    async fn io_loop<R: futures::AsyncRead + Unpin>(&self, reader: R) {
+        let mut reader: RpcReader<R> = reader.into();
 
         loop {
             match reader.recv().await {
@@ -442,7 +441,7 @@ impl AppWindow {
         keyval: gdk::Key,
         _keycode: u32,
         state: gdk::ModifierType,
-    ) -> gtk::Inhibit {
+    ) -> glib::Propagation {
         let evt = self
             .event_controller_key
             .borrow()
@@ -455,18 +454,18 @@ impl AppWindow {
             .map(|evt| evt.is_modifier())
             .unwrap_or(false)
         {
-            return gtk::Inhibit(false);
+            return glib::Propagation::Proceed;
         }
 
         if self.im_context.borrow().filter_keypress(&evt) {
-            gtk::Inhibit(true)
+            glib::Propagation::Stop
         } else {
             if let Some(input) = event_to_nvim_input(keyval, state) {
                 spawn_local!(clone!(@weak self as this => async move {
                     this.send_nvim_input(input).await;
                 }));
 
-                return gtk::Inhibit(true);
+                return glib::Propagation::Stop;
             } else {
                 println!(
                     "Failed to turn input event into nvim key (keyval: {})",
@@ -474,7 +473,7 @@ impl AppWindow {
                 )
             }
 
-            gtk::Inhibit(false)
+            glib::Propagation::Proceed
         }
     }
 
@@ -515,7 +514,7 @@ impl ObjectImpl for AppWindow {
         self.parent_constructed();
         let obj = self.obj();
 
-        gtk::StyleContext::add_provider_for_display(
+        gtk::style_context_add_provider_for_display(
             &gdk::Display::default().expect("couldn't get display"),
             &self.css_provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,

@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gio = "0.17"
+gio = "0.18"
 futures = "0.3"

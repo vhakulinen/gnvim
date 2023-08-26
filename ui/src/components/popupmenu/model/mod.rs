@@ -58,15 +58,15 @@ impl Model {
         self.lazy_add(removed);
 
         *lazy = Some(glib::idle_add_local(
-            clone!(@weak self as this => @default-return Continue(false), move || {
+            clone!(@weak self as this => @default-return glib::ControlFlow::Break, move || {
                 this.lazy_add(0);
 
                 let imp = this.imp();
                 if imp.to_add.borrow().len() > 0 {
-                    Continue(true)
+                    glib::ControlFlow::Continue
                 } else {
                     imp.lazy.take();
-                    Continue(false)
+                    glib::ControlFlow::Break
                 }
             }),
         ));

@@ -1,13 +1,12 @@
 use std::cell::RefCell;
 
 use futures::lock::Mutex;
-use gio_compat::CompatWrite;
-use gtk::{glib, subclass::prelude::*};
+use gtk::{gio, glib, subclass::prelude::*};
 use nvim::rpc::caller::Sender;
 
 #[derive(Default)]
 pub struct Neovim {
-    pub writer: Mutex<Option<CompatWrite>>,
+    pub writer: Mutex<Option<gio::OutputStreamAsyncWrite<gio::PollableOutputStream>>>,
     pub msgid_counter: RefCell<u32>,
     pub callbacks: RefCell<Vec<(u32, Sender)>>,
 }

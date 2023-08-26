@@ -85,7 +85,7 @@ impl Cursor {
             }
 
             this.queue_draw();
-            Continue(true)
+            glib::ControlFlow::Continue
         });
 
         self.blink_tick.replace(Some(new_id));

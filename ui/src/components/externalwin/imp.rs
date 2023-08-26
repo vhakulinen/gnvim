@@ -32,7 +32,7 @@ impl ExternalWindow {
 
         let id = glib::timeout_add_local(
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
-            clone!(@weak obj => @default-return Continue(false), move || {
+            clone!(@weak obj => @default-return glib::ControlFlow::Break, move || {
                 spawn_local!(clone!(@weak obj => async move {
                     let res = obj
                         .nvim()
@@ -49,7 +49,7 @@ impl ExternalWindow {
                 // our id once we're already done.
                 obj.imp().resize_id.replace(None);
 
-                Continue(false)
+                glib::ControlFlow::Break
             }),
         );
 

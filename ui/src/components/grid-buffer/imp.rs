@@ -147,7 +147,7 @@ impl GridBuffer {
                 let now = clock.frame_time() as f64;
                 if now < start_time {
                     warn!("Clock going backwards");
-                    return Continue(true);
+                    return glib::ControlFlow::Continue;
                 }
 
                 let (_, req) = this.preferred_size();
@@ -181,12 +181,12 @@ impl GridBuffer {
                     let y = start_y + ((target_y - start_y) * t);
                     this.set_y_offset(y);
 
-                    Continue(true)
+                    glib::ControlFlow::Continue
                 } else {
                     this.set_y_offset(target_y);
                     imp.scroll_nodes.borrow_mut().clear();
 
-                    Continue(false)
+                    glib::ControlFlow::Break
                 }
             }));
 
