@@ -414,7 +414,6 @@ dependencies = [
 name = "gnvim"
 version = "0.3.2-dev"
 dependencies = [
- "atty",
  "cfg-if",
  "clap",
  "futures",

@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::{ffi::OsString, io::IsTerminal};
 
 use gtk::glib;
 
@@ -50,7 +50,7 @@ impl Arguments {
     pub fn parse() -> Self {
         let mut args: Self = clap::Parser::parse();
 
-        if atty::isnt(atty::Stream::Stdin) {
+        if !std::io::stdin().is_terminal() {
             args.stdin_fd = dup_stdin();
         }
 
@@ -62,8 +62,6 @@ fn dup_stdin() -> Option<i32> {
     cfg_if::cfg_if! {
         if #[cfg(unix)] {
             use std::os::unix::prelude::AsRawFd;
-
-
 
             unsafe {
                 // Duplicate the stdin fd.
