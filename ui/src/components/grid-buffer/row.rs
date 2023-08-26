@@ -74,6 +74,24 @@ impl Row {
         self.cells = vec![Cell::default(); self.cells.len()];
     }
 
+    pub fn to_render_node(&self) -> gsk::RenderNode {
+        let mut bg_nodes = vec![];
+        let mut fg_nodes = vec![];
+
+        for nodes in self.render_node_iter() {
+            if let Some(ref nodes) = *nodes {
+                bg_nodes.push(nodes.bg.clone());
+                fg_nodes.push(nodes.fg.clone());
+            }
+        }
+
+        gsk::ContainerNode::new(&[
+            gsk::ContainerNode::new(&bg_nodes).upcast(),
+            gsk::ContainerNode::new(&fg_nodes).upcast(),
+        ])
+        .upcast()
+    }
+
     pub fn update(&mut self, event: &GridLine) {
         let mut hl_id = event
             .data

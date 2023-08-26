@@ -84,9 +84,20 @@ impl GridBuffer {
 
         let ctx = self.pango_context();
 
+        let mut row_nodes = imp.row_nodes.borrow_mut();
+        row_nodes.clear();
+
         let font = imp.font.borrow();
-        for row in imp.rows.borrow_mut().iter_mut() {
+        for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
             row.generate_nodes(&ctx, colors, &font);
+            row_nodes.push(
+                gsk::TransformNode::new(
+                    row.to_render_node(),
+                    &gsk::Transform::new()
+                        .translate(&graphene::Point::new(0.0, font.row_to_y(i as f64) as f32)),
+                )
+                .upcast(),
+            );
         }
 
         let (alloc, _) = self.preferred_size();

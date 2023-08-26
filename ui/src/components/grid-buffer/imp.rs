@@ -5,7 +5,7 @@ use gtk::{glib, graphene, gsk, prelude::*};
 
 use crate::font::Font;
 use crate::math::ease_out_cubic;
-use crate::{some_or_return, some_or_return_val, warn, SCALE};
+use crate::{some_or_return, warn, SCALE};
 
 use super::row::Cell;
 use super::Row;
@@ -15,6 +15,8 @@ use super::Row;
 pub struct GridBuffer {
     /// Our rows of content.
     pub rows: RefCell<Vec<Row>>,
+    /// Render nodes of our rows from the latest `flush` event.
+    pub row_nodes: RefCell<Vec<gsk::RenderNode>>,
     /// Background nodes.
     pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
 
@@ -28,8 +30,6 @@ pub struct GridBuffer {
     /// Y offset for the main buffer.
     #[property(get, set)]
     pub y_offset: cell::Cell<f32>,
-    /// Y offset for the scroll/background buffer.
-    pub y_offset_scroll: cell::Cell<f32>,
 
     #[property(get, set = Self::set_font)]
     pub font: RefCell<Font>,
@@ -48,9 +48,8 @@ pub struct GridBuffer {
     scroll_nodes: RefCell<Vec<ScrollNode>>,
 }
 
-#[derive(Default)]
 struct ScrollNode {
-    node: Option<gsk::RenderNode>,
+    node: gsk::RenderNode,
     offset: f32,
     target: f32,
     start: f32,
@@ -115,29 +114,26 @@ impl GridBuffer {
         .frame_time() as f64;
         let end_time = start_time + self.scroll_transition.get();
 
-        let (from, to) = self.scroll_delta_to_range(delta);
-        let rows = self.rows.borrow();
-        let rows = &rows[from..to];
-
-        let node = rows.to_render_node(&self.font.borrow());
-
         let font = self.font.borrow();
+        let (from, to) = self.scroll_delta_to_range(delta);
+        let rows = self.row_nodes.borrow();
 
-        let start = self.y_offset.get() + font.row_to_y(from as f64) as f32;
-        let target = font.row_to_y(from as f64 - delta) as f32;
+        let node = gsk::ContainerNode::new(&rows[from..to]).upcast();
+
+        let start = self.y_offset.get();
+        let target = font.row_to_y(-delta) as f32;
         let scroll_node = ScrollNode {
-            node: Some(node),
+            node,
             offset: 0.0,
             target,
             start,
             reached_view: false,
         };
 
-        let delta_neg = font.row_to_y(-delta) as f32;
         self.scroll_nodes
             .borrow_mut()
             .iter_mut()
-            .for_each(|s| s.adjust(delta_neg));
+            .for_each(|s| s.adjust(target));
 
         self.scroll_nodes.borrow_mut().push(scroll_node);
 
@@ -171,12 +167,7 @@ impl GridBuffer {
                         let y = (s.target - s.start) * t;
                         s.offset = y;
 
-                        let mut bounds = some_or_return_val!(
-                            &s.node,
-                            false,
-                            "grid-buffer: scroll node missing node"
-                        )
-                        .bounds();
+                        let mut bounds = s.node.bounds();
                         bounds.offset(0.0, s.start + s.offset);
 
                         if clip.intersection(&bounds).is_none() {
@@ -188,12 +179,10 @@ impl GridBuffer {
                     });
 
                     let y = start_y + ((target_y - start_y) * t);
-                    //imp.y_offset.set(y);
                     this.set_y_offset(y);
 
                     Continue(true)
                 } else {
-                    //imp.y_offset.set(target_y);
                     this.set_y_offset(target_y);
                     imp.scroll_nodes.borrow_mut().clear();
 
@@ -241,29 +230,26 @@ impl WidgetImpl for GridBuffer {
                     return None;
                 }
 
-                let node =
-                    some_or_return_val!(&s.node, None, "grid-buffer: scroll node missing node");
-
-                Some(
-                    gsk::TransformNode::new(
-                        node,
-                        &gsk::Transform::new()
-                            .translate(&graphene::Point::new(0.0, s.start + s.offset)),
-                    )
-                    .upcast(),
+                let node = gsk::TransformNode::new(
+                    &s.node,
+                    &gsk::Transform::new()
+                        .translate(&graphene::Point::new(0.0, s.start + s.offset)),
                 )
+                .upcast();
+
+                Some(node)
             })
             .collect::<Vec<gsk::RenderNode>>();
 
         let scroll = gsk::ContainerNode::new(&scroll_nodes);
 
-        let forebround = gsk::TransformNode::new(
-            &self.rows.borrow().to_render_node(&self.font.borrow()),
+        let foreground = gsk::TransformNode::new(
+            &gsk::ContainerNode::new(&self.row_nodes.borrow()),
             &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
         );
 
         let node =
-            gsk::ContainerNode::new(&[background.upcast(), scroll.upcast(), forebround.upcast()]);
+            gsk::ContainerNode::new(&[background.upcast(), scroll.upcast(), foreground.upcast()]);
 
         snapshot.append_node(&node);
         self.backbuffer.replace(Some(node.upcast()));
@@ -292,46 +278,5 @@ impl WidgetImpl for GridBuffer {
             }
             _ => self.parent_measure(orientation, for_size),
         }
-    }
-}
-
-trait ToRenderNode {
-    fn to_render_node(&self, font: &Font) -> gsk::RenderNode;
-}
-
-impl<T> ToRenderNode for T
-where
-    T: AsRef<[Row]>,
-{
-    fn to_render_node(&self, font: &Font) -> gsk::RenderNode {
-        let mut nodes: Vec<gsk::RenderNode> = Vec::with_capacity(self.as_ref().len());
-
-        for (i, row) in self.as_ref().iter().enumerate() {
-            let y = font.row_to_y(i as f64);
-            let mut bg_nodes = vec![];
-            let mut fg_nodes = vec![];
-
-            for nodes in row.render_node_iter() {
-                if let Some(ref nodes) = *nodes {
-                    bg_nodes.push(nodes.bg.clone());
-                    fg_nodes.push(nodes.fg.clone());
-                }
-            }
-
-            let translate = gsk::Transform::new().translate(&graphene::Point::new(0.0, y as f32));
-
-            nodes.push(
-                gsk::TransformNode::new(
-                    &gsk::ContainerNode::new(&[
-                        gsk::ContainerNode::new(&bg_nodes).upcast(),
-                        gsk::ContainerNode::new(&fg_nodes).upcast(),
-                    ]),
-                    &translate,
-                )
-                .upcast(),
-            )
-        }
-
-        gsk::ContainerNode::new(&nodes).upcast()
     }
 }
