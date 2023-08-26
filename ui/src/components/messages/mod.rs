@@ -110,9 +110,9 @@ mod imp {
 
     use crate::{child_iter::IterChildren, components::Message};
 
-    use super::Kinds;
+    use super::{Kinds, MessageObject};
 
-    #[derive(Default, gtk::CompositeTemplate)]
+    #[derive(gtk::CompositeTemplate)]
     #[template(resource = "/com/github/vhakulinen/gnvim/messages.ui")]
     pub struct Messages {
         // NOTE(ville): HashMap is not supported by the glib::Properties derive.
@@ -122,6 +122,16 @@ mod imp {
         pub listview: TemplateChild<gtk::ListView>,
 
         pub store: gio::ListStore,
+    }
+
+    impl Default for Messages {
+        fn default() -> Self {
+            Self {
+                kinds: Default::default(),
+                listview: Default::default(),
+                store: gio::ListStore::new::<MessageObject>(),
+            }
+        }
     }
 
     #[glib::object_subclass]
