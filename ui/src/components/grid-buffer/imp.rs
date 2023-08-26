@@ -118,7 +118,7 @@ impl GridBuffer {
         let (from, to) = self.scroll_delta_to_range(delta);
         let rows = self.row_nodes.borrow();
 
-        let node = gsk::ContainerNode::new(&rows[from..to]).upcast();
+        let node = gsk::ContainerNode::new(rows.get(from..to).unwrap_or(&[])).upcast();
 
         let start = self.y_offset.get();
         let target = font.row_to_y(-delta) as f32;
