@@ -92,6 +92,7 @@ impl Cursor {
     }
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for Cursor {
     fn constructed(&self) {
         self.parent_constructed();
@@ -106,18 +107,6 @@ impl ObjectImpl for Cursor {
             // Clear the cached render node, since blink directly contributes to it.
             this.imp().node.replace(None);
         });
-    }
-
-    fn properties() -> &'static [glib::ParamSpec] {
-        Self::derived_properties()
-    }
-
-    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        self.derived_property(id, pspec)
-    }
-
-    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        self.derived_set_property(id, value, pspec)
     }
 }
 

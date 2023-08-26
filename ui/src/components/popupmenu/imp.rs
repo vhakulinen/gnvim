@@ -46,6 +46,7 @@ impl ObjectSubclass for Popupmenu {
     }
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for Popupmenu {
     fn constructed(&self) {
         self.parent_constructed();
@@ -80,18 +81,6 @@ impl ObjectImpl for Popupmenu {
 
         self.listview.set_model(Some(&self.store));
         self.listview.set_factory(Some(&factory));
-    }
-
-    fn properties() -> &'static [glib::ParamSpec] {
-        Self::derived_properties()
-    }
-
-    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        self.derived_property(id, pspec)
-    }
-
-    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        self.derived_set_property(id, value, pspec)
     }
 }
 

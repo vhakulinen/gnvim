@@ -509,6 +509,7 @@ impl ObjectSubclass for AppWindow {
     }
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for AppWindow {
     fn constructed(&self) {
         self.parent_constructed();
@@ -568,18 +569,6 @@ impl ObjectImpl for AppWindow {
             .set_im_context(Some(&*self.im_context.borrow()));
 
         obj.add_controller(self.event_controller_key.borrow().clone());
-    }
-
-    fn properties() -> &'static [glib::ParamSpec] {
-        Self::derived_properties()
-    }
-
-    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        self.derived_property(id, pspec)
-    }
-
-    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        self.derived_set_property(id, value, pspec)
     }
 }
 

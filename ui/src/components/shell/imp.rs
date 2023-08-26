@@ -154,6 +154,7 @@ impl ObjectSubclass for Shell {
     }
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for Shell {
     fn constructed(&self) {
         self.parent_constructed();
@@ -170,18 +171,6 @@ impl ObjectImpl for Shell {
             .connect_items_changed(clone!(@weak obj => move |_, _, _, _| {
                 obj.imp().adjust_pmenu();
             }));
-    }
-
-    fn properties() -> &'static [glib::ParamSpec] {
-        Self::derived_properties()
-    }
-
-    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        self.derived_property(id, pspec)
-    }
-
-    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        self.derived_set_property(id, value, pspec)
     }
 }
 

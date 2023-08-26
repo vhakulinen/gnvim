@@ -19,6 +19,7 @@ impl ObjectSubclass for Child {
     type ParentType = gtk::LayoutChild;
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for Child {
     fn constructed(&self) {
         self.parent_constructed();
@@ -30,18 +31,6 @@ impl ObjectImpl for Child {
         self.obj().connect_z_index_notify(|this| {
             gtk::prelude::LayoutChildExt::layout_manager(this).layout_changed();
         });
-    }
-
-    fn properties() -> &'static [glib::ParamSpec] {
-        Self::derived_properties()
-    }
-
-    fn property(&self, id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        self.derived_property(id, pspec)
-    }
-
-    fn set_property(&self, id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        self.derived_set_property(id, value, pspec)
     }
 }
 
