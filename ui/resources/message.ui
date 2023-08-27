@@ -29,6 +29,11 @@
                     bind-flags="sync-create"
                 />
                 <property name="use-markup">true</property>
+                <!--
+                    NOTE(ville): There is a issue with multiline label's height calculation:
+                    https://gitlab.gnome.org/GNOME/gtk/-/issues/5885
+                -->
+                <property name="wrap">true</property>
                 <property name="xalign">0</property>
             </object>
         </child>
