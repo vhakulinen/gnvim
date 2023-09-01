@@ -105,6 +105,7 @@ pub struct GridLine {
     pub row: i64,
     pub col_start: i64,
     pub data: Vec<GridLineData>,
+    pub wrap: bool,
 }
 #[derive(Debug, serde :: Deserialize)]
 pub struct GridScroll {
