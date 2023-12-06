@@ -197,17 +197,17 @@ impl UiEvent {
             syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
         let name = &self.name;
 
+        // TODO(ville): All events should have a vec
         if self.parameters.is_empty() {
             quote! {
-                (Some(#name), None) => UiEvent::#member,
+                #name => {
+                    while seq.next_element::<serde::de::IgnoredAny>()?.is_some() { }
+                    UiEvent::#member
+                },
             }
         } else {
             quote! (
-                (Some(#name), Some(params)) => UiEvent::#member({
-                    params.into_iter().map(#member::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-                }),
+                #name => UiEvent::#member(seq_to_vec!(seq)),
             )
         }
     }
@@ -251,19 +251,56 @@ impl UiEvent {
         let name: syn::Ident =
             syn::parse_str(&self.name.as_pascal_case()).expect("failed to parse name");
 
-        let fields = self.parameters.iter().map(|param| {
+        let mut fields = vec![];
+        let mut seq_fields = vec![];
+
+        self.parameters.iter().enumerate().for_each(|(i, param)| {
             let name = format_ident!("{}", &param.name);
             let ty = self.field_type_for(&param.name, &param.r#type);
 
-            quote! {
+            fields.push(quote! {
                 pub #name: #ty,
-            }
+            });
+
+            seq_fields.push(quote! {
+                #name: seq.next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(#i, &self))?,
+            });
         });
 
+        let expecting = format!("valid {}", name);
+
         Some(quote! {
-            #[derive(Debug, serde::Deserialize)]
+            #[derive(Debug)]
             pub struct #name {
                 #(#fields)*
+            }
+
+            impl<'de> serde::Deserialize<'de> for #name {
+                fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                    struct Visitor;
+
+                    impl<'de> serde::de::Visitor<'de> for Visitor {
+                        type Value = #name;
+
+                        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                            formatter.write_str(#expecting)
+                        }
+
+                        fn visit_seq<V: serde::de::SeqAccess<'de>>(self, mut seq: V) -> Result<Self::Value, V::Error> {
+                            let evt = #name {
+                                #(#seq_fields)*
+                            };
+
+                            // For forward compatibility (see `:h api-contract`)
+                            while let Some(serde::de::IgnoredAny) = seq.next_element()? { }
+
+                            Ok(evt)
+                        }
+                    }
+
+                    d.deserialize_any(Visitor)
+                }
             }
         })
     }

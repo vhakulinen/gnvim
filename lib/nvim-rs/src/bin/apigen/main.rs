@@ -59,25 +59,45 @@ fn uievents(res: ApiMetadata) {
             }
         }
 
+
+        macro_rules! seq_to_vec {
+            ($seq:expr) => {{
+                let mut v = Vec::with_capacity($seq.size_hint().unwrap_or(0));
+                while let Some(evt) = $seq.next_element()? {
+                    v.push(evt);
+                }
+                v
+            }};
+        }
+
         impl<'de> serde::Deserialize<'de> for UiEvent {
             fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-                let redraw = rmpv::Value::deserialize(d)?;
 
-                let name = redraw[0].as_str();
-                // TODO(ville): Would be nice if this was possible to do with the derilization it self...
-                let params = redraw.as_array().and_then(|v| {
-                    if v[1].as_array().map(|v| v.is_empty()) == Some(true) {
-                        None
-                    } else {
-                        Some(v[1..].to_vec())
+                struct Visitor;
+
+                impl<'de> serde::de::Visitor<'de> for Visitor {
+                    type Value = UiEvent;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str("valid UiEvent")
                     }
-                });
 
-                // TODO(ville): Error handling.
-                Ok(match (name, params) {
-                    #(#decode_matches)*
-                    v => panic!("failed to decode message {:?}", v),
-                })
+                    fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+                    where
+                        V: serde::de::SeqAccess<'de>,
+                    {
+                        let name = seq
+                            .next_element::<String>()?
+                            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+
+                        Ok(match name.as_str() {
+                            #(#decode_matches)*
+                            v => panic!("failed to decode message {:?}", v),
+                        })
+                    }
+                }
+
+                d.deserialize_seq(Visitor)
             }
         }
     }

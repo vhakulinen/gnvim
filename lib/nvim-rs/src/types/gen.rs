@@ -1,69 +1,426 @@
 use super::manual::*;
 use std::fmt::Display;
-#[derive(Debug, serde :: Deserialize)]
+#[derive(Debug)]
 pub struct ModeInfoSet {
     pub enabled: bool,
     pub cursor_styles: Vec<ModeInfo>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for ModeInfoSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = ModeInfoSet;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid ModeInfoSet")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = ModeInfoSet {
+                    enabled: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    cursor_styles: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct ModeChange {
     pub mode: String,
     pub mode_idx: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for ModeChange {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = ModeChange;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid ModeChange")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = ModeChange {
+                    mode: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    mode_idx: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct SetTitle {
     pub title: String,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for SetTitle {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = SetTitle;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid SetTitle")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = SetTitle {
+                    title: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct SetIcon {
     pub icon: String,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for SetIcon {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = SetIcon;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid SetIcon")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = SetIcon {
+                    icon: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct Screenshot {
     pub path: String,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for Screenshot {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Screenshot;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Screenshot")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Screenshot {
+                    path: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct UpdateFg {
     pub fg: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for UpdateFg {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UpdateFg;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid UpdateFg")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = UpdateFg {
+                    fg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct UpdateBg {
     pub bg: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for UpdateBg {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UpdateBg;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid UpdateBg")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = UpdateBg {
+                    bg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct UpdateSp {
     pub sp: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for UpdateSp {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UpdateSp;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid UpdateSp")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = UpdateSp {
+                    sp: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct Resize {
     pub width: i64,
     pub height: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for Resize {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Resize;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Resize")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Resize {
+                    width: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    height: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CursorGoto {
     pub row: i64,
     pub col: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CursorGoto {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CursorGoto;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CursorGoto")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CursorGoto {
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct HighlightSet {
     pub attrs: Dictionary,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for HighlightSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = HighlightSet;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid HighlightSet")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = HighlightSet {
+                    attrs: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct Put {
     pub str: String,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for Put {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Put;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Put")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Put {
+                    str: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct SetScrollRegion {
     pub top: i64,
     pub bot: i64,
     pub left: i64,
     pub right: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for SetScrollRegion {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = SetScrollRegion;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid SetScrollRegion")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = SetScrollRegion {
+                    top: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    bot: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    left: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    right: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct Scroll {
     pub count: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for Scroll {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Scroll;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Scroll")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Scroll {
+                    count: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct DefaultColorsSet {
     pub rgb_fg: i64,
     pub rgb_bg: i64,
@@ -71,42 +428,255 @@ pub struct DefaultColorsSet {
     pub cterm_fg: i64,
     pub cterm_bg: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for DefaultColorsSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = DefaultColorsSet;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid DefaultColorsSet")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = DefaultColorsSet {
+                    rgb_fg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    rgb_bg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    rgb_sp: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    cterm_fg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    cterm_bg: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct HlAttrDefine {
     pub id: i64,
     pub rgb_attrs: HlAttr,
     pub cterm_attrs: HlAttr,
     pub info: Vec<rmpv::Value>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for HlAttrDefine {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = HlAttrDefine;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid HlAttrDefine")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = HlAttrDefine {
+                    id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    rgb_attrs: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    cterm_attrs: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    info: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct HlGroupSet {
     pub name: String,
     pub id: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for HlGroupSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = HlGroupSet;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid HlGroupSet")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = HlGroupSet {
+                    name: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridResize {
     pub grid: i64,
     pub width: i64,
     pub height: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridResize {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridResize;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridResize")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridResize {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    width: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    height: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridClear {
     pub grid: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridClear {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridClear;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridClear")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridClear {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridCursorGoto {
     pub grid: i64,
     pub row: i64,
     pub col: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridCursorGoto {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridCursorGoto;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridCursorGoto")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridCursorGoto {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridLine {
     pub grid: i64,
     pub row: i64,
     pub col_start: i64,
     pub data: Vec<GridLineData>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridLine {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridLine;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridLine")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridLine {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    col_start: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    data: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridScroll {
     pub grid: i64,
     pub top: i64,
@@ -116,11 +686,77 @@ pub struct GridScroll {
     pub rows: i64,
     pub cols: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridScroll {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridScroll;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridScroll")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridScroll {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    top: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    bot: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    left: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    right: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    rows: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                    cols: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct GridDestroy {
     pub grid: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for GridDestroy {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = GridDestroy;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid GridDestroy")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = GridDestroy {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinPos {
     pub grid: i64,
     pub win: Window,
@@ -129,7 +765,46 @@ pub struct WinPos {
     pub width: i64,
     pub height: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinPos {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinPos;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinPos")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinPos {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    startrow: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    startcol: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    width: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    height: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinFloatPos {
     pub grid: i64,
     pub win: Window,
@@ -140,27 +815,180 @@ pub struct WinFloatPos {
     pub focusable: bool,
     pub zindex: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinFloatPos {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinFloatPos;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinFloatPos")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinFloatPos {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    anchor: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    anchor_grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    anchor_row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    anchor_col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                    focusable: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
+                    zindex: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(7usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinExternalPos {
     pub grid: i64,
     pub win: Window,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinExternalPos {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinExternalPos;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinExternalPos")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinExternalPos {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinHide {
     pub grid: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinHide {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinHide;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinHide")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinHide {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinClose {
     pub grid: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinClose {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinClose;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinClose")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinClose {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgSetPos {
     pub grid: i64,
     pub row: i64,
     pub scrolled: bool,
     pub sep_char: String,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for MsgSetPos {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgSetPos;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgSetPos")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgSetPos {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    scrolled: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    sep_char: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinViewport {
     pub grid: i64,
     pub win: Window,
@@ -171,7 +999,52 @@ pub struct WinViewport {
     pub line_count: i64,
     pub scroll_delta: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinViewport {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinViewport;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinViewport")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinViewport {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    topline: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    botline: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    curline: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    curcol: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                    line_count: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
+                    scroll_delta: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(7usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinExtmark {
     pub grid: i64,
     pub win: Window,
@@ -180,7 +1053,46 @@ pub struct WinExtmark {
     pub row: i64,
     pub col: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WinExtmark {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinExtmark;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinExtmark")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinExtmark {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    ns_id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    mark_id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct PopupmenuShow {
     pub items: Vec<PopupmenuItem>,
     pub selected: i64,
@@ -188,18 +1100,111 @@ pub struct PopupmenuShow {
     pub col: i64,
     pub grid: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for PopupmenuShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = PopupmenuShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid PopupmenuShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = PopupmenuShow {
+                    items: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    selected: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct PopupmenuSelect {
     pub selected: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for PopupmenuSelect {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = PopupmenuSelect;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid PopupmenuSelect")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = PopupmenuSelect {
+                    selected: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct TablineUpdate {
     pub current: Tabpage,
     pub tabs: Vec<TablineTab>,
     pub current_buffer: Buffer,
     pub buffers: Vec<TablineBuffer>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for TablineUpdate {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = TablineUpdate;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid TablineUpdate")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = TablineUpdate {
+                    current: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    tabs: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    current_buffer: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    buffers: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlineShow {
     pub content: Vec<CmdlineContent>,
     pub pos: i64,
@@ -208,58 +1213,400 @@ pub struct CmdlineShow {
     pub indent: i64,
     pub level: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlineShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlineShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlineShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlineShow {
+                    content: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    pos: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    firstc: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    prompt: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    indent: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    level: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlinePos {
     pub pos: i64,
     pub level: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlinePos {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlinePos;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlinePos")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlinePos {
+                    pos: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    level: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlineSpecialChar {
     pub c: String,
     pub shift: bool,
     pub level: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlineSpecialChar {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlineSpecialChar;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlineSpecialChar")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlineSpecialChar {
+                    c: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    shift: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    level: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlineHide {
     pub level: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlineHide {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlineHide;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlineHide")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlineHide {
+                    level: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlineBlockShow {
     pub lines: Vec<Vec<CmdlineContent>>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlineBlockShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlineBlockShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlineBlockShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlineBlockShow {
+                    lines: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct CmdlineBlockAppend {
     pub lines: Vec<CmdlineContent>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for CmdlineBlockAppend {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = CmdlineBlockAppend;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid CmdlineBlockAppend")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = CmdlineBlockAppend {
+                    lines: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WildmenuShow {
     pub items: Vec<rmpv::Value>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WildmenuShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WildmenuShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WildmenuShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WildmenuShow {
+                    items: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WildmenuSelect {
     pub selected: i64,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for WildmenuSelect {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WildmenuSelect;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WildmenuSelect")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WildmenuSelect {
+                    selected: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgShow {
     pub kind: String,
     pub content: Vec<MsgShowContent>,
     pub replace_last: bool,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for MsgShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgShow {
+                    kind: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    content: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    replace_last: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgShowcmd {
     pub content: Vec<rmpv::Value>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for MsgShowcmd {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgShowcmd;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgShowcmd")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgShowcmd {
+                    content: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgShowmode {
     pub content: Vec<rmpv::Value>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for MsgShowmode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgShowmode;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgShowmode")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgShowmode {
+                    content: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgRuler {
     pub content: Vec<rmpv::Value>,
 }
-#[derive(Debug, serde :: Deserialize)]
+impl<'de> serde::Deserialize<'de> for MsgRuler {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgRuler;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgRuler")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgRuler {
+                    content: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct MsgHistoryShow {
     pub entries: Vec<MsgHistoryShowEntry>,
+}
+impl<'de> serde::Deserialize<'de> for MsgHistoryShow {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = MsgHistoryShow;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid MsgHistoryShow")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = MsgHistoryShow {
+                    entries: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
 }
 #[derive(Debug)]
 pub enum UiEvent {
@@ -398,371 +1745,147 @@ impl Display for UiEvent {
         }
     }
 }
+macro_rules! seq_to_vec {
+    ($ seq : expr) => {{
+        let mut v = Vec::with_capacity($seq.size_hint().unwrap_or(0));
+        while let Some(evt) = $seq.next_element()? {
+            v.push(evt);
+        }
+        v
+    }};
+}
 impl<'de> serde::Deserialize<'de> for UiEvent {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let redraw = rmpv::Value::deserialize(d)?;
-        let name = redraw[0].as_str();
-        let params = redraw.as_array().and_then(|v| {
-            if v[1].as_array().map(|v| v.is_empty()) == Some(true) {
-                None
-            } else {
-                Some(v[1..].to_vec())
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UiEvent;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid UiEvent")
             }
-        });
-        Ok(match (name, params) {
-            (Some("mode_info_set"), Some(params)) => UiEvent::ModeInfoSet({
-                params
-                    .into_iter()
-                    .map(ModeInfoSet::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("update_menu"), None) => UiEvent::UpdateMenu,
-            (Some("busy_start"), None) => UiEvent::BusyStart,
-            (Some("busy_stop"), None) => UiEvent::BusyStop,
-            (Some("mouse_on"), None) => UiEvent::MouseOn,
-            (Some("mouse_off"), None) => UiEvent::MouseOff,
-            (Some("mode_change"), Some(params)) => UiEvent::ModeChange({
-                params
-                    .into_iter()
-                    .map(ModeChange::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("bell"), None) => UiEvent::Bell,
-            (Some("visual_bell"), None) => UiEvent::VisualBell,
-            (Some("flush"), None) => UiEvent::Flush,
-            (Some("suspend"), None) => UiEvent::Suspend,
-            (Some("set_title"), Some(params)) => UiEvent::SetTitle({
-                params
-                    .into_iter()
-                    .map(SetTitle::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("set_icon"), Some(params)) => UiEvent::SetIcon({
-                params
-                    .into_iter()
-                    .map(SetIcon::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("screenshot"), Some(params)) => UiEvent::Screenshot({
-                params
-                    .into_iter()
-                    .map(Screenshot::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("option_set"), Some(params)) => UiEvent::OptionSet({
-                params
-                    .into_iter()
-                    .map(OptionSet::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("update_fg"), Some(params)) => UiEvent::UpdateFg({
-                params
-                    .into_iter()
-                    .map(UpdateFg::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("update_bg"), Some(params)) => UiEvent::UpdateBg({
-                params
-                    .into_iter()
-                    .map(UpdateBg::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("update_sp"), Some(params)) => UiEvent::UpdateSp({
-                params
-                    .into_iter()
-                    .map(UpdateSp::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("resize"), Some(params)) => UiEvent::Resize({
-                params
-                    .into_iter()
-                    .map(Resize::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("clear"), None) => UiEvent::Clear,
-            (Some("eol_clear"), None) => UiEvent::EolClear,
-            (Some("cursor_goto"), Some(params)) => UiEvent::CursorGoto({
-                params
-                    .into_iter()
-                    .map(CursorGoto::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("highlight_set"), Some(params)) => UiEvent::HighlightSet({
-                params
-                    .into_iter()
-                    .map(HighlightSet::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("put"), Some(params)) => UiEvent::Put({
-                params
-                    .into_iter()
-                    .map(Put::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("set_scroll_region"), Some(params)) => UiEvent::SetScrollRegion({
-                params
-                    .into_iter()
-                    .map(SetScrollRegion::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("scroll"), Some(params)) => UiEvent::Scroll({
-                params
-                    .into_iter()
-                    .map(Scroll::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("default_colors_set"), Some(params)) => UiEvent::DefaultColorsSet({
-                params
-                    .into_iter()
-                    .map(DefaultColorsSet::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("hl_attr_define"), Some(params)) => UiEvent::HlAttrDefine({
-                params
-                    .into_iter()
-                    .map(HlAttrDefine::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("hl_group_set"), Some(params)) => UiEvent::HlGroupSet({
-                params
-                    .into_iter()
-                    .map(HlGroupSet::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_resize"), Some(params)) => UiEvent::GridResize({
-                params
-                    .into_iter()
-                    .map(GridResize::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_clear"), Some(params)) => UiEvent::GridClear({
-                params
-                    .into_iter()
-                    .map(GridClear::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_cursor_goto"), Some(params)) => UiEvent::GridCursorGoto({
-                params
-                    .into_iter()
-                    .map(GridCursorGoto::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_line"), Some(params)) => UiEvent::GridLine({
-                params
-                    .into_iter()
-                    .map(GridLine::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_scroll"), Some(params)) => UiEvent::GridScroll({
-                params
-                    .into_iter()
-                    .map(GridScroll::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("grid_destroy"), Some(params)) => UiEvent::GridDestroy({
-                params
-                    .into_iter()
-                    .map(GridDestroy::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_pos"), Some(params)) => UiEvent::WinPos({
-                params
-                    .into_iter()
-                    .map(WinPos::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_float_pos"), Some(params)) => UiEvent::WinFloatPos({
-                params
-                    .into_iter()
-                    .map(WinFloatPos::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_external_pos"), Some(params)) => UiEvent::WinExternalPos({
-                params
-                    .into_iter()
-                    .map(WinExternalPos::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_hide"), Some(params)) => UiEvent::WinHide({
-                params
-                    .into_iter()
-                    .map(WinHide::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_close"), Some(params)) => UiEvent::WinClose({
-                params
-                    .into_iter()
-                    .map(WinClose::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_set_pos"), Some(params)) => UiEvent::MsgSetPos({
-                params
-                    .into_iter()
-                    .map(MsgSetPos::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_viewport"), Some(params)) => UiEvent::WinViewport({
-                params
-                    .into_iter()
-                    .map(WinViewport::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("win_extmark"), Some(params)) => UiEvent::WinExtmark({
-                params
-                    .into_iter()
-                    .map(WinExtmark::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("popupmenu_show"), Some(params)) => UiEvent::PopupmenuShow({
-                params
-                    .into_iter()
-                    .map(PopupmenuShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("popupmenu_hide"), None) => UiEvent::PopupmenuHide,
-            (Some("popupmenu_select"), Some(params)) => UiEvent::PopupmenuSelect({
-                params
-                    .into_iter()
-                    .map(PopupmenuSelect::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("tabline_update"), Some(params)) => UiEvent::TablineUpdate({
-                params
-                    .into_iter()
-                    .map(TablineUpdate::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_show"), Some(params)) => UiEvent::CmdlineShow({
-                params
-                    .into_iter()
-                    .map(CmdlineShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_pos"), Some(params)) => UiEvent::CmdlinePos({
-                params
-                    .into_iter()
-                    .map(CmdlinePos::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_special_char"), Some(params)) => UiEvent::CmdlineSpecialChar({
-                params
-                    .into_iter()
-                    .map(CmdlineSpecialChar::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_hide"), Some(params)) => UiEvent::CmdlineHide({
-                params
-                    .into_iter()
-                    .map(CmdlineHide::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_block_show"), Some(params)) => UiEvent::CmdlineBlockShow({
-                params
-                    .into_iter()
-                    .map(CmdlineBlockShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_block_append"), Some(params)) => UiEvent::CmdlineBlockAppend({
-                params
-                    .into_iter()
-                    .map(CmdlineBlockAppend::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("cmdline_block_hide"), None) => UiEvent::CmdlineBlockHide,
-            (Some("wildmenu_show"), Some(params)) => UiEvent::WildmenuShow({
-                params
-                    .into_iter()
-                    .map(WildmenuShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("wildmenu_select"), Some(params)) => UiEvent::WildmenuSelect({
-                params
-                    .into_iter()
-                    .map(WildmenuSelect::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("wildmenu_hide"), None) => UiEvent::WildmenuHide,
-            (Some("msg_show"), Some(params)) => UiEvent::MsgShow({
-                params
-                    .into_iter()
-                    .map(MsgShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_clear"), None) => UiEvent::MsgClear,
-            (Some("msg_showcmd"), Some(params)) => UiEvent::MsgShowcmd({
-                params
-                    .into_iter()
-                    .map(MsgShowcmd::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_showmode"), Some(params)) => UiEvent::MsgShowmode({
-                params
-                    .into_iter()
-                    .map(MsgShowmode::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_ruler"), Some(params)) => UiEvent::MsgRuler({
-                params
-                    .into_iter()
-                    .map(MsgRuler::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_history_show"), Some(params)) => UiEvent::MsgHistoryShow({
-                params
-                    .into_iter()
-                    .map(MsgHistoryShow::deserialize)
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(serde::de::Error::custom)?
-            }),
-            (Some("msg_history_clear"), None) => UiEvent::MsgHistoryClear,
-            v => panic!("failed to decode message {:?}", v),
-        })
+            fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::SeqAccess<'de>,
+            {
+                let name = seq
+                    .next_element::<String>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+                Ok(match name.as_str() {
+                    "mode_info_set" => UiEvent::ModeInfoSet(seq_to_vec!(seq)),
+                    "update_menu" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::UpdateMenu
+                    }
+                    "busy_start" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::BusyStart
+                    }
+                    "busy_stop" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::BusyStop
+                    }
+                    "mouse_on" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::MouseOn
+                    }
+                    "mouse_off" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::MouseOff
+                    }
+                    "mode_change" => UiEvent::ModeChange(seq_to_vec!(seq)),
+                    "bell" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::Bell
+                    }
+                    "visual_bell" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::VisualBell
+                    }
+                    "flush" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::Flush
+                    }
+                    "suspend" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::Suspend
+                    }
+                    "set_title" => UiEvent::SetTitle(seq_to_vec!(seq)),
+                    "set_icon" => UiEvent::SetIcon(seq_to_vec!(seq)),
+                    "screenshot" => UiEvent::Screenshot(seq_to_vec!(seq)),
+                    "option_set" => UiEvent::OptionSet(seq_to_vec!(seq)),
+                    "update_fg" => UiEvent::UpdateFg(seq_to_vec!(seq)),
+                    "update_bg" => UiEvent::UpdateBg(seq_to_vec!(seq)),
+                    "update_sp" => UiEvent::UpdateSp(seq_to_vec!(seq)),
+                    "resize" => UiEvent::Resize(seq_to_vec!(seq)),
+                    "clear" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::Clear
+                    }
+                    "eol_clear" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::EolClear
+                    }
+                    "cursor_goto" => UiEvent::CursorGoto(seq_to_vec!(seq)),
+                    "highlight_set" => UiEvent::HighlightSet(seq_to_vec!(seq)),
+                    "put" => UiEvent::Put(seq_to_vec!(seq)),
+                    "set_scroll_region" => UiEvent::SetScrollRegion(seq_to_vec!(seq)),
+                    "scroll" => UiEvent::Scroll(seq_to_vec!(seq)),
+                    "default_colors_set" => UiEvent::DefaultColorsSet(seq_to_vec!(seq)),
+                    "hl_attr_define" => UiEvent::HlAttrDefine(seq_to_vec!(seq)),
+                    "hl_group_set" => UiEvent::HlGroupSet(seq_to_vec!(seq)),
+                    "grid_resize" => UiEvent::GridResize(seq_to_vec!(seq)),
+                    "grid_clear" => UiEvent::GridClear(seq_to_vec!(seq)),
+                    "grid_cursor_goto" => UiEvent::GridCursorGoto(seq_to_vec!(seq)),
+                    "grid_line" => UiEvent::GridLine(seq_to_vec!(seq)),
+                    "grid_scroll" => UiEvent::GridScroll(seq_to_vec!(seq)),
+                    "grid_destroy" => UiEvent::GridDestroy(seq_to_vec!(seq)),
+                    "win_pos" => UiEvent::WinPos(seq_to_vec!(seq)),
+                    "win_float_pos" => UiEvent::WinFloatPos(seq_to_vec!(seq)),
+                    "win_external_pos" => UiEvent::WinExternalPos(seq_to_vec!(seq)),
+                    "win_hide" => UiEvent::WinHide(seq_to_vec!(seq)),
+                    "win_close" => UiEvent::WinClose(seq_to_vec!(seq)),
+                    "msg_set_pos" => UiEvent::MsgSetPos(seq_to_vec!(seq)),
+                    "win_viewport" => UiEvent::WinViewport(seq_to_vec!(seq)),
+                    "win_extmark" => UiEvent::WinExtmark(seq_to_vec!(seq)),
+                    "popupmenu_show" => UiEvent::PopupmenuShow(seq_to_vec!(seq)),
+                    "popupmenu_hide" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::PopupmenuHide
+                    }
+                    "popupmenu_select" => UiEvent::PopupmenuSelect(seq_to_vec!(seq)),
+                    "tabline_update" => UiEvent::TablineUpdate(seq_to_vec!(seq)),
+                    "cmdline_show" => UiEvent::CmdlineShow(seq_to_vec!(seq)),
+                    "cmdline_pos" => UiEvent::CmdlinePos(seq_to_vec!(seq)),
+                    "cmdline_special_char" => UiEvent::CmdlineSpecialChar(seq_to_vec!(seq)),
+                    "cmdline_hide" => UiEvent::CmdlineHide(seq_to_vec!(seq)),
+                    "cmdline_block_show" => UiEvent::CmdlineBlockShow(seq_to_vec!(seq)),
+                    "cmdline_block_append" => UiEvent::CmdlineBlockAppend(seq_to_vec!(seq)),
+                    "cmdline_block_hide" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::CmdlineBlockHide
+                    }
+                    "wildmenu_show" => UiEvent::WildmenuShow(seq_to_vec!(seq)),
+                    "wildmenu_select" => UiEvent::WildmenuSelect(seq_to_vec!(seq)),
+                    "wildmenu_hide" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::WildmenuHide
+                    }
+                    "msg_show" => UiEvent::MsgShow(seq_to_vec!(seq)),
+                    "msg_clear" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::MsgClear
+                    }
+                    "msg_showcmd" => UiEvent::MsgShowcmd(seq_to_vec!(seq)),
+                    "msg_showmode" => UiEvent::MsgShowmode(seq_to_vec!(seq)),
+                    "msg_ruler" => UiEvent::MsgRuler(seq_to_vec!(seq)),
+                    "msg_history_show" => UiEvent::MsgHistoryShow(seq_to_vec!(seq)),
+                    "msg_history_clear" => {
+                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+                        UiEvent::MsgHistoryClear
+                    }
+                    v => panic!("failed to decode message {:?}", v),
+                })
+            }
+        }
+        d.deserialize_seq(Visitor)
     }
 }
