@@ -138,10 +138,10 @@ impl Cmdline {
         self.imp().block.hide();
     }
 
-    pub fn popupmenu_show(&self, event: PopupmenuShow) {
+    pub fn popupmenu_show(&self, event: PopupmenuShow, colors: &Colors) {
         let imp = self.imp();
 
-        imp.popupmenu.set_items(event.items);
+        imp.popupmenu.set_items(event.items, colors);
         imp.popupmenu.set_visible(true);
     }
 

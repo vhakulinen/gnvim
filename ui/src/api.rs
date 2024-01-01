@@ -19,6 +19,7 @@ pub enum GnvimEvent {
     CursorPositionTransition(f64),
     ScrollTransition(f64),
     MessageKinds(MessageKinds),
+    Popupmenu(Popupmenu),
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -39,4 +40,18 @@ pub struct MessageKinds {
 pub struct MessageKind {
     pub label: String,
     pub hl_attr: Option<colors::HlAttr>,
+}
+
+#[derive(Debug, serde::Deserialize, Default)]
+#[serde(crate = "nvim::serde")]
+pub struct Popupmenu {
+    pub kinds: HashMap<String, PopupmenuKind>,
+}
+
+#[derive(Debug, serde::Deserialize, Default)]
+#[serde(crate = "nvim::serde")]
+pub struct PopupmenuKind {
+    pub label: String,
+    pub hl_attr: Option<colors::HlAttr>,
+    pub hl_attr_sel: Option<colors::HlAttr>,
 }

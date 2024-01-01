@@ -57,4 +57,8 @@ function M.set_message_kinds(kinds)
   M.notify('message_kinds', kinds)
 end
 
+function M.set_popupmenu(kinds)
+  M.notify('popupmenu', kinds)
+end
+
 return M

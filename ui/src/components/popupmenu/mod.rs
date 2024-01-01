@@ -4,6 +4,7 @@ use nvim::NeovimApi;
 
 mod imp;
 mod model;
+mod object;
 mod row;
 
 pub use model::Model;
@@ -11,7 +12,11 @@ pub use model::Model;
 use nvim::types::PopupmenuItem;
 use row::Row;
 
-use crate::{nvim::Neovim, spawn_local, SCALE};
+use crate::{colors::Colors, nvim::Neovim, spawn_local, SCALE};
+
+pub use imp::Kinds;
+
+use self::object::PopupmenuObject;
 
 glib::wrapper! {
     pub struct Popupmenu(ObjectSubclass<imp::Popupmenu>)
@@ -20,12 +25,13 @@ glib::wrapper! {
 }
 
 impl Popupmenu {
-    pub fn set_items(&self, items: Vec<PopupmenuItem>) {
+    pub fn set_items(&self, items: Vec<PopupmenuItem>, colors: &Colors) {
         let imp = self.imp();
 
+        let kinds = self.kinds();
         let items = items
             .into_iter()
-            .map(glib::BoxedAnyObject::new)
+            .map(|item| PopupmenuObject::new(&item, colors, &kinds))
             .collect::<Vec<_>>();
 
         imp.store.set_items(items);

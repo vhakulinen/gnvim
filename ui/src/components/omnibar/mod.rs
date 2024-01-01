@@ -61,8 +61,8 @@ impl Omnibar {
         self.imp().cmdline.set_linespace(space);
     }
 
-    pub fn handle_popupmenu_show(&self, event: PopupmenuShow) {
-        self.imp().cmdline.popupmenu_show(event);
+    pub fn handle_popupmenu_show(&self, event: PopupmenuShow, colors: &Colors) {
+        self.imp().cmdline.popupmenu_show(event, colors);
     }
 
     pub fn cmdline_popupmenu_visible(&self) -> bool {

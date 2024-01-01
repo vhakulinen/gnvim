@@ -25,7 +25,7 @@ use nvim::rpc::{message::Notification, RpcReader};
 use crate::api::GnvimEvent;
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, Highlight, HlGroup};
-use crate::components::{Messages, Omnibar, Overflower, Shell, Tabline};
+use crate::components::{popupmenu, Messages, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
@@ -56,6 +56,8 @@ pub struct AppWindow {
     nvim: Neovim,
 
     colors: RefCell<Colors>,
+    #[property(get, set)]
+    popupmenu_kinds: RefCell<popupmenu::Kinds>,
 
     #[property(get, set)]
     font: RefCell<Font>,
@@ -157,9 +159,11 @@ impl AppWindow {
 
     fn handle_popupmenu_show(&self, event: PopupmenuShow) {
         if event.grid == -1 {
-            self.omnibar.handle_popupmenu_show(event)
+            self.omnibar
+                .handle_popupmenu_show(event, &self.colors.borrow())
         } else {
-            self.shell.handle_popupmenu_show(event)
+            self.shell
+                .handle_popupmenu_show(event, &self.colors.borrow())
         }
     }
 
@@ -212,6 +216,9 @@ impl AppWindow {
                 self.messages.set_kinds(event.kinds);
                 self.css_on_flush.set(true);
             }
+            GnvimEvent::Popupmenu(event) => self
+                .obj()
+                .set_popupmenu_kinds(popupmenu::Kinds::from(event.kinds)),
         }
     }
 

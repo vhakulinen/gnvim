@@ -32,3 +32,25 @@ Gnvim animates the grid scrolling. The scroll speed can be adjusted through
     require('gnvim').set_scroll_transition(300)
 <
 Setting the transition to 0 effectively disables the animation.
+
+================================================================================
+Popupmenu                                                         *gnvim-pmenu*
+                                                              *gnvim-popupmenu*
+
+Gnvim's popupmenu has support to configure the `kind` label (i.e. map `kind` to
+some label & change its color) through `set_popupmenu`: >
+
+    require('gnvim').set_popupmenu({
+      kinds = {
+        -- Map kind "Event" to given label.
+        Event = { label = " Event" },
+        -- Map kind "File" to given label and provied non-default highlights.
+        -- The "sel" variant for a selected item.
+        File = {
+            label = "󰈙 File",
+            hl_attr = vim.api.nvim_get_hl(0, "SomeColor"),
+            hl_attr_sel = vim.api.nvim_get_hl(0, "SomeColorSel"),
+        },
+      }
+    })
+<

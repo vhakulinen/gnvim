@@ -1,6 +1,8 @@
 use glib::{clone, subclass::prelude::*};
 use gtk::{gio, prelude::*};
 
+use super::object::PopupmenuObject;
+
 mod imp;
 
 glib::wrapper! {
@@ -44,7 +46,7 @@ impl Model {
         }
     }
 
-    pub fn set_items(&self, items: Vec<glib::BoxedAnyObject>) {
+    pub fn set_items(&self, items: Vec<PopupmenuObject>) {
         let imp = self.imp();
 
         let mut lazy = imp.lazy.borrow_mut();

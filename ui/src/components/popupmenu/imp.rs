@@ -1,4 +1,9 @@
-use std::cell::{Cell, RefCell};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    ops::Deref,
+    rc::Rc,
+};
 
 use gtk::{
     glib::{self, clone, subclass::InitializingObject},
@@ -6,9 +11,27 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::font::Font;
+use crate::{api::PopupmenuKind, font::Font};
 
-use super::Row;
+use super::{object::PopupmenuObject, Row};
+
+#[derive(Debug, Clone, Default, glib::Boxed)]
+#[boxed_type(name = "PopupmenuKinds")]
+pub struct Kinds(Rc<HashMap<String, PopupmenuKind>>);
+
+impl Deref for Kinds {
+    type Target = Rc<HashMap<String, PopupmenuKind>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<HashMap<String, PopupmenuKind>> for Kinds {
+    fn from(value: HashMap<String, PopupmenuKind>) -> Self {
+        Self(Rc::new(value))
+    }
+}
 
 #[derive(gtk::CompositeTemplate, glib::Properties, Default)]
 #[properties(wrapper_type = super::Popupmenu)]
@@ -18,6 +41,9 @@ pub struct Popupmenu {
     pub scrolledwindow: TemplateChild<gtk::ScrolledWindow>,
     #[template_child(id = "list-view")]
     pub listview: TemplateChild<gtk::ListView>,
+
+    #[property(get, set)]
+    pub kinds: RefCell<Kinds>,
 
     #[property(get, set)]
     pub max_height: Cell<i32>,
@@ -67,7 +93,7 @@ impl ObjectImpl for Popupmenu {
             let item = listitem
                 .item()
                 .expect("failed to get item from listitem")
-                .downcast::<glib::BoxedAnyObject>()
+                .downcast::<PopupmenuObject>()
                 .expect("unexpected item type");
 
             let row = listitem
@@ -76,7 +102,16 @@ impl ObjectImpl for Popupmenu {
                 .downcast::<Row>()
                 .expect("unexpected child type");
 
-            row.set_item(&item.borrow());
+            item.bind_to(&row);
+        });
+
+        factory.connect_unbind(|_, listitem| {
+            listitem
+                .item()
+                .expect("failed to get item from listitem")
+                .downcast::<PopupmenuObject>()
+                .expect("unexpected item type")
+                .unbind();
         });
 
         self.listview.set_model(Some(&self.store));

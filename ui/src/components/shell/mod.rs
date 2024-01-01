@@ -339,10 +339,10 @@ impl Shell {
         }
     }
 
-    pub fn handle_popupmenu_show(&self, event: PopupmenuShow) {
+    pub fn handle_popupmenu_show(&self, event: PopupmenuShow, colors: &Colors) {
         let imp = self.imp();
 
-        imp.popupmenu.set_items(event.items);
+        imp.popupmenu.set_items(event.items, colors);
         imp.popupmenu.select(event.selected);
 
         self.set_pmenu_row(event.row);

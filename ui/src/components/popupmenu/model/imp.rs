@@ -2,14 +2,24 @@ use std::cell::{Cell, RefCell};
 
 use gtk::{gio, glib, prelude::*, subclass::prelude::*};
 
+use crate::components::popupmenu::object::PopupmenuObject;
+
 #[derive(Default)]
 pub struct Model {
-    pub items: RefCell<Vec<glib::BoxedAnyObject>>,
-    pub to_add: RefCell<Vec<glib::BoxedAnyObject>>,
+    pub items: RefCell<Vec<PopupmenuObject>>,
+    pub to_add: RefCell<Vec<PopupmenuObject>>,
     pub lazy: RefCell<Option<glib::SourceId>>,
 
     /// Item to select from the lazy loading operations.
     pub selected_item: Cell<Option<u32>>,
+}
+
+impl Model {
+    fn set_item_selected(&self, index: usize, selected: bool) {
+        if let Some(item) = self.items.borrow().get(index) {
+            item.set_selected(selected);
+        }
+    }
 }
 
 #[glib::object_subclass]
@@ -23,7 +33,7 @@ impl ObjectImpl for Model {}
 
 impl ListModelImpl for Model {
     fn item_type(&self) -> glib::Type {
-        glib::BoxedAnyObject::static_type()
+        PopupmenuObject::static_type()
     }
 
     fn n_items(&self) -> u32 {
@@ -41,6 +51,12 @@ impl ListModelImpl for Model {
 impl SelectionModelImpl for Model {
     fn select_item(&self, position: u32, _unselect_rest: bool) -> bool {
         let old = self.selected_item.replace(Some(position));
+
+        if let Some(old) = old {
+            self.set_item_selected(old as usize, false);
+        }
+        self.set_item_selected(position as usize, true);
+
         let model = self.obj();
         // NOTE(ville): We need to notify selection-changed on our old item too.
         model.do_selection_changed(old);
@@ -51,6 +67,9 @@ impl SelectionModelImpl for Model {
 
     fn unselect_all(&self) -> bool {
         let prev = self.selected_item.replace(None);
+        if let Some(prev) = prev {
+            self.set_item_selected(prev as usize, false);
+        }
         self.obj().do_selection_changed(prev);
         true
     }

@@ -38,7 +38,7 @@ pub struct Shell {
     #[template_child(id = "msg-win")]
     pub msg_win: TemplateChild<MsgWin>,
 
-    #[template_child(id = "popupmenu")]
+    #[template_child(id = "popupmenu", internal = true)]
     pub popupmenu: TemplateChild<Popupmenu>,
 
     #[property(get, set)]

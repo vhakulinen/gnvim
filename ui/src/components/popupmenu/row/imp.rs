@@ -19,6 +19,11 @@ pub struct Row {
 
     #[property(set = Self::set_font)]
     pub font: RefCell<Font>,
+
+    #[property(get, set)]
+    pub word_label: RefCell<String>,
+    #[property(get, set)]
+    pub kind_markup: RefCell<String>,
 }
 
 impl Row {
