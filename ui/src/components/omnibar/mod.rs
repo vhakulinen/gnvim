@@ -1,4 +1,4 @@
-use gtk::{prelude::*, subclass::prelude::*};
+use gtk::subclass::prelude::*;
 use nvim::types::uievents::{
     CmdlineBlockAppend, CmdlineBlockShow, CmdlineHide, CmdlinePos, CmdlineShow, CmdlineSpecialChar,
     PopupmenuSelect, PopupmenuShow,
@@ -15,10 +15,6 @@ glib::wrapper! {
 }
 
 impl Omnibar {
-    pub fn set_max_height(&self, m: i32) {
-        self.set_property("max-height", m);
-    }
-
     pub fn handle_cmdline_show(&self, event: CmdlineShow, colors: &Colors) {
         let imp = self.imp();
 

@@ -2,15 +2,79 @@ use gtk::{glib::subclass::InitializingObject, prelude::*, subclass::prelude::*};
 
 use crate::{child_iter::IterChildren, components::Cmdline};
 
-#[derive(gtk::CompositeTemplate, Default)]
+#[derive(gtk::CompositeTemplate, Default, glib::Properties)]
+#[properties(wrapper_type = super::Omnibar)]
 #[template(resource = "/com/github/vhakulinen/gnvim/omnibar.ui")]
 pub struct Omnibar {
+    #[property(
+        name = "title",
+        type = glib::GString,
+        get = Self::get_title,
+        set = Self::set_title,
+    )]
+    #[property(
+        name = "title-height",
+        type = i32,
+        get = Self::get_title_height,
+    )]
+    #[property(
+        name = "max-height",
+        type = i32,
+        get = Self::get_max_height,
+        set = Self::set_max_height,
+    )]
     #[template_child(id = "title")]
     pub title: TemplateChild<gtk::Label>,
     #[template_child(id = "cmdline-revealer")]
     pub cmdline_revealer: TemplateChild<gtk::Revealer>,
     #[template_child(id = "cmdline")]
     pub cmdline: TemplateChild<Cmdline>,
+}
+
+impl Omnibar {
+    fn get_title(&self) -> glib::GString {
+        self.title.label()
+    }
+
+    fn set_title(&self, title: glib::GString) {
+        self.title.set_label(&title);
+    }
+
+    fn get_title_height(&self) -> i32 {
+        let h = self.title.preferred_size().1.height();
+
+        let style_ctx = self.obj().style_context();
+        let border = style_ctx.border();
+        let margin = style_ctx.margin();
+
+        // Add our border and margin sizes to the height.
+        let h = h
+            + border.top() as i32
+            + border.bottom() as i32
+            + margin.top() as i32
+            + margin.bottom() as i32;
+
+        h
+    }
+
+    fn get_max_height(&self) -> i32 {
+        self.cmdline.max_height()
+    }
+
+    fn set_max_height(&self, h: i32) {
+        let style_ctx = self.obj().style_context();
+        let border = style_ctx.border();
+        let margin = style_ctx.margin();
+
+        // Remove our border and margin.
+        let h = h
+            - border.top() as i32
+            - border.bottom() as i32
+            - margin.top() as i32
+            - margin.bottom() as i32;
+
+        self.cmdline.set_max_height(h);
+    }
 }
 
 #[glib::object_subclass]
@@ -32,76 +96,8 @@ impl ObjectSubclass for Omnibar {
     }
 }
 
-impl ObjectImpl for Omnibar {
-    fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecString::builder("title")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecInt::builder("title-height")
-                    .flags(glib::ParamFlags::READABLE)
-                    .build(),
-                glib::ParamSpecInt::builder("max-height")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-            ]
-        });
-
-        PROPERTIES.as_ref()
-    }
-
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "title" => self.title.label().to_value(),
-            "max-height" => self.cmdline.max_height().to_value(),
-            "title-height" => {
-                let h = self.title.preferred_size().1.height();
-
-                let style_ctx = self.obj().style_context();
-                let border = style_ctx.border();
-                let margin = style_ctx.margin();
-
-                // Add our border and margin sizes to the height.
-                let h = h
-                    + border.top() as i32
-                    + border.bottom() as i32
-                    + margin.top() as i32
-                    + margin.bottom() as i32;
-
-                h.to_value()
-            }
-            _ => unimplemented!(),
-        }
-    }
-
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "title" => {
-                self.title
-                    .set_label(value.get().expect("label must be a string"));
-            }
-            "max-height" => {
-                let h: i32 = value.get().expect("max-height must be a i32");
-
-                let style_ctx = self.obj().style_context();
-                let border = style_ctx.border();
-                let margin = style_ctx.margin();
-
-                // Remove our border and margin.
-                let h = h
-                    - border.top() as i32
-                    - border.bottom() as i32
-                    - margin.top() as i32
-                    - margin.bottom() as i32;
-
-                self.cmdline.set_max_height(h);
-            }
-            _ => unimplemented!(),
-        };
-    }
-}
+#[glib::derived_properties]
+impl ObjectImpl for Omnibar {}
 
 impl WidgetImpl for Omnibar {
     fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
