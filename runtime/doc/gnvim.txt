@@ -9,26 +9,45 @@
 
 
 ================================================================================
+Setup                                                             *gnvim-setup*
+
+You can optionally change some of gnvim's settings through a setup call.
+
+Example:
+>lua
+    require('gnvim').setup({
+        cursor = {
+            blink_transition = 300
+        }
+    })
+<
+
+The available settings for setup (excluding the gnvim-setup prefix):
+
+                                                           *gnvim-setup.cursor*
+*gnvim-setup.cursor.blink_transition*
+Transition time between `guicursor` states, in milliseconds.
+
+*gnvim-setup.cursor.position_transition*
+Transition time between cursor positions, in milliseconds
+
+*gnvim-setup.scroll_transition*
+Transition time for the grid scroll animation.
+
+
+================================================================================
 Cursor                                                           *gnvim-cursor*
 
 Gnvim's cursors respects neovim's blink options through 'guicursor'. In
-addition to blink wait, on and off, gnvim has cursor transition state which
-defines the time it takes to transition from one state to another. This can
-be set through `set_cursor_blink_transition`: >
+addition to blink wait, on and off, gnvim has cursor transition for:
 
-    require('gnvim').set_cursor_blink_transition(100)
-<
-The blink transition is in milliseconds.
+  - position change
+  - state change (i.e. blinking)
 
-Additionally, the cursors position change is also animated. The speed of this
-can be set through `set_cursor_position_transition`.
+These can be adjusted through `gnvim-setup.cursor`
 
 ================================================================================
 Scrolling                                                        *gnvim-scroll*
 
 Gnvim animates the grid scrolling. The scroll speed can be adjusted through
-`set_scroll_transition`: >
-
-    require('gnvim').set_scroll_transition(300)
-<
-Setting the transition to 0 effectively disables the animation.
+`gnvim-setup.scroll_transition`.

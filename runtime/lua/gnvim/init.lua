@@ -41,16 +41,8 @@ function M.gtk_debugger()
   M.notify('gtk_debugger')
 end
 
-function M.set_cursor_blink_transition(t)
-  M.notify('cursor_blink_transition', t)
-end
-
-function M.set_cursor_position_transition(t)
-  M.notify('cursor_position_transition', t)
-end
-
-function M.set_scroll_transition(t)
-  M.notify('scroll_transition', t)
+function M.setup(opts)
+  M.notify('setup', opts)
 end
 
 return M

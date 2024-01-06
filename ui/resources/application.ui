@@ -84,9 +84,24 @@
                             bind-property="nvim"
                             bind-flags="sync-create"
                             />
-                        <property name="cursor-blink-transition">160</property>
-                        <property name="cursor-position-transition">150</property>
-                        <property name="scroll-transition">300</property>
+                        <property
+                            name="cursor-blink-transition"
+                            bind-source="AppWindow"
+                            bind-property="cursor-blink-transition"
+                            bind-flags="sync-create"
+                            />
+                        <property
+                            name="cursor-position-transition"
+                            bind-source="AppWindow"
+                            bind-property="cursor-position-transition"
+                            bind-flags="sync-create"
+                            />
+                        <property
+                            name="scroll-transition"
+                            bind-source="AppWindow"
+                            bind-property="scroll-transition"
+                            bind-flags="sync-create"
+                            />
                     </object>
                 </child>
             </object>

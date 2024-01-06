@@ -1,3 +1,8 @@
 gnvim	gnvim.txt	/*gnvim*
 gnvim-cursor	gnvim.txt	/*gnvim-cursor*
 gnvim-scroll	gnvim.txt	/*gnvim-scroll*
+gnvim-setup	gnvim.txt	/*gnvim-setup*
+gnvim-setup.cursor	gnvim.txt	/*gnvim-setup.cursor*
+gnvim-setup.cursor.blink_transition	gnvim.txt	/*gnvim-setup.cursor.blink_transition*
+gnvim-setup.cursor.position_transition	gnvim.txt	/*gnvim-setup.cursor.position_transition*
+gnvim-setup.scroll_transition	gnvim.txt	/*gnvim-setup.scroll_transition*

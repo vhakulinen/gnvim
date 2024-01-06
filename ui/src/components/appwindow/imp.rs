@@ -20,7 +20,7 @@ use gtk::{
 
 use nvim::rpc::{message::Notification, RpcReader};
 
-use crate::api::GnvimEvent;
+use crate::api::{self, GnvimEvent};
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::{Omnibar, Overflower, Shell, Tabline};
@@ -28,6 +28,12 @@ use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
 use crate::{arguments::Arguments, spawn_local, SCALE};
+
+#[derive(Default)]
+struct CursorOpts {
+    blink_transition: api::CursorBlinkTransition,
+    position_transition: api::CursorPositionTransition,
+}
 
 #[derive(CompositeTemplate, Default, glib::Properties)]
 #[properties(wrapper_type = super::AppWindow)]
@@ -45,6 +51,24 @@ pub struct AppWindow {
     omnibar: TemplateChild<Omnibar>,
 
     css_provider: gtk::CssProvider,
+
+    #[property(
+        name = "cursor-position-transition",
+        get, set,
+        member = position_transition,
+        type = f64,
+        minimum = 0.0
+    )]
+    #[property(
+        name = "cursor-blink-transition",
+        get, set,
+        member = blink_transition,
+        type = f64,
+        minimum = 0.0
+    )]
+    cursor_opts: RefCell<CursorOpts>,
+    #[property(get, set, type = f64, minimum = 0.0)]
+    scroll_transition: RefCell<api::ScrollTransition>,
 
     #[property(get, set, construct_only)]
     args: RefCell<Arguments>,
@@ -192,14 +216,11 @@ impl AppWindow {
             GnvimEvent::GtkDebugger => {
                 self.enable_debugging(true);
             }
-            GnvimEvent::CursorBlinkTransition(t) => {
-                self.shell.set_cursor_blink_transition(t);
-            }
-            GnvimEvent::CursorPositionTransition(t) => {
-                self.shell.set_cursor_position_transition(t);
-            }
-            GnvimEvent::ScrollTransition(t) => {
-                self.shell.set_scroll_transition(t);
+            GnvimEvent::Setup(event) => {
+                let obj = self.obj();
+                obj.set_cursor_position_transition(event.cursor.position_transition.max(0.0));
+                obj.set_cursor_blink_transition(event.cursor.blink_transition.max(0.0));
+                obj.set_scroll_transition(event.scroll_transition.max(0.0));
             }
         }
     }
