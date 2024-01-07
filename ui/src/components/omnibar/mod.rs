@@ -6,6 +6,8 @@ use nvim::types::uievents::{
 
 use crate::colors::Colors;
 
+use super::popupmenu;
+
 mod imp;
 
 glib::wrapper! {
@@ -57,8 +59,13 @@ impl Omnibar {
         self.imp().cmdline.set_linespace(space);
     }
 
-    pub fn handle_popupmenu_show(&self, event: PopupmenuShow) {
-        self.imp().cmdline.popupmenu_show(event);
+    pub fn handle_popupmenu_show(
+        &self,
+        event: PopupmenuShow,
+        colors: &Colors,
+        kinds: &mut popupmenu::Kinds,
+    ) {
+        self.imp().cmdline.popupmenu_show(event, colors, kinds);
     }
 
     pub fn cmdline_popupmenu_visible(&self) -> bool {

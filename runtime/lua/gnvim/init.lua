@@ -1,4 +1,4 @@
-local M = {}
+local M = { popupmenu = {} }
 
 function M.find_gnvim_chans()
   local nvim_chans = {}
@@ -43,6 +43,31 @@ end
 
 function M.setup(opts)
   M.notify('setup', opts)
+end
+
+function M.popupmenu.kind(label, hl)
+  local adapt = function(hl, normal)
+    local attrs = vim.api.nvim_get_hl(0, { name = hl })
+    local bg
+    if normal then
+        bg = vim.api.nvim_get_hl(0, { name = "Pmenu" }).bg
+    else
+        bg = vim.api.nvim_get_hl(0, { name = "PmenuSel" }).bg
+    end
+
+    return {
+      fg = attrs.fg,
+      bg = bg,
+      italic = attrs.italic,
+      bold = attrs.bold,
+    }
+  end
+
+  return {
+    label = label,
+    hl = adapt(hl, true),
+    sel_hl = adapt(hl, false),
+  }
 end
 
 return M

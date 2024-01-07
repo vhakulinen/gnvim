@@ -11,7 +11,7 @@ use nvim::NeovimApi;
 
 use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
 
-use super::Grid;
+use super::{popupmenu, Grid};
 
 #[macro_export]
 macro_rules! find_grid_or_return {
@@ -339,10 +339,15 @@ impl Shell {
         }
     }
 
-    pub fn handle_popupmenu_show(&self, event: PopupmenuShow) {
+    pub fn handle_popupmenu_show(
+        &self,
+        event: PopupmenuShow,
+        colors: &Colors,
+        kinds: &mut popupmenu::Kinds,
+    ) {
         let imp = self.imp();
 
-        imp.popupmenu.set_items(event.items);
+        imp.popupmenu.set_items(event.items, colors, kinds);
         imp.popupmenu.select(event.selected);
 
         self.set_pmenu_row(event.row);

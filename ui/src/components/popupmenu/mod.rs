@@ -3,15 +3,19 @@ use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::NeovimApi;
 
 mod imp;
+mod kind;
 mod model;
+mod object;
 mod row;
 
+pub use kind::{Kind, Kinds};
 pub use model::Model;
+pub use object::PopupmenuObject;
 
 use nvim::types::PopupmenuItem;
 use row::Row;
 
-use crate::{nvim::Neovim, spawn_local, SCALE};
+use crate::{colors::Colors, nvim::Neovim, spawn_local, SCALE};
 
 glib::wrapper! {
     pub struct Popupmenu(ObjectSubclass<imp::Popupmenu>)
@@ -20,12 +24,12 @@ glib::wrapper! {
 }
 
 impl Popupmenu {
-    pub fn set_items(&self, items: Vec<PopupmenuItem>) {
+    pub fn set_items(&self, items: Vec<PopupmenuItem>, colors: &Colors, kinds: &mut Kinds) {
         let imp = self.imp();
 
         let items = items
-            .into_iter()
-            .map(glib::BoxedAnyObject::new)
+            .iter()
+            .map(|item| PopupmenuObject::new(item, colors, kinds))
             .collect::<Vec<_>>();
 
         imp.store.set_items(items);

@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{collections::HashMap, ops::Deref};
 
 use gtk::glib;
 use nvim::serde;
@@ -31,6 +31,23 @@ pub struct Setup {
     pub cursor: Cursor,
     #[serde(default)]
     pub scroll_transition: ScrollTransition,
+    #[serde(default)]
+    pub popupmenu: Popupmenu,
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
+pub struct Popupmenu {
+    #[serde(default)]
+    pub kinds: HashMap<String, PopupmenuKind>,
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
+pub struct PopupmenuKind {
+    pub label: Option<String>,
+    pub hl: Option<HlAttr>,
+    pub sel_hl: Option<HlAttr>,
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -40,6 +57,20 @@ pub struct Cursor {
     pub blink_transition: CursorBlinkTransition,
     #[serde(default)]
     pub position_transition: CursorPositionTransition,
+}
+
+/// Limited custom HlAttr that the gnvim API supports.
+#[derive(Debug, Default, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
+pub struct HlAttr {
+    #[serde(default)]
+    pub fg: Option<i64>,
+    #[serde(default)]
+    pub bg: Option<i64>,
+    #[serde(default)]
+    pub bold: Option<bool>,
+    #[serde(default)]
+    pub italic: Option<bool>,
 }
 
 macro_rules! defaulted_f64 {

@@ -2,6 +2,8 @@ use std::{collections::HashMap, ops::Deref};
 
 use gtk::gdk;
 
+use crate::api;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum HlGroup {
     MsgSeparator,
@@ -47,6 +49,10 @@ impl Colors {
             hl_attr,
         }
     }
+
+    pub fn get_hl_grpup_attr<'a>(&'a self, group: &HlGroup) -> Option<&'a HlAttr> {
+        self.hl_groups.get(group).and_then(|id| self.hls.get(id))
+    }
 }
 
 pub struct Highlight<'a> {
@@ -55,6 +61,10 @@ pub struct Highlight<'a> {
 }
 
 impl<'a> Highlight<'a> {
+    pub fn new(hl_attr: Option<&'a HlAttr>, colors: &'a Colors) -> Self {
+        Self { hl_attr, colors }
+    }
+
     pub fn fg(&self) -> &Color {
         if self.hl_attr.and_then(|hl| hl.reverse).unwrap_or(false) {
             self.hl_attr
@@ -144,7 +154,7 @@ impl<'a> Highlight<'a> {
 }
 
 /// Mapping from `nvim::HlAttr` that has the color fields converted to `Color`.
-#[derive(Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct HlAttr {
     pub foreground: Option<Color>,
     pub background: Option<Color>,
@@ -177,6 +187,18 @@ impl From<nvim::types::HlAttr> for HlAttr {
             underdot: from.underdotted,
             underdash: from.underdashed,
             blend: from.blend.map(From::from),
+        }
+    }
+}
+
+impl From<&api::HlAttr> for HlAttr {
+    fn from(from: &api::HlAttr) -> Self {
+        Self {
+            foreground: from.fg.map(From::from),
+            background: from.bg.map(From::from),
+            bold: from.bold,
+            italic: from.italic,
+            ..Default::default()
         }
     }
 }

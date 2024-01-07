@@ -34,6 +34,39 @@ Transition time between cursor positions, in milliseconds
 *gnvim-setup.scroll_transition*
 Transition time for the grid scroll animation.
 
+                                                        *gnvim-setup.popupmenu*
+*gnvim-setup.popupmenu.kinds*
+Map popupmenu item kinds to different labels and colors.
+
+Each key is a kind value (e.g. LSP completion item kind) and the value contains
+a label, hl (normal highlight) and sel_hl (selected higlight).
+
+The hl values can have the following fields:
+  - fg (number, defaults to Pmenu/PmenuSel)
+  - bg (number, defaults to Pmenu/PmenuSel)
+  - bold (boolean, defaults to false)
+  - italic (boolean, defaults to false)
+
+Example:
+>lua
+    popupmenu = {
+        kinds = {
+            Variable = {
+                label = "  Module",
+                hl = { fg = tonumber('FF00AA', 16) }
+                sel_hl = { fg = tonumber('FF00AA', 16) }
+            }
+        }
+    }
+<
+
+You can use `gnvim.popupmenu.kind` as a helper to define the kind items.
+>lua
+    kinds = {
+        Text = gnvim.popupmenu.kind(" Text", "@lsp.type.text"),
+    }
+>
+
 
 ================================================================================
 Cursor                                                           *gnvim-cursor*
@@ -51,3 +84,12 @@ Scrolling                                                        *gnvim-scroll*
 
 Gnvim animates the grid scrolling. The scroll speed can be adjusted through
 `gnvim-setup.scroll_transition`.
+
+================================================================================
+Popupmenu                                                     *gnvim-popupmenu*
+
+Gnvim's popupmenu has some support for customization, see |gnvim-setup.popupmenu|.
+
+The customization brings a limitation however: some of the popupmenu's colors
+are not automatically updated when the colorscheme changes. If this happens,
+you might call `gnvim-setup` again.

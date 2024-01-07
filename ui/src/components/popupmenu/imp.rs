@@ -6,9 +6,9 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::font::Font;
+use crate::{components::popupmenu::Kind, font::Font};
 
-use super::Row;
+use super::{PopupmenuObject, Row};
 
 #[derive(gtk::CompositeTemplate, glib::Properties, Default)]
 #[properties(wrapper_type = super::Popupmenu)]
@@ -60,24 +60,35 @@ impl ObjectImpl for Popupmenu {
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
 
+            // When the listitem is selected, adjust the `kind` value.
+            listitem.property_expression("selected")
+                .chain_closure::<String>(glib::closure!(|listitem: gtk::ListItem, selected: bool| {
+                    let f = listitem.property_expression("item")
+                        .chain_property::<PopupmenuObject>("kind")
+                        .chain_property::<Kind>(if selected {
+                            "selected"
+                        } else {
+                            "normal"
+                        })
+                    .evaluate_as::<String, gtk::ListItem>(Some(&listitem));
+
+                    f.unwrap_or("".to_owned())
+                }))
+                .bind(&item, "kind", Some(listitem));
+
+            // Default kind value.
+            listitem.property_expression("item")
+                .chain_property::<PopupmenuObject>("kind")
+                .chain_property::<Kind>("normal")
+                .bind(&item, "kind", Some(listitem));
+
+            // Word value.
+            listitem.property_expression("item")
+                .chain_property::<PopupmenuObject>("word")
+                .bind(&item, "word", Some(listitem));
+
             listitem.set_child(Some(&item));
         }));
-
-        factory.connect_bind(|_, listitem| {
-            let item = listitem
-                .item()
-                .expect("failed to get item from listitem")
-                .downcast::<glib::BoxedAnyObject>()
-                .expect("unexpected item type");
-
-            let row = listitem
-                .child()
-                .expect("failed to get child from listitem")
-                .downcast::<Row>()
-                .expect("unexpected child type");
-
-            row.set_item(&item.borrow());
-        });
 
         self.listview.set_model(Some(&self.store));
         self.listview.set_factory(Some(&factory));

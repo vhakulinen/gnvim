@@ -1,5 +1,4 @@
-use gtk::{glib, subclass::prelude::*};
-use nvim::types::PopupmenuItem;
+use gtk::glib;
 
 mod imp;
 
@@ -12,13 +11,6 @@ glib::wrapper! {
 impl Row {
     fn new() -> Self {
         glib::Object::new()
-    }
-
-    pub fn set_item(&self, item: &PopupmenuItem) {
-        let imp = self.imp();
-
-        imp.word.set_label(&item.word);
-        imp.kind.set_label(&item.kind);
     }
 }
 

@@ -2,10 +2,12 @@ use std::cell::{Cell, RefCell};
 
 use gtk::{gio, glib, prelude::*, subclass::prelude::*};
 
+use crate::components::popupmenu::PopupmenuObject;
+
 #[derive(Default)]
 pub struct Model {
-    pub items: RefCell<Vec<glib::BoxedAnyObject>>,
-    pub to_add: RefCell<Vec<glib::BoxedAnyObject>>,
+    pub items: RefCell<Vec<PopupmenuObject>>,
+    pub to_add: RefCell<Vec<PopupmenuObject>>,
     pub lazy: RefCell<Option<glib::SourceId>>,
 
     /// Item to select from the lazy loading operations.
@@ -23,7 +25,7 @@ impl ObjectImpl for Model {}
 
 impl ListModelImpl for Model {
     fn item_type(&self) -> glib::Type {
-        glib::BoxedAnyObject::static_type()
+        PopupmenuObject::static_type()
     }
 
     fn n_items(&self) -> u32 {

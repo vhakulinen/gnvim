@@ -23,7 +23,7 @@ use nvim::rpc::{message::Notification, RpcReader};
 use crate::api::{self, GnvimEvent};
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
-use crate::components::{Omnibar, Overflower, Shell, Tabline};
+use crate::components::{popupmenu, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
@@ -69,6 +69,8 @@ pub struct AppWindow {
     cursor_opts: RefCell<CursorOpts>,
     #[property(get, set, type = f64, minimum = 0.0)]
     scroll_transition: RefCell<api::ScrollTransition>,
+
+    popupmenu_kinds: RefCell<popupmenu::Kinds>,
 
     #[property(get, set, construct_only)]
     args: RefCell<Arguments>,
@@ -173,10 +175,14 @@ impl AppWindow {
     }
 
     fn handle_popupmenu_show(&self, event: PopupmenuShow) {
+        let mut kinds = self.popupmenu_kinds.borrow_mut();
+        let colors = self.colors.borrow();
+
         if event.grid == -1 {
-            self.omnibar.handle_popupmenu_show(event)
+            self.omnibar
+                .handle_popupmenu_show(event, &colors, &mut kinds)
         } else {
-            self.shell.handle_popupmenu_show(event)
+            self.shell.handle_popupmenu_show(event, &colors, &mut kinds)
         }
     }
 
@@ -221,6 +227,11 @@ impl AppWindow {
                 obj.set_cursor_position_transition(event.cursor.position_transition.max(0.0));
                 obj.set_cursor_blink_transition(event.cursor.blink_transition.max(0.0));
                 obj.set_scroll_transition(event.scroll_transition.max(0.0));
+
+                self.popupmenu_kinds.replace(popupmenu::Kinds::from_api(
+                    event.popupmenu.kinds,
+                    &self.colors.borrow(),
+                ));
             }
         }
     }

@@ -6,22 +6,35 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::{child_iter::IterChildren, font::Font, SCALE};
+use crate::{child_iter::IterChildren, components::popupmenu::PopupmenuObject, font::Font, SCALE};
 
 #[derive(gtk::CompositeTemplate, glib::Properties, Default)]
 #[properties(wrapper_type = super::Row)]
 #[template(resource = "/com/github/vhakulinen/gnvim/popupmenu_row.ui")]
 pub struct Row {
+    #[property(name = "word", set = Self::set_word, type = String)]
     #[template_child(id = "word")]
     pub word: TemplateChild<gtk::Label>,
+    #[property(name = "kind", set = Self::set_kind, type = String)]
     #[template_child(id = "kind")]
     pub kind: TemplateChild<gtk::Label>,
 
     #[property(set = Self::set_font)]
     pub font: RefCell<Font>,
+
+    #[property(get, set)]
+    object: RefCell<PopupmenuObject>,
 }
 
 impl Row {
+    fn set_word(&self, v: String) {
+        self.word.set_label(&v);
+    }
+
+    fn set_kind(&self, v: String) {
+        self.kind.set_label(&v);
+    }
+
     fn set_font(&self, font: Font) {
         let w = (font.char_width() / SCALE).ceil() as i32;
 

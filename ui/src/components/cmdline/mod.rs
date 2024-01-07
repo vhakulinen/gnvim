@@ -7,6 +7,8 @@ use nvim::types::uievents::{
 
 use crate::colors::Colors;
 
+use super::popupmenu;
+
 mod imp;
 
 glib::wrapper! {
@@ -138,10 +140,15 @@ impl Cmdline {
         self.imp().block.hide();
     }
 
-    pub fn popupmenu_show(&self, event: PopupmenuShow) {
+    pub fn popupmenu_show(
+        &self,
+        event: PopupmenuShow,
+        colors: &Colors,
+        kinds: &mut popupmenu::Kinds,
+    ) {
         let imp = self.imp();
 
-        imp.popupmenu.set_items(event.items);
+        imp.popupmenu.set_items(event.items, colors, kinds);
         imp.popupmenu.set_visible(true);
     }
 
