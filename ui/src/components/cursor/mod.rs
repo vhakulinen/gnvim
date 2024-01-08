@@ -1,6 +1,6 @@
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 
-use crate::{colors::Colors, math::ease_out_cubic, warn, SCALE};
+use crate::{colors::Colors, math::ease_out_cubic, some_or_return, warn, SCALE};
 
 use super::grid_buffer::row::Cell;
 
@@ -79,10 +79,8 @@ impl Cursor {
     fn move_to_transition(&self, col: i64, row: i64) {
         let imp = self.imp();
 
-        let start = self
-            .frame_clock()
-            .expect("failed to get frame clock")
-            .frame_time() as f64;
+        let start =
+            some_or_return!(self.frame_clock(), "failed to get frame clock").frame_time() as f64;
         if let Some(ref mut blink) = *imp.blink.borrow_mut() {
             blink.reset_to_wait(start);
         }
