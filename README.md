@@ -25,6 +25,10 @@ $ sudo make install
 More detailed instructions regarding gtk4 requirements, see the gtk-rs book's
 [instructions](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html)).
 
+# Documentation
+
+See `:h gnvim` and/or `runtime/doc/gnvim.txt`.
+
 # Development
 
 Gnvim comes with custom rpc client which uses code generation for generating

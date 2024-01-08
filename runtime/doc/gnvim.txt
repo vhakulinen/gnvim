@@ -15,10 +15,26 @@ You can optionally change some of gnvim's settings through a setup call.
 
 Example:
 >lua
-    require('gnvim').setup({
-        cursor = {
-            blink_transition = 300
-        }
+    local api = vim.api
+
+    -- Only setup gnvim when it attaches.
+    api.nvim_create_autocmd({'UIEnter'}, {
+      callback = function(event)
+        local chanid = vim.v.event['chan']
+        local chan = vim.api.nvim_get_chan_info(chanid)
+        if chan.client and chan.client.name ~= 'gnvim' then
+          return
+        end
+
+        -- Gnvim brings its own runtime files.
+        local gnvim = require('gnvim')
+
+        gnvim.setup({
+            cursor = {
+                blink_transition = 300
+            }
+        })
+      end
     })
 <
 
