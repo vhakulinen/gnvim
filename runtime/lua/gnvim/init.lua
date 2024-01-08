@@ -45,6 +45,14 @@ function M.setup(opts)
   M.notify('setup', opts)
 end
 
+--- Adjust the font size.
+---
+---@param increment Increment for font size. Positive to increase, negative to
+---                 decrease
+function M.font_size(increment)
+  M.notify('font_size', { increment = increment })
+end
+
 function M.popupmenu.kind(label, hl)
   local adapt = function(hl, normal)
     local attrs = vim.api.nvim_get_hl(0, { name = hl })

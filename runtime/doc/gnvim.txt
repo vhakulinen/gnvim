@@ -29,6 +29,13 @@ Example:
         -- Gnvim brings its own runtime files.
         local gnvim = require('gnvim')
 
+        -- Set the font
+        vim.opt.guifont = 'FiraCode Nerd Font 13'
+
+        -- Increase/decrease font.
+        vim.keymap.set('n', '<c-+>', function() gnvim.font_size(1) end)
+        vim.keymap.set('n', '<c-->', function() gnvim.font_size(-1) end)
+
         gnvim.setup({
             cursor = {
                 blink_transition = 300
@@ -109,3 +116,20 @@ Gnvim's popupmenu has some support for customization, see |gnvim-setup.popupmenu
 The customization brings a limitation however: some of the popupmenu's colors
 are not automatically updated when the colorscheme changes. If this happens,
 you might call `gnvim-setup` again.
+
+================================================================================
+Font                                                               *gnvim-font*
+
+Set the font using 'guifont'.
+
+                                                              *gnvim.font_size*
+Gnvim can change the font size through `gnvim.font_size`:
+>lua
+    local gnvim = require('gnvim')
+    local increment = 1
+
+    -- Increase
+    gnvim.font_size(increment)
+    -- Decrease
+    gnvim.font_size(-increment)
+>

@@ -15,6 +15,14 @@ pub enum GnvimEvent {
     EchoRepeat(EchoRepeat),
     GtkDebugger,
     Setup(Setup),
+
+    FontSize(FontSize),
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
+pub struct FontSize {
+    pub increment: f32,
 }
 
 #[derive(Debug, serde::Deserialize)]

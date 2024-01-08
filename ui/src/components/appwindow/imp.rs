@@ -233,6 +233,26 @@ impl AppWindow {
                     &self.colors.borrow(),
                 ));
             }
+            GnvimEvent::FontSize(event) => {
+                let font = self.font.borrow();
+                let desc = font.font_desc();
+                let size = desc.size() as f32 / SCALE;
+
+                let mut desc_clone = desc.clone();
+                desc_clone.set_size(((size + event.increment) * SCALE) as i32);
+                let guifont = desc_clone.to_string();
+                spawn_local!(clone!(@weak self.nvim as nvim => async move {
+                    let res = nvim
+                        .nvim_set_option(
+                            "guifont",
+                            &nvim::types::Object::from(guifont),
+                        )
+                        .await
+                        .unwrap();
+
+                    res.await.expect("nvim_set_option for guifont failed");
+                }));
+            }
         }
     }
 

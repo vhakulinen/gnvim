@@ -226,3 +226,12 @@ impl Object {
         Self(v.into())
     }
 }
+
+impl<T> From<T> for Object
+where
+    T: Into<rmpv::Value>,
+{
+    fn from(value: T) -> Self {
+        Self(value.into())
+    }
+}
