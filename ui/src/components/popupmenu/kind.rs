@@ -36,13 +36,13 @@ impl Kinds {
                     &Highlight::new(
                         hl.as_ref()
                             .or_else(|| colors.get_hl_grpup_attr(&HlGroup::Pmenu)),
-                        &colors,
+                        colors,
                     ),
                     &Highlight::new(
                         hl_sel
                             .as_ref()
                             .or_else(|| colors.get_hl_grpup_attr(&HlGroup::PmenuSel)),
-                        &colors,
+                        colors,
                     ),
                     v.label.as_ref().unwrap_or(k),
                 );

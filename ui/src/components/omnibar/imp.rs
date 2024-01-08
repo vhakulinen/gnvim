@@ -48,13 +48,10 @@ impl Omnibar {
         let margin = style_ctx.margin();
 
         // Add our border and margin sizes to the height.
-        let h = h
-            + border.top() as i32
+        h + border.top() as i32
             + border.bottom() as i32
             + margin.top() as i32
-            + margin.bottom() as i32;
-
-        h
+            + margin.bottom() as i32
     }
 
     fn get_max_height(&self) -> i32 {
