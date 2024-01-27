@@ -27,3 +27,6 @@ install:
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"
 	rm -rf "$(DESTDIR)$(PREFIX)/share/gnvim"
+	rm -rf "$(DESTDIR)$(PREFIX)/share/applications/gnvim.desktop"
+	rm -rf "$(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/gnvim.png"
+	rm -rf "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/gnvim.png"
