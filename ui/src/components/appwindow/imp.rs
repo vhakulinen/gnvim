@@ -21,13 +21,14 @@ use gtk::{
 use nvim::rpc::{message::Notification, RpcReader};
 
 use crate::api::{self, GnvimEvent};
+use crate::app::Fd;
 use crate::boxed::{ModeInfo, ShowTabline};
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::{popupmenu, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::warn;
-use crate::{arguments::Arguments, spawn_local, SCALE};
+use crate::{spawn_local, SCALE};
 
 #[derive(Default)]
 struct CursorOpts {
@@ -72,10 +73,12 @@ pub struct AppWindow {
 
     popupmenu_kinds: RefCell<popupmenu::Kinds>,
 
-    #[property(get, set, construct_only)]
-    args: RefCell<Arguments>,
     #[property(get)]
     nvim: Neovim,
+    #[property(get, set, construct_only)]
+    nvim_args: RefCell<Vec<String>>,
+    #[property(get, set, construct_only)]
+    stdin_fd: RefCell<Fd>,
 
     colors: RefCell<Colors>,
 
@@ -580,10 +583,10 @@ impl ObjectImpl for AppWindow {
             ext_popupmenu: true,
             ext_tabline: true,
             ext_cmdline: true,
-            stdin_fd: self.args.borrow().stdin_fd,
+            stdin_fd: self.stdin_fd.borrow().0,
             ..Default::default()
         };
-        let args = self.args.borrow().nvim_cmd_args();
+        let args = self.nvim_args.borrow();
         let args: Vec<&OsStr> = args.iter().map(|a| a.as_ref()).collect();
         let reader = self.nvim.open(&args, uiopts.stdin_fd.is_some());
 

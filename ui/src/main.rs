@@ -1,8 +1,10 @@
+use std::io::IsTerminal;
+
 use glib::ExitCode;
 use gtk::{gio, pango, prelude::*};
 
 mod api;
-mod arguments;
+mod app;
 mod boxed;
 mod child_iter;
 mod colors;
@@ -14,33 +16,54 @@ mod math;
 mod nvim;
 mod render;
 
-use components::appwindow::AppWindow;
-
 pub const SCALE: f32 = pango::SCALE as f32;
 pub const WINDOW_RESIZE_DEBOUNCE_MS: u64 = 10;
 
 fn main() -> ExitCode {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");
 
-    let args = arguments::Arguments::parse();
+    // Duplicate the stdin fd if the user is trying to pipe content to us.
+    // See `:h ui-startup-stdin`.
+    let stdin_fd = (!std::io::stdin().is_terminal())
+        .then(|| dup_stdin())
+        .flatten();
 
-    let mut flags = gio::ApplicationFlags::empty();
-    flags.insert(gio::ApplicationFlags::NON_UNIQUE);
-    flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
-
-    let app = gtk::Application::builder()
-        .application_id("com.github.vhakulinen.gnvim")
-        .flags(flags)
-        .build();
-
-    app.connect_activate(move |app| build_ui(app, &args));
-
-    // NOTE(ville): Pass empty arguments to the gtk application. We handle
-    // those manually.
-    app.run_with_args::<&str>(&[])
+    let app = app::App::new(stdin_fd);
+    app.run()
 }
 
-fn build_ui(app: &gtk::Application, args: &arguments::Arguments) {
-    let window = AppWindow::new(app, args);
-    window.present();
+fn dup_stdin() -> Option<i32> {
+    cfg_if::cfg_if! {
+        if #[cfg(unix)] {
+            use std::os::unix::prelude::AsRawFd;
+
+            unsafe {
+                // Duplicate the stdin fd.
+                let fd_dup = libc::dup(std::io::stdin().as_raw_fd());
+                if fd_dup < 0 {
+                    println!("ERR: couldn't duplicate stdin");
+                    return None;
+                }
+
+                let fdflags = libc::fcntl(fd_dup, libc::F_GETFD);
+                if fdflags < 0 {
+                    println!("ERR: couldn't get fdglags");
+                    return None;
+                }
+
+                // Remove FD_CLOEXEC.
+                if fdflags & libc::FD_CLOEXEC == 1
+                    && libc::fcntl(fd_dup, libc::F_SETFD, fdflags & !libc::FD_CLOEXEC) < 0
+                    {
+                        println!("ERR: couldn't set fdglags");
+                        return None;
+                    }
+
+                Some(fd_dup)
+            }
+        } else {
+            println!("ERR: stdin pipe not supported on this platform");
+            return None;
+        }
+    }
 }

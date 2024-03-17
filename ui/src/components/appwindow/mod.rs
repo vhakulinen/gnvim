@@ -1,9 +1,9 @@
 mod imp;
 
-use glib::Object;
-use gtk::{gio, glib};
+use gtk::{gio, glib, prelude::*};
+use nvim::NeovimApi;
 
-use crate::arguments::Arguments;
+use crate::{debug, spawn_local};
 
 glib::wrapper! {
     pub struct AppWindow(ObjectSubclass<imp::AppWindow>)
@@ -13,10 +13,17 @@ glib::wrapper! {
 }
 
 impl AppWindow {
-    pub fn new(app: &gtk::Application, args: &Arguments) -> Self {
-        Object::builder()
-            .property("application", app)
-            .property("args", args)
-            .build()
+    pub fn open_files(&self, files: &[gtk::gio::File]) {
+        let nvim = self.nvim();
+        for file in files.iter() {
+            debug!("opening {}", file.uri());
+            spawn_local!(glib::clone!(@weak nvim, @strong file => async move {
+                let f = nvim
+                    .nvim_command(&format!("e {}", file.uri()))
+                    .await
+                    .expect("call to nvim failed");
+                f.await.expect("nvim_command failed");
+            }));
+        }
     }
 }

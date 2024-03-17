@@ -54,3 +54,14 @@ macro_rules! warn {
         )
     };
 }
+
+#[macro_export]
+macro_rules! debug {
+    ($format:literal $(,$arg:expr)* $(,)?) => {
+        $crate::log!(
+            gtk::glib::LogLevel::Debug,
+            $format,
+            $($arg),*
+        )
+    };
+}
