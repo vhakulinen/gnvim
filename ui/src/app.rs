@@ -1,5 +1,7 @@
 use gtk::gio;
 
+use crate::APPID;
+
 glib::wrapper! {
     pub struct App(ObjectSubclass<imp::App>)
         @extends gio::Application, gtk::Application;
@@ -23,18 +25,34 @@ impl App {
         flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
 
         glib::Object::builder()
-            .property("application-id", "com.github.vhakulinen.gnvim")
+            .property("application-id", APPID)
             .property("flags", flags)
             .build()
     }
 }
 
 mod imp {
+    #[cfg(feature = "flatpak")]
+    use std::process::Command;
     use std::{cell::RefCell, io::IsTerminal};
 
     use gtk::{gio, prelude::*, subclass::prelude::*};
 
     use crate::{components::appwindow::AppWindow, debug};
+
+    #[cfg(not(feature = "flatpak"))]
+    fn default_rtp() -> Option<String> {
+        Some(String::from("/usr/local/share/gnvim/runtime"))
+    }
+
+    #[cfg(feature = "flatpak")]
+    fn default_rtp() -> Option<String> {
+        glib::user_data_dir()
+            .join("gnvim")
+            .join("runtime")
+            .to_str()
+            .map(String::from)
+    }
 
     #[derive(Default, glib::Properties)]
     #[properties(wrapper_type = super::App)]
@@ -46,7 +64,7 @@ mod imp {
 
         #[property(get, set, construct, default = "nvim")]
         nvim: RefCell<String>,
-        #[property(get, set, construct, default = "/usr/local/share/gnvim/runtime")]
+        #[property(get, set, construct, default = default_rtp().as_deref())]
         rtp: RefCell<String>,
 
         #[property(get, set)]
@@ -60,12 +78,20 @@ mod imp {
                 .get_or_insert_with(|| {
                     let obj = self.obj();
 
-                    let mut args: Vec<String> = vec![
+                    let mut args = vec![];
+
+                    #[cfg(feature = "flatpak")]
+                    args.extend_from_slice(&[
+                        String::from("flatpak-spawn"),
+                        String::from("--host"),
+                    ]);
+
+                    args.extend_from_slice(&[
                         obj.nvim(),
                         String::from("--embed"),
                         String::from("--cmd"),
                         format!("let &rtp.=',{}'", obj.rtp()),
-                    ];
+                    ]);
 
                     args.extend_from_slice(&obj.nvim_args());
 
@@ -139,6 +165,26 @@ mod imp {
                 None,
             );
 
+            #[cfg(feature = "flatpak")]
+            obj.add_main_option(
+                "install-runtime-files",
+                glib::Char::from(0),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::None,
+                "Install GNvim's runtime files",
+                None,
+            );
+
+            #[cfg(feature = "flatpak")]
+            obj.add_main_option(
+                "purne-runtime-files",
+                glib::Char::from(0),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::None,
+                "Remove GNvim's runtime files",
+                None,
+            );
+
             obj.set_option_context_parameter_string(Some("FILES..."));
             obj.set_option_context_summary(Some(
                 "NOTE that nvim arguments are only passed to nvim when a new \
@@ -176,6 +222,37 @@ mod imp {
 
             if options.contains("version") {
                 println!("gnvim {}", env!("CARGO_PKG_VERSION"));
+                return glib::ExitCode::from(0);
+            }
+
+            #[cfg(feature = "flatpak")]
+            if options.contains("install-runtime-files") {
+                let target = glib::user_data_dir().join("gnvim");
+                println!("Installing runtime files to {}", target.to_string_lossy());
+                Command::new("cp")
+                    .arg("-r")
+                    .arg("/app/share/gnvim")
+                    .arg(target)
+                    .spawn()
+                    .expect("failed to start `cp`")
+                    .wait()
+                    .expect("failed to install runtime files");
+
+                return glib::ExitCode::from(0);
+            }
+
+            #[cfg(feature = "flatpak")]
+            if options.contains("purne-runtime-files") {
+                let target = glib::user_data_dir().join("gnvim");
+                println!("Purning {}", target.to_string_lossy());
+                Command::new("rm")
+                    .arg("-rI")
+                    .arg(target)
+                    .spawn()
+                    .expect("failed to start `rm`")
+                    .wait()
+                    .expect("failed to purne runtime files");
+
                 return glib::ExitCode::from(0);
             }
 

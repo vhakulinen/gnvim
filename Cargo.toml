@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "ui",
     "lib/nvim-rs",
+    "flatpak-helper",
 ]
 
 # For addition information about build profies, see

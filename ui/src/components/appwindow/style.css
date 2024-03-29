@@ -53,6 +53,7 @@ tabline tab.selected label {{
 
 headerbar {{
   background-color: #{menu_bg};
+  background-image: none;
   color: #{menu_fg};
   border: 0;
   min-height: 0;

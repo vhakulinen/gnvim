@@ -116,6 +116,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "flatpak-helper"
+version = "0.1.0"
+dependencies = [
+ "gio",
+ "glib",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"

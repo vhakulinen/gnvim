@@ -15,6 +15,8 @@ mod math;
 mod nvim;
 mod render;
 
+include!(concat!(env!("OUT_DIR"), "/config.rs"));
+
 pub const SCALE: f32 = pango::SCALE as f32;
 pub const WINDOW_RESIZE_DEBOUNCE_MS: u64 = 10;
 

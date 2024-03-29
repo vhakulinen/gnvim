@@ -13,7 +13,24 @@ _For previous gtk3 version, checkout the `legacy` branch._
 
 # Install
 
-**NOTE**: gnvim requires nvim version 0.9 or higher.
+**NOTE**: gnvim requires nvim version 0.9.5 or higher.
+
+## Flatpak
+
+If you're using flatpak, you can build a GNvim flatpak locally:
+
+```
+$ # Install flatpak-builder
+$ sudo apt install flatpak-builder
+$ make install-flatpak-deps # Install required runtime and SDKs
+$ make install-flatpak # Build and install the flatpak
+$ # Optional: install gnvim runtime files (i.e. for `lua require('gnvim')`)
+$ flatpak run com.github.vhakulinen.gnvim.Devel --install-runtime-files
+```
+
+## System
+
+Install system wide:
 
 ```
 $ # Install cargo (e.g. the rust toolchain)

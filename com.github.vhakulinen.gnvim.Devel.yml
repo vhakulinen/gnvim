@@ -1,0 +1,37 @@
+id: com.github.vhakulinen.gnvim.Devel
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.llvm16
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm16/bin
+  build-args:
+    - --share=network
+  env:
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: -C link-arg=-fuse-ld=/usr/lib/sdk/rust-stable/bin/mold
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: clang
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS: -C link-arg=-fuse-ld=/usr/lib/sdk/rust-stable/bin/mold
+    PREFIX: /app
+    CARGOARGS: --features flatpak
+command: gnvim
+finish-args:
+  - --env=RUST_BACKTRACE=1
+  - --talk-name=org.a11y.Bus
+  # Required for "flatpak-spawn".
+  - --talk-name=org.freedesktop.Flatpak
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+modules:
+  - name: gnvim
+    buildsystem: simple
+    build-commands:
+      - make build
+      - make install
+    sources:
+      - type: dir
+        path: .

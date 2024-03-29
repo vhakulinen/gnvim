@@ -1,3 +1,6 @@
-
 /target
 **/*.rs.bk
+/vendor
+
+# Default flatpak-builder build directory.
+.flatpak-builder
