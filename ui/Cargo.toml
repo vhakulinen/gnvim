@@ -14,15 +14,15 @@ cfg-if = "1.0"
 
 [dependencies.gtk]
 package = "gtk4"
-version = "0.7"
+version = "0.8"
 features = ["v4_4"]
 
 [dependencies.glib]
-version = "0.18"
+version = "0.19"
 features = ["log_macros"]
 
 [dependencies.pango]
-version = "0.18"
+version = "0.19"
 features = ["v1_50"]
 
 [dependencies.nvim]
@@ -30,4 +30,4 @@ package = "nvim-rs"
 path = "../lib/nvim-rs"
 
 [build-dependencies]
-glib-build-tools = "0.18"
+glib-build-tools = "0.19"
