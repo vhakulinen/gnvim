@@ -115,7 +115,7 @@ impl Row {
                 .unwrap_or(false);
 
             for _ in 0..data.repeat.unwrap_or(1) {
-                let mut cell = iter.next().expect("too long grid line event");
+                let cell = iter.next().expect("too long grid line event");
                 cell.hl_id = hl_id;
                 cell.text = data.text.clone();
                 cell.double_width = double_width;
