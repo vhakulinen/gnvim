@@ -65,7 +65,7 @@ mod imp {
                         obj.nvim(),
                         String::from("--embed"),
                         String::from("--cmd"),
-                        String::from(format!("let &rtp.=',{}'", obj.rtp())),
+                        format!("let &rtp.=',{}'", obj.rtp()),
                     ];
 
                     args.extend_from_slice(&obj.nvim_args());
@@ -181,15 +181,16 @@ mod imp {
             {
                 debug!("nvim-args arg: {:?}", nvim_args);
                 // FIXME: should not need to convert between String <-> OsString.
-                let nvim_args = glib::shell_parse_argv(&nvim_args)
-                    .expect("failed to parse nvim-args")
-                    .into_iter()
-                    .map(|v| {
-                        v.into_string()
-                            .expect("nvim-args should be valid unicode strings")
-                    })
-                    .collect();
-                obj.set_nvim_args(&nvim_args);
+                obj.set_nvim_args(
+                    glib::shell_parse_argv(&nvim_args)
+                        .expect("failed to parse nvim-args")
+                        .into_iter()
+                        .map(|v| {
+                            v.into_string()
+                                .expect("nvim-args should be valid unicode strings")
+                        })
+                        .collect::<Vec<_>>(),
+                );
             }
 
             self.parent_handle_local_options(options)

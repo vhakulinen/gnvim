@@ -24,9 +24,7 @@ fn main() -> ExitCode {
 
     // Duplicate the stdin fd if the user is trying to pipe content to us.
     // See `:h ui-startup-stdin`.
-    let stdin_fd = (!std::io::stdin().is_terminal())
-        .then(|| dup_stdin())
-        .flatten();
+    let stdin_fd = (!std::io::stdin().is_terminal()).then(dup_stdin).flatten();
 
     let app = app::App::new(stdin_fd);
     app.run()
