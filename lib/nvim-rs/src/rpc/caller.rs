@@ -1,12 +1,11 @@
 use std::any::{Any, TypeId};
-use std::pin::Pin;
 
 use futures::{channel::oneshot, prelude::*};
 use serde::Deserialize;
 
 use crate::rpc::{message, WriteError};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum CallError {
     /// The operation was cancelled, because other end (of the internal channel)
     /// was dropped.
@@ -19,9 +18,11 @@ pub enum CallError {
     DecodeResult,
     // Decoding the error failed.
     //DecodeError,
+    /// The write operation over RPC failed.
+    WriteError(WriteError),
 }
 
-pub type CallResponse<T> = Pin<Box<dyn Future<Output = Result<T, CallError>> + Send>>;
+pub type CallResponse<T> = Result<T, CallError>;
 
 pub type Response = message::Response<rmpv::Value, rmpv::Value>;
 
@@ -30,6 +31,12 @@ pub type Sender = oneshot::Sender<Response>;
 impl From<oneshot::Canceled> for CallError {
     fn from(_: oneshot::Canceled) -> Self {
         Self::Cancelled
+    }
+}
+
+impl From<WriteError> for CallError {
+    fn from(value: WriteError) -> Self {
+        Self::WriteError(value)
     }
 }
 
@@ -48,7 +55,7 @@ pub trait Caller
 where
     Self: Sized,
 {
-    async fn call<T, S, V>(mut self, method: S, args: V) -> Result<CallResponse<T>, WriteError>
+    async fn call<T, S, V>(mut self, method: S, args: V) -> CallResponse<T>
     where
         T: for<'de> Deserialize<'de> + Any,
         S: AsRef<str>,
@@ -61,7 +68,7 @@ where
 
         self.write(msgid, method, &args).await?;
 
-        Ok(receiver
+        receiver
             .map(|res| {
                 let res = res?;
 
@@ -81,7 +88,8 @@ where
 
                 rmpv::ext::from_value::<T>(res).map_err(|_err| CallError::DecodeResult)
             })
-            .boxed())
+            .boxed()
+            .await
     }
 
     async fn write<S: AsRef<str>, V: serde::Serialize>(

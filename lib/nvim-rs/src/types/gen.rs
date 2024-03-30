@@ -642,6 +642,7 @@ pub struct GridLine {
     pub row: i64,
     pub col_start: i64,
     pub data: Vec<GridLineData>,
+    pub wrap: bool,
 }
 impl<'de> serde::Deserialize<'de> for GridLine {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -668,6 +669,9 @@ impl<'de> serde::Deserialize<'de> for GridLine {
                     data: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    wrap: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)

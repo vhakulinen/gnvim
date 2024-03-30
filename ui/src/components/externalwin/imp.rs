@@ -34,15 +34,13 @@ impl ExternalWindow {
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
             clone!(@weak obj => @default-return glib::ControlFlow::Break, move || {
                 spawn_local!(clone!(@weak obj => async move {
-                    let res = obj
+                    obj
                         .nvim()
                         .nvim_ui_try_resize_grid(
                             obj.grid_id(),
                             cols.max(1) as i64, rows.max(1) as i64)
                         .await
-                        .unwrap();
-
-                    res.await.expect("nvim_ui_try_resize failed");
+                        .expect("nvim_ui_try_resize failed");
                 }));
 
                 // Clear after our selves, so we don't try to remove

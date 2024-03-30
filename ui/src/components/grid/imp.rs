@@ -145,7 +145,7 @@ impl ObjectImpl for Grid {
         obj.connect_mouse(
             clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
-                    let res = obj
+                    obj
                         .nvim()
                         .nvim_input_mouse(
                             mouse.as_nvim_input(),
@@ -155,9 +155,8 @@ impl ObjectImpl for Grid {
                             row as i64,
                             col as i64,
                         )
-                        .await.expect("call to nvim failed");
-
-                    res.await.expect("nvim_input_mouse failed");
+                        .await
+                        .expect("nvim_input_mouse failed");
                 });
             }),
         )

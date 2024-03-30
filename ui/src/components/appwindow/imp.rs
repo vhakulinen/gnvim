@@ -214,12 +214,10 @@ impl AppWindow {
                 ];
 
                 spawn_local!(clone!(@weak self.nvim as nvim => async move {
-                    let res = nvim
+                    nvim
                         .nvim_echo(msg, false, &dict![])
                         .await
-                        .unwrap();
-
-                    res.await.expect("nvim_echo failed");
+                        .expect("nvim_echo failed");
                 }));
             }
             GnvimEvent::GtkDebugger => {
@@ -245,15 +243,13 @@ impl AppWindow {
                 desc_clone.set_size(((size + event.increment) * SCALE) as i32);
                 let guifont = desc_clone.to_string();
                 spawn_local!(clone!(@weak self.nvim as nvim => async move {
-                    let res = nvim
+                    nvim
                         .nvim_set_option(
                             "guifont",
                             &nvim::types::Object::from(guifont),
                         )
                         .await
-                        .unwrap();
-
-                    res.await.expect("nvim_set_option for guifont failed");
+                        .expect("nvim_set_option for guifont failed");
                 }));
             }
         }
@@ -470,14 +466,11 @@ impl AppWindow {
     }
 
     async fn send_nvim_input(&self, input: String) {
-        let res = self
-            .nvim
+        self.nvim
             .nvim_input(&input)
             .await
-            .expect("call to nvim failed");
-
-        // TODO(ville): nvim_input handle the returned bytes written value.
-        res.await.expect("nvim_input failed");
+            // TODO(ville): nvim_input handle the returned bytes written value.
+            .expect("nvim_input failed");
     }
 }
 
@@ -597,23 +590,20 @@ impl ObjectImpl for AppWindow {
 
         // Call nvim_ui_attach.
         spawn_local!(clone!(@weak self.nvim as nvim => async move {
-            let res = nvim
-                .nvim_set_client_info(
+            nvim.nvim_set_client_info(
                     "gnvim",
                     // TODO(ville): Tell the version in client info.
                     &dict![],
                     "ui",
                     &dict![],
                     &dict![],
-                ).await.expect("call to nvim failed");
+                )
+                .await
+                .expect("nvim_set_client_info failed");
 
-            res.await.expect("nvim_set_client_info failed");
-
-            let res = nvim
-                .nvim_ui_attach(80, 30, uiopts)
-                .await.expect("call to nvim failed");
-
-            res.await.expect("nvim_ui_attach failed");
+            nvim.nvim_ui_attach(80, 30, uiopts)
+                .await
+                .expect("nvim_ui_attach failed");
         }));
 
         // TODO(ville): Figure out if we should use preedit or not.

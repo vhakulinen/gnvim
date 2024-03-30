@@ -18,11 +18,10 @@ impl AppWindow {
         for file in files.iter() {
             debug!("opening {}", file.uri());
             spawn_local!(glib::clone!(@weak nvim, @strong file => async move {
-                let f = nvim
+                nvim
                     .nvim_command(&format!("e {}", file.uri()))
                     .await
-                    .expect("call to nvim failed");
-                f.await.expect("nvim_command failed");
+                    .expect("nvim_command failed");
             }));
         }
     }

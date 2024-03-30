@@ -59,12 +59,10 @@ impl Shell {
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
             clone!(@weak self as obj => @default-return glib::ControlFlow::Break, move || {
                 spawn_local!(clone!(@weak obj => async move {
-                    let res = obj.nvim()
+                    obj.nvim()
                         .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
                         .await
-                        .unwrap();
-
-                    res.await.expect("nvim_ui_try_resize failed");
+                        .expect("nvim_ui_try_resize failed");
                 }));
 
                 // Clear after our selves, so we don't try to remove
@@ -259,16 +257,14 @@ impl Shell {
 
             let grid_id = grid.grid_id();
             spawn_local!(clone!(@weak self as obj => async move {
-                let res = obj.nvim()
+                obj.nvim()
                     .nvim_ui_try_resize_grid(
                         grid_id,
                         cols.max(1) as i64,
                         rows.max(1) as i64
                     )
                     .await
-                    .unwrap();
-
-                res.await.expect("nvim_ui_try_resize failed");
+                    .expect("nvim_ui_try_resize failed");
             }));
         }
 

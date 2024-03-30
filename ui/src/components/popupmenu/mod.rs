@@ -74,13 +74,10 @@ impl Popupmenu {
         let row = (y / (font.height() / SCALE)) as f64;
 
         spawn_local!(clone!(@weak nvim => async move {
-            let res = nvim
-                .clone()
+            nvim.clone()
                 .nvim_ui_pum_set_bounds(w, h, row, col)
                 .await
-                .unwrap();
-
-            res.await.expect("nvim_ui_pum_set_bounds failed");
+                .expect("nvim_ui_pum_set_bounds failed");
         }));
     }
 }
