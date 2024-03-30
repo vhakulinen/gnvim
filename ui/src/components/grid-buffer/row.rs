@@ -95,7 +95,7 @@ impl Row {
     pub fn update(&mut self, event: &GridLine) {
         let mut hl_id = event
             .data
-            .get(0)
+            .first()
             .expect("grid line event cant be empty")
             .hl_id
             .expect("first item should have hl_id");

@@ -73,7 +73,7 @@ impl ObjectImpl for ExternalWindow {
         let obj = self.obj();
 
         // Override css classes.
-        obj.set_property("css-classes", vec!["external-window"].to_value());
+        obj.set_property("css-classes", ["external-window"].to_value());
 
         // NOTE(ville): The root interface implementation does some extra magic
         // compared to the GtkWindow's own set_focus function, so use the root
