@@ -141,6 +141,12 @@ mod imp {
             );
 
             obj.set_option_context_parameter_string(Some("FILES..."));
+            obj.set_option_context_summary(Some(
+                "NOTE that nvim arguments are only passed to nvim when a new \
+                instance is launched.\n\n\
+                By default existing gnvim instance is used for opening files, \
+                if one is found.",
+            ));
 
             self.parent_constructed();
         }
