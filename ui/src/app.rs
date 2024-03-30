@@ -18,27 +18,19 @@ impl std::ops::Deref for Fd {
 }
 
 impl App {
-    pub fn new(stdin_fd: Option<i32>) -> Self {
+    pub fn new() -> Self {
         let mut flags = gio::ApplicationFlags::empty();
         flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
-
-        if stdin_fd.is_some() {
-            // If the user is piping the content to us, don't try to use any
-            // existing instance (because we don't have any support for that
-            // at the moment).
-            flags.insert(gio::ApplicationFlags::NON_UNIQUE);
-        }
 
         glib::Object::builder()
             .property("application-id", "com.github.vhakulinen.gnvim")
             .property("flags", flags)
-            .property("stdin-fd", Fd(stdin_fd))
             .build()
     }
 }
 
 mod imp {
-    use std::cell::RefCell;
+    use std::{cell::RefCell, io::IsTerminal};
 
     use gtk::{gio, prelude::*, subclass::prelude::*};
 
@@ -47,7 +39,6 @@ mod imp {
     #[derive(Default, glib::Properties)]
     #[properties(wrapper_type = super::App)]
     pub struct App {
-        #[property(get, set, nullable, construct_only)]
         stdin_fd: RefCell<super::Fd>,
 
         #[property(get)]
@@ -81,7 +72,7 @@ mod imp {
                     glib::Object::builder()
                         .property("application", obj.upcast_ref::<gtk::Application>())
                         .property("nvim-args", args)
-                        .property("stdin-fd", obj.stdin_fd())
+                        .property("stdin-fd", *self.stdin_fd.borrow())
                         .build()
                 })
                 .clone()
@@ -139,6 +130,14 @@ mod imp {
                 "Open a new instance",
                 None,
             );
+            obj.add_main_option(
+                "no-stdin",
+                glib::Char::from(0),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::None,
+                "Ignore stdin pipe",
+                None,
+            );
 
             obj.set_option_context_parameter_string(Some("FILES..."));
             obj.set_option_context_summary(Some(
@@ -161,6 +160,19 @@ mod imp {
         fn handle_local_options(&self, options: &glib::VariantDict) -> glib::ExitCode {
             debug!("Application::handle_local_options");
             let obj = self.obj();
+
+            // Duplicate the stdin fd if the user is trying to pipe content to us.
+            // See `:h ui-startup-stdin`.
+            if !std::io::stdin().is_terminal() && !options.contains("no-stdin") {
+                // Duplicate the fd for the nvim subprocess.
+                *self.stdin_fd.borrow_mut() = super::Fd(crate::fd::dup_stdin());
+
+                // We don't currently support opening stdin over dbus, so don't
+                // try to reuse any existing instances.
+                let mut flags = obj.flags();
+                flags.insert(gio::ApplicationFlags::NON_UNIQUE);
+                obj.set_flags(flags);
+            }
 
             if options.contains("version") {
                 println!("gnvim {}", env!("CARGO_PKG_VERSION"));
