@@ -7,7 +7,15 @@ glib::wrapper! {
 
 #[derive(Default, glib::Boxed, Clone, Copy)]
 #[boxed_type(name = "fd-boxed")]
-pub struct Fd(pub Option<i32>);
+pub struct Fd(Option<i32>);
+
+impl std::ops::Deref for Fd {
+    type Target = Option<i32>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl App {
     pub fn new(stdin_fd: Option<i32>) -> Self {

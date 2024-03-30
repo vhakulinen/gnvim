@@ -583,7 +583,7 @@ impl ObjectImpl for AppWindow {
             ext_popupmenu: true,
             ext_tabline: true,
             ext_cmdline: true,
-            stdin_fd: self.stdin_fd.borrow().0,
+            stdin_fd: **self.stdin_fd.borrow(),
             ..Default::default()
         };
         let args = self.nvim_args.borrow();
