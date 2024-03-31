@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+
+use futures::lock::Mutex;
+
 use crate::rpc::{caller::Sender, message::Response, Caller, HandleError, RpcWriter, WriteError};
 
 #[macro_export]
@@ -12,29 +16,29 @@ macro_rules! dict {
 
 #[derive(Debug)]
 pub struct Client<W: RpcWriter> {
-    writer: W,
-    msgid_counter: u32,
-    callbacks: Vec<(u32, Sender)>,
+    writer: Mutex<Box<W>>,
+    msgid_counter: RefCell<u32>,
+    callbacks: RefCell<Vec<(u32, Sender)>>,
 }
 
 impl<W: RpcWriter> Client<W> {
     pub fn new(writer: W) -> Self {
         Self {
-            writer,
-            callbacks: Vec::new(),
-            msgid_counter: 0,
+            writer: Mutex::new(Box::new(writer)),
+            callbacks: RefCell::new(Vec::new()),
+            msgid_counter: RefCell::new(0),
         }
     }
 
     pub fn handle_response(
-        &mut self,
+        &self,
         response: Response<rmpv::Value, rmpv::Value>,
     ) -> Result<(), HandleError> {
-        let caller = self
-            .callbacks
+        let mut callbacks = self.callbacks.borrow_mut();
+        let caller = callbacks
             .iter()
             .position(|(msgid, _)| *msgid == response.msgid)
-            .map(|index| self.callbacks.swap_remove(index));
+            .map(|index| callbacks.swap_remove(index));
 
         match caller {
             Some((_, recv)) => recv.send(response).map_err(HandleError::CallerDropped),
@@ -43,23 +47,18 @@ impl<W: RpcWriter> Client<W> {
     }
 }
 
-impl<W: RpcWriter> AsMut<W> for Client<W> {
-    fn as_mut(&mut self) -> &mut W {
-        &mut self.writer
-    }
-}
-
 #[async_trait::async_trait(?Send)]
-impl<W: futures::AsyncWrite + Unpin> Caller for &mut Client<W> {
+impl<W: futures::AsyncWrite + Unpin> Caller for &Client<W> {
     fn next_msgid(&mut self) -> u32 {
-        let msgid = self.msgid_counter;
-        self.msgid_counter += 1;
+        let mut msgid_counter = self.msgid_counter.borrow_mut();
+        let msgid = *msgid_counter;
+        *msgid_counter += 1;
 
         msgid
     }
 
     fn store_handler(&mut self, msgid: u32, sender: Sender) {
-        self.callbacks.push((msgid, sender));
+        self.callbacks.borrow_mut().push((msgid, sender));
     }
 
     async fn write<S: AsRef<str>, V: serde::Serialize>(
@@ -68,7 +67,9 @@ impl<W: futures::AsyncWrite + Unpin> Caller for &mut Client<W> {
         method: S,
         args: V,
     ) -> Result<(), WriteError> {
-        self.as_mut()
+        let mut writer = self.writer.lock().await;
+        writer
+            .as_mut()
             .write_rpc_request(msgid, method.as_ref(), &args)
             .await
     }

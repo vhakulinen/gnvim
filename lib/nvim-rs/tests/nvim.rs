@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::rc::Rc;
 use std::time::Duration;
 
 use nvim_rs::types::{Object, UiOptions};
@@ -25,14 +26,13 @@ async fn smoke_test() {
     let writer = stdin.compat_write();
     let mut reader: RpcReader<_> = stdout.compat().into();
 
-    let mut client = Client::new(writer);
+    let client = Rc::new(Client::new(writer));
 
-    let result = client.nvim_get_vvar("argv").await.unwrap();
-
-    let handle = tokio::task::spawn(async move {
+    let c = client.clone();
+    let (result, _) = tokio::join!(client.nvim_get_vvar("argv"), async move {
         let v = reader.recv().await.unwrap();
         match v {
-            Message::Response(response) => client.handle_response(response).unwrap(),
+            Message::Response(response) => c.handle_response(response).unwrap(),
             v => panic!("unexpected message: {:?}", v),
         }
     });
@@ -44,9 +44,7 @@ async fn smoke_test() {
         rmpv::Value::from("call stdioopen({'rpc': v:true})"),
     ];
 
-    assert_eq!(result.await, Ok(Object::new(vals)));
-
-    handle.await.unwrap();
+    assert_eq!(result.unwrap(), Object::new(vals));
 }
 
 #[tokio::test]
@@ -68,38 +66,41 @@ async fn smoke_test_ui_attach() {
     let writer = stdin.compat_write();
     let mut reader: RpcReader<_> = stdout.compat().into();
 
-    let mut client = Client::new(writer);
+    let client = Rc::new(Client::new(writer));
 
-    let res = client
-        .nvim_ui_attach(10, 10, UiOptions::default())
-        .await
-        .unwrap();
-
-    let handle = tokio::spawn(async move { res.await.unwrap() });
+    let c = client.clone();
+    let res = c.nvim_ui_attach(10, 10, UiOptions::default());
 
     // Read what ever messages we manage get in a reasonalbe time and deserialize them.
-    loop {
-        tokio::select! {
-            _sleep = tokio::time::sleep(Duration::from_secs(2)) => {
-                println!("Timeout");
-                break;
-            },
-            v = reader.recv() => {
-                match v.unwrap() {
-                    Message::Response(response) => client.handle_response(response).unwrap(),
-                    Message::Notification(notification) => {
-                        match notification.method.as_ref() {
-                            "redraw" => {
-                                nvim_rs::types::decode_redraw_params(notification.params).unwrap();
+    let read = async move {
+        let mut i = 0;
+        loop {
+            tokio::select! {
+                _sleep = tokio::time::sleep(Duration::from_secs(2)) => {
+                    println!("Timeout");
+                    // We should have some redraw calls.
+                    assert!(i > 0);
+                    break;
+                },
+                v = reader.recv() => {
+                    match v.unwrap() {
+                        Message::Response(response) => client.handle_response(response).unwrap(),
+                        Message::Notification(notification) => {
+                            match notification.method.as_ref() {
+                                "redraw" => {
+                                    i += 1;
+                                    nvim_rs::types::decode_redraw_params(notification.params).unwrap();
+                                }
+                                _ => panic!("unexpected notification: {}", notification.method),
                             }
-                            _ => panic!("unexpected notification: {}", notification.method),
                         }
+                        v => panic!("unexpected message: {:?}", v),
                     }
-                    v => panic!("unexpected message: {:?}", v),
-                }
-            },
+                },
+            }
         }
-    }
+    };
 
-    handle.await.unwrap();
+    let (res, _) = tokio::join!(res, read);
+    assert!(res.is_ok());
 }

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use nvim_rs::rpc::{message::Message, RpcReader, RpcWriter};
@@ -36,21 +38,22 @@ async fn void_response_decodes_correctly() {
                 let writer = writer.compat_write();
                 let mut reader: RpcReader<_> = reader.compat().into();
 
-                let mut client = Client::new(writer);
+                let client = Rc::new(Client::new(writer));
 
-                let res = client.call::<(), _, _>("get_nil", ()).await.unwrap();
+                let c = client.clone();
+                let res = c.call::<(), _, _>("get_nil", ());
 
-                let handle = tokio::task::spawn(async move {
+                let read = async move {
                     let v = reader.recv().await.unwrap();
                     match v {
                         Message::Response(response) => client.handle_response(response).unwrap(),
                         v => panic!("unexpected message: {:?}", v),
                     }
-                });
+                };
 
-                assert_eq!(res.await, Ok(()));
+                let (res, _) = tokio::join!(res, read);
 
-                handle.await.unwrap();
+                assert_eq!(res.unwrap(), ());
             });
 
             tokio::try_join!(server_handle, client_handle).unwrap();
