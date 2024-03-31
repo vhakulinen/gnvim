@@ -79,6 +79,27 @@ impl Neovim {
             None => Err(HandleError::CallerMissing(response)),
         }
     }
+
+    pub async fn write_rpc_response<R: serde::Serialize, E: serde::Serialize>(
+        self,
+        msgid: u32,
+        error: Option<&E>,
+        result: Option<&R>,
+    ) -> Result<(), WriteError> {
+        self.imp()
+            .writer
+            .lock()
+            .await
+            .as_mut()
+            .expect("nvim writer not set")
+            .write_rpc_response(msgid, error, result)
+            .await
+    }
+
+    pub async fn write_empty_rpc_response(self, msgid: u32) -> Result<(), WriteError> {
+        self.write_rpc_response(msgid, None::<&()>, None::<&()>)
+            .await
+    }
 }
 
 #[async_trait::async_trait(?Send)]

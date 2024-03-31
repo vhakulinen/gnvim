@@ -2,7 +2,8 @@ use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
 
 use nvim::dict;
-use nvim::rpc::message::Message;
+use nvim::rpc::message::{Message, Request};
+use nvim::rpc::ReadError;
 use nvim::serde::Deserialize;
 use nvim::types::uievents::{DefaultColorsSet, HlGroupSet, PopupmenuSelect, PopupmenuShow};
 use nvim::types::UiEvent;
@@ -27,7 +28,7 @@ use crate::colors::{Color, Colors, HlGroup};
 use crate::components::{popupmenu, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
-use crate::warn;
+use crate::{debug, warn};
 use crate::{spawn_local, SCALE};
 
 #[derive(Default)]
@@ -75,6 +76,7 @@ pub struct AppWindow {
 
     #[property(get)]
     nvim: Neovim,
+    nvim_exited: Cell<bool>,
     #[property(get, set, construct_only)]
     nvim_args: RefCell<Vec<String>>,
     #[property(get, set, construct_only)]
@@ -104,9 +106,7 @@ impl AppWindow {
                     .handle_response(res)
                     .expect("failed to handle nvim response");
             }
-            Message::Request(req) => {
-                println!("Got request from nvim: {:?}", req);
-            }
+            Message::Request(req) => self.handle_request(req),
             Message::Notification(Notification { method, params, .. }) => match method.as_ref() {
                 "redraw" => {
                     let events = nvim::decode_redraw_params(params)
@@ -133,17 +133,72 @@ impl AppWindow {
         }
     }
 
+    fn handle_request(&self, req: Request<'_, rmpv::Value>) {
+        match req.method.as_ref() {
+            "vimleavepre" => {
+                self.nvim_exited.set(true);
+
+                spawn_local!(glib::clone!(@strong self.nvim as nvim => async move {
+                    nvim.write_empty_rpc_response(req.msgid)
+                        .await
+                        .expect("write_rpc_response failed");
+                }));
+            }
+            _ => {
+                warn!("unexpected request from nvim: {}", req.method);
+                spawn_local!(glib::clone!(@strong self.nvim as nvim => async move {
+                    nvim.write_rpc_response(
+                        req.msgid,
+                        Some(&"unexpected request"),
+                        None::<&()>,
+                    ).await.expect("write_rpc_response failed")
+                }));
+            }
+        }
+    }
+
+    fn handle_io_error(&self, err: ReadError) {
+        let dialog = gtk::MessageDialog::new(
+            Some(self.obj().upcast_ref::<gtk::Window>()),
+            gtk::DialogFlags::MODAL,
+            gtk::MessageType::Error,
+            gtk::ButtonsType::Close,
+            "",
+        );
+
+        dialog.set_markup("<b>Fatal IO error</b>");
+        dialog.set_secondary_use_markup(true);
+        dialog.set_secondary_text(Some(&format!(
+            "Communication with Neovim failed with the following error:\n\n\
+            <tt>{:?}</tt>",
+            err
+        )));
+
+        let obj = self.obj();
+        dialog.connect_response(glib::clone!(@weak obj => move |_, _| {
+            obj.application().expect("application not set").quit();
+        }));
+
+        dialog.show();
+    }
+
     async fn io_loop<R: futures::AsyncRead + Unpin>(&self, reader: R) {
         let mut reader: RpcReader<R> = reader.into();
 
         loop {
             match reader.recv().await {
                 Ok(msg) => self.process_nvim_event(msg),
-                Err(_) => {
+                Err(ReadError::IOError(_)) if self.nvim_exited.get() => {
+                    debug!("clean exit");
                     self.obj()
                         .application()
                         .expect("application not set")
                         .quit();
+                    break;
+                }
+                Err(err) => {
+                    warn!("io error: {:?}", err);
+                    self.handle_io_error(err);
                     break;
                 }
             };
@@ -600,6 +655,12 @@ impl ObjectImpl for AppWindow {
                 )
                 .await
                 .expect("nvim_set_client_info failed");
+
+            // NOTE: If we're not embedding nvim, but using some other way to
+            // communicate to it, the channel id might be different.
+            nvim.nvim_command("autocmd VimLeavePre * call rpcrequest(1, 'vimleavepre')")
+                .await
+                .expect("nvim_command failed");
 
             nvim.nvim_ui_attach(80, 30, uiopts)
                 .await
