@@ -108,14 +108,12 @@ impl AppWindow {
             }
             Message::Request(req) => self.handle_request(req),
             Message::Notification(Notification { method, params, .. }) => match method.as_ref() {
-                "redraw" => {
-                    let events = nvim::decode_redraw_params(params)
-                        .expect("failed to decode redraw notification");
-
-                    events
+                "redraw" => match nvim::decode_redraw_params(params) {
+                    Ok(events) => events
                         .into_iter()
-                        .for_each(|event| self.handle_ui_event(event))
-                }
+                        .for_each(|event| self.handle_ui_event(event)),
+                    Err(err) => self.handle_decode_redraw_error(err),
+                },
                 "gnvim" => match params {
                     rmpv::Value::Array(params) => params
                         .into_iter()
@@ -157,7 +155,7 @@ impl AppWindow {
         }
     }
 
-    fn handle_io_error(&self, err: ReadError) {
+    fn show_error_dialog(&self, title_markup: &str, content_markup: &str) {
         let dialog = gtk::MessageDialog::new(
             Some(self.obj().upcast_ref::<gtk::Window>()),
             gtk::DialogFlags::MODAL,
@@ -166,13 +164,9 @@ impl AppWindow {
             "",
         );
 
-        dialog.set_markup("<b>Fatal IO error</b>");
+        dialog.set_markup(title_markup);
         dialog.set_secondary_use_markup(true);
-        dialog.set_secondary_text(Some(&format!(
-            "Communication with Neovim failed with the following error:\n\n\
-            <tt>{:?}</tt>",
-            err
-        )));
+        dialog.set_secondary_text(Some(content_markup));
 
         let obj = self.obj();
         dialog.connect_response(glib::clone!(@weak obj => move |_, _| {
@@ -180,6 +174,30 @@ impl AppWindow {
         }));
 
         dialog.show();
+    }
+
+    fn handle_decode_redraw_error(&self, err: rmpv::ext::Error) {
+        self.show_error_dialog(
+            "Failed to decode redraw event",
+            &format!(
+                "Gnvim failed to decode a redraw event, and show the correct\
+                state of the UI.\n\
+                This is likely because of mismatch between neovim and gnvim versions.\n\n\
+                Error:\n\n<tt>{}</tt>",
+                glib::markup_escape_text(&format!("{:?}", err))
+            ),
+        );
+    }
+
+    fn handle_io_error(&self, err: ReadError) {
+        self.show_error_dialog(
+            "Fatal IO error",
+            &format!(
+                "Communication with Neovim failed with the following error:\n\n\
+                <tt>{}</tt>",
+                glib::markup_escape_text(&format!("{:?}", err))
+            ),
+        );
     }
 
     async fn io_loop<R: futures::AsyncRead + Unpin>(&self, reader: R) {
