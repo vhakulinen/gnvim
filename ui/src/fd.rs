@@ -1,4 +1,3 @@
-
 pub fn dup_stdin() -> Option<i32> {
     cfg_if::cfg_if! {
         if #[cfg(unix)] {
