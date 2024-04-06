@@ -11,13 +11,13 @@ use nvim::types::{OptionSet, UiOptions};
 use nvim::NeovimApi;
 
 use glib::subclass::InitializingObject;
-use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::CompositeTemplate;
 use gtk::{
     gdk,
     glib::{self, clone},
 };
+use gtk::{gio, prelude::*};
 
 use nvim::rpc::{message::Notification, RpcReader};
 
@@ -28,13 +28,29 @@ use crate::colors::{Color, Colors, HlGroup};
 use crate::components::{popupmenu, Omnibar, Overflower, Shell, Tabline};
 use crate::font::Font;
 use crate::nvim::Neovim;
-use crate::{debug, warn};
+use crate::{debug, warn, APPID};
 use crate::{spawn_local, SCALE};
 
 #[derive(Default)]
 struct CursorOpts {
     blink_transition: api::CursorBlinkTransition,
     position_transition: api::CursorPositionTransition,
+}
+
+struct Settings(gio::Settings);
+
+impl std::ops::Deref for Settings {
+    type Target = gio::Settings;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings(gio::Settings::new(APPID))
+    }
 }
 
 #[derive(CompositeTemplate, Default, glib::Properties)]
@@ -51,6 +67,8 @@ pub struct AppWindow {
     tabline: TemplateChild<Tabline>,
     #[template_child(id = "omnibar")]
     omnibar: TemplateChild<Omnibar>,
+
+    settings: Settings,
 
     css_provider: gtk::CssProvider,
 
@@ -208,10 +226,7 @@ impl AppWindow {
                 Ok(msg) => self.process_nvim_event(msg),
                 Err(ReadError::IOError(_)) if self.nvim_exited.get() => {
                     debug!("clean exit");
-                    self.obj()
-                        .application()
-                        .expect("application not set")
-                        .quit();
+                    self.obj().close();
                     break;
                 }
                 Err(err) => {
@@ -545,6 +560,33 @@ impl AppWindow {
             // TODO(ville): nvim_input handle the returned bytes written value.
             .expect("nvim_input failed");
     }
+
+    fn save_window_state(&self) -> Result<(), glib::BoolError> {
+        println!("Save window state");
+        let obj = self.obj();
+        let (w, h) = obj.default_size();
+
+        self.settings.set_int("window-width", w)?;
+        self.settings.set_int("window-height", h)?;
+        self.settings
+            .set_boolean("is-maximized", obj.is_maximized())?;
+
+        Ok(())
+    }
+
+    fn load_window_state(&self) {
+        println!("Load window state");
+        let obj = self.obj();
+
+        let w = self.settings.int("window-width");
+        let h = self.settings.int("window-height");
+        let maximized = self.settings.boolean("is-maximized");
+
+        obj.set_default_size(w, h);
+        if maximized {
+            obj.maximize();
+        }
+    }
 }
 
 #[gtk::template_callbacks]
@@ -693,6 +735,8 @@ impl ObjectImpl for AppWindow {
             .set_im_context(Some(&*self.im_context.borrow()));
 
         obj.add_controller(self.event_controller_key.borrow().clone());
+
+        self.load_window_state();
     }
 }
 
@@ -704,7 +748,15 @@ impl WidgetImpl for AppWindow {
     }
 }
 
-impl WindowImpl for AppWindow {}
+impl WindowImpl for AppWindow {
+    fn close_request(&self) -> glib::Propagation {
+        if let Err(err) = self.save_window_state() {
+            warn!("failed to save window state: {}", err);
+        }
+
+        self.parent_close_request()
+    }
+}
 
 impl ApplicationWindowImpl for AppWindow {}
 

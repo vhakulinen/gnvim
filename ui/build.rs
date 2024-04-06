@@ -7,8 +7,8 @@ fn main() {
     let appid = env::var("APPID").unwrap_or(String::from("com.github.vhakulinen.gnvim.Devel"));
 
     glib_build_tools::compile_resources(
-        &["resources"],
-        "resources/resources.gresource.xml",
+        &["data/resources"],
+        "data/resources/resources.gresource.xml",
         "gnvim.gresource",
     );
 

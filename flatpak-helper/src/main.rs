@@ -62,6 +62,9 @@ fn main() {
         .arg("--share=ipc")
         .arg("--socket=fallback-x11")
         .arg("--socket=wayland")
+        // Set the PREFIX that we're using in our make file.
+        .arg("--env=PREFIX=/app")
+        // Set the path required by the rust sdk.
         .arg("--env=PATH=/app/bin:/usr/bin:/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm16/bin");
 
     for arg in font_args() {
