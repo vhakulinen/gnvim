@@ -562,7 +562,7 @@ impl AppWindow {
     }
 
     fn save_window_state(&self) -> Result<(), glib::BoolError> {
-        println!("Save window state");
+        debug!("save window state");
         let obj = self.obj();
         let (w, h) = obj.default_size();
 
@@ -575,7 +575,7 @@ impl AppWindow {
     }
 
     fn load_window_state(&self) {
-        println!("Load window state");
+        debug!("load window state");
         let obj = self.obj();
 
         let w = self.settings.int("window-width");
