@@ -10,6 +10,7 @@
                 </style>
                 <child>
                     <object class="GtkListView" id="list-view">
+                        <property name="valign">start</property>
                         <style>
                             <class name="popupmenu-listview" />
                         </style>

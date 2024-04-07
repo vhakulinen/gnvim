@@ -18,14 +18,6 @@ glib::wrapper! {
 }
 
 impl Cmdline {
-    pub fn max_height(&self) -> i32 {
-        self.imp().max_height.get()
-    }
-
-    pub fn set_max_height(&self, m: i32) {
-        self.set_property("max-height", m);
-    }
-
     pub fn show(&self, event: CmdlineShow, colors: &Colors) {
         let imp = self.imp();
 

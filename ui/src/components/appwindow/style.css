@@ -1,7 +1,3 @@
-headerbar, omnibar > label, tabline {{
-  {font}
-}}
-
 .app-window, .external-window {{
   background-color: #{bg};
 }}
@@ -35,6 +31,7 @@ headerbar, omnibar > label, tabline {{
 }}
 
 tabline {{
+  {font}
   background-color: #{tablinefill_bg};
   box-shadow: inset -2px -70px 10px -70px rgba(0,0,0,0.75);
 }}
@@ -51,35 +48,22 @@ tabline tab.selected label {{
   color: #{tablinesel_fg};
 }}
 
-headerbar {{
-  background-color: #{menu_bg};
-  background-image: none;
-  color: #{menu_fg};
-  border: 0;
-  min-height: 0;
-}}
+cmdline {{
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  /* TODO(ville): Make the shadow color configurable. */
+  box-shadow: 0px 0px 10px 0px #000000;
 
-omnibar {{
-  background-color: #{menu_bg};
-  margin: 5px;
-  border: 1px solid shade(#{menu_fg}, 0.8);
-  border-radius: 3px;
-}}
-
-omnibar label {{
-  padding:
-      calc({omnibar_pad}px + {linespace_top}px)
-      {omnibar_pad}px
-      calc({omnibar_pad}px + {linespace_bottom}px)
-      {omnibar_pad}px;
-}}
-
-omnibar cmdline {{
-  padding: {omnibar_pad}px;
+  {font}
 }}
 
 cmdline textview, cmdline text {{
   background-color: #{bg};
   color: #{fg};
   caret-color: #{fg};
+}}
+
+cmdline #input {{
+  padding: 1rem;
+  background-color: #{bg};
 }}

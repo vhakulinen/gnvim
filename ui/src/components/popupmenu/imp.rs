@@ -96,6 +96,7 @@ impl ObjectImpl for Popupmenu {
 }
 
 impl WidgetImpl for Popupmenu {
+    // TODO(ville): Move these to a custom "maxheight" layout manager.
     fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
         // Use the listview's measurement for our size.
         let (_, n, _, _) = self.listview.measure(orientation, for_size);

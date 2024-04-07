@@ -7,18 +7,14 @@ use crate::components::Popupmenu;
 #[derive(gtk::CompositeTemplate, Default)]
 #[template(resource = "/com/github/vhakulinen/gnvim/cmdline.ui")]
 pub struct Cmdline {
-    #[template_child(id = "container")]
-    pub container: TemplateChild<gtk::Box>,
-    #[template_child(id = "top")]
-    pub top: TemplateChild<gtk::Box>,
+    #[template_child(id = "input")]
+    pub input: TemplateChild<gtk::Box>,
     #[template_child(id = "main")]
     pub main: TemplateChild<gtk::TextView>,
     #[template_child(id = "block")]
     pub block: TemplateChild<gtk::TextView>,
     #[template_child(id = "completion")]
     pub popupmenu: TemplateChild<Popupmenu>,
-
-    pub max_height: Cell<i32>,
 
     pub prompt_len: Cell<i32>,
 }
@@ -41,53 +37,6 @@ impl ObjectSubclass for Cmdline {
     }
 }
 
-impl ObjectImpl for Cmdline {
-    fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![glib::ParamSpecInt::builder("max-height")
-                .flags(glib::ParamFlags::READWRITE)
-                .build()]
-        });
+impl ObjectImpl for Cmdline {}
 
-        PROPERTIES.as_ref()
-    }
-
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "max-height" => self.max_height.get().to_value(),
-            _ => unimplemented!(),
-        }
-    }
-
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "max-height" => {
-                let h: i32 = value.get().expect("max-height must be a i32");
-
-                let style_ctx = self.obj().style_context();
-                let padding = style_ctx.padding();
-                // Remove our padding.
-                let h = h - padding.top() as i32 - padding.bottom() as i32;
-
-                self.max_height.set(h);
-            }
-            _ => unimplemented!(),
-        };
-    }
-}
-
-impl WidgetImpl for Cmdline {
-    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
-        self.container.measure(orientation, for_size)
-    }
-
-    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-        self.container.allocate(width, height, baseline, None);
-
-        let (_, req) = self.top.preferred_size();
-        let max_h = self.max_height.get();
-        self.popupmenu.set_max_height(max_h - req.height());
-        self.popupmenu.set_max_width(req.width());
-    }
-}
+impl WidgetImpl for Cmdline {}

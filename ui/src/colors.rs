@@ -14,7 +14,6 @@ pub enum HlGroup {
     TabLine,
     TabLineFill,
     TabLineSel,
-    Menu,
 }
 
 #[derive(Clone, Debug, Default)]
