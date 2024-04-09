@@ -74,6 +74,10 @@ impl ObjectImpl for Tabline {
             _ => unimplemented!(),
         };
     }
+
+    fn dispose(&self) {
+        self.dispose_template();
+    }
 }
 
 impl WidgetImpl for Tabline {}

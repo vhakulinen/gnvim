@@ -22,6 +22,10 @@ impl ObjectImpl for MsgWin {
 
         self.obj().set_property("overflow", gtk::Overflow::Hidden);
     }
+
+    fn dispose(&self) {
+        self.obj().iter_children().for_each(|c| c.unparent());
+    }
 }
 
 impl WidgetImpl for MsgWin {

@@ -172,6 +172,10 @@ impl ObjectImpl for Shell {
                 obj.imp().adjust_pmenu();
             }));
     }
+
+    fn dispose(&self) {
+        self.dispose_template();
+    }
 }
 
 impl WidgetImpl for Shell {

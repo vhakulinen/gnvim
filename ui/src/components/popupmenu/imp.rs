@@ -96,6 +96,10 @@ impl ObjectImpl for Popupmenu {
         self.listview.set_model(Some(&self.store));
         self.listview.set_factory(Some(&factory));
     }
+
+    fn dispose(&self) {
+        self.dispose_template();
+    }
 }
 
 impl WidgetImpl for Popupmenu {

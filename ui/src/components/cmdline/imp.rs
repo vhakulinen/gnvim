@@ -37,6 +37,10 @@ impl ObjectSubclass for Cmdline {
     }
 }
 
-impl ObjectImpl for Cmdline {}
+impl ObjectImpl for Cmdline {
+    fn dispose(&self) {
+        self.dispose_template();
+    }
+}
 
 impl WidgetImpl for Cmdline {}

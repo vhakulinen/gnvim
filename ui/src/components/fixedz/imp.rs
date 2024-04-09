@@ -21,6 +21,10 @@ impl ObjectImpl for Fixedz {
         self.obj()
             .set_layout_manager(Some(self.layout_manager.clone()));
     }
+
+    fn dispose(&self) {
+        self.obj().iter_children().for_each(|c| c.unparent());
+    }
 }
 
 impl WidgetImpl for Fixedz {
