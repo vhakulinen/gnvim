@@ -53,7 +53,7 @@ impl Shell {
             .imp()
             .font
             .borrow()
-            .grid_size_for_allocation(&self.allocation());
+            .grid_size_for_allocation(self.width(), self.height());
 
         let id = glib::timeout_add_local(
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),

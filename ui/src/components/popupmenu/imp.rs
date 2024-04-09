@@ -54,6 +54,9 @@ impl ObjectImpl for Popupmenu {
         let factory = gtk::SignalListItemFactory::new();
 
         factory.connect_setup(clone!(@weak self as imp => move |_, listitem| {
+            let listitem = listitem
+                .downcast_ref::<gtk::ListItem>()
+                .expect("invalid listitem type");
             let item = Row::default();
             let obj = imp.obj();
             obj.bind_property("font", &item, "font")

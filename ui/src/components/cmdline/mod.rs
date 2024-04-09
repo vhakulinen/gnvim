@@ -109,7 +109,7 @@ impl Cmdline {
             buf.insert_markup(&mut iter, &line);
         });
 
-        imp.block.show();
+        imp.block.set_visible(true);
     }
 
     pub fn block_append(&self, event: CmdlineBlockAppend, colors: &Colors) {
@@ -129,7 +129,7 @@ impl Cmdline {
     }
 
     pub fn block_hide(&self) {
-        self.imp().block.hide();
+        self.imp().block.set_visible(false);
     }
 
     pub fn popupmenu_show(

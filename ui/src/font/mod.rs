@@ -93,9 +93,9 @@ impl Font {
     /// Calculates grid size for given allocation.
     ///
     /// Returns (cols, rows).
-    pub fn grid_size_for_allocation(&self, alloc: &gtk::Allocation) -> (usize, usize) {
-        let rows = (alloc.height() as f32 / (self.height() / SCALE)).floor();
-        let cols = (alloc.width() as f32 / (self.char_width() / SCALE)).floor();
+    pub fn grid_size_for_allocation(&self, width: i32, height: i32) -> (usize, usize) {
+        let rows = (height as f32 / (self.height() / SCALE)).floor();
+        let cols = (width as f32 / (self.char_width() / SCALE)).floor();
 
         (cols as usize, rows as usize)
     }

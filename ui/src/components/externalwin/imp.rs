@@ -28,7 +28,7 @@ impl ExternalWindow {
             .grid
             .borrow()
             .font()
-            .grid_size_for_allocation(&obj.allocation());
+            .grid_size_for_allocation(obj.width(), obj.height());
 
         let id = glib::timeout_add_local(
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),

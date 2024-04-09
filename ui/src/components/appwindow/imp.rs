@@ -174,24 +174,28 @@ impl AppWindow {
     }
 
     fn show_error_dialog(&self, title_markup: &str, content_markup: &str) {
-        let dialog = gtk::MessageDialog::new(
-            Some(self.obj().upcast_ref::<gtk::Window>()),
-            gtk::DialogFlags::MODAL,
-            gtk::MessageType::Error,
-            gtk::ButtonsType::Close,
-            "",
-        );
+        // TODO(ville): Migrate to custom dialog.
+        #[allow(deprecated)]
+        {
+            let dialog = gtk::MessageDialog::new(
+                Some(self.obj().upcast_ref::<gtk::Window>()),
+                gtk::DialogFlags::MODAL,
+                gtk::MessageType::Error,
+                gtk::ButtonsType::Close,
+                "",
+            );
 
-        dialog.set_markup(title_markup);
-        dialog.set_secondary_use_markup(true);
-        dialog.set_secondary_text(Some(content_markup));
+            dialog.set_markup(title_markup);
+            dialog.set_secondary_use_markup(true);
+            dialog.set_secondary_text(Some(content_markup));
 
-        let obj = self.obj();
-        dialog.connect_response(glib::clone!(@weak obj => move |_, _| {
-            obj.application().expect("application not set").quit();
-        }));
+            let obj = self.obj();
+            dialog.connect_response(glib::clone!(@weak obj => move |_, _| {
+                obj.application().expect("application not set").quit();
+            }));
 
-        dialog.show();
+            dialog.show();
+        }
     }
 
     fn handle_decode_redraw_error(&self, err: rmpv::ext::Error) {
@@ -397,7 +401,7 @@ impl AppWindow {
                     // be set in CSS, instead of through custom property.
                     // Tho' at least linespace value (e.g. line-height css
                     // property) was added as recently as gtk version 4.6.
-                    self.css_provider.load_from_data(&format!(
+                    self.css_provider.load_from_string(&format!(
                         include_str!("style.css"),
                         bg = colors.bg.as_hex(),
                         fg = colors.fg.as_hex(),
