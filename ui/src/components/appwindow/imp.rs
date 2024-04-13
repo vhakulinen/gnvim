@@ -173,29 +173,27 @@ impl AppWindow {
         }
     }
 
-    fn show_error_dialog(&self, title_markup: &str, content_markup: &str) {
-        // TODO(ville): Migrate to custom dialog.
-        #[allow(deprecated)]
-        {
-            let dialog = gtk::MessageDialog::new(
-                Some(self.obj().upcast_ref::<gtk::Window>()),
-                gtk::DialogFlags::MODAL,
-                gtk::MessageType::Error,
-                gtk::ButtonsType::Close,
-                "",
-            );
+    fn show_error_dialog(&self, heading: &str, body_markup: &str) {
+        const RESPONSE_ID: &str = "CLOSE";
+        let dialog = adw::AlertDialog::builder()
+            .heading(heading)
+            .body(body_markup)
+            .body_use_markup(true)
+            .can_close(false)
+            .follows_content_size(true)
+            .build();
+        dialog.add_response(RESPONSE_ID, "Close");
+        dialog.set_response_appearance(RESPONSE_ID, adw::ResponseAppearance::Destructive);
 
-            dialog.set_markup(title_markup);
-            dialog.set_secondary_use_markup(true);
-            dialog.set_secondary_text(Some(content_markup));
-
-            let obj = self.obj();
-            dialog.connect_response(glib::clone!(@weak obj => move |_, _| {
+        let obj = self.obj();
+        dialog.connect_response(
+            None,
+            glib::clone!(@weak obj => move |_, _| {
                 obj.application().expect("application not set").quit();
-            }));
+            }),
+        );
 
-            dialog.show();
-        }
+        dialog.present(self.obj().upcast_ref::<gtk::Widget>());
     }
 
     fn handle_decode_redraw_error(&self, err: rmpv::ext::Error) {
