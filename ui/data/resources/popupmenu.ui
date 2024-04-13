@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
     <template class="Popupmenu" parent="GtkWidget">
+        <property name="layout-manager">
+            <object class="MaxSizeLayoutManager">
+                <property
+                    name="max-height"
+                    bind-source="Popupmenu"
+                    bind-property="max-height"
+                    bind-flags="sync-create" />
+                <property
+                    name="max-width"
+                    bind-source="Popupmenu"
+                    bind-property="max-width"
+                    bind-flags="sync-create" />
+            </object>
+        </property>
+
         <child>
             <object class="GtkScrolledWindow" id="scrolled-window">
                 <property name="propagate-natural-width">true</property>

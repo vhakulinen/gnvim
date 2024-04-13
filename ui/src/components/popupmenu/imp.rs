@@ -6,7 +6,10 @@ use gtk::{
     subclass::prelude::*,
 };
 
-use crate::{components::popupmenu::Kind, font::Font};
+use crate::{
+    components::{popupmenu::Kind, MaxSizeLayoutManager},
+    font::Font,
+};
 
 use super::{PopupmenuObject, Row};
 
@@ -37,6 +40,7 @@ impl ObjectSubclass for Popupmenu {
 
     fn class_init(klass: &mut Self::Class) {
         Row::ensure_type();
+        MaxSizeLayoutManager::ensure_type();
 
         klass.bind_template();
     }
@@ -102,28 +106,4 @@ impl ObjectImpl for Popupmenu {
     }
 }
 
-impl WidgetImpl for Popupmenu {
-    // TODO(ville): Move these to a custom "maxheight" layout manager.
-    fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
-        // Use the listview's measurement for our size.
-        let (_, n, _, _) = self.listview.measure(orientation, for_size);
-
-        match orientation {
-            gtk::Orientation::Horizontal => {
-                let w = n.min(self.max_width.get());
-                (w, w, -1, -1)
-            }
-            gtk::Orientation::Vertical => {
-                let h = n.min(self.max_height.get());
-                (h, h, -1, -1)
-            }
-            _ => self.parent_measure(orientation, for_size),
-        }
-    }
-
-    fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(width, height, baseline);
-
-        self.scrolledwindow.allocate(width, height, baseline, None);
-    }
-}
+impl WidgetImpl for Popupmenu {}
