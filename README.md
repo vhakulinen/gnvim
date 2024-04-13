@@ -34,7 +34,7 @@ Install system wide:
 
 ```
 $ # Install cargo (e.g. the rust toolchain)
-$ # Install gtk4 dev files, e.g. apt install libgtk-4-dev (see below)
+$ # Install gtk4 and libadwaita dev files, e.g. apt install libgtk-4-dev libadwaita-1-dev (see below)
 $ make build
 $ sudo make install
 ```
