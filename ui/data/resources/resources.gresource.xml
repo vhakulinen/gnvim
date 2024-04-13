@@ -4,7 +4,6 @@
         <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">cmdline.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">grid.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">omnibar.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">popupmenu.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">popupmenu_row.ui</file>
         <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
