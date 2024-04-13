@@ -6,13 +6,16 @@ use gtk::{glib, prelude::*, subclass::prelude::*};
 use crate::boxed::ShowTabline;
 use crate::nvim::Neovim;
 
-#[derive(Default, gtk::CompositeTemplate)]
+#[derive(Default, glib::Properties, gtk::CompositeTemplate)]
 #[template(resource = "/com/github/vhakulinen/gnvim/tabline.ui")]
+#[properties(wrapper_type = super::Tabline)]
 pub struct Tabline {
     #[template_child(id = "content")]
     pub content: TemplateChild<gtk::Box>,
 
+    #[property(get, set)]
     pub nvim: RefCell<Neovim>,
+    #[property(set)]
     pub show: RefCell<ShowTabline>,
 }
 
@@ -34,47 +37,8 @@ impl ObjectSubclass for Tabline {
     }
 }
 
+#[glib::derived_properties]
 impl ObjectImpl for Tabline {
-    fn properties() -> &'static [glib::ParamSpec] {
-        use once_cell::sync::Lazy;
-        static PROPERTIES: Lazy<Vec<glib::ParamSpec>> = Lazy::new(|| {
-            vec![
-                glib::ParamSpecObject::builder::<Neovim>("nvim")
-                    .flags(glib::ParamFlags::READWRITE)
-                    .build(),
-                glib::ParamSpecBoxed::builder::<ShowTabline>("show")
-                    .flags(glib::ParamFlags::WRITABLE)
-                    .build(),
-            ]
-        });
-
-        PROPERTIES.as_ref()
-    }
-
-    fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
-        match pspec.name() {
-            "nvim" => self.nvim.borrow().to_value(),
-            _ => unimplemented!(),
-        }
-    }
-
-    fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-        match pspec.name() {
-            "nvim" => {
-                self.nvim.replace(
-                    value
-                        .get()
-                        .expect("nvim value needs to be an Neovim object"),
-                );
-            }
-            "show" => {
-                self.show
-                    .replace(value.get().expect("font value must be a ShowTabline"));
-            }
-            _ => unimplemented!(),
-        };
-    }
-
     fn dispose(&self) {
         self.dispose_template();
     }
