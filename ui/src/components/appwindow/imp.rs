@@ -10,14 +10,14 @@ use nvim::types::UiEvent;
 use nvim::types::{OptionSet, UiOptions};
 use nvim::NeovimApi;
 
+use adw::{self, prelude::*, subclass::prelude::*};
 use glib::subclass::InitializingObject;
-use gtk::subclass::prelude::*;
+use gtk::gio;
 use gtk::CompositeTemplate;
 use gtk::{
     gdk,
     glib::{self, clone},
 };
-use gtk::{gio, prelude::*};
 
 use nvim::rpc::{message::Notification, RpcReader};
 
@@ -662,7 +662,7 @@ impl AppWindow {
 impl ObjectSubclass for AppWindow {
     const NAME: &'static str = "AppWindow";
     type Type = super::AppWindow;
-    type ParentType = gtk::ApplicationWindow;
+    type ParentType = adw::ApplicationWindow;
 
     fn class_init(klass: &mut Self::Class) {
         Shell::ensure_type();
@@ -756,6 +756,8 @@ impl WindowImpl for AppWindow {
         self.parent_close_request()
     }
 }
+
+impl AdwApplicationWindowImpl for AppWindow {}
 
 impl ApplicationWindowImpl for AppWindow {}
 

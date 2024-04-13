@@ -1,6 +1,7 @@
-.app-window, .external-window {{
-  background-color: #{bg};
-}}
+@define-color window_bg_color #{bg};
+@define-color window_fg_color #{fg};
+@define-color view_bg_color #{bg};
+@define-color view_fg_color #{fg};
 
 .msg-win.scrolled {{
   border-top: 1px solid #{msgsep};

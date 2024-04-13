@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="AppWindow" parent="GtkApplicationWindow">
+    <template class="AppWindow" parent="AdwApplicationWindow">
         <property name="title">Gnvim</property>
         <property name="default-width">1280</property>
         <property name="default-height">720</property>
@@ -20,75 +20,82 @@
             <class name="app-window" />
         </style>
 
-        <child>
-            <object class="GtkOverlay">
-                <child type="overlay">
-                    <object class="Cmdline" id="cmdline">
-                        <property name="visible">false</property>
-                    </object>
+        <property name="content">
+            <object class="AdwToolbarView">
+                <child type="top">
+                    <object class="AdwHeaderBar" />
                 </child>
-
-                <child>
-                    <object class="GtkBox">
-                        <property name="orientation">vertical</property>
-
-                        <child>
-                            <object class="Tabline" id="tabline">
-                                <property name="can-focus">false</property>
-                                <property
-                                    name="show"
-                                    bind-source="AppWindow"
-                                    bind-property="show-tabline"
-                                    bind-flags="sync-create"
-                                    />
-                                <property
-                                    name="nvim"
-                                    bind-source="AppWindow"
-                                    bind-property="nvim"
-                                    bind-flags="sync-create"
-                                    />
+                <property name="content">
+                    <object class="GtkOverlay">
+                        <child type="overlay">
+                            <object class="Cmdline" id="cmdline">
+                                <property name="visible">false</property>
                             </object>
                         </child>
 
                         <child>
-                            <object class="Shell" id="shell">
-                                <property name="hexpand">true</property>
-                                <property name="vexpand">true</property>
-                                <property
-                                    name="font"
-                                    bind-source="AppWindow"
-                                    bind-property="font"
-                                    bind-flags="sync-create"
-                                    />
-                                <property
-                                    name="nvim"
-                                    bind-source="AppWindow"
-                                    bind-property="nvim"
-                                    bind-flags="sync-create"
-                                    />
-                                <property
-                                    name="cursor-blink-transition"
-                                    bind-source="AppWindow"
-                                    bind-property="cursor-blink-transition"
-                                    bind-flags="sync-create"
-                                    />
-                                <property
-                                    name="cursor-position-transition"
-                                    bind-source="AppWindow"
-                                    bind-property="cursor-position-transition"
-                                    bind-flags="sync-create"
-                                    />
-                                <property
-                                    name="scroll-transition"
-                                    bind-source="AppWindow"
-                                    bind-property="scroll-transition"
-                                    bind-flags="sync-create"
-                                    />
+                            <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+
+                                <child>
+                                    <object class="Tabline" id="tabline">
+                                        <property name="can-focus">false</property>
+                                        <property
+                                            name="show"
+                                            bind-source="AppWindow"
+                                            bind-property="show-tabline"
+                                            bind-flags="sync-create"
+                                            />
+                                        <property
+                                            name="nvim"
+                                            bind-source="AppWindow"
+                                            bind-property="nvim"
+                                            bind-flags="sync-create"
+                                            />
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="Shell" id="shell">
+                                        <property name="hexpand">true</property>
+                                        <property name="vexpand">true</property>
+                                        <property
+                                            name="font"
+                                            bind-source="AppWindow"
+                                            bind-property="font"
+                                            bind-flags="sync-create"
+                                            />
+                                        <property
+                                            name="nvim"
+                                            bind-source="AppWindow"
+                                            bind-property="nvim"
+                                            bind-flags="sync-create"
+                                            />
+                                        <property
+                                            name="cursor-blink-transition"
+                                            bind-source="AppWindow"
+                                            bind-property="cursor-blink-transition"
+                                            bind-flags="sync-create"
+                                            />
+                                        <property
+                                            name="cursor-position-transition"
+                                            bind-source="AppWindow"
+                                            bind-property="cursor-position-transition"
+                                            bind-flags="sync-create"
+                                            />
+                                        <property
+                                            name="scroll-transition"
+                                            bind-source="AppWindow"
+                                            bind-property="scroll-transition"
+                                            bind-flags="sync-create"
+                                            />
+                                    </object>
+                                </child>
                             </object>
                         </child>
                     </object>
-                </child>
+                </property>
             </object>
-        </child>
+        </property>
     </template>
 </interface>

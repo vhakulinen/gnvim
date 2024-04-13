@@ -1,10 +1,11 @@
+use adw;
 use gtk::gio;
 
 use crate::APPID;
 
 glib::wrapper! {
     pub struct App(ObjectSubclass<imp::App>)
-        @extends gio::Application, gtk::Application;
+        @extends gio::Application, adw::Application;
 }
 
 #[derive(Default, glib::Boxed, Clone, Copy)]
@@ -36,7 +37,8 @@ mod imp {
     use std::process::Command;
     use std::{cell::RefCell, io::IsTerminal};
 
-    use gtk::{gio, prelude::*, subclass::prelude::*};
+    use adw::subclass::prelude::*;
+    use gtk::{gio, prelude::*};
 
     use crate::{components::appwindow::AppWindow, debug};
 
@@ -96,7 +98,7 @@ mod imp {
                     args.extend_from_slice(&obj.nvim_args());
 
                     glib::Object::builder()
-                        .property("application", obj.upcast_ref::<gtk::Application>())
+                        .property("application", obj.upcast_ref::<adw::Application>())
                         .property("nvim-args", args)
                         .property("stdin-fd", *self.stdin_fd.borrow())
                         .build()
@@ -109,7 +111,7 @@ mod imp {
     impl ObjectSubclass for App {
         const NAME: &'static str = "App";
         type Type = super::App;
-        type ParentType = gtk::Application;
+        type ParentType = adw::Application;
     }
 
     #[glib::derived_properties]
@@ -196,6 +198,8 @@ mod imp {
             self.parent_constructed();
         }
     }
+
+    impl AdwApplicationImpl for App {}
 
     impl ApplicationImpl for App {
         fn startup(&self) {
