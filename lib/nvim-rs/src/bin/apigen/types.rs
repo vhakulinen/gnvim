@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 
 pub trait AsPascalCase {
     fn as_pascal_case(&self) -> String;
@@ -62,34 +62,41 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn param_type_for(&self, param: &Parameter) -> TokenStream {
+    pub fn param_type_for(
+        &self,
+        param: &Parameter,
+        index: usize,
+    ) -> (Option<TokenStream>, TokenStream) {
         match (self.name.as_ref(), param.name.as_ref()) {
-            ("nvim_ui_attach", "options") => quote! { UiOptions },
-            _ => self.param_type(&param.r#type),
+            ("nvim_ui_attach", "options") => (None, quote! { UiOptions }),
+            _ => self.param_type(&param.r#type, index),
         }
     }
 
-    fn param_type(&self, ty: &str) -> TokenStream {
+    fn param_type(&self, ty: &str, i: usize) -> (Option<TokenStream>, TokenStream) {
         match ty {
-            "Boolean" => quote! { bool },
-            "Integer" => quote! { i64 },
-            "Float" => quote! { f64 },
-            "String" => quote! { &str },
-            "void" => quote! { () },
-            "Window" => quote! { &Window },
-            "Tabpage" => quote! { &Tabpage },
-            "Buffer" => quote! { &Buffer },
-            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
-            "ArrayOf(String)" => quote! { Vec<String> },
-            "ArrayOf(Integer)" => quote! { &[i64] },
-            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
-            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
-            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
-            "ArrayOf(Window)" => quote! { Vec<Window> },
-            "Array" => quote! { Vec<rmpv::Value> },
-            "Dictionary" => quote! { &Dictionary },
-            "Object" => quote! { &Object },
-            "LuaRef" => quote! { &LuaRef },
+            "Boolean" => (None, quote! { bool }),
+            "Integer" => (None, quote! { i64 }),
+            "Float" => (None, quote! { f64 }),
+            "String" => (None, quote! { &str }),
+            "void" => (None, quote! { () }),
+            "Window" => (None, quote! { &Window }),
+            "Tabpage" => (None, quote! { &Tabpage }),
+            "Buffer" => (None, quote! { &Buffer }),
+            "ArrayOf(Integer, 2)" => (None, quote! { (i64, i64) }),
+            "ArrayOf(String)" => (None, quote! { Vec<String> }),
+            "ArrayOf(Integer)" => (None, quote! { &[i64] }),
+            "ArrayOf(Buffer)" => (None, quote! { Vec<Buffer> }),
+            "ArrayOf(Dictionary)" => (None, quote! { Vec<Dictionary> }),
+            "ArrayOf(Tabpage)" => (None, quote! { Vec<Tabpage> }),
+            "ArrayOf(Window)" => (None, quote! { Vec<Window> }),
+            "Array" => (None, quote! { Vec<rmpv::Value> }),
+            "Dictionary" => (None, quote! { &Dictionary }),
+            "Object" => {
+                let t = format_ident!("T{}", i).to_token_stream();
+                (Some(quote! { #t: serde::Serialize }), quote! { &#t })
+            }
+            "LuaRef" => (None, quote! { &LuaRef }),
             s => unimplemented!("function param type '{}'", s),
         }
     }
@@ -119,17 +126,21 @@ impl Function {
         }
     }
 
-    fn args_in(&self) -> Vec<TokenStream> {
+    fn args_in(&self) -> (Vec<Option<TokenStream>>, Vec<TokenStream>) {
         self.parameters
             .iter()
-            .map(|p| {
+            .enumerate()
+            .map(|(i, p)| {
                 let name = p.rust_name();
-                let ty = self.param_type_for(p);
-                quote! {
-                    #name: #ty
-                }
+                let (generic, ty) = self.param_type_for(p, i + 1);
+                (
+                    generic,
+                    quote! {
+                        #name: #ty
+                    },
+                )
             })
-            .collect()
+            .unzip()
     }
 
     fn args_out(&self) -> Vec<syn::Ident> {
@@ -143,12 +154,14 @@ impl Function {
 
         let fname: syn::Ident = syn::parse_str(&self.name).expect("failed to parse name");
         let method = &self.name;
-        let args_in = self.args_in();
+        let (generics, args_in) = self.args_in();
         let args_out = self.args_out();
         let output = self.output_type_for(&self.return_type);
 
+        let generics = generics.into_iter().flatten();
+
         Some(quote! {
-            async fn #fname(self, #(#args_in),*) -> CallResponse<#output> {
+            async fn #fname<#(#generics),*>(self, #(#args_in),*) -> CallResponse<#output> {
                 self.call(#method, (#(#args_out,)*)).await
             }
         })

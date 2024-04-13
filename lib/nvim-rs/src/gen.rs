@@ -11,7 +11,11 @@ where
     async fn nvim_get_autocmds(self, opts: &Dictionary) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_get_autocmds", (opts,)).await
     }
-    async fn nvim_create_autocmd(self, event: &Object, opts: &Dictionary) -> CallResponse<i64> {
+    async fn nvim_create_autocmd<T1: serde::Serialize>(
+        self,
+        event: &T1,
+        opts: &Dictionary,
+    ) -> CallResponse<i64> {
         self.call("nvim_create_autocmd", (event, opts)).await
     }
     async fn nvim_del_autocmd(self, id: i64) -> CallResponse<()> {
@@ -29,7 +33,11 @@ where
     async fn nvim_del_augroup_by_name(self, name: &str) -> CallResponse<()> {
         self.call("nvim_del_augroup_by_name", (name,)).await
     }
-    async fn nvim_exec_autocmds(self, event: &Object, opts: &Dictionary) -> CallResponse<()> {
+    async fn nvim_exec_autocmds<T1: serde::Serialize>(
+        self,
+        event: &T1,
+        opts: &Dictionary,
+    ) -> CallResponse<()> {
         self.call("nvim_exec_autocmds", (event, opts)).await
     }
     async fn nvim_buf_line_count(self, buffer: &Buffer) -> CallResponse<i64> {
@@ -131,11 +139,11 @@ where
     async fn nvim_buf_del_keymap(self, buffer: &Buffer, mode: &str, lhs: &str) -> CallResponse<()> {
         self.call("nvim_buf_del_keymap", (buffer, mode, lhs)).await
     }
-    async fn nvim_buf_set_var(
+    async fn nvim_buf_set_var<T3: serde::Serialize>(
         self,
         buffer: &Buffer,
         name: &str,
-        value: &Object,
+        value: &T3,
     ) -> CallResponse<()> {
         self.call("nvim_buf_set_var", (buffer, name, value)).await
     }
@@ -183,10 +191,10 @@ where
     async fn nvim_cmd(self, cmd: &Dictionary, opts: &Dictionary) -> CallResponse<String> {
         self.call("nvim_cmd", (cmd, opts)).await
     }
-    async fn nvim_create_user_command(
+    async fn nvim_create_user_command<T2: serde::Serialize>(
         self,
         name: &str,
-        command: &Object,
+        command: &T2,
         opts: &Dictionary,
     ) -> CallResponse<()> {
         self.call("nvim_create_user_command", (name, command, opts))
@@ -195,11 +203,11 @@ where
     async fn nvim_del_user_command(self, name: &str) -> CallResponse<()> {
         self.call("nvim_del_user_command", (name,)).await
     }
-    async fn nvim_buf_create_user_command(
+    async fn nvim_buf_create_user_command<T3: serde::Serialize>(
         self,
         buffer: &Buffer,
         name: &str,
-        command: &Object,
+        command: &T3,
         opts: &Dictionary,
     ) -> CallResponse<()> {
         self.call(
@@ -240,12 +248,12 @@ where
         self.call("nvim_buf_get_extmark_by_id", (buffer, ns_id, id, opts))
             .await
     }
-    async fn nvim_buf_get_extmarks(
+    async fn nvim_buf_get_extmarks<T3: serde::Serialize, T4: serde::Serialize>(
         self,
         buffer: &Buffer,
         ns_id: i64,
-        start: &Object,
-        end: &Object,
+        start: &T3,
+        end: &T4,
         opts: &Dictionary,
     ) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_buf_get_extmarks", (buffer, ns_id, start, end, opts))
@@ -305,10 +313,10 @@ where
     async fn nvim_get_option_value(self, name: &str, opts: &Dictionary) -> CallResponse<Object> {
         self.call("nvim_get_option_value", (name, opts)).await
     }
-    async fn nvim_set_option_value(
+    async fn nvim_set_option_value<T2: serde::Serialize>(
         self,
         name: &str,
-        value: &Object,
+        value: &T2,
         opts: &Dictionary,
     ) -> CallResponse<()> {
         self.call("nvim_set_option_value", (name, value, opts))
@@ -324,7 +332,11 @@ where
     ) -> CallResponse<Dictionary> {
         self.call("nvim_get_option_info2", (name, opts)).await
     }
-    async fn nvim_set_option(self, name: &str, value: &Object) -> CallResponse<()> {
+    async fn nvim_set_option<T2: serde::Serialize>(
+        self,
+        name: &str,
+        value: &T2,
+    ) -> CallResponse<()> {
         self.call("nvim_set_option", (name, value)).await
     }
     async fn nvim_get_option(self, name: &str) -> CallResponse<Object> {
@@ -333,11 +345,11 @@ where
     async fn nvim_buf_get_option(self, buffer: &Buffer, name: &str) -> CallResponse<Object> {
         self.call("nvim_buf_get_option", (buffer, name)).await
     }
-    async fn nvim_buf_set_option(
+    async fn nvim_buf_set_option<T3: serde::Serialize>(
         self,
         buffer: &Buffer,
         name: &str,
-        value: &Object,
+        value: &T3,
     ) -> CallResponse<()> {
         self.call("nvim_buf_set_option", (buffer, name, value))
             .await
@@ -345,11 +357,11 @@ where
     async fn nvim_win_get_option(self, window: &Window, name: &str) -> CallResponse<Object> {
         self.call("nvim_win_get_option", (window, name)).await
     }
-    async fn nvim_win_set_option(
+    async fn nvim_win_set_option<T3: serde::Serialize>(
         self,
         window: &Window,
         name: &str,
-        value: &Object,
+        value: &T3,
     ) -> CallResponse<()> {
         self.call("nvim_win_set_option", (window, name, value))
             .await
@@ -360,11 +372,11 @@ where
     async fn nvim_tabpage_get_var(self, tabpage: &Tabpage, name: &str) -> CallResponse<Object> {
         self.call("nvim_tabpage_get_var", (tabpage, name)).await
     }
-    async fn nvim_tabpage_set_var(
+    async fn nvim_tabpage_set_var<T3: serde::Serialize>(
         self,
         tabpage: &Tabpage,
         name: &str,
-        value: &Object,
+        value: &T3,
     ) -> CallResponse<()> {
         self.call("nvim_tabpage_set_var", (tabpage, name, value))
             .await
@@ -393,7 +405,11 @@ where
     async fn nvim_ui_try_resize(self, width: i64, height: i64) -> CallResponse<()> {
         self.call("nvim_ui_try_resize", (width, height)).await
     }
-    async fn nvim_ui_set_option(self, name: &str, value: &Object) -> CallResponse<()> {
+    async fn nvim_ui_set_option<T2: serde::Serialize>(
+        self,
+        name: &str,
+        value: &T2,
+    ) -> CallResponse<()> {
         self.call("nvim_ui_set_option", (name, value)).await
     }
     async fn nvim_ui_try_resize_grid(self, grid: i64, width: i64, height: i64) -> CallResponse<()> {
@@ -494,7 +510,7 @@ where
     async fn nvim_get_var(self, name: &str) -> CallResponse<Object> {
         self.call("nvim_get_var", (name,)).await
     }
-    async fn nvim_set_var(self, name: &str, value: &Object) -> CallResponse<()> {
+    async fn nvim_set_var<T2: serde::Serialize>(self, name: &str, value: &T2) -> CallResponse<()> {
         self.call("nvim_set_var", (name, value)).await
     }
     async fn nvim_del_var(self, name: &str) -> CallResponse<()> {
@@ -503,7 +519,7 @@ where
     async fn nvim_get_vvar(self, name: &str) -> CallResponse<Object> {
         self.call("nvim_get_vvar", (name,)).await
     }
-    async fn nvim_set_vvar(self, name: &str, value: &Object) -> CallResponse<()> {
+    async fn nvim_set_vvar<T2: serde::Serialize>(self, name: &str, value: &T2) -> CallResponse<()> {
         self.call("nvim_set_vvar", (name, value)).await
     }
     async fn nvim_echo(
@@ -673,9 +689,9 @@ where
     async fn nvim_call_function(self, _fn: &str, args: Vec<rmpv::Value>) -> CallResponse<Object> {
         self.call("nvim_call_function", (_fn, args)).await
     }
-    async fn nvim_call_dict_function(
+    async fn nvim_call_dict_function<T1: serde::Serialize>(
         self,
-        dict: &Object,
+        dict: &T1,
         _fn: &str,
         args: Vec<rmpv::Value>,
     ) -> CallResponse<Object> {
@@ -732,11 +748,11 @@ where
     async fn nvim_win_get_var(self, window: &Window, name: &str) -> CallResponse<Object> {
         self.call("nvim_win_get_var", (window, name)).await
     }
-    async fn nvim_win_set_var(
+    async fn nvim_win_set_var<T3: serde::Serialize>(
         self,
         window: &Window,
         name: &str,
-        value: &Object,
+        value: &T3,
     ) -> CallResponse<()> {
         self.call("nvim_win_set_var", (window, name, value)).await
     }
