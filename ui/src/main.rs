@@ -23,6 +23,6 @@ pub const WINDOW_RESIZE_DEBOUNCE_MS: u64 = 10;
 fn main() -> ExitCode {
     gio::resources_register_include!("gnvim.gresource").expect("Failed to register resources.");
 
-    let app = app::App::new();
+    let app = app::App::default();
     app.run()
 }

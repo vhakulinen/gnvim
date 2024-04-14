@@ -1,4 +1,3 @@
-use adw;
 use gtk::gio;
 
 use crate::APPID;
@@ -20,8 +19,8 @@ impl std::ops::Deref for Fd {
     }
 }
 
-impl App {
-    pub fn new() -> Self {
+impl Default for App {
+    fn default() -> Self {
         let mut flags = gio::ApplicationFlags::empty();
         flags.insert(gio::ApplicationFlags::HANDLES_OPEN);
 

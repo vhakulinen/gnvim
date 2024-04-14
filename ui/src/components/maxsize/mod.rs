@@ -1,4 +1,4 @@
-use gtk::{glib, prelude::*};
+use gtk::glib;
 
 glib::wrapper! {
     /// MaxSizeLayoutManager allows its child to use its natural size up to
@@ -10,7 +10,7 @@ glib::wrapper! {
 mod imp {
     use std::{cell::Cell, num::NonZeroI32};
 
-    use gtk::{glib, graphene, prelude::*, subclass::prelude::*};
+    use gtk::{glib, prelude::*, subclass::prelude::*};
 
     use crate::child_iter::IterChildren;
 

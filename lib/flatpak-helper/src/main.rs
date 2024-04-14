@@ -2,8 +2,6 @@
 //! gnome builder also does the same thing (for fonts _and_ a11y bus).
 use std::{env, path::PathBuf, process::Command};
 
-use glib;
-
 fn font_args() -> Vec<String> {
     let system_fonts_dir = PathBuf::from("/usr/share/fonts");
     let system_local_fonts_dir = PathBuf::from("/usr/local/share/fonts");
@@ -40,7 +38,7 @@ fn font_args() -> Vec<String> {
         maps.push(arg);
     }
 
-    return maps;
+    maps
 }
 
 fn main() {
