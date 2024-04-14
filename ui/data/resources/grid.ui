@@ -1,84 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="Grid" parent="GtkWidget">
-        <child>
-            <object class="GridBuffer" id="buffer">
-                <property
-                    name="font"
-                    bind-source="Grid"
-                    bind-property="font"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="scroll-delta"
-                    bind-source="Grid"
-                    bind-property="viewport-delta"
-                />
+  <template class="Grid" parent="GtkWidget">
+    <child>
+      <object class="GridBuffer" id="buffer">
+        <property
+          name="font"
+          bind-source="Grid"
+          bind-property="font"
+          bind-flags="sync-create"
+          />
+        <property
+          name="scroll-delta"
+          bind-source="Grid"
+          bind-property="viewport-delta"
+          />
 
-                <binding name="scroll-transition">
-                    <closure type="gdouble" function="multiply">
-                        <lookup type="Grid" name="scroll-transition" />
-                        <constant type="gdouble">1000.0</constant>
-                    </closure>
-                </binding>
-            </object>
-        </child>
-        <child>
-            <object class="Cursor" id="cursor">
-                <property
-                    name="font"
-                    bind-source="Grid"
-                    bind-property="font"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="busy"
-                    bind-source="Grid"
-                    bind-property="busy"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="y-offset"
-                    bind-source="buffer"
-                    bind-property="y-offset"
-                    bind-flags="sync-create"
-                />
+        <binding name="scroll-transition">
+          <closure type="gdouble" function="multiply">
+            <lookup type="Grid" name="scroll-transition" />
+            <constant type="gdouble">1000.0</constant>
+          </closure>
+        </binding>
+      </object>
+    </child>
+    <child>
+      <object class="Cursor" id="cursor">
+        <property
+          name="font"
+          bind-source="Grid"
+          bind-property="font"
+          bind-flags="sync-create"
+          />
+        <property
+          name="busy"
+          bind-source="Grid"
+          bind-property="busy"
+          bind-flags="sync-create"
+          />
+        <property
+          name="y-offset"
+          bind-source="buffer"
+          bind-property="y-offset"
+          bind-flags="sync-create"
+          />
 
-                <property
-                    name="active"
-                    bind-source="Grid"
-                    bind-property="active"
-                    bind-flags="sync-create"
-                />
+        <property
+          name="active"
+          bind-source="Grid"
+          bind-property="active"
+          bind-flags="sync-create"
+          />
 
-                <binding name="position-transition">
-                    <closure type="gdouble" function="multiply">
-                        <lookup type="Grid" name="cursor-position-transition" />
-                        <constant type="gdouble">1000.0</constant>
-                    </closure>
-                </binding>
+        <binding name="position-transition">
+          <closure type="gdouble" function="multiply">
+            <lookup type="Grid" name="cursor-position-transition" />
+            <constant type="gdouble">1000.0</constant>
+          </closure>
+        </binding>
 
-                <binding name="width-percentage">
-                    <closure type="gfloat" function="cursor_width">
-                        <lookup type="Grid" name="mode-info" />
-                    </closure>
-                </binding>
+        <binding name="width-percentage">
+          <closure type="gfloat" function="cursor_width">
+            <lookup type="Grid" name="mode-info" />
+          </closure>
+        </binding>
 
-                <binding name="attr-id">
-                    <closure type="gint64" function="cursor_attr_id">
-                        <lookup type="Grid" name="mode-info" />
-                    </closure>
-                </binding>
+        <binding name="attr-id">
+          <closure type="gint64" function="cursor_attr_id">
+            <lookup type="Grid" name="mode-info" />
+          </closure>
+        </binding>
 
-                <binding name="blink">
-                    <closure type="CursorBlink" function="cursor_blink">
-                        <lookup type="Grid" name="mode-info" />
-                        <lookup type="Grid" name="cursor-blink-transition" />
-                    </closure>
-                </binding>
-            </object>
-        </child>
-    </template>
+        <binding name="blink">
+          <closure type="CursorBlink" function="cursor_blink">
+            <lookup type="Grid" name="mode-info" />
+            <lookup type="Grid" name="cursor-blink-transition" />
+          </closure>
+        </binding>
+      </object>
+    </child>
+  </template>
 </interface>
 
 

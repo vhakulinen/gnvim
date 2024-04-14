@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <schemalist>
-    <schema path="/com/github/vhakulinen/gvim/" id="@appid@">
-        <key name="window-width" type="i">
-            <default>1280</default>
-            <summary>Window width</summary>
-        </key>
-        <key name="window-height" type="i">
-            <default>720</default>
-            <summary>Window height</summary>
-        </key>
-        <key name="is-maximized" type="b">
-            <default>false</default>
-            <summary>Is window maximized</summary>
-        </key>
-    </schema>
+  <schema path="/com/github/vhakulinen/gvim/" id="@appid@">
+    <key name="window-width" type="i">
+      <default>1280</default>
+      <summary>Window width</summary>
+    </key>
+    <key name="window-height" type="i">
+      <default>720</default>
+      <summary>Window height</summary>
+    </key>
+    <key name="is-maximized" type="b">
+      <default>false</default>
+      <summary>Is window maximized</summary>
+    </key>
+  </schema>
 </schemalist>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-    <gresource prefix="/com/github/vhakulinen/gnvim/">
-        <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">cmdline.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">grid.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">popupmenu.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">popupmenu_row.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">tab.ui</file>
-        <file compressed="true" preprocess="xml-stripblanks">tabline.ui</file>
-    </gresource>
+  <gresource prefix="/com/github/vhakulinen/gnvim/">
+    <file compressed="true" preprocess="xml-stripblanks">application.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">cmdline.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">grid.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">popupmenu.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">popupmenu_row.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">shell.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">tab.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">tabline.ui</file>
+  </gresource>
 </gresources>

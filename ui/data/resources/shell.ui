@@ -1,96 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="Shell" parent="GtkWidget">
-        <property name="overflow">hidden</property>
+  <template class="Shell" parent="GtkWidget">
+    <property name="overflow">hidden</property>
+
+    <child>
+      <object class="Grid" id="root-grid">
+        <property name="halign">center</property>
+        <property name="valign">center</property>
+        <property name="grid-id">1</property>
+        <property
+          name="font"
+          bind-source="Shell"
+          bind-property="font"
+          bind-flags="sync-create"
+          />
+        <property
+          name="nvim"
+          bind-source="Shell"
+          bind-property="nvim"
+          bind-flags="sync-create"
+          />
+        <property
+          name="busy"
+          bind-source="Shell"
+          bind-property="busy"
+          bind-flags="sync-create"
+          />
+        <property
+          name="mode-info"
+          bind-source="Shell"
+          bind-property="current-mode-info"
+          bind-flags="sync-create"
+          />
+        <property
+          name="cursor-blink-transition"
+          bind-source="Shell"
+          bind-property="cursor-blink-transition"
+          bind-flags="sync-create"
+          />
+        <property
+          name="cursor-position-transition"
+          bind-source="Shell"
+          bind-property="cursor-position-transition"
+          bind-flags="sync-create"
+          />
+        <property
+          name="scroll-transition"
+          bind-source="Shell"
+          bind-property="scroll-transition"
+          bind-flags="sync-create"
+          />
+      </object>
+    </child>
+    <child>
+      <object class="Fixedz" id="windows">
+        <property name="halign">center</property>
+        <property name="valign">center</property>
 
         <child>
-            <object class="Grid" id="root-grid">
-                <property name="halign">center</property>
-                <property name="valign">center</property>
-                <property name="grid-id">1</property>
-                <property
-                    name="font"
-                    bind-source="Shell"
-                    bind-property="font"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="nvim"
-                    bind-source="Shell"
-                    bind-property="nvim"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="busy"
-                    bind-source="Shell"
-                    bind-property="busy"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="mode-info"
-                    bind-source="Shell"
-                    bind-property="current-mode-info"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="cursor-blink-transition"
-                    bind-source="Shell"
-                    bind-property="cursor-blink-transition"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="cursor-position-transition"
-                    bind-source="Shell"
-                    bind-property="cursor-position-transition"
-                    bind-flags="sync-create"
-                />
-                <property
-                    name="scroll-transition"
-                    bind-source="Shell"
-                    bind-property="scroll-transition"
-                    bind-flags="sync-create"
-                />
-            </object>
+          <object class="MsgWin" id="msg-win">
+            <property name="can-target">false</property>
+            <style>
+              <class name="msg-win" />
+            </style>
+            <layout>
+              <!-- z-index according to the nvim docs. -->
+              <property name="z-index">200</property>
+            </layout>
+          </object>
         </child>
+
         <child>
-            <object class="Fixedz" id="windows">
-                <property name="halign">center</property>
-                <property name="valign">center</property>
-
-                <child>
-                    <object class="MsgWin" id="msg-win">
-                        <property name="can-target">false</property>
-                        <style>
-                            <class name="msg-win" />
-                        </style>
-                        <layout>
-                            <!-- z-index according to the nvim docs. -->
-                            <property name="z-index">200</property>
-                        </layout>
-                    </object>
-                </child>
-
-                <child>
-                    <object class="Popupmenu" id="popupmenu">
-                        <property
-                            name="visible"
-                            bind-source="Shell"
-                            bind-property="pmenu-visible"
-                            bind-flags="sync-create"
-                        />
-                        <property
-                            name="font"
-                            bind-source="Shell"
-                            bind-property="font"
-                            bind-flags="sync-create"
-                        />
-                        <layout>
-                            <!-- z-index according to the nvim docs. -->
-                            <property name="z-index">100</property>
-                        </layout>
-                    </object>
-                </child>
-            </object>
+          <object class="Popupmenu" id="popupmenu">
+            <property
+              name="visible"
+              bind-source="Shell"
+              bind-property="pmenu-visible"
+              bind-flags="sync-create"
+              />
+            <property
+              name="font"
+              bind-source="Shell"
+              bind-property="font"
+              bind-flags="sync-create"
+              />
+            <layout>
+              <!-- z-index according to the nvim docs. -->
+              <property name="z-index">100</property>
+            </layout>
+          </object>
         </child>
-    </template>
+      </object>
+    </child>
+  </template>
 </interface>

@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="Cmdline" parent="GtkWidget">
+  <template class="Cmdline" parent="GtkWidget">
+    <property name="layout-manager">
+      <object class="GtkBoxLayout">
+        <property name="orientation">vertical</property>
+      </object>
+    </property>
+    <property name="width-request">800</property>
+    <property name="halign">center</property>
+    <property name="valign">start</property>
+
+    <child>
+      <object class="GtkBox" id="input">
+        <property name="name">input</property>
+        <property name="hexpand">true</property>
+        <property name="orientation">vertical</property>
+
+        <child>
+          <object class="GtkTextView" id="block">
+            <property name="visible">false</property>
+            <property name="can-focus">false</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkTextView" id="main">
+            <property name="can-focus">false</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="Popupmenu" id="completion">
         <property name="layout-manager">
-            <object class="GtkBoxLayout">
-                <property name="orientation">vertical</property>
-            </object>
+          <object class="GtkBinLayout" />
         </property>
-        <property name="width-request">800</property>
-        <property name="halign">center</property>
-        <property name="valign">start</property>
-
-        <child>
-            <object class="GtkBox" id="input">
-                <property name="name">input</property>
-                <property name="hexpand">true</property>
-                <property name="orientation">vertical</property>
-
-                <child>
-                    <object class="GtkTextView" id="block">
-                        <property name="visible">false</property>
-                        <property name="can-focus">false</property>
-                    </object>
-                </child>
-
-                <child>
-                    <object class="GtkTextView" id="main">
-                        <property name="can-focus">false</property>
-                    </object>
-                </child>
-            </object>
-        </child>
-
-        <child>
-            <object class="Popupmenu" id="completion">
-                <property name="layout-manager">
-                    <object class="GtkBinLayout" />
-                </property>
-                <property name="vexpand">true</property>
-                <property name="visible">false</property>
-            </object>
-        </child>
-    </template>
+        <property name="vexpand">true</property>
+        <property name="visible">false</property>
+      </object>
+    </child>
+  </template>
 </interface>

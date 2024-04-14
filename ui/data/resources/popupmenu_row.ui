@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="PopupmenuRow" parent="GtkBox">
-        <property name="orientation">horizontal</property>
-        <style>
-            <class name="popupmenu-row" />
-        </style>
+  <template class="PopupmenuRow" parent="GtkBox">
+    <property name="orientation">horizontal</property>
+    <style>
+      <class name="popupmenu-row" />
+    </style>
 
-        <child>
-            <object class="GtkLabel" id="word">
-                <property name="hexpand">true</property>
-                <property name="xalign">0.0</property>
-            </object>
-        </child>
-        <child>
-            <object class="GtkLabel" id="kind">
-                <property name="use-markup">true</property>
-            </object>
-        </child>
-    </template>
+    <child>
+      <object class="GtkLabel" id="word">
+        <property name="hexpand">true</property>
+        <property name="xalign">0.0</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="kind">
+        <property name="use-markup">true</property>
+      </object>
+    </child>
+  </template>
 </interface>

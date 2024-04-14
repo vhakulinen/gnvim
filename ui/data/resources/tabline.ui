@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <template class="Tabline" parent="GtkWidget">
-        <property name="layout-manager">
-            <object class="GtkBinLayout" />
-        </property>
-        <child>
-            <object class="GtkBox" id="content">
-            </object>
-        </child>
-    </template>
+  <template class="Tabline" parent="GtkWidget">
+    <property name="layout-manager">
+      <object class="GtkBinLayout" />
+    </property>
+    <child>
+      <object class="GtkBox" id="content">
+      </object>
+    </child>
+  </template>
 </interface>
