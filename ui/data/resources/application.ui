@@ -21,80 +21,213 @@
     </style>
 
     <property name="content">
-      <object class="AdwToolbarView">
-        <child type="top">
-          <object class="AdwHeaderBar" />
-        </child>
-        <property name="content">
-          <object class="GtkOverlay">
-            <child type="overlay">
-              <object class="Cmdline" id="cmdline">
-                <property name="visible">false</property>
-              </object>
-            </child>
-
-            <child>
-              <object class="GtkBox">
-                <property name="orientation">vertical</property>
-
-                <child>
-                  <object class="Tabline" id="tabline">
-                    <property name="can-focus">false</property>
-                    <property
-                      name="show"
-                      bind-source="AppWindow"
-                      bind-property="show-tabline"
-                      bind-flags="sync-create"
-                      />
-                    <property
-                      name="nvim"
-                      bind-source="AppWindow"
-                      bind-property="nvim"
-                      bind-flags="sync-create"
-                      />
-                  </object>
-                </child>
-
-                <child>
-                  <object class="Shell" id="shell">
-                    <property name="hexpand">true</property>
-                    <property name="vexpand">true</property>
-                    <property
-                      name="font"
-                      bind-source="AppWindow"
-                      bind-property="font"
-                      bind-flags="sync-create"
-                      />
-                    <property
-                      name="nvim"
-                      bind-source="AppWindow"
-                      bind-property="nvim"
-                      bind-flags="sync-create"
-                      />
-                    <property
-                      name="cursor-blink-transition"
-                      bind-source="AppWindow"
-                      bind-property="cursor-blink-transition"
-                      bind-flags="sync-create"
-                      />
-                    <property
-                      name="cursor-position-transition"
-                      bind-source="AppWindow"
-                      bind-property="cursor-position-transition"
-                      bind-flags="sync-create"
-                      />
-                    <property
-                      name="scroll-transition"
-                      bind-source="AppWindow"
-                      bind-property="scroll-transition"
-                      bind-flags="sync-create"
-                      />
-                  </object>
-                </child>
-              </object>
-            </child>
+      <object class="GtkOverlay">
+        <child type="overlay">
+          <object class="Cmdline" id="cmdline">
+            <property name="visible">false</property>
           </object>
-        </property>
+        </child>
+
+        <child>
+          <object class="AdwOverlaySplitView">
+            <property name="show-sidebar"
+                      bind-source="show-sidebar-button"
+                      bind-property="active"
+                      bind-flags="sync-create|bidirectional" />
+
+            <property name="sidebar">
+              <object class="AdwToolbarView">
+                <child type="top">
+                  <object class="AdwHeaderBar">
+                    <child type="title">
+                      <object class="GtkLabel">
+                        <property name="label">GNvim</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <property name="content">
+
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="can-focus">false</property>
+                        <property name="homogeneous">true</property>
+                        <property name="hexpand">true</property>
+                        <style>
+                          <class name="toolbar" />
+                        </style>
+
+                        <child>
+                          <object class="GtkToggleButton" id="toggle-files">
+                            <property name="icon-name">file-manager-symbolic</property>
+                            <signal name="clicked" handler="toggle_files_clicked" swapped="true" />
+                            <binding name="active">
+                              <closure type="gboolean" function="str_equal">
+                                  <lookup type="AdwViewStack" name="visible-child-name">
+                                    sidebar-stack
+                                  </lookup>
+                                <constant type="gchararray">files</constant>
+                              </closure>
+                            </binding>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkToggleButton" id="toggle-buffers">
+                            <property name="icon-name">list-large-symbolic</property>
+                            <signal name="clicked" handler="toggle_buffers_clicked" swapped="true" />
+                            <binding name="active">
+                              <closure type="gboolean" function="str_equal">
+                                  <lookup type="AdwViewStack" name="visible-child-name">
+                                    sidebar-stack
+                                  </lookup>
+                                <constant type="gchararray">buffers</constant>
+                              </closure>
+                            </binding>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwViewStack" id="sidebar-stack">
+                        <property name="name">sidebar-stack</property>
+
+                        <child>
+                          <object class="AdwViewStackPage">
+                            <property name="name">buffers</property>
+                            <property name="child">
+                              <object class="GtkScrolledWindow">
+                                <property name="propagate-natural-width">true</property>
+                                <property name="propagate-natural-height">true</property>
+
+                                <child>
+                                  <object class="GtkListView" id="buffers-listview">
+                                    <style>
+                                      <class name="navigation-sidebar" />
+                                    </style>
+                                    <property name="model">
+                                      <object class="GtkSingleSelection" id="buffers-selection">
+                                        <property name="autoselect">false</property>
+                                        <property name="model"
+                                                  bind-source="AppWindow"
+                                                  bind-property="buffers"
+                                                  bind-flags="sync-create" />
+                                        <signal name="selection-changed"
+                                                handler="buffers_listview_selection_changed"
+                                                swapped="true" />
+                                      </object>
+                                    </property>
+                                    <property name="factory">
+                                      <object class="GtkBuilderListItemFactory">
+                                        <property name="resource">/com/github/vhakulinen/gnvim/buffer-listitem.ui</property>
+                                      </object>
+                                    </property>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwViewStackPage">
+                            <property name="name">files</property>
+                            <property name="child">
+                              <object class="GtkLabel">
+                                <property name="label">FILES</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+
+            <property name="content">
+              <object class="AdwToolbarView">
+                <property name="top-bar-style">raised</property>
+
+                <child type="top">
+                  <object class="AdwHeaderBar">
+                    <child type="start">
+                      <object class="GtkToggleButton" id="show-sidebar-button">
+                        <property name="icon-name">dock-left-symbolic</property>
+                        <property name="active">true</property>
+                        <property name="can-focus">false</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <property name="content">
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+
+                    <child>
+                      <object class="Tabline" id="tabline">
+                        <property name="can-focus">false</property>
+                        <property
+                          name="show"
+                          bind-source="AppWindow"
+                          bind-property="show-tabline"
+                          bind-flags="sync-create"
+                          />
+                        <property
+                          name="nvim"
+                          bind-source="AppWindow"
+                          bind-property="nvim"
+                          bind-flags="sync-create"
+                          />
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="Shell" id="shell">
+                        <property name="hexpand">true</property>
+                        <property name="vexpand">true</property>
+                        <property
+                          name="font"
+                          bind-source="AppWindow"
+                          bind-property="font"
+                          bind-flags="sync-create"
+                          />
+                        <property
+                          name="nvim"
+                          bind-source="AppWindow"
+                          bind-property="nvim"
+                          bind-flags="sync-create"
+                          />
+                        <property
+                          name="cursor-blink-transition"
+                          bind-source="AppWindow"
+                          bind-property="cursor-blink-transition"
+                          bind-flags="sync-create"
+                          />
+                        <property
+                          name="cursor-position-transition"
+                          bind-source="AppWindow"
+                          bind-property="cursor-position-transition"
+                          bind-flags="sync-create"
+                          />
+                        <property
+                          name="scroll-transition"
+                          bind-source="AppWindow"
+                          bind-property="scroll-transition"
+                          bind-flags="sync-create"
+                          />
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </child>
       </object>
     </property>
   </template>

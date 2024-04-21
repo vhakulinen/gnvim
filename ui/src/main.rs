@@ -4,6 +4,8 @@ use gtk::{gio, pango, prelude::*};
 mod api;
 mod app;
 mod boxed;
+#[path = "./buffer-listobject.rs"]
+mod buffer_listobject;
 mod child_iter;
 mod colors;
 mod components;

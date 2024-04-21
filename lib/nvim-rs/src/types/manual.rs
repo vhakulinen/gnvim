@@ -159,7 +159,7 @@ pub struct CmdlineContent {
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Window(rmpv::Value);
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Buffer(rmpv::Value);
 
 #[derive(Debug, PartialEq, Clone, serde::Deserialize, serde::Serialize)]

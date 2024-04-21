@@ -23,7 +23,8 @@ use nvim::rpc::{message::Notification, RpcReader};
 
 use crate::api::{self, GnvimEvent};
 use crate::app::Fd;
-use crate::boxed::{ModeInfo, ShowTabline};
+use crate::boxed::{Buffer, ModeInfo, ShowTabline};
+use crate::buffer_listobject::BufferListObject;
 use crate::colors::{Color, Colors, HlGroup};
 use crate::components::{popupmenu, Cmdline, Shell, Tabline};
 use crate::font::Font;
@@ -53,6 +54,23 @@ impl Default for Settings {
     }
 }
 
+#[derive(glib::ValueDelegate)]
+pub struct Buffers(gio::ListStore);
+
+impl std::ops::Deref for Buffers {
+    type Target = gio::ListStore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Default for Buffers {
+    fn default() -> Self {
+        Self(gio::ListStore::new::<BufferListObject>())
+    }
+}
+
 #[derive(CompositeTemplate, Default, glib::Properties)]
 #[properties(wrapper_type = super::AppWindow)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -68,9 +86,21 @@ pub struct AppWindow {
     #[template_child(id = "cmdline")]
     cmdline: TemplateChild<Cmdline>,
 
+    #[template_child(id = "buffers-selection")]
+    buffers_selection: TemplateChild<gtk::SingleSelection>,
+
+    #[template_child(id = "sidebar-stack")]
+    sidebar_stack: TemplateChild<adw::ViewStack>,
+
+    #[property(get)]
+    buffers: Buffers,
+
     settings: Settings,
 
     css_provider: gtk::CssProvider,
+
+    #[property(get, set)]
+    current_buffer: RefCell<Buffer>,
 
     #[property(
         name = "cursor-position-transition",
@@ -340,6 +370,9 @@ impl AppWindow {
                         .expect("nvim_set_option for guifont failed");
                 }));
             }
+            GnvimEvent::DirChanged(event) => {
+                dbg!("dir changed", event);
+            }
         }
     }
 
@@ -487,9 +520,30 @@ impl AppWindow {
             UiEvent::PopupmenuHide => self.handle_popupmenu_hide(),
 
             // tabline events
-            UiEvent::TablineUpdate(events) => events
-                .into_iter()
-                .for_each(|event| self.tabline.handle_tabline_update(event)),
+            UiEvent::TablineUpdate(events) => events.into_iter().for_each(|event| {
+                let additions = event
+                    .buffers
+                    .iter()
+                    .map(|buf| BufferListObject::new(&buf.name, buf.buffer.clone().into()))
+                    .collect::<Vec<_>>();
+
+                let selected = event
+                    .buffers
+                    .iter()
+                    .position(|b| b.buffer == event.current_buffer)
+                    .map(|v| v as u32)
+                    .unwrap_or(gtk::INVALID_LIST_POSITION);
+
+                // NOTE: important to set the current buffer before modifying
+                // the list store, otherwise our selection changed signal handler
+                // thinks the user selected other buffer when we were actually
+                // updating the list.
+                self.current_buffer.set(event.current_buffer.clone().into());
+                self.buffers.splice(0, self.buffers.n_items(), &additions);
+                self.buffers_selection.set_selected(selected);
+
+                self.tabline.handle_tabline_update(event);
+            }),
 
             // cmdline events
             UiEvent::CmdlineShow(events) => events.into_iter().for_each(|event| {
@@ -654,6 +708,36 @@ impl AppWindow {
             .expect("failed to get event");
         self.im_context.borrow().filter_keypress(&evt);
     }
+
+    #[template_callback]
+    fn str_equal(&self, a: &str, b: &str) -> bool {
+        a == b
+    }
+
+    #[template_callback]
+    fn toggle_buffers_clicked(&self) {
+        self.sidebar_stack.set_visible_child_name("buffers")
+    }
+
+    #[template_callback]
+    fn toggle_files_clicked(&self) {
+        self.sidebar_stack.set_visible_child_name("files")
+    }
+
+    #[template_callback]
+    fn buffers_listview_selection_changed(&self, _position: u32, _n_items: u32) {
+        let index = self.buffers_selection.selected();
+        if let Some(selected) = self
+            .buffers_selection
+            .item(index)
+            .and_downcast_ref::<BufferListObject>()
+        {
+            if selected.buffer() != *self.current_buffer.borrow() {
+                // TODO(ville): Edit the selected buffer.
+                println!("TODO: change buffer");
+            }
+        }
+    }
 }
 
 #[glib::object_subclass]
@@ -665,6 +749,7 @@ impl ObjectSubclass for AppWindow {
     fn class_init(klass: &mut Self::Class) {
         Shell::ensure_type();
         Tabline::ensure_type();
+        BufferListObject::ensure_type();
 
         klass.bind_template();
         klass.bind_template_callbacks();
@@ -680,6 +765,12 @@ impl ObjectImpl for AppWindow {
     fn constructed(&self) {
         self.parent_constructed();
         let obj = self.obj();
+
+        // NOTE(ville): Add resource path for icons manually, because our resources
+        // have hard coded app id instead of the dynamic one (i.e. our development
+        // version suffix Devel isn't present in the resource files).
+        gtk::IconTheme::for_display(&gdk::Display::default().expect("couldn't get display"))
+            .add_resource_path("/com/github/vhakulinen/gnvim/icons/");
 
         gtk::style_context_add_provider_for_display(
             &gdk::Display::default().expect("couldn't get display"),
@@ -721,9 +812,22 @@ impl ObjectImpl for AppWindow {
 
             // NOTE: If we're not embedding nvim, but using some other way to
             // communicate to it, the channel id might be different.
-            nvim.nvim_command("autocmd VimLeavePre * call rpcrequest(1, 'vimleavepre')")
+            nvim.nvim_create_autocmd(&["VimLeavePre"], &dict![
+                "pattern" => "*",
+                "command" => "call rpcrequest(1, 'vimleavepre')"
+            ])
                 .await
-                .expect("nvim_command failed");
+                .expect("nvim_create_autocmd failed");
+
+            nvim.nvim_create_autocmd(&["DirChanged"], &dict![
+                "pattern" => "*",
+                // TODO(ville): This is just copying functionality from
+                // the runtime lua files...
+                "command" => "call rpcnotify(1, 'gnvim', { \
+                    'fn': 'dir_changed', \
+                    'args': v:event, \
+                })"
+            ]).await.expect("nvim_create_autocmd failed");
 
             nvim.nvim_ui_attach(80, 30, uiopts)
                 .await

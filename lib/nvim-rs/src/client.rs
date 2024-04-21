@@ -9,7 +9,7 @@ macro_rules! dict {
     ($($key:expr => $val:expr),*) => {{
         use $crate::types::Dictionary;
         Dictionary::new(vec![
-            $(($key, $val),)*
+            $(($key.into(), $val.into()),)*
         ])
     }};
 }

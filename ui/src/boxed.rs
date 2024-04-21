@@ -53,3 +53,21 @@ impl From<nvim::types::Tabpage> for Tabpage {
         Self(s)
     }
 }
+
+#[derive(Default, PartialEq, Debug, Clone, glib::Boxed)]
+#[boxed_type(name = "Buffer", nullable)]
+pub struct Buffer(Option<nvim::types::Buffer>);
+
+impl Deref for Buffer {
+    type Target = Option<nvim::types::Buffer>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<nvim::types::Buffer> for Buffer {
+    fn from(s: nvim::types::Buffer) -> Self {
+        Self(Some(s))
+    }
+}

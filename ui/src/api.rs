@@ -16,7 +16,15 @@ pub enum GnvimEvent {
     GtkDebugger,
     Setup(Setup),
 
+    DirChanged(DirChanged),
+
     FontSize(FontSize),
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(crate = "nvim::serde")]
+pub struct DirChanged {
+    pub cwd: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
