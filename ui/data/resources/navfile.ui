@@ -1,0 +1,44 @@
+<interface>
+  <template class="NavFile" parent="GtkWidget">
+    <property name="layout-manager">
+      <object class="GtkBinLayout" />
+    </property>
+
+    <child>
+      <object class="GtkTreeExpander" id="expander">
+        <property name="hide-expander">true</property>
+
+        <property name="list-row"
+                  bind-source="NavFile"
+                  bind-property="list-row"
+                  bind-flags="sync-create" />
+
+        <property name="child">
+          <object class="GtkBox">
+            <property name="spacing">5</property>
+
+            <child>
+              <object class="GtkImage">
+                <property name="gicon"
+                          bind-source="NavFile"
+                          bind-property="gicon"
+                          bind-flags="sync-create" />
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="xalign">0</property>
+                <property name="ellipsize">middle</property>
+
+                <property name="label"
+                          bind-source="NavFile"
+                          bind-property="label"
+                          bind-flags="sync-create" />
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+  </template>
+</interface>

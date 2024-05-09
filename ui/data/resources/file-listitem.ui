@@ -1,0 +1,25 @@
+<interface>
+  <template class="GtkListItem">
+    <property name="focusable">false</property>
+
+    <property name="child">
+      <object class="NavFile">
+        <binding name='list-row'>
+          <lookup name='item'>GtkListItem</lookup>
+        </binding>
+
+        <binding name="gicon">
+          <closure type="GIcon" function="get_symbolic_icon">
+            <lookup name="item">GtkListItem</lookup>
+          </closure>
+        </binding>
+
+        <binding name="label">
+          <closure type="gchararray" function="get_file_name">
+            <lookup name="item">GtkListItem</lookup>
+          </closure>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>

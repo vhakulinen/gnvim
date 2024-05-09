@@ -26,7 +26,8 @@ use crate::app::Fd;
 use crate::boxed::{Buffer, ModeInfo, ShowTabline};
 use crate::buffer_listobject::BufferListObject;
 use crate::colors::{Color, Colors, HlGroup};
-use crate::components::{popupmenu, Cmdline, Shell, Tabline};
+use crate::components::{popupmenu, Cmdline, NavFile, Shell, Tabline};
+use crate::files_sorter::FilesSorter;
 use crate::font::Font;
 use crate::nvim::Neovim;
 use crate::{debug, warn, APPID};
@@ -71,6 +72,44 @@ impl Default for Buffers {
     }
 }
 
+#[derive(glib::ValueDelegate)]
+pub struct Files(gtk::TreeListModel);
+
+impl std::ops::Deref for Files {
+    type Target = gtk::TreeListModel;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+const DIRECTORY_LIST_ATTRS: &'static str =
+    "standard::display-name,standard::symbolic-icon,standard::type";
+
+impl Default for Files {
+    fn default() -> Self {
+        Self(gtk::TreeListModel::new(
+            gtk::DirectoryList::new(Some(DIRECTORY_LIST_ATTRS), Some(&gio::File::for_path(&"."))),
+            false,
+            false,
+            |obj| {
+                obj.downcast_ref::<gio::FileInfo>()
+                    .and_then(|f| match f.file_type() {
+                        gio::FileType::Directory => Some(
+                            gtk::DirectoryList::new(
+                                Some(DIRECTORY_LIST_ATTRS),
+                                f.attribute_object("standard::file")?
+                                    .downcast_ref::<gio::File>(),
+                            )
+                            .upcast(),
+                        ),
+                        _ => None,
+                    })
+            },
+        ))
+    }
+}
+
 #[derive(CompositeTemplate, Default, glib::Properties)]
 #[properties(wrapper_type = super::AppWindow)]
 #[template(resource = "/com/github/vhakulinen/gnvim/application.ui")]
@@ -94,6 +133,8 @@ pub struct AppWindow {
 
     #[property(get)]
     buffers: Buffers,
+    #[property(get)]
+    files: Files,
 
     settings: Settings,
 
@@ -371,7 +412,11 @@ impl AppWindow {
                 }));
             }
             GnvimEvent::DirChanged(event) => {
-                dbg!("dir changed", event);
+                self.files
+                    .model()
+                    .downcast_ref::<gtk::DirectoryList>()
+                    .unwrap()
+                    .set_file(Some(&gio::File::for_path(event.cwd)));
             }
         }
     }
@@ -738,6 +783,24 @@ impl AppWindow {
             }
         }
     }
+
+    #[template_callback]
+    fn get_file_name(
+        _item: &gtk::ListItem,
+        row: Option<&gtk::TreeListRow>,
+    ) -> Option<glib::GString> {
+        Some(row?.item()?.downcast_ref::<gio::FileInfo>()?.display_name())
+    }
+
+    #[template_callback]
+    fn get_symbolic_icon(
+        item: &gtk::ListItem,
+        row: Option<&gtk::TreeListRow>,
+    ) -> Option<gio::Icon> {
+        row?.item()?
+            .downcast_ref::<gio::FileInfo>()?
+            .symbolic_icon()
+    }
 }
 
 #[glib::object_subclass]
@@ -750,6 +813,8 @@ impl ObjectSubclass for AppWindow {
         Shell::ensure_type();
         Tabline::ensure_type();
         BufferListObject::ensure_type();
+        NavFile::ensure_type();
+        FilesSorter::ensure_type();
 
         klass.bind_template();
         klass.bind_template_callbacks();

@@ -34,6 +34,7 @@
                       bind-source="show-sidebar-button"
                       bind-property="active"
                       bind-flags="sync-create|bidirectional" />
+            <property name="can-focus">false</property>
 
             <property name="sidebar">
               <object class="AdwToolbarView">
@@ -52,7 +53,6 @@
                     <property name="orientation">vertical</property>
                     <child>
                       <object class="GtkBox">
-                        <property name="can-focus">false</property>
                         <property name="homogeneous">true</property>
                         <property name="hexpand">true</property>
                         <style>
@@ -135,8 +135,43 @@
                           <object class="AdwViewStackPage">
                             <property name="name">files</property>
                             <property name="child">
-                              <object class="GtkLabel">
-                                <property name="label">FILES</property>
+                              <object class="GtkScrolledWindow">
+                                <property name="propagate-natural-width">true</property>
+                                <property name="propagate-natural-height">true</property>
+
+                                <child>
+                                  <object class="GtkListView" id="files-listview">
+                                    <style>
+                                      <class name="navigation-sidebar" />
+                                    </style>
+                                    <property name="model">
+                                      <object class="GtkSingleSelection" id="files-selection">
+                                        <property name="autoselect">false</property>
+                                        <property name="model">
+                                          <object class="GtkSortListModel">
+                                            <property name="sorter">
+                                              <object class="GtkTreeListRowSorter">
+                                                <property name="sorter">
+                                                  <object class="FilesSorter" />
+                                                </property>
+                                              </object>
+                                            </property>
+                                            <property name="model"
+                                                      bind-source="AppWindow"
+                                                      bind-property="files"
+                                                      bind-flags="sync-create" />
+                                          </object>
+                                        </property>
+                                      </object>
+                                    </property>
+
+                                    <property name="factory">
+                                      <object class="GtkBuilderListItemFactory">
+                                        <property name="resource">/com/github/vhakulinen/gnvim/file-listitem.ui</property>
+                                      </object>
+                                    </property>
+                                  </object>
+                                </child>
                               </object>
                             </property>
                           </object>

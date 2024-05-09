@@ -10,6 +10,8 @@ mod child_iter;
 mod colors;
 mod components;
 mod fd;
+#[path = "./files-sorter.rs"]
+mod files_sorter;
 mod font;
 mod input;
 mod macros;
