@@ -332,9 +332,10 @@ impl AppWindow {
                 let guifont = desc_clone.to_string();
                 spawn_local!(clone!(@weak self.nvim as nvim => async move {
                     nvim
-                        .nvim_set_option(
+                        .nvim_set_option_value(
                             "guifont",
                             &nvim::types::Object::from(guifont),
+                            &dict![],
                         )
                         .await
                         .expect("nvim_set_option for guifont failed");
@@ -376,6 +377,7 @@ impl AppWindow {
             UiEvent::UpdateMenu => {}
             UiEvent::Bell => {}
             UiEvent::VisualBell => {}
+            UiEvent::Chdir(_) => {}
             UiEvent::Flush => {
                 self.shell.handle_flush(&self.colors.borrow());
                 self.tabline.flush();
@@ -476,6 +478,9 @@ impl AppWindow {
             UiEvent::WinViewport(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_win_viewport(event)),
+            UiEvent::WinViewportMargins(_events) => {
+                // TODO(ville): implement
+            }
 
             // popupmenu events
             UiEvent::PopupmenuShow(events) => events
