@@ -229,9 +229,6 @@ where
     ) -> CallResponse<Dictionary> {
         self.call("nvim_buf_get_commands", (buffer, opts)).await
     }
-    async fn nvim_get_option_info(self, name: &str) -> CallResponse<Dictionary> {
-        self.call("nvim_get_option_info", (name,)).await
-    }
     async fn nvim_create_namespace(self, name: &str) -> CallResponse<i64> {
         self.call("nvim_create_namespace", (name,)).await
     }
@@ -332,40 +329,6 @@ where
     ) -> CallResponse<Dictionary> {
         self.call("nvim_get_option_info2", (name, opts)).await
     }
-    async fn nvim_set_option<T2: serde::Serialize>(
-        self,
-        name: &str,
-        value: &T2,
-    ) -> CallResponse<()> {
-        self.call("nvim_set_option", (name, value)).await
-    }
-    async fn nvim_get_option(self, name: &str) -> CallResponse<Object> {
-        self.call("nvim_get_option", (name,)).await
-    }
-    async fn nvim_buf_get_option(self, buffer: &Buffer, name: &str) -> CallResponse<Object> {
-        self.call("nvim_buf_get_option", (buffer, name)).await
-    }
-    async fn nvim_buf_set_option<T3: serde::Serialize>(
-        self,
-        buffer: &Buffer,
-        name: &str,
-        value: &T3,
-    ) -> CallResponse<()> {
-        self.call("nvim_buf_set_option", (buffer, name, value))
-            .await
-    }
-    async fn nvim_win_get_option(self, window: &Window, name: &str) -> CallResponse<Object> {
-        self.call("nvim_win_get_option", (window, name)).await
-    }
-    async fn nvim_win_set_option<T3: serde::Serialize>(
-        self,
-        window: &Window,
-        name: &str,
-        value: &T3,
-    ) -> CallResponse<()> {
-        self.call("nvim_win_set_option", (window, name, value))
-            .await
-    }
     async fn nvim_tabpage_list_wins(self, tabpage: &Tabpage) -> CallResponse<Vec<Window>> {
         self.call("nvim_tabpage_list_wins", (tabpage,)).await
     }
@@ -386,6 +349,9 @@ where
     }
     async fn nvim_tabpage_get_win(self, tabpage: &Tabpage) -> CallResponse<Window> {
         self.call("nvim_tabpage_get_win", (tabpage,)).await
+    }
+    async fn nvim_tabpage_set_win(self, tabpage: &Tabpage, win: &Window) -> CallResponse<()> {
+        self.call("nvim_tabpage_set_win", (tabpage, win)).await
     }
     async fn nvim_tabpage_get_number(self, tabpage: &Tabpage) -> CallResponse<i64> {
         self.call("nvim_tabpage_get_number", (tabpage,)).await
@@ -429,6 +395,13 @@ where
         self.call("nvim_ui_pum_set_bounds", (width, height, row, col))
             .await
     }
+    async fn nvim_ui_term_event<T2: serde::Serialize>(
+        self,
+        event: &str,
+        value: &T2,
+    ) -> CallResponse<()> {
+        self.call("nvim_ui_term_event", (event, value)).await
+    }
     async fn nvim_get_hl_id_by_name(self, name: &str) -> CallResponse<i64> {
         self.call("nvim_get_hl_id_by_name", (name,)).await
     }
@@ -437,6 +410,9 @@ where
     }
     async fn nvim_set_hl(self, ns_id: i64, name: &str, val: &Dictionary) -> CallResponse<()> {
         self.call("nvim_set_hl", (ns_id, name, val)).await
+    }
+    async fn nvim_get_hl_ns(self, opts: &Dictionary) -> CallResponse<i64> {
+        self.call("nvim_get_hl_ns", (opts,)).await
     }
     async fn nvim_set_hl_ns(self, ns_id: i64) -> CallResponse<()> {
         self.call("nvim_set_hl_ns", (ns_id,)).await
@@ -646,9 +622,6 @@ where
     async fn nvim_list_chans(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_chans", ()).await
     }
-    async fn nvim_call_atomic(self, calls: Vec<rmpv::Value>) -> CallResponse<Vec<rmpv::Value>> {
-        self.call("nvim_call_atomic", (calls,)).await
-    }
     async fn nvim_list_uis(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_uis", ()).await
     }
@@ -782,5 +755,12 @@ where
     }
     async fn nvim_win_set_hl_ns(self, window: &Window, ns_id: i64) -> CallResponse<()> {
         self.call("nvim_win_set_hl_ns", (window, ns_id)).await
+    }
+    async fn nvim_win_text_height(
+        self,
+        window: &Window,
+        opts: &Dictionary,
+    ) -> CallResponse<Dictionary> {
+        self.call("nvim_win_text_height", (window, opts)).await
     }
 }

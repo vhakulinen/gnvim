@@ -149,6 +149,34 @@ impl<'de> serde::Deserialize<'de> for Screenshot {
     }
 }
 #[derive(Debug)]
+pub struct Chdir {
+    pub path: String,
+}
+impl<'de> serde::Deserialize<'de> for Chdir {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Chdir;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Chdir")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Chdir {
+                    path: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct UpdateFg {
     pub fg: i64,
 }
@@ -1049,6 +1077,54 @@ impl<'de> serde::Deserialize<'de> for WinViewport {
     }
 }
 #[derive(Debug)]
+pub struct WinViewportMargins {
+    pub grid: i64,
+    pub win: Window,
+    pub top: i64,
+    pub bottom: i64,
+    pub left: i64,
+    pub right: i64,
+}
+impl<'de> serde::Deserialize<'de> for WinViewportMargins {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = WinViewportMargins;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid WinViewportMargins")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = WinViewportMargins {
+                    grid: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    win: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
+                    top: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    bottom: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    left: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    right: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct WinExtmark {
     pub grid: i64,
     pub win: Window,
@@ -1613,6 +1689,34 @@ impl<'de> serde::Deserialize<'de> for MsgHistoryShow {
     }
 }
 #[derive(Debug)]
+pub struct ErrorExit {
+    pub status: i64,
+}
+impl<'de> serde::Deserialize<'de> for ErrorExit {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = ErrorExit;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid ErrorExit")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = ErrorExit {
+                    status: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub enum UiEvent {
     ModeInfoSet(Vec<ModeInfoSet>),
     UpdateMenu,
@@ -1629,6 +1733,7 @@ pub enum UiEvent {
     SetIcon(Vec<SetIcon>),
     Screenshot(Vec<Screenshot>),
     OptionSet(Vec<OptionSet>),
+    Chdir(Vec<Chdir>),
     UpdateFg(Vec<UpdateFg>),
     UpdateBg(Vec<UpdateBg>),
     UpdateSp(Vec<UpdateSp>),
@@ -1656,6 +1761,7 @@ pub enum UiEvent {
     WinClose(Vec<WinClose>),
     MsgSetPos(Vec<MsgSetPos>),
     WinViewport(Vec<WinViewport>),
+    WinViewportMargins(Vec<WinViewportMargins>),
     WinExtmark(Vec<WinExtmark>),
     PopupmenuShow(Vec<PopupmenuShow>),
     PopupmenuHide,
@@ -1678,6 +1784,7 @@ pub enum UiEvent {
     MsgRuler(Vec<MsgRuler>),
     MsgHistoryShow(Vec<MsgHistoryShow>),
     MsgHistoryClear,
+    ErrorExit(Vec<ErrorExit>),
 }
 impl Display for UiEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1697,6 +1804,7 @@ impl Display for UiEvent {
             Self::SetIcon(_) => write!(f, "set_icon"),
             Self::Screenshot(_) => write!(f, "screenshot"),
             Self::OptionSet(_) => write!(f, "option_set"),
+            Self::Chdir(_) => write!(f, "chdir"),
             Self::UpdateFg(_) => write!(f, "update_fg"),
             Self::UpdateBg(_) => write!(f, "update_bg"),
             Self::UpdateSp(_) => write!(f, "update_sp"),
@@ -1724,6 +1832,7 @@ impl Display for UiEvent {
             Self::WinClose(_) => write!(f, "win_close"),
             Self::MsgSetPos(_) => write!(f, "msg_set_pos"),
             Self::WinViewport(_) => write!(f, "win_viewport"),
+            Self::WinViewportMargins(_) => write!(f, "win_viewport_margins"),
             Self::WinExtmark(_) => write!(f, "win_extmark"),
             Self::PopupmenuShow(_) => write!(f, "popupmenu_show"),
             Self::PopupmenuHide => write!(f, "popupmenu_hide"),
@@ -1746,6 +1855,7 @@ impl Display for UiEvent {
             Self::MsgRuler(_) => write!(f, "msg_ruler"),
             Self::MsgHistoryShow(_) => write!(f, "msg_history_show"),
             Self::MsgHistoryClear => write!(f, "msg_history_clear"),
+            Self::ErrorExit(_) => write!(f, "error_exit"),
         }
     }
 }
@@ -1816,6 +1926,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     "set_icon" => UiEvent::SetIcon(seq_to_vec!(seq)),
                     "screenshot" => UiEvent::Screenshot(seq_to_vec!(seq)),
                     "option_set" => UiEvent::OptionSet(seq_to_vec!(seq)),
+                    "chdir" => UiEvent::Chdir(seq_to_vec!(seq)),
                     "update_fg" => UiEvent::UpdateFg(seq_to_vec!(seq)),
                     "update_bg" => UiEvent::UpdateBg(seq_to_vec!(seq)),
                     "update_sp" => UiEvent::UpdateSp(seq_to_vec!(seq)),
@@ -1849,6 +1960,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     "win_close" => UiEvent::WinClose(seq_to_vec!(seq)),
                     "msg_set_pos" => UiEvent::MsgSetPos(seq_to_vec!(seq)),
                     "win_viewport" => UiEvent::WinViewport(seq_to_vec!(seq)),
+                    "win_viewport_margins" => UiEvent::WinViewportMargins(seq_to_vec!(seq)),
                     "win_extmark" => UiEvent::WinExtmark(seq_to_vec!(seq)),
                     "popupmenu_show" => UiEvent::PopupmenuShow(seq_to_vec!(seq)),
                     "popupmenu_hide" => {
@@ -1886,6 +1998,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                         while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
                         UiEvent::MsgHistoryClear
                     }
+                    "error_exit" => UiEvent::ErrorExit(seq_to_vec!(seq)),
                     v => panic!("failed to decode message {:?}", v),
                 })
             }

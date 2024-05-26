@@ -378,7 +378,7 @@ pub struct Version {
     pub patch: i64,
     pub api_level: i64,
     pub api_compatible: i64,
-    pub api_prerelease: bool,
+    //pub api_prerelease: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
