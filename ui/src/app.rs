@@ -92,6 +92,8 @@ mod imp {
                         String::from("--embed"),
                         String::from("--cmd"),
                         format!("let &rtp.=',{}'", obj.rtp()),
+                        String::from("--cmd"),
+                        format!("let g:gnivm_rtp_path='{}'", obj.rtp()),
                     ]);
 
                     args.extend_from_slice(&obj.nvim_args());

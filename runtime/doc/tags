@@ -1,3 +1,4 @@
+g:gnvim_rtp_path	gnvim.txt	/*g:gnvim_rtp_path*
 gnvim	gnvim.txt	/*gnvim*
 gnvim-cursor	gnvim.txt	/*gnvim-cursor*
 gnvim-font	gnvim.txt	/*gnvim-font*
@@ -10,4 +11,5 @@ gnvim-setup.cursor.position_transition	gnvim.txt	/*gnvim-setup.cursor.position_t
 gnvim-setup.popupmenu	gnvim.txt	/*gnvim-setup.popupmenu*
 gnvim-setup.popupmenu.kinds	gnvim.txt	/*gnvim-setup.popupmenu.kinds*
 gnvim-setup.scroll_transition	gnvim.txt	/*gnvim-setup.scroll_transition*
+gnvim-variables	gnvim.txt	/*gnvim-variables*
 gnvim.font_size	gnvim.txt	/*gnvim.font_size*

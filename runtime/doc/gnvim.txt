@@ -27,6 +27,11 @@ Example:
         end
 
         -- Gnvim brings its own runtime files.
+        --
+        -- If you're using lazy.nvim, you can use g:gnvim_rtp_path to get the
+        -- path to gnvim's runtime files and use it with lazy's
+        -- performance.rtp.paths to include gnvim's runtime files without any
+        -- external plug.
         local gnvim = require('gnvim')
 
         -- Set the font
@@ -90,6 +95,12 @@ You can use `gnvim.popupmenu.kind` as a helper to define the kind items.
     }
 >
 
+
+================================================================================
+Variables                                                     *gnvim-variables*
+
+*g:gnvim_rtp_path*
+Path to gnvim's runtime files.
 
 ================================================================================
 Cursor                                                           *gnvim-cursor*
