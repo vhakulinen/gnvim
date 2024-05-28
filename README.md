@@ -13,7 +13,7 @@ _For previous gtk3 version, checkout the `legacy` branch._
 
 # Install
 
-**NOTE**: gnvim requires nvim version 0.9.5 or higher.
+**NOTE**: gnvim requires nvim version 0.10 or higher.
 
 ## Flatpak
 
