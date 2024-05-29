@@ -71,7 +71,7 @@ run: dev-base
 		-- $(DEVDIR) cargo run \
 		--bin gnvim \
 		--features flatpak \
-		-- --new
+		-- --new --nvim-args "-u NONE"
 
 shell: dev-base
 	@cargo run --bin flatpak-helper \

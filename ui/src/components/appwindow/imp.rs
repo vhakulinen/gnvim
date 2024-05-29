@@ -345,6 +345,7 @@ impl AppWindow {
     }
 
     fn handle_ui_event(&self, event: UiEvent) {
+        println!("event: {}", &event);
         match event {
             // Global events
             UiEvent::SetTitle(events) => events.into_iter().for_each(|event| {
