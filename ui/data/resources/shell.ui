@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <template class="Shell" parent="GtkWidget">
-    <property name="overflow">hidden</property>
-
     <child>
       <object class="Grid" id="root-grid">
-        <property name="halign">center</property>
-        <property name="valign">center</property>
         <property name="grid-id">1</property>
         <property
           name="font"
@@ -54,9 +50,6 @@
     </child>
     <child>
       <object class="Fixedz" id="windows">
-        <property name="halign">center</property>
-        <property name="valign">center</property>
-
         <child>
           <object class="MsgWin" id="msg-win">
             <property name="can-target">false</property>
