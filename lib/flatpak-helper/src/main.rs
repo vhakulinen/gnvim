@@ -62,6 +62,9 @@ fn main() {
         .arg("--socket=wayland")
         // Set the PREFIX that we're using in our make file.
         .arg("--env=PREFIX=/app")
+        // Set the target dir to be flatpak specific. This avoids conflicts
+        // (cache invalidation) between the host and the flatpak container.
+        .arg("--env=CARGO_TARGET_DIR=target/flatpak")
         // Set the path required by the rust sdk.
         .arg("--env=PATH=/app/bin:/usr/bin:/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm16/bin");
 
