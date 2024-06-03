@@ -8,6 +8,8 @@ use crate::colors::Colors;
 mod imp;
 pub mod row;
 
+pub use imp::ViewportMargins;
+
 use row::{Cell, Row};
 
 glib::wrapper! {
@@ -50,25 +52,7 @@ impl GridBuffer {
     }
 
     pub fn resize(&self, width: usize, height: usize) {
-        let mut rows = self.imp().rows.borrow_mut();
-        rows.resize_with(height, Default::default);
-
-        for row in rows.iter_mut() {
-            // Invalidate the last cell's nodes so they'll get re-render when
-            // truncating the rows.
-            row.cells.resize(width, Cell::default());
-
-            // Clear the last cell's render nodes. This is needed when we're
-            // truncating, which might cause the last render segment to be
-            // cut off.
-            if let Some(cell) = row.cells.last_mut() {
-                // TODO(ville): Should we do this also before the resize?
-                cell.clear_nodes();
-            }
-        }
-
-        self.set_dirty(true);
-        self.queue_resize();
+        self.set_size(imp::Size { width, height })
     }
 
     pub fn clear(&self) {
@@ -99,6 +83,9 @@ impl GridBuffer {
                 .upcast(),
             );
         }
+
+        imp.margins_mask_node
+            .replace(Some(imp.create_margins_mask()));
 
         let (alloc, _) = self.preferred_size();
         let mut nodes = imp.background_nodes.borrow_mut();

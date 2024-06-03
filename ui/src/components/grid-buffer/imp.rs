@@ -1,7 +1,8 @@
 use std::cell::{self, RefCell};
 
 use gtk::subclass::prelude::*;
-use gtk::{glib, graphene, gsk, prelude::*};
+use gtk::{gdk, glib, graphene, gsk, prelude::*};
+use nvim::types::uievents::WinViewportMargins;
 
 use crate::font::Font;
 use crate::math::ease_out_cubic;
@@ -10,15 +11,46 @@ use crate::{some_or_return, warn, SCALE};
 use super::row::Cell;
 use super::Row;
 
+#[derive(Default, Clone, Copy, glib::Boxed)]
+#[boxed_type(name = "ViewportMargins")]
+pub struct ViewportMargins {
+    pub top: i64,
+    pub bottom: i64,
+    pub left: i64,
+    pub right: i64,
+}
+
+impl From<&WinViewportMargins> for ViewportMargins {
+    fn from(value: &WinViewportMargins) -> Self {
+        Self {
+            top: value.top,
+            bottom: value.bottom,
+            left: value.left,
+            right: value.right,
+        }
+    }
+}
+
+#[derive(Default, Clone, Copy, glib::Boxed)]
+#[boxed_type(name = "GridSize")]
+pub struct Size {
+    pub width: usize,
+    pub height: usize,
+}
+
 #[derive(glib::Properties, Default)]
 #[properties(wrapper_type = super::GridBuffer)]
 pub struct GridBuffer {
     /// Our rows of content.
     pub rows: RefCell<Vec<Row>>,
+    #[property(get, set = Self::set_size)]
+    size: RefCell<Size>,
     /// Render nodes of our rows from the latest `flush` event.
     pub row_nodes: RefCell<Vec<gsk::RenderNode>>,
     /// Background nodes.
     pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
+    /// Margins mask node. Used to mask out content in the margins.
+    pub margins_mask_node: RefCell<Option<gsk::RenderNode>>,
 
     /// Node containing the "background" buffer (used for the scroll effect).
     pub scroll_node: RefCell<Option<gsk::RenderNode>>,
@@ -38,7 +70,10 @@ pub struct GridBuffer {
     ///
     /// Setting this property will cause the buffer to do a scroll animation.
     #[property(get, set = Self::set_scroll_delta)]
-    pub scroll_delta: std::cell::Cell<f64>,
+    scroll_delta: std::cell::Cell<f64>,
+
+    #[property(get, set)]
+    pub viewport_margins: RefCell<ViewportMargins>,
     /// If our content is "dirty" (i.e. we're waiting for flush event).
     #[property(get, set)]
     pub dirty: std::cell::Cell<bool>,
@@ -74,6 +109,31 @@ impl ObjectSubclass for GridBuffer {
 }
 
 impl GridBuffer {
+    fn set_size(&self, size: Size) {
+        self.size.replace(size);
+
+        let mut rows = self.rows.borrow_mut();
+        rows.resize_with(size.height, Default::default);
+
+        for row in rows.iter_mut() {
+            // Invalidate the last cell's nodes so they'll get re-render when
+            // truncating the rows.
+            row.cells.resize(size.width, Cell::default());
+
+            // Clear the last cell's render nodes. This is needed when we're
+            // truncating, which might cause the last render segment to be
+            // cut off.
+            if let Some(cell) = row.cells.last_mut() {
+                // TODO(ville): Should we do this also before the resize?
+                cell.clear_nodes();
+            }
+        }
+
+        let obj = self.obj();
+        obj.set_dirty(true);
+        obj.queue_resize();
+    }
+
     fn set_font(&self, value: Font) {
         self.font.replace(value);
 
@@ -194,6 +254,22 @@ impl GridBuffer {
             old_id.remove();
         }
     }
+
+    pub fn create_margins_mask(&self) -> gsk::RenderNode {
+        let font = self.font.borrow();
+        let vp = self.viewport_margins.borrow();
+        let size = self.size.borrow();
+
+        let x = font.col_to_x(vp.left as f64);
+        let y = font.row_to_y(vp.top as f64);
+        let h = font.row_to_y(size.height as f64) - font.row_to_y(vp.bottom as f64);
+        let w = font.col_to_x(size.width as f64) - font.col_to_x(vp.right as f64);
+        gsk::ColorNode::new(
+            &gdk::RGBA::WHITE,
+            &graphene::Rect::new(x as f32, y as f32, w as f32, h as f32),
+        )
+        .upcast()
+    }
 }
 
 #[glib::derived_properties]
@@ -232,13 +308,22 @@ impl WidgetImpl for GridBuffer {
 
         let scroll = gsk::ContainerNode::new(&scroll_nodes);
 
+        let row_nodes = gsk::ContainerNode::new(&self.row_nodes.borrow());
+        let mut mask = self.margins_mask_node.borrow_mut();
+        let mask = mask.get_or_insert_with(|| self.create_margins_mask());
         let foreground = gsk::TransformNode::new(
-            &gsk::ContainerNode::new(&self.row_nodes.borrow()),
+            gsk::MaskNode::new(&row_nodes, &mask, gsk::MaskMode::Alpha),
             &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
         );
 
-        let node =
-            gsk::ContainerNode::new(&[background.upcast(), scroll.upcast(), foreground.upcast()]);
+        let margins = gsk::MaskNode::new(&row_nodes, &mask, gsk::MaskMode::InvertedAlpha);
+
+        let node = gsk::ContainerNode::new(&[
+            background.upcast(),
+            scroll.upcast(),
+            foreground.upcast(),
+            margins.upcast(),
+        ]);
 
         snapshot.append_node(&node);
         self.backbuffer.replace(Some(node.upcast()));

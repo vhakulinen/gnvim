@@ -5,7 +5,7 @@ use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{
     GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
     PopupmenuSelect, PopupmenuShow, WinClose, WinExternalPos, WinFloatPos, WinHide, WinPos,
-    WinViewport,
+    WinViewport, WinViewportMargins,
 };
 use nvim::NeovimApi;
 
@@ -297,6 +297,14 @@ impl Shell {
         grid.set_nvim_window(Some(event.win));
 
         grid.set_viewport_delta(event.scroll_delta as f64);
+    }
+
+    pub fn handle_win_viewport_margins(&self, event: WinViewportMargins) {
+        assert!(event.grid != 1, "cant do win_viewport_margins for grid 1");
+
+        let grid = self.find_or_create_grid(event.grid);
+        grid.set_viewport_margins((&event).into());
+        grid.set_nvim_window(Some(event.win));
     }
 
     pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {

@@ -15,7 +15,7 @@ use crate::{
     some_or_return,
 };
 
-use super::ExternalWindow;
+use super::{grid_buffer::ViewportMargins, ExternalWindow};
 
 mod imp;
 
@@ -208,6 +208,14 @@ impl Grid {
 
     pub fn mode_change(&self, mode: &ModeInfo) {
         self.set_property("mode-info", mode);
+    }
+
+    pub fn set_viewport_delta(&self, delta: f64) {
+        self.imp().buffer.set_scroll_delta(delta);
+    }
+
+    pub fn set_viewport_margins(&self, event: ViewportMargins) {
+        self.imp().buffer.set_viewport_margins(event);
     }
 }
 

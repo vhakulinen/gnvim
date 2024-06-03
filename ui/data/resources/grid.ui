@@ -9,11 +9,6 @@
           bind-property="font"
           bind-flags="sync-create"
           />
-        <property
-          name="scroll-delta"
-          bind-source="Grid"
-          bind-property="viewport-delta"
-          />
 
         <binding name="scroll-transition">
           <closure type="gdouble" function="multiply">
@@ -80,5 +75,3 @@
     </child>
   </template>
 </interface>
-
-

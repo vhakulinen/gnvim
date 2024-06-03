@@ -478,9 +478,9 @@ impl AppWindow {
             UiEvent::WinViewport(events) => events
                 .into_iter()
                 .for_each(|event| self.shell.handle_win_viewport(event)),
-            UiEvent::WinViewportMargins(_events) => {
-                // TODO(ville): implement
-            }
+            UiEvent::WinViewportMargins(events) => events
+                .into_iter()
+                .for_each(|event| self.shell.handle_win_viewport_margins(event)),
 
             // popupmenu events
             UiEvent::PopupmenuShow(events) => events

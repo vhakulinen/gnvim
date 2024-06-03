@@ -21,6 +21,7 @@ use crate::spawn_local;
 #[template(resource = "/com/github/vhakulinen/gnvim/grid.ui")]
 pub struct Grid {
     /// Our cursor on the screen.
+    /// TODO(ville): fix the cursor to render within the window margins.
     #[template_child(id = "cursor")]
     pub cursor: TemplateChild<Cursor>,
     /// The content.
@@ -60,9 +61,6 @@ pub struct Grid {
     /// The scroll animation speed.
     #[property(get, set, minimum = 0.0)]
     pub scroll_transition: Cell<f64>,
-
-    #[property(get, set)]
-    pub viewport_delta: Cell<f64>,
 }
 
 #[gtk::template_callbacks(functions)]
