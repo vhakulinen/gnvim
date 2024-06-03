@@ -90,7 +90,7 @@ impl Shell {
             gsk::Transform::new()
         } else {
             self.fixed
-                .child_position(&find_grid_or_return!(self.obj(), pmenu_pos.grid))
+                .child_position(&self.obj().find_or_create_grid(pmenu_pos.grid))
         }
         .transform_point(&graphene::Point::new(
             font.col_to_x(pmenu_pos.col as f64) as f32,

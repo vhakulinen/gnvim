@@ -13,19 +13,6 @@ use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCAL
 
 use super::{popupmenu, Grid};
 
-#[macro_export]
-macro_rules! find_grid_or_return {
-    ($self:expr, $grid:expr) => {
-        $crate::some_or_return!(
-            $self.find_grid($grid),
-            "grid {} not found in {}:{}",
-            $grid,
-            file!(),
-            line!()
-        )
-    };
-}
-
 mod imp;
 
 glib::wrapper! {
@@ -46,6 +33,42 @@ impl Shell {
             .iter()
             .find(|grid| grid.id() == id)
             .cloned()
+    }
+
+    pub fn find_or_create_grid(&self, id: i64) -> Grid {
+        self.find_grid(id).unwrap_or_else(|| {
+            let grid = Grid::new(id, &self.font());
+
+            // Bind the properties.
+            self.bind_property("font", &grid, "font")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            self.bind_property("nvim", &grid, "nvim")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            self.bind_property("busy", &grid, "busy")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            self.bind_property("current-mode-info", &grid, "mode-info")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            self.bind_property("cursor-blink-transition", &grid, "cursor-blink-transition")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            self.bind_property(
+                "cursor-position-transition",
+                &grid,
+                "cursor-position-transition",
+            )
+            .flags(glib::BindingFlags::SYNC_CREATE)
+            .build();
+            self.bind_property("scroll-transition", &grid, "scroll-transition")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+
+            self.imp().grids.borrow_mut().push(grid.clone());
+            grid
+        })
     }
 
     pub fn resize_nvim(&self) {
@@ -88,45 +111,11 @@ impl Shell {
     }
 
     pub fn handle_grid_line(&self, event: GridLine) {
-        find_grid_or_return!(self, event.grid).put(event);
+        self.find_or_create_grid(event.grid).put(event);
     }
 
     pub fn handle_grid_resize(&self, event: GridResize) {
-        self.find_grid(event.grid)
-            .unwrap_or_else(|| {
-                let grid = Grid::new(event.grid, &self.font());
-
-                // Bind the properties.
-                self.bind_property("font", &grid, "font")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-                self.bind_property("nvim", &grid, "nvim")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-                self.bind_property("busy", &grid, "busy")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-                self.bind_property("current-mode-info", &grid, "mode-info")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-                self.bind_property("cursor-blink-transition", &grid, "cursor-blink-transition")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-                self.bind_property(
-                    "cursor-position-transition",
-                    &grid,
-                    "cursor-position-transition",
-                )
-                .flags(glib::BindingFlags::SYNC_CREATE)
-                .build();
-                self.bind_property("scroll-transition", &grid, "scroll-transition")
-                    .flags(glib::BindingFlags::SYNC_CREATE)
-                    .build();
-
-                self.imp().grids.borrow_mut().push(grid.clone());
-                grid
-            })
-            .resize(event);
+        self.find_or_create_grid(event.grid).resize(event);
     }
 
     pub fn handle_flush(&self, colors: &Colors) {
@@ -140,7 +129,7 @@ impl Shell {
     }
 
     pub fn handle_grid_clear(&self, event: GridClear) {
-        find_grid_or_return!(self, event.grid).clear();
+        self.find_or_create_grid(event.grid).clear();
     }
 
     pub fn handle_grid_cursor_goto(&self, event: GridCursorGoto) {
@@ -160,7 +149,7 @@ impl Shell {
     }
 
     pub fn handle_grid_scroll(&self, event: GridScroll) {
-        find_grid_or_return!(self, event.grid).scroll(event);
+        self.find_or_create_grid(event.grid).scroll(event);
     }
 
     pub fn handle_mode_change(&self, mode: &ModeInfo) {
@@ -190,7 +179,7 @@ impl Shell {
          * neovim is not controlling the window's/grid's size.
          */
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(Some(event.win));
 
         let x = font.col_to_x(event.startcol as f64) as f32;
@@ -206,7 +195,7 @@ impl Shell {
     }
 
     pub fn handle_float_pos(&self, event: WinFloatPos, font: &Font) {
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(Some(event.win));
 
         let east = event.anchor == "NE" || event.anchor == "SE";
@@ -222,7 +211,7 @@ impl Shell {
         let pos = if event.anchor_grid == 1 {
             gsk::Transform::new()
         } else {
-            fixed.child_position(&find_grid_or_return!(self, event.anchor_grid))
+            fixed.child_position(&self.find_or_create_grid(event.anchor_grid))
         }
         .transform_point(&graphene::Point::new(
             font.col_to_x(col) as f32,
@@ -281,14 +270,14 @@ impl Shell {
     pub fn handle_win_hide(&self, event: WinHide) {
         assert!(event.grid != 1, "cant do win_hide for grid 1");
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.unparent();
     }
 
     pub fn handle_win_close(&self, event: WinClose) {
         assert!(event.grid != 1, "cant do win_close for grid 1");
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(None);
         grid.unparent();
     }
@@ -296,7 +285,7 @@ impl Shell {
     pub fn handle_win_external_pos(&self, event: WinExternalPos, parent: &gtk::Window) {
         assert!(event.grid != 1, "cant do win_external_pos for grid 1");
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(Some(event.win));
         grid.make_external(parent);
     }
@@ -304,7 +293,7 @@ impl Shell {
     pub fn handle_win_viewport(&self, event: WinViewport) {
         assert!(event.grid != 1, "cant do win_viewport for grid 1");
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(Some(event.win));
 
         grid.set_viewport_delta(event.scroll_delta as f64);
@@ -313,7 +302,7 @@ impl Shell {
     pub fn handle_msg_set_pos(&self, event: MsgSetPos, font: &Font) {
         assert!(event.grid != 1, "cant do msg_set_pos for grid 1");
 
-        let grid = find_grid_or_return!(self, event.grid);
+        let grid = self.find_or_create_grid(event.grid);
         let imp = self.imp();
         let win = imp.msg_win.clone();
 
