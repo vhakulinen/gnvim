@@ -1,6 +1,10 @@
 //! This tool is based on what flatpak does when running flatpaks, and how
 //! gnome builder also does the same thing (for fonts _and_ a11y bus).
-use std::{env, path::PathBuf, process::Command};
+use std::{
+    env,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn font_args() -> Vec<String> {
     let system_fonts_dir = PathBuf::from("/usr/share/fonts");
@@ -80,7 +84,7 @@ fn main() {
         .expect("failed to wait");
 }
 
-fn bind_mount(path: &PathBuf, container: &str) -> Option<String> {
+fn bind_mount(path: &Path, container: &str) -> Option<String> {
     path.exists().then(|| {
         let p = path.to_str().unwrap();
         format!("--bind-mount={}={}", container, p)

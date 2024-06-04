@@ -35,7 +35,7 @@ where
 
     async fn fill_buffer(&mut self) -> Result<(), ReadError> {
         match self.reader.fill_buf().await {
-            Ok(bytes) if bytes.is_empty() => Err(ReadError::IOError(io::Error::new(
+            Ok([]) => Err(ReadError::IOError(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Read zero bytes",
             ))),
