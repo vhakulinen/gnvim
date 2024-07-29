@@ -1,16 +1,17 @@
 use std::cell::{Cell, RefCell};
 
 use gtk::glib::subclass::InitializingObject;
-use gtk::graphene;
 use gtk::subclass::prelude::*;
 use gtk::{
     glib::{self, clone},
     prelude::*,
 };
+use gtk::{graphene, gsk};
 use nvim::types::Window;
 use nvim::NeovimApi;
 
 use crate::boxed::ModeInfo;
+use crate::components::grid_buffer::ViewportMargins;
 use crate::components::{cursor, Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
 use crate::nvim::Neovim;
@@ -27,9 +28,21 @@ pub struct Grid {
     /// The content.
     #[template_child(id = "buffer")]
     pub buffer: TemplateChild<GridBuffer>,
+    #[template_child(id = "scrollbar")]
+    pub scrollbar: TemplateChild<gtk::Scrollbar>,
+
+    /// Set the scrollbar visibility.
+    #[property(get, set)]
+    scrollbar_visible: Cell<bool>,
+
+    /// Don't notify nvim about the scorllbar's adjustment value change.
+    #[property(get, set)]
+    scroll_freeze: Cell<bool>,
 
     #[property(get, set)]
     pub font: RefCell<Font>,
+    #[property(get, set = Self::set_viewport_margins)]
+    pub viewport_margins: RefCell<ViewportMargins>,
 
     /// The grid id from neovim.
     #[property(name = "grid-id", construct_only, get, set, default = 0)]
@@ -61,6 +74,15 @@ pub struct Grid {
     /// The scroll animation speed.
     #[property(get, set, minimum = 0.0)]
     pub scroll_transition: Cell<f64>,
+}
+
+impl Grid {
+    fn set_viewport_margins(&self, vp: ViewportMargins) {
+        self.viewport_margins.set(vp);
+
+        // Margins affect the scrollbar's size, so queue a resize.
+        self.obj().queue_resize();
+    }
 }
 
 #[gtk::template_callbacks(functions)]
@@ -138,8 +160,24 @@ impl ObjectImpl for Grid {
         self.buffer
             .add_controller(self.event_controller_motion.clone());
 
-        // Connect mouse events.
         let obj = self.obj();
+        self.scrollbar
+            .adjustment()
+            .connect_value_changed(clone!(@weak obj => move |adj| {
+                if obj.scroll_freeze() {
+                    return;
+                }
+
+                let v = adj.value().trunc() as i64 + 1;
+                spawn_local!(async move {
+                    obj.nvim()
+                       .nvim_command(&format!("call cursor({}, 0)", v))
+                       .await
+                       .expect("call to cursor() failed");
+                });
+            }));
+
+        // Connect mouse events.
         obj.connect_mouse(
             clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
@@ -161,8 +199,7 @@ impl ObjectImpl for Grid {
     }
 
     fn dispose(&self) {
-        self.buffer.unparent();
-        self.cursor.unparent();
+        self.dispose_template();
     }
 }
 
@@ -190,16 +227,25 @@ impl WidgetImpl for Grid {
     }
 
     fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-        self.parent_size_allocate(width, height, baseline);
+        let (req, _) = self.buffer.preferred_size();
+        self.buffer.allocate(req.width(), req.height(), -1, None);
 
-        let mut child: Option<gtk::Widget> = self.obj().first_child();
-        while let Some(sib) = child {
-            if sib.should_layout() {
-                let (req, _) = sib.preferred_size();
-                sib.allocate(req.width(), req.height(), -1, None);
-            }
+        let (req, _) = self.cursor.preferred_size();
+        self.cursor.allocate(req.width(), req.height(), -1, None);
 
-            child = sib.next_sibling();
-        }
+        let vp = &self.buffer.viewport_margins();
+        let size = vp.viewport_size(&self.font.borrow(), &self.buffer.size());
+
+        let transform = gsk::Transform::translate(
+            gsk::Transform::new(),
+            &graphene::Point::new(size.x(), size.y()),
+        );
+
+        self.scrollbar.allocate(
+            width.min(size.width() as i32),
+            height.min(size.height() as i32),
+            baseline,
+            Some(transform),
+        );
     }
 }

@@ -20,6 +20,17 @@ pub struct ViewportMargins {
     pub right: i64,
 }
 
+impl ViewportMargins {
+    pub fn viewport_size(&self, font: &Font, size: &Size) -> graphene::Rect {
+        let x = font.col_to_x(self.left as f64);
+        let y = font.row_to_y(self.top as f64);
+        let h = font.row_to_y(size.height as f64) - font.row_to_y(self.bottom as f64);
+        let w = font.col_to_x(size.width as f64) - font.col_to_x(self.right as f64);
+
+        graphene::Rect::new(x as f32, y as f32, w as f32, h as f32)
+    }
+}
+
 impl From<&WinViewportMargins> for ViewportMargins {
     fn from(value: &WinViewportMargins) -> Self {
         Self {
@@ -260,15 +271,7 @@ impl GridBuffer {
         let vp = self.viewport_margins.borrow();
         let size = self.size.borrow();
 
-        let x = font.col_to_x(vp.left as f64);
-        let y = font.row_to_y(vp.top as f64);
-        let h = font.row_to_y(size.height as f64) - font.row_to_y(vp.bottom as f64);
-        let w = font.col_to_x(size.width as f64) - font.col_to_x(vp.right as f64);
-        gsk::ColorNode::new(
-            &gdk::RGBA::WHITE,
-            &graphene::Rect::new(x as f32, y as f32, w as f32, h as f32),
-        )
-        .upcast()
+        gsk::ColorNode::new(&gdk::RGBA::WHITE, &vp.viewport_size(&font, &size)).upcast()
     }
 }
 

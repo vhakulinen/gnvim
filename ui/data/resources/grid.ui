@@ -10,6 +10,13 @@
           bind-flags="sync-create"
           />
 
+        <property
+          name="viewport-margins"
+          bind-source="Grid"
+          bind-property="viewport-margins"
+          bind-flags="sync-create"
+          />
+
         <binding name="scroll-transition">
           <closure type="gdouble" function="multiply">
             <lookup type="Grid" name="scroll-transition" />
@@ -71,6 +78,19 @@
             <lookup type="Grid" name="cursor-blink-transition" />
           </closure>
         </binding>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkScrollbar" id="scrollbar">
+        <property name="orientation">vertical</property>
+        <property name="halign">end</property>
+        <property
+          name="visible"
+          bind-source="Grid"
+          bind-property="scrollbar-visible"
+          bind-flags="sync-create"
+          />
       </object>
     </child>
   </template>

@@ -15,7 +15,7 @@ use crate::{
     some_or_return,
 };
 
-use super::{grid_buffer::ViewportMargins, ExternalWindow};
+use super::ExternalWindow;
 
 mod imp;
 
@@ -30,6 +30,7 @@ impl Grid {
         let grid: Grid = glib::Object::builder()
             .property("grid-id", id)
             .property("font", font)
+            .property("scrollbar-visible", true)
             .build();
         grid
     }
@@ -160,9 +161,13 @@ impl Grid {
     }
 
     pub fn resize(&self, event: GridResize) {
-        self.imp()
-            .buffer
+        let imp = self.imp();
+        imp.buffer
             .resize(event.width as usize, event.height as usize);
+
+        imp.scrollbar
+            .adjustment()
+            .set_page_size(event.height as f64);
     }
 
     pub fn flush(&self, colors: &Colors) {
@@ -214,8 +219,12 @@ impl Grid {
         self.imp().buffer.set_scroll_delta(delta);
     }
 
-    pub fn set_viewport_margins(&self, event: ViewportMargins) {
-        self.imp().buffer.set_viewport_margins(event);
+    pub fn set_scrollbar(&self, current: i64, total: i64) {
+        self.set_scroll_freeze(true);
+        let adj = self.imp().scrollbar.adjustment();
+        adj.set_upper(total as f64);
+        adj.set_value(current as f64);
+        self.set_scroll_freeze(false);
     }
 }
 

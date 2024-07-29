@@ -4,6 +4,7 @@
     <child>
       <object class="Grid" id="root-grid">
         <property name="grid-id">1</property>
+        <property name="scrollbar-visible">false</property>
         <property
           name="font"
           bind-source="Shell"

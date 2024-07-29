@@ -9,6 +9,7 @@ use nvim::types::uievents::{
 };
 use nvim::NeovimApi;
 
+use crate::components::grid_buffer::ViewportMargins;
 use crate::{boxed::ModeInfo, colors::Colors, font::Font, spawn_local, warn, SCALE};
 
 use super::{popupmenu, Grid};
@@ -297,13 +298,14 @@ impl Shell {
         grid.set_nvim_window(Some(event.win));
 
         grid.set_viewport_delta(event.scroll_delta as f64);
+        grid.set_scrollbar(event.curline, event.line_count);
     }
 
     pub fn handle_win_viewport_margins(&self, event: WinViewportMargins) {
         assert!(event.grid != 1, "cant do win_viewport_margins for grid 1");
 
         let grid = self.find_or_create_grid(event.grid);
-        grid.set_viewport_margins((&event).into());
+        grid.set_viewport_margins(ViewportMargins::from(&event));
         grid.set_nvim_window(Some(event.win));
     }
 
@@ -311,6 +313,7 @@ impl Shell {
         assert!(event.grid != 1, "cant do msg_set_pos for grid 1");
 
         let grid = self.find_or_create_grid(event.grid);
+        grid.set_scrollbar_visible(false);
         let imp = self.imp();
         let win = imp.msg_win.clone();
 
