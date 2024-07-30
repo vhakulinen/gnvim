@@ -85,12 +85,13 @@
       <object class="GtkScrollbar" id="scrollbar">
         <property name="orientation">vertical</property>
         <property name="halign">end</property>
-        <property
-          name="visible"
-          bind-source="Grid"
-          bind-property="scrollbar-visible"
-          bind-flags="sync-create"
-          />
+
+        <binding name="visible">
+          <closure type="gboolean" function="scrollbar_visible">
+            <lookup type="Grid" name="scrollbar-visible" />
+            <lookup type="Grid" name="scrollbar-should-show" />
+          </closure>
+        </binding>
       </object>
     </child>
   </template>

@@ -219,12 +219,14 @@ impl Grid {
         self.imp().buffer.set_scroll_delta(delta);
     }
 
-    pub fn set_scrollbar(&self, current: i64, total: i64) {
+    pub fn set_scrollbar(&self, current_line: i64, total_lines: i64) {
         self.set_scroll_freeze(true);
         let adj = self.imp().scrollbar.adjustment();
-        adj.set_upper(total as f64);
-        adj.set_value(current as f64);
+        adj.set_upper(total_lines as f64);
+        adj.set_value(current_line as f64);
         self.set_scroll_freeze(false);
+
+        self.set_scrollbar_should_show(total_lines > self.imp().buffer.size().height as i64);
     }
 }
 

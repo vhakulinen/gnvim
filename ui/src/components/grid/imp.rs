@@ -34,6 +34,9 @@ pub struct Grid {
     /// Set the scrollbar visibility.
     #[property(get, set)]
     scrollbar_visible: Cell<bool>,
+    /// If the scrollbar _should_ be shown (i.e. there are enough lines for it).
+    #[property(get, set)]
+    scrollbar_should_show: Cell<bool>,
 
     /// Don't notify nvim about the scorllbar's adjustment value change.
     #[property(get, set)]
@@ -87,6 +90,11 @@ impl Grid {
 
 #[gtk::template_callbacks(functions)]
 impl Grid {
+    #[template_callback]
+    fn scrollbar_visible(a: bool, b: bool) -> bool {
+        return a && b;
+    }
+
     #[template_callback]
     fn multiply(a: f64, b: f64) -> f64 {
         a * b
