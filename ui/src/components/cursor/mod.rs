@@ -1,4 +1,4 @@
-use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
+use gtk::{glib, gsk, prelude::*, subclass::prelude::*};
 
 use crate::{colors::Colors, math::ease_out_cubic, some_or_return, warn, SCALE};
 
@@ -35,15 +35,17 @@ impl Cursor {
         let (fg, bg) = if *hl_id == 0 { (bg, fg) } else { (fg, bg) };
 
         let height = font.height();
-        let ch = font.char_width();
+        let width = font.char_width();
+        let double = imp.double_width.get();
 
-        let width = if *imp.double_width.borrow() {
-            ch * 2.0 / SCALE
-        } else {
-            ch / SCALE
-        };
-        let width = width * *imp.width_percentage.borrow();
-        let rect = graphene::Rect::new(0.0, 0.0, width, height / SCALE);
+        let rect = imp.shape.borrow().cell_rect(
+            height,
+            match double {
+                true => width * 2.0,
+                false => width,
+            },
+            imp.cell_percentage.get(),
+        );
 
         let bg_node = gsk::ColorNode::new(bg, &rect).upcast();
 

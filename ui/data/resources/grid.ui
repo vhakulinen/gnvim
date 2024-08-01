@@ -60,8 +60,14 @@
           </closure>
         </binding>
 
-        <binding name="width-percentage">
-          <closure type="gfloat" function="cursor_width">
+        <binding name="shape">
+          <closure type="CursorShape" function="cursor_shape">
+            <lookup type="Grid" name="mode-info" />
+          </closure>
+        </binding>
+
+        <binding name="cell-percentage">
+          <closure type="gfloat" function="cursor_cell_percentage">
             <lookup type="Grid" name="mode-info" />
           </closure>
         </binding>

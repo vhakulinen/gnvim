@@ -1,5 +1,51 @@
 use std::ops::Deref;
 
+use gtk::graphene;
+
+use crate::SCALE;
+
+#[derive(Debug, Default, Clone, glib::Boxed)]
+#[boxed_type(name = "CursorShape")]
+pub struct CursorShape(pub nvim::types::CursorShape);
+
+impl CursorShape {
+    /// Get the "size" rect for rendering.
+    pub fn cell_rect(&self, height: f32, width: f32, percentage: f32) -> graphene::Rect {
+        let width = (width / SCALE)
+            * match self.0 {
+                nvim::types::CursorShape::Vertical => percentage,
+                _ => 1.0,
+            };
+
+        let height = height / SCALE;
+        // For Horizontal cursor, we'll need to adjust our y so that we dont
+        // render our cursor to the top of the cell,
+        let (y, height) = match self.0 {
+            nvim::types::CursorShape::Horizontal => {
+                let h = height * percentage;
+                (height - h, h)
+            }
+            _ => (0.0, height),
+        };
+
+        graphene::Rect::new(0.0, y, width, height)
+    }
+}
+
+impl Deref for CursorShape {
+    type Target = nvim::types::CursorShape;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<nvim::types::CursorShape> for CursorShape {
+    fn from(value: nvim::types::CursorShape) -> Self {
+        Self(value)
+    }
+}
+
 #[derive(Debug, Default, Clone, glib::Boxed)]
 #[boxed_type(name = "ModeInfo")]
 pub struct ModeInfo(pub nvim::types::ModeInfo);

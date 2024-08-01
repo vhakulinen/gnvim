@@ -10,7 +10,7 @@ use gtk::{graphene, gsk};
 use nvim::types::Window;
 use nvim::NeovimApi;
 
-use crate::boxed::ModeInfo;
+use crate::boxed::{CursorShape, ModeInfo};
 use crate::components::grid_buffer::ViewportMargins;
 use crate::components::{cursor, Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
@@ -92,7 +92,7 @@ impl Grid {
 impl Grid {
     #[template_callback]
     fn scrollbar_visible(a: bool, b: bool) -> bool {
-        return a && b;
+        a && b
     }
 
     #[template_callback]
@@ -101,7 +101,14 @@ impl Grid {
     }
 
     #[template_callback]
-    fn cursor_width(mode: &ModeInfo) -> f32 {
+    fn cursor_shape(mode: &ModeInfo) -> CursorShape {
+        mode.cursor_shape
+            .unwrap_or(nvim::types::CursorShape::Block)
+            .into()
+    }
+
+    #[template_callback]
+    fn cursor_cell_percentage(mode: &ModeInfo) -> f32 {
         mode.cell_percentage
             // Make sure we have non 0 value.
             .map(|v| if v == 0 { 100 } else { v })

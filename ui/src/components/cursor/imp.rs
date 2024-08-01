@@ -3,6 +3,7 @@ use std::cell::{Cell, RefCell};
 use gtk::subclass::prelude::*;
 use gtk::{glib, graphene, gsk, prelude::*};
 
+use crate::boxed::CursorShape;
 use crate::font::Font;
 use crate::SCALE;
 
@@ -33,12 +34,15 @@ pub struct Cursor {
     pub pos: RefCell<Position>,
 
     pub text: RefCell<String>,
-    pub double_width: RefCell<bool>,
+    pub double_width: Cell<bool>,
 
     pub node: RefCell<Option<gsk::RenderNode>>,
 
+    #[property(set)]
+    pub shape: RefCell<CursorShape>,
+
     #[property(set, default = 1.0)]
-    pub width_percentage: RefCell<f32>,
+    pub cell_percentage: Cell<f32>,
     #[property(set)]
     pub attr_id: RefCell<i64>,
 
@@ -140,7 +144,7 @@ impl WidgetImpl for Cursor {
         match orientation {
             gtk::Orientation::Horizontal => {
                 // width
-                let len = self.double_width.borrow().then(|| 2.0).unwrap_or(1.0);
+                let len = if self.double_width.get() { 2.0 } else { 1.0 };
                 let font = self.font.borrow();
                 let w = len * (font.char_width() / SCALE);
                 let w = w.ceil() as i32;
