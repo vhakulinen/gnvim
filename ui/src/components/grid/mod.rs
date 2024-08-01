@@ -8,7 +8,6 @@ use nvim::types::{
 };
 
 use crate::{
-    boxed::ModeInfo,
     colors::Colors,
     font::Font,
     input::{Action, Mouse},
@@ -209,10 +208,6 @@ impl Grid {
 
     pub fn scroll(&self, event: GridScroll) {
         self.imp().buffer.scroll(event);
-    }
-
-    pub fn mode_change(&self, mode: &ModeInfo) {
-        self.set_property("mode-info", mode);
     }
 
     pub fn set_viewport_delta(&self, delta: f64) {
