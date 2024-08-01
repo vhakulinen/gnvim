@@ -30,7 +30,7 @@ pub struct Position {
 #[properties(wrapper_type = super::Cursor)]
 pub struct Cursor {
     #[property(set, name ="position-transition", member = transition, type = f64)]
-    #[property(set, name ="y-offset", member = y_offset, type = f64)]
+    #[property(set = Self::set_y_offset, name ="y-offset", member = y_offset, type = f64)]
     pub pos: RefCell<Position>,
 
     pub text: RefCell<String>,
@@ -68,6 +68,11 @@ impl ObjectSubclass for Cursor {
 }
 
 impl Cursor {
+    fn set_y_offset(&self, offset: f64) {
+        self.pos.borrow_mut().y_offset = offset;
+        self.obj().queue_draw();
+    }
+
     /// Set the cursor's blink. Removes earlier tick callback, and adds the
     /// new one if needed.
     fn set_blink(&self, blink: Option<Blink>) {
