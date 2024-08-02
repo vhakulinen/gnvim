@@ -56,6 +56,17 @@ end
 function M.popupmenu.kind(label, hl)
   local adapt = function(hl, normal)
     local attrs = vim.api.nvim_get_hl(0, { name = hl })
+
+    local limit = 10
+    while attrs['link'] ~= nil do
+      attrs = vim.api.nvim_get_hl(0, { name = attrs['link'] })
+
+      limit = limit - 1
+      if limit == 0 then
+        break
+      end
+    end
+
     local bg
     if normal then
         bg = vim.api.nvim_get_hl(0, { name = "Pmenu" }).bg
