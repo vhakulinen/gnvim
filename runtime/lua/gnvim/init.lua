@@ -67,16 +67,22 @@ function M.popupmenu.kind(label, hl)
       end
     end
 
-    local bg
+    local default
     if normal then
-        bg = vim.api.nvim_get_hl(0, { name = "Pmenu" }).bg
+        default = vim.api.nvim_get_hl(0, { name = "Pmenu" })
     else
-        bg = vim.api.nvim_get_hl(0, { name = "PmenuSel" }).bg
+        default = vim.api.nvim_get_hl(0, { name = "PmenuSel" })
     end
 
+    local fg = attrs.fg
+    -- While this utility function is intended for adapting a "forground only"
+    -- highlight, use a fallback anyways. This way the user can use a blanket
+    -- set of highlights across colorschemes.
+    if not fg then fg = default.fg end
+
     return {
-      fg = attrs.fg,
-      bg = bg,
+      fg = fg,
+      bg = default.bg,
       italic = attrs.italic,
       bold = attrs.bold,
     }
