@@ -2,12 +2,25 @@ use std::process::Stdio;
 use std::rc::Rc;
 use std::time::Duration;
 
-use nvim_rs::types::{Object, UiOptions};
+use nvim_rs::types::{Object, UiEvent, UiOptions};
 use tokio::process::Command;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use nvim_rs::rpc::{message::Message, RpcReader};
 use nvim_rs::{Client, NeovimApi};
+
+fn decode_redraw_params(params: rmpv::Value) -> Result<Vec<UiEvent>, rmpv::ext::Error> {
+    match params {
+        rmpv::Value::Array(params) => params
+            .into_iter()
+            .map(rmpv::ext::from_value::<UiEvent>)
+            .collect(),
+        params => Err(rmpv::ext::Error::Syntax(format!(
+            "Invalid params type: {:?}",
+            params
+        ))),
+    }
+}
 
 #[tokio::test]
 async fn smoke_test() {
@@ -89,7 +102,7 @@ async fn smoke_test_ui_attach() {
                             match notification.method.as_ref() {
                                 "redraw" => {
                                     i += 1;
-                                    nvim_rs::types::decode_redraw_params(notification.params).unwrap();
+                                    decode_redraw_params(notification.params).unwrap();
                                 }
                                 _ => panic!("unexpected notification: {}", notification.method),
                             }

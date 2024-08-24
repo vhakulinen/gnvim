@@ -41,6 +41,15 @@ pub enum ReadError {
     RmpError(rmp_serde::decode::Error),
 }
 
+impl std::fmt::Display for ReadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReadError::IOError(err) => f.write_fmt(format_args!("io error: {}", err)),
+            ReadError::RmpError(err) => f.write_fmt(format_args!("rmp error: {}", err)),
+        }
+    }
+}
+
 pub struct RpcReader<R>
 where
     R: AsyncRead + Unpin,

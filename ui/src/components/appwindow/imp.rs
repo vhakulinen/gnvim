@@ -126,11 +126,18 @@ impl AppWindow {
             }
             Message::Request(req) => self.handle_request(req),
             Message::Notification(Notification { method, params, .. }) => match method.as_ref() {
-                "redraw" => match nvim::decode_redraw_params(params) {
-                    Ok(events) => events
+                "redraw" => match params {
+                    rmpv::Value::Array(params) => params
                         .into_iter()
-                        .for_each(|event| self.handle_ui_event(event)),
-                    Err(err) => self.handle_decode_redraw_error(err),
+                        .map(rmpv::ext::from_value::<UiEvent>)
+                        .for_each(|event| match event {
+                            Ok(event) => self.handle_ui_event(event),
+                            Err(err) => self.handle_decode_redraw_error(err),
+                        }),
+                    params => self.handle_decode_redraw_error(format_args!(
+                        "Invalid params type: {:?}",
+                        params
+                    )),
                 },
                 "gnvim" => match params {
                     rmpv::Value::Array(params) => params
@@ -206,7 +213,7 @@ impl AppWindow {
         dialog.present(Some(self.obj().upcast_ref::<gtk::Widget>()));
     }
 
-    fn handle_decode_redraw_error(&self, err: rmpv::ext::Error) {
+    fn handle_decode_redraw_error<D: std::fmt::Display>(&self, err: D) {
         self.show_error_dialog(
             "Failed to decode redraw event",
             &format!(
@@ -214,18 +221,18 @@ impl AppWindow {
                 state of the UI.\n\
                 This is likely because of mismatch between neovim and gnvim versions.\n\n\
                 Error:\n\n<tt>{}</tt>",
-                glib::markup_escape_text(&format!("{:?}", err))
+                glib::markup_escape_text(&format!("{}", err))
             ),
         );
     }
 
-    fn handle_io_error(&self, err: ReadError) {
+    fn handle_io_error<D: std::fmt::Display>(&self, err: D) {
         self.show_error_dialog(
             "Fatal IO error",
             &format!(
                 "Communication with Neovim failed with the following error:\n\n\
                 <tt>{}</tt>",
-                glib::markup_escape_text(&format!("{:?}", err))
+                glib::markup_escape_text(&format!("{}", err))
             ),
         );
     }
