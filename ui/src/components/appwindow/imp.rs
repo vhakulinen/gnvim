@@ -193,7 +193,7 @@ impl AppWindow {
             }),
         );
 
-        dialog.present(self.obj().upcast_ref::<gtk::Widget>());
+        dialog.present(Some(self.obj().upcast_ref::<gtk::Widget>()));
     }
 
     fn handle_decode_redraw_error(&self, err: rmpv::ext::Error) {

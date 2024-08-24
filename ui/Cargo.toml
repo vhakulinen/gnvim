@@ -17,20 +17,20 @@ cfg-if = "1.0"
 
 [dependencies.adw]
 package = "libadwaita"
-version = "0.6"
+version = "0.7"
 features = ["v1_5"]
 
 [dependencies.gtk]
 package = "gtk4"
-version = "0.8"
+version = "0.9"
 features = ["v4_12"]
 
 [dependencies.glib]
-version = "0.19"
+version = "0.20"
 features = ["log_macros"]
 
 [dependencies.pango]
-version = "0.19"
+version = "0.20"
 features = ["v1_50"]
 
 [dependencies.nvim]
@@ -38,4 +38,4 @@ package = "nvim-rs"
 path = "../lib/nvim-rs"
 
 [build-dependencies]
-glib-build-tools = "0.19"
+glib-build-tools = "0.20"
