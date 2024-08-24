@@ -1,19 +1,60 @@
 use std::borrow::Cow;
 
-use serde::ser::SerializeTuple;
+use serde::{de::value::SeqAccessDeserializer, ser::SerializeTuple, Deserialize};
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(untagged)]
+#[derive(Debug)]
 pub enum Message {
     Request(Request<'static, rmpv::Value>),
     Response(Response<rmpv::Value, rmpv::Value>),
     Notification(Notification<'static, rmpv::Value>),
 }
 
+impl<'de> serde::Deserialize<'de> for Message {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Message;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid msgpack-rpc message")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                match seq
+                    .next_element::<u32>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?
+                {
+                    0 => Ok(Message::Request(Request::deserialize(
+                        SeqAccessDeserializer::new(seq),
+                    )?)),
+                    1 => Ok(Message::Response(Response::deserialize(
+                        SeqAccessDeserializer::new(seq),
+                    )?)),
+                    2 => Ok(Message::Notification(Notification::deserialize(
+                        SeqAccessDeserializer::new(seq),
+                    )?)),
+                    v => Err(serde::de::Error::custom(format!(
+                        "unknown msgpack-rpc tag: {}",
+                        v
+                    ))),
+                }
+            }
+        }
+
+        deserializer.deserialize_seq(Visitor)
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
 #[serde(bound = "P: serde::Deserialize<'de>")]
 pub struct Request<'a, P> {
-    r#type: u32,
     pub msgid: u32,
     pub method: Cow<'a, str>,
     pub params: P,
@@ -28,7 +69,7 @@ where
         S: serde::Serializer,
     {
         let mut tup = serializer.serialize_tuple(4)?;
-        tup.serialize_element(&self.r#type)?;
+        tup.serialize_element(&0)?;
         tup.serialize_element(&self.msgid)?;
         tup.serialize_element(&self.method)?;
         tup.serialize_element(&self.params)?;
@@ -39,7 +80,6 @@ where
 impl<'a, P> Request<'a, P> {
     pub fn new<S: Into<Cow<'a, str>>>(msgid: u32, method: S, params: P) -> Self {
         Self {
-            r#type: 0,
             msgid,
             method: method.into(),
             params,
@@ -50,8 +90,6 @@ impl<'a, P> Request<'a, P> {
 #[derive(Debug, serde::Deserialize)]
 #[serde(bound = "R: serde::Deserialize<'de>, E: serde::Deserialize<'de>")]
 pub struct Response<R, E> {
-    r#type: u32,
-
     pub msgid: u32,
     pub error: Option<E>,
     pub result: Option<R>,
@@ -60,7 +98,6 @@ pub struct Response<R, E> {
 impl<R, E> Response<R, E> {
     pub fn new(msgid: u32, error: Option<E>, result: Option<R>) -> Self {
         Self {
-            r#type: 1,
             msgid,
             error,
             result,
@@ -78,7 +115,7 @@ where
         S: serde::Serializer,
     {
         let mut tup = serializer.serialize_tuple(4)?;
-        tup.serialize_element(&self.r#type)?;
+        tup.serialize_element(&1)?;
         tup.serialize_element(&self.msgid)?;
         tup.serialize_element(&self.error)?;
         tup.serialize_element(&self.result)?;
@@ -89,8 +126,6 @@ where
 #[derive(Debug, serde::Deserialize)]
 #[serde(bound = "P: serde::Deserialize<'de>")]
 pub struct Notification<'a, P> {
-    r#type: u32,
-
     pub method: Cow<'a, str>,
     pub params: P,
 }
@@ -98,7 +133,6 @@ pub struct Notification<'a, P> {
 impl<'a, P> Notification<'a, P> {
     pub fn new<S: Into<Cow<'a, str>>>(method: S, params: P) -> Self {
         Self {
-            r#type: 2,
             method: method.into(),
             params,
         }
@@ -114,7 +148,7 @@ where
         S: serde::Serializer,
     {
         let mut tup = serializer.serialize_tuple(3)?;
-        tup.serialize_element(&self.r#type)?;
+        tup.serialize_element(&2)?;
         tup.serialize_element(&self.method)?;
         tup.serialize_element(&self.params)?;
         tup.end()
