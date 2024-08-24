@@ -16,7 +16,7 @@ use gtk::gio;
 use gtk::CompositeTemplate;
 use gtk::{
     gdk,
-    glib::{self, clone},
+    glib::{self},
 };
 
 use nvim::rpc::{message::Notification, RpcReader};
@@ -154,21 +154,27 @@ impl AppWindow {
             "vimleavepre" => {
                 self.nvim_exited.set(true);
 
-                spawn_local!(glib::clone!(@strong self.nvim as nvim => async move {
-                    nvim.write_empty_rpc_response(req.msgid)
-                        .await
-                        .expect("write_rpc_response failed");
-                }));
+                spawn_local!(glib::clone!(
+                    #[strong(rename_to = nvim)]
+                    self.nvim,
+                    async move {
+                        nvim.write_empty_rpc_response(req.msgid)
+                            .await
+                            .expect("write_rpc_response failed");
+                    }
+                ));
             }
             _ => {
                 warn!("unexpected request from nvim: {}", req.method);
-                spawn_local!(glib::clone!(@strong self.nvim as nvim => async move {
-                    nvim.write_rpc_response(
-                        req.msgid,
-                        Some(&"unexpected request"),
-                        None::<&()>,
-                    ).await.expect("write_rpc_response failed")
-                }));
+                spawn_local!(glib::clone!(
+                    #[strong(rename_to = nvim)]
+                    self.nvim,
+                    async move {
+                        nvim.write_rpc_response(req.msgid, Some(&"unexpected request"), None::<&()>)
+                            .await
+                            .expect("write_rpc_response failed")
+                    }
+                ));
             }
         }
     }
@@ -188,9 +194,13 @@ impl AppWindow {
         let obj = self.obj();
         dialog.connect_response(
             None,
-            glib::clone!(@weak obj => move |_, _| {
-                obj.application().expect("application not set").quit();
-            }),
+            glib::clone!(
+                #[weak]
+                obj,
+                move |_, _| {
+                    obj.application().expect("application not set").quit();
+                }
+            ),
         );
 
         dialog.present(Some(self.obj().upcast_ref::<gtk::Widget>()));
@@ -301,12 +311,15 @@ impl AppWindow {
                     echo_repeat.times
                 ];
 
-                spawn_local!(clone!(@weak self.nvim as nvim => async move {
-                    nvim
-                        .nvim_echo(msg, false, &dict![])
-                        .await
-                        .expect("nvim_echo failed");
-                }));
+                spawn_local!(glib::clone!(
+                    #[weak(rename_to = nvim)]
+                    self.nvim,
+                    async move {
+                        nvim.nvim_echo(msg, false, &dict![])
+                            .await
+                            .expect("nvim_echo failed");
+                    }
+                ));
             }
             GnvimEvent::GtkDebugger => {
                 self.enable_debugging(true);
@@ -330,16 +343,19 @@ impl AppWindow {
                 let mut desc_clone = desc.clone();
                 desc_clone.set_size(((size + event.increment) * SCALE) as i32);
                 let guifont = desc_clone.to_string();
-                spawn_local!(clone!(@weak self.nvim as nvim => async move {
-                    nvim
-                        .nvim_set_option_value(
+                spawn_local!(glib::clone!(
+                    #[weak(rename_to = nvim)]
+                    self.nvim,
+                    async move {
+                        nvim.nvim_set_option_value(
                             "guifont",
                             &nvim::types::Object::from(guifont),
                             &dict![],
                         )
                         .await
                         .expect("nvim_set_option for guifont failed");
-                }));
+                    }
+                ));
             }
         }
     }
@@ -634,9 +650,13 @@ impl AppWindow {
             glib::Propagation::Stop
         } else {
             if let Some(input) = event_to_nvim_input(keyval, state) {
-                spawn_local!(clone!(@weak self as this => async move {
-                    this.send_nvim_input(input).await;
-                }));
+                spawn_local!(glib::clone!(
+                    #[weak(rename_to = this)]
+                    self,
+                    async move {
+                        this.send_nvim_input(input).await;
+                    }
+                ));
 
                 return glib::Propagation::Stop;
             } else {
@@ -707,13 +727,20 @@ impl ObjectImpl for AppWindow {
         let reader = self.nvim.open(&args, uiopts.stdin_fd.is_some());
 
         // Start io loop.
-        spawn_local!(clone!(@strong obj as app => async move {
-            app.imp().io_loop(reader).await;
-        }));
+        spawn_local!(glib::clone!(
+            #[strong(rename_to = app)]
+            obj,
+            async move {
+                app.imp().io_loop(reader).await;
+            }
+        ));
 
         // Call nvim_ui_attach.
-        spawn_local!(clone!(@weak self.nvim as nvim => async move {
-            nvim.nvim_set_client_info(
+        spawn_local!(glib::clone!(
+            #[weak(rename_to = nvim)]
+            self.nvim,
+            async move {
+                nvim.nvim_set_client_info(
                     "gnvim",
                     // TODO(ville): Tell the version in client info.
                     &dict![],
@@ -724,16 +751,17 @@ impl ObjectImpl for AppWindow {
                 .await
                 .expect("nvim_set_client_info failed");
 
-            // NOTE: If we're not embedding nvim, but using some other way to
-            // communicate to it, the channel id might be different.
-            nvim.nvim_command("autocmd VimLeavePre * call rpcrequest(1, 'vimleavepre')")
-                .await
-                .expect("nvim_command failed");
+                // NOTE: If we're not embedding nvim, but using some other way to
+                // communicate to it, the channel id might be different.
+                nvim.nvim_command("autocmd VimLeavePre * call rpcrequest(1, 'vimleavepre')")
+                    .await
+                    .expect("nvim_command failed");
 
-            nvim.nvim_ui_attach(80, 30, uiopts)
-                .await
-                .expect("nvim_ui_attach failed");
-        }));
+                nvim.nvim_ui_attach(80, 30, uiopts)
+                    .await
+                    .expect("nvim_ui_attach failed");
+            }
+        ));
 
         // TODO(ville): Figure out if we should use preedit or not.
         self.im_context.borrow().set_use_preedit(false);

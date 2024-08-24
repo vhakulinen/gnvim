@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use glib::{clone, subclass::InitializingObject};
+use glib::subclass::InitializingObject;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::NeovimApi;
 
@@ -42,21 +42,19 @@ impl ObjectImpl for Tab {
         let obj = self.obj();
         obj.add_controller(self.gesture_click.clone());
 
-        self.gesture_click
-            .connect_pressed(clone!(@weak obj => move |_, _, _, _| {
+        self.gesture_click.connect_pressed(glib::clone!(
+            #[weak]
+            obj,
+            move |_, _, _, _| {
                 spawn_local!(async move {
                     let nvim = obj.nvim();
-                    let page = obj
-                        .imp()
-                        .tabpage
-                        .borrow()
-                        .clone()
-                        .expect("tabpage not set");
+                    let page = obj.imp().tabpage.borrow().clone().expect("tabpage not set");
                     nvim.nvim_set_current_tabpage(&page)
                         .await
                         .expect("nvim_set_current_tabpage failed");
                 });
-            }));
+            }
+        ));
     }
 
     fn dispose(&self) {

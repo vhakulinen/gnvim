@@ -1,6 +1,5 @@
 use std::cell::{Cell, RefCell};
 
-use glib::clone;
 use gtk::glib::subclass::InitializingObject;
 use gtk::subclass::prelude::*;
 use gtk::{glib, gsk};
@@ -166,11 +165,13 @@ impl ObjectImpl for Shell {
         self.grids.borrow_mut().push(self.root_grid.clone());
 
         let obj = self.obj();
-        self.popupmenu
-            .store()
-            .connect_items_changed(clone!(@weak obj => move |_, _, _, _| {
+        self.popupmenu.store().connect_items_changed(glib::clone!(
+            #[weak]
+            obj,
+            move |_, _, _, _| {
                 obj.imp().adjust_pmenu();
-            }));
+            }
+        ));
     }
 
     fn dispose(&self) {

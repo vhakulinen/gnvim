@@ -1,4 +1,4 @@
-use glib::{clone, subclass::prelude::*};
+use glib::subclass::prelude::*;
 use gtk::{gio, prelude::*};
 
 use super::PopupmenuObject;
@@ -59,8 +59,12 @@ impl Model {
         imp.to_add.replace(items);
         self.lazy_add(removed);
 
-        *lazy = Some(glib::idle_add_local(
-            clone!(@weak self as this => @default-return glib::ControlFlow::Break, move || {
+        *lazy = Some(glib::idle_add_local(glib::clone!(
+            #[weak(rename_to = this)]
+            self,
+            #[upgrade_or_else]
+            || glib::ControlFlow::Break,
+            move || {
                 this.lazy_add(0);
 
                 let imp = this.imp();
@@ -70,8 +74,8 @@ impl Model {
                     imp.lazy.take();
                     glib::ControlFlow::Break
                 }
-            }),
-        ));
+            }
+        )));
     }
 }
 

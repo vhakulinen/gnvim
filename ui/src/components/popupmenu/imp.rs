@@ -1,7 +1,7 @@
 use std::cell::{Cell, RefCell};
 
 use gtk::{
-    glib::{self, clone, subclass::InitializingObject},
+    glib::{self, subclass::InitializingObject},
     prelude::*,
     subclass::prelude::*,
 };
@@ -57,45 +57,55 @@ impl ObjectImpl for Popupmenu {
 
         let factory = gtk::SignalListItemFactory::new();
 
-        factory.connect_setup(clone!(@weak self as imp => move |_, listitem| {
-            let listitem = listitem
-                .downcast_ref::<gtk::ListItem>()
-                .expect("invalid listitem type");
-            let item = Row::default();
-            let obj = imp.obj();
-            obj.bind_property("font", &item, "font")
-                .flags(glib::BindingFlags::SYNC_CREATE)
-                .build();
+        factory.connect_setup(glib::clone!(
+            #[weak(rename_to = imp)]
+            self,
+            move |_, listitem| {
+                let listitem = listitem
+                    .downcast_ref::<gtk::ListItem>()
+                    .expect("invalid listitem type");
+                let item = Row::default();
+                let obj = imp.obj();
+                obj.bind_property("font", &item, "font")
+                    .flags(glib::BindingFlags::SYNC_CREATE)
+                    .build();
 
-            // When the listitem is selected, adjust the `kind` value.
-            listitem.property_expression("selected")
-                .chain_closure::<String>(glib::closure!(|listitem: gtk::ListItem, selected: bool| {
-                    let f = listitem.property_expression("item")
-                        .chain_property::<PopupmenuObject>("kind")
-                        .chain_property::<Kind>(if selected {
-                            "selected"
-                        } else {
-                            "normal"
-                        })
-                    .evaluate_as::<String, gtk::ListItem>(Some(&listitem));
+                // When the listitem is selected, adjust the `kind` value.
+                listitem
+                    .property_expression("selected")
+                    .chain_closure::<String>(glib::closure!(
+                        |listitem: gtk::ListItem, selected: bool| {
+                            let f = listitem
+                                .property_expression("item")
+                                .chain_property::<PopupmenuObject>("kind")
+                                .chain_property::<Kind>(if selected {
+                                    "selected"
+                                } else {
+                                    "normal"
+                                })
+                                .evaluate_as::<String, gtk::ListItem>(Some(&listitem));
 
-                    f.unwrap_or("".to_owned())
-                }))
-                .bind(&item, "kind", Some(listitem));
+                            f.unwrap_or("".to_owned())
+                        }
+                    ))
+                    .bind(&item, "kind", Some(listitem));
 
-            // Default kind value.
-            listitem.property_expression("item")
-                .chain_property::<PopupmenuObject>("kind")
-                .chain_property::<Kind>("normal")
-                .bind(&item, "kind", Some(listitem));
+                // Default kind value.
+                listitem
+                    .property_expression("item")
+                    .chain_property::<PopupmenuObject>("kind")
+                    .chain_property::<Kind>("normal")
+                    .bind(&item, "kind", Some(listitem));
 
-            // Word value.
-            listitem.property_expression("item")
-                .chain_property::<PopupmenuObject>("word")
-                .bind(&item, "word", Some(listitem));
+                // Word value.
+                listitem
+                    .property_expression("item")
+                    .chain_property::<PopupmenuObject>("word")
+                    .bind(&item, "word", Some(listitem));
 
-            listitem.set_child(Some(&item));
-        }));
+                listitem.set_child(Some(&item));
+            }
+        ));
 
         self.listview.set_model(Some(&self.store));
         self.listview.set_factory(Some(&factory));

@@ -5,7 +5,7 @@ use std::{
 };
 
 use gtk::{
-    glib::{self, clone},
+    glib::{self},
     prelude::*,
     subclass::prelude::*,
 };
@@ -32,23 +32,34 @@ impl ExternalWindow {
 
         let id = glib::timeout_add_local(
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
-            clone!(@weak obj => @default-return glib::ControlFlow::Break, move || {
-                spawn_local!(clone!(@weak obj => async move {
-                    obj
-                        .nvim()
-                        .nvim_ui_try_resize_grid(
-                            obj.grid_id(),
-                            cols.max(1) as i64, rows.max(1) as i64)
-                        .await
-                        .expect("nvim_ui_try_resize failed");
-                }));
+            glib::clone!(
+                #[weak]
+                obj,
+                #[upgrade_or_else]
+                || glib::ControlFlow::Break,
+                move || {
+                    spawn_local!(glib::clone!(
+                        #[weak]
+                        obj,
+                        async move {
+                            obj.nvim()
+                                .nvim_ui_try_resize_grid(
+                                    obj.grid_id(),
+                                    cols.max(1) as i64,
+                                    rows.max(1) as i64,
+                                )
+                                .await
+                                .expect("nvim_ui_try_resize failed");
+                        }
+                    ));
 
-                // Clear after our selves, so we don't try to remove
-                // our id once we're already done.
-                obj.imp().resize_id.replace(None);
+                    // Clear after our selves, so we don't try to remove
+                    // our id once we're already done.
+                    obj.imp().resize_id.replace(None);
 
-                glib::ControlFlow::Break
-            }),
+                    glib::ControlFlow::Break
+                }
+            ),
         );
 
         // Cancel the earlier timeout if it exists.

@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use glib::clone;
 use gtk::{glib, graphene, gsk, prelude::*, subclass::prelude::*};
 use nvim::types::uievents::{
     GridClear, GridCursorGoto, GridDestroy, GridLine, GridResize, GridScroll, MsgSetPos,
@@ -81,20 +80,30 @@ impl Shell {
 
         let id = glib::timeout_add_local(
             Duration::from_millis(crate::WINDOW_RESIZE_DEBOUNCE_MS),
-            clone!(@weak self as obj => @default-return glib::ControlFlow::Break, move || {
-                spawn_local!(clone!(@weak obj => async move {
-                    obj.nvim()
-                        .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
-                        .await
-                        .expect("nvim_ui_try_resize failed");
-                }));
+            glib::clone!(
+                #[weak(rename_to = obj)]
+                self,
+                #[upgrade_or_else]
+                || glib::ControlFlow::Break,
+                move || {
+                    spawn_local!(glib::clone!(
+                        #[weak]
+                        obj,
+                        async move {
+                            obj.nvim()
+                                .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
+                                .await
+                                .expect("nvim_ui_try_resize failed");
+                        }
+                    ));
 
-                // Clear after our selves, so we don't try to remove
-                // our id once we're already done.
-                obj.imp().resize_id.replace(None);
+                    // Clear after our selves, so we don't try to remove
+                    // our id once we're already done.
+                    obj.imp().resize_id.replace(None);
 
-                glib::ControlFlow::Break
-            }),
+                    glib::ControlFlow::Break
+                }
+            ),
         );
 
         // Cancel the earlier timeout if it exists.
@@ -246,16 +255,16 @@ impl Shell {
             let rows = font.scale_to_row(grid_h as f64 + adj_h.min(0.0) as f64);
 
             let grid_id = grid.grid_id();
-            spawn_local!(clone!(@weak self as obj => async move {
-                obj.nvim()
-                    .nvim_ui_try_resize_grid(
-                        grid_id,
-                        cols.max(1) as i64,
-                        rows.max(1) as i64
-                    )
-                    .await
-                    .expect("nvim_ui_try_resize failed");
-            }));
+            spawn_local!(glib::clone!(
+                #[weak(rename_to = obj)]
+                self,
+                async move {
+                    obj.nvim()
+                        .nvim_ui_try_resize_grid(grid_id, cols.max(1) as i64, rows.max(1) as i64)
+                        .await
+                        .expect("nvim_ui_try_resize failed");
+                }
+            ));
         }
 
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {

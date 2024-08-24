@@ -3,7 +3,7 @@ use std::cell::{Cell, RefCell};
 use gtk::glib::subclass::InitializingObject;
 use gtk::subclass::prelude::*;
 use gtk::{
-    glib::{self, clone},
+    glib::{self},
     prelude::*,
 };
 use gtk::{graphene, gsk};
@@ -178,26 +178,31 @@ impl ObjectImpl for Grid {
         let obj = self.obj();
         self.scrollbar
             .adjustment()
-            .connect_value_changed(clone!(@weak obj => move |adj| {
-                if obj.scroll_freeze() {
-                    return;
-                }
+            .connect_value_changed(glib::clone!(
+                #[weak]
+                obj,
+                move |adj| {
+                    if obj.scroll_freeze() {
+                        return;
+                    }
 
-                let v = adj.value().trunc() as i64 + 1;
-                spawn_local!(async move {
-                    obj.nvim()
-                       .nvim_command(&format!("call cursor({}, 0)", v))
-                       .await
-                       .expect("call to cursor() failed");
-                });
-            }));
+                    let v = adj.value().trunc() as i64 + 1;
+                    spawn_local!(async move {
+                        obj.nvim()
+                            .nvim_command(&format!("call cursor({}, 0)", v))
+                            .await
+                            .expect("call to cursor() failed");
+                    });
+                }
+            ));
 
         // Connect mouse events.
-        obj.connect_mouse(
-            clone!(@weak obj => move |id, mouse, action, modifier, row, col| {
+        obj.connect_mouse(glib::clone!(
+            #[weak]
+            obj,
+            move |id, mouse, action, modifier, row, col| {
                 spawn_local!(async move {
-                    obj
-                        .nvim()
+                    obj.nvim()
                         .nvim_input_mouse(
                             mouse.as_nvim_input(),
                             action.as_nvim_action(),
@@ -209,8 +214,8 @@ impl ObjectImpl for Grid {
                         .await
                         .expect("nvim_input_mouse failed");
                 });
-            }),
-        )
+            }
+        ))
     }
 
     fn dispose(&self) {

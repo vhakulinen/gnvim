@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use gtk::{glib, glib::clone, prelude::*, subclass::prelude::*};
+use gtk::{glib, prelude::*, subclass::prelude::*};
 
 use nvim::types::{
     uievents::{GridLine, GridResize, GridScroll},
@@ -70,41 +70,63 @@ impl Grid {
     where
         F: Fn(i64, Mouse, Action, String, usize, usize) + 'static + Clone,
     {
-        let click = clone!(@weak self as obj, @strong f, => move |
-            gst: &gtk::GestureClick,
-            action: Action,
-            n: i32,
-            x: f64,
-            y: f64,
-        | {
-            let font = obj.font();
-            let col = font.scale_to_col(x);
-            let row = font.scale_to_row(y);
+        let click = glib::clone!(
+            #[weak(rename_to = obj)]
+            self,
+            #[strong]
+            f,
+            move |gst: &gtk::GestureClick, action: Action, n: i32, x: f64, y: f64| {
+                let font = obj.font();
+                let col = font.scale_to_col(x);
+                let row = font.scale_to_row(y);
 
-            let modifier = crate::input::modifier_to_nvim(&gst.current_event_state());
-            let mouse = Mouse::from(gst);
+                let modifier = crate::input::modifier_to_nvim(&gst.current_event_state());
+                let mouse = Mouse::from(gst);
 
-            for _ in 0..n {
-                f(obj.imp().id.get(), mouse, action, modifier.clone(), row, col)
+                for _ in 0..n {
+                    f(
+                        obj.imp().id.get(),
+                        mouse,
+                        action,
+                        modifier.clone(),
+                        row,
+                        col,
+                    )
+                }
             }
-        });
+        );
 
         let imp = self.imp();
-        imp.gesture_click.connect_pressed(
-            clone!(@strong click => move |gst, n, x, y| click(gst, Action::Pressed, n, x, y)),
-        );
-        imp.gesture_click.connect_released(
-            clone!(@strong click => move |gst, n, x, y| click(gst, Action::Released, n, x, y)),
-        );
+        imp.gesture_click.connect_pressed(glib::clone!(
+            #[strong]
+            click,
+            move |gst, n, x, y| click(gst, Action::Pressed, n, x, y)
+        ));
+        imp.gesture_click.connect_released(glib::clone!(
+            #[strong]
+            click,
+            move |gst, n, x, y| click(gst, Action::Released, n, x, y)
+        ));
 
         let start = Rc::new(RefCell::new((0.0, 0.0)));
         let pos = Rc::new(RefCell::new((0, 0)));
-        imp.gesture_drag
-            .connect_drag_begin(clone!(@strong start => move |_, x, y| {
+        imp.gesture_drag.connect_drag_begin(glib::clone!(
+            #[strong]
+            start,
+            move |_, x, y| {
                 start.replace((x, y));
-            }));
-        imp.gesture_drag.connect_drag_update(
-            clone!(@strong start, @strong pos, @weak self as obj, @strong f => move |gst, x, y| {
+            }
+        ));
+        imp.gesture_drag.connect_drag_update(glib::clone!(
+            #[strong]
+            start,
+            #[strong]
+            pos,
+            #[weak(rename_to = obj)]
+            self,
+            #[strong]
+            f,
+            move |gst, x, y| {
                 let start = start.borrow();
                 let x = start.0 + x;
                 let y = start.1 + y;
@@ -121,17 +143,26 @@ impl Grid {
                     let mouse = Mouse::from(gst);
                     f(obj.imp().id.get(), mouse, Action::Drag, modifier, row, col);
                 }
-            }),
-        );
+            }
+        ));
 
         let mouse_pos = Rc::new(RefCell::new((0.0, 0.0)));
-        imp.event_controller_motion
-            .connect_motion(clone!(@strong mouse_pos => move |_, x, y| {
+        imp.event_controller_motion.connect_motion(glib::clone!(
+            #[strong]
+            mouse_pos,
+            move |_, x, y| {
                 mouse_pos.replace((x, y));
-            }));
+            }
+        ));
 
-        imp.event_controller_scroll.connect_scroll(
-            clone!(@weak self as obj, @strong mouse_pos => @default-return glib::Propagation::Proceed, move |evt, dx, dy| {
+        imp.event_controller_scroll.connect_scroll(glib::clone!(
+            #[weak(rename_to = obj)]
+            self,
+            #[strong]
+            mouse_pos,
+            #[upgrade_or_else]
+            || glib::Propagation::Proceed,
+            move |evt, dx, dy| {
                 let modifier = crate::input::modifier_to_nvim(&evt.current_event_state());
                 let pos = mouse_pos.borrow();
                 let font = obj.font();
@@ -151,8 +182,8 @@ impl Grid {
                 }
 
                 glib::Propagation::Stop
-            }),
-        );
+            }
+        ));
     }
 
     pub fn put(&self, event: GridLine) {

@@ -1,4 +1,3 @@
-use glib::clone;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use nvim::NeovimApi;
 
@@ -73,11 +72,15 @@ impl Popupmenu {
         let col = (x / (font.char_width() / SCALE)) as f64;
         let row = (y / (font.height() / SCALE)) as f64;
 
-        spawn_local!(clone!(@weak nvim => async move {
-            nvim.clone()
-                .nvim_ui_pum_set_bounds(w, h, row, col)
-                .await
-                .expect("nvim_ui_pum_set_bounds failed");
-        }));
+        spawn_local!(glib::clone!(
+            #[weak]
+            nvim,
+            async move {
+                nvim.clone()
+                    .nvim_ui_pum_set_bounds(w, h, row, col)
+                    .await
+                    .expect("nvim_ui_pum_set_bounds failed");
+            }
+        ));
     }
 }
