@@ -26,7 +26,7 @@ impl Neovim {
     ///
     /// * `args` - Arguments (including the nvim command) for the subprocess.
     /// * `inherit_fds` - If the fds should be shared with the subprocess. Required
-    /// for the stdin_fd uiattach option.
+    ///    for the stdin_fd uiattach option.
     pub fn open(
         &self,
         args: &[&OsStr],

@@ -143,7 +143,7 @@ pub fn render_underdot(
     // Create a dot, and color it.
     let bounds = graphene::Rect::new(x, y, h, h);
     let dot_node = gsk::RoundedClipNode::new(
-        &gsk::ColorNode::new(color, &bounds),
+        gsk::ColorNode::new(color, &bounds),
         &gsk::RoundedRect::from_rect(bounds, h),
     );
 
@@ -156,7 +156,7 @@ pub fn render_underdot(
     // Repeat our dot across the given area.
     let node = gsk::RepeatNode::new(
         &graphene::Rect::new(x, y, width, h),
-        &gsk::ContainerNode::new(&[dot_node.upcast(), space_node.upcast()]),
+        gsk::ContainerNode::new(&[dot_node.upcast(), space_node.upcast()]),
         None,
     );
 

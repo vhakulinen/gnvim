@@ -13,11 +13,8 @@ fn main() {
     );
 
     let config_dst = Path::new(&outdir).join("config.rs");
-    fs::write(
-        config_dst,
-        format!("const APPID: &'static str = \"{appid}\";"),
-    )
-    .expect("failed to create config.rs");
+    fs::write(config_dst, format!("const APPID: &str = \"{appid}\";"))
+        .expect("failed to create config.rs");
 
     println!("cargo:rerun-if-changed=build.rs")
 }

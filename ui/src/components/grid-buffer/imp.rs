@@ -319,7 +319,7 @@ impl WidgetImpl for GridBuffer {
             &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
         );
 
-        let margins = gsk::MaskNode::new(&row_nodes, &mask, gsk::MaskMode::InvertedAlpha);
+        let margins = gsk::MaskNode::new(&row_nodes, mask, gsk::MaskMode::InvertedAlpha);
 
         let node = gsk::ContainerNode::new(&[
             background.upcast(),
