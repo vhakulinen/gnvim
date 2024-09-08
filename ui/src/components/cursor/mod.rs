@@ -78,13 +78,27 @@ impl Cursor {
         return self.imp().pos.borrow().grid.0;
     }
 
-    fn move_to_transition(&self, col: i64, row: i64) {
+    pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
         let imp = self.imp();
+
+        imp.text.replace(cell.text.clone());
+        imp.double_width.replace(cell.double_width);
+
+        let position_changed = {
+            let mut pos = imp.pos.borrow_mut();
+            let changed = pos.grid.0 != col || pos.grid.1 != row;
+            pos.grid = (col, row);
+            changed
+        };
 
         let start =
             some_or_return!(self.frame_clock(), "failed to get frame clock").frame_time() as f64;
-        if let Some(ref mut blink) = *imp.blink.borrow_mut() {
-            blink.reset_to_wait(start);
+
+        match *imp.blink.borrow_mut() {
+            Some(ref mut blink) if position_changed => {
+                blink.reset_to_wait(start);
+            }
+            _ => (),
         }
 
         let font = imp.font.borrow();
@@ -129,16 +143,6 @@ impl Cursor {
         if let Some(old_id) = old_id {
             old_id.remove();
         }
-    }
-
-    pub fn move_to(&self, cell: &Cell, col: i64, row: i64) {
-        let imp = self.imp();
-
-        imp.text.replace(cell.text.clone());
-        imp.double_width.replace(cell.double_width);
-        imp.pos.borrow_mut().grid = (col, row);
-
-        self.move_to_transition(col, row);
 
         // Clear the render node.
         imp.node.replace(None);
