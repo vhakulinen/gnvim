@@ -15,7 +15,7 @@ use crate::components::grid_buffer::ViewportMargins;
 use crate::components::{cursor, Cursor, ExternalWindow, GridBuffer};
 use crate::font::Font;
 use crate::nvim::Neovim;
-use crate::spawn_local;
+use crate::{spawn_local, warn};
 
 #[derive(gtk::CompositeTemplate, glib::Properties, Default)]
 #[properties(wrapper_type = super::Grid)]
@@ -187,12 +187,22 @@ impl ObjectImpl for Grid {
                     }
 
                     let v = adj.value().trunc() as i64 + 1;
-                    spawn_local!(async move {
-                        obj.nvim()
-                            .nvim_command(&format!("call cursor({}, 0)", v))
-                            .await
-                            .expect("call to cursor() failed");
-                    });
+                    // NOTE(ville): Must clone the "window". Oterwise we'll hold
+                    // the borrowed ref for too long.
+                    let win = obj.imp().nvim_window.borrow().clone();
+                    match win {
+                        Some(win) => {
+                            spawn_local!(async move {
+                                obj.nvim()
+                                    .nvim_win_set_cursor(&win, (v, 0))
+                                    .await
+                                    .expect("call to cursor() failed")
+                            });
+                        }
+                        None => {
+                            warn!("nvim window not set while scrolling the scrollbar");
+                        }
+                    }
                 }
             ));
 
