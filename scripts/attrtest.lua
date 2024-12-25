@@ -1,7 +1,5 @@
 -- Basic test for rendering font attributes.
 
-local ns = vim.api.nvim_create_namespace('attrtest')
-
 vim.api.nvim_set_hl(0, 'AttrTestFg', {
   fg = 'red'
 })
@@ -62,13 +60,13 @@ vim.api.nvim_buf_set_lines(
 
 vim.api.nvim_buf_set_option(bufno, 'buftype', 'nowrite')
 
-vim.highlight.range(bufno, ns, 'AttrTestFg', {0, 0}, {0, -1})
-vim.highlight.range(bufno, ns, 'AttrTestBg', {1, 0}, {1, -1})
-vim.highlight.range(bufno, ns, 'AttrTestUnderline', {2, 0}, {2, -1})
-vim.highlight.range(bufno, ns, 'AttrTestUnderlineline', {3, 0}, {3, -1})
-vim.highlight.range(bufno, ns, 'AttrTestStrike', {4, 0}, {4, -1})
-vim.highlight.range(bufno, ns, 'AttrTestUnderdot', {5, 0}, {5, -1})
-vim.highlight.range(bufno, ns, 'AttrTestUnderdash', {6, 0}, {6, -1})
-vim.highlight.range(bufno, ns, 'AttrTestUndercurl', {7, 0}, {7, -1})
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestFg', 0, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestBg', 1, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestUnderline', 2, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestUnderlineline', 3, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestStrike', 4, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestUnderdot', 5, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestUnderdash', 6, 0, -1)
+vim.api.nvim_buf_add_highlight(bufno, -1, 'AttrTestUndercurl', 7, 0, -1)
 
 vim.api.nvim_win_set_buf(0, bufno)
