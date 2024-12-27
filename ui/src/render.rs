@@ -68,10 +68,7 @@ pub fn render_underlineline(
     baseline: f32,
     width: f32,
 ) -> [gsk::RenderNode; 2] {
-    render_underline(font, color, x, baseline, width);
-
     let baseline2 = baseline + font.underline_thickness() / SCALE * 2.0;
-    render_underline(font, color, x, baseline2, width);
 
     [
         render_underline(font, color, x, baseline, width),
