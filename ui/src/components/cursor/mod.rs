@@ -49,7 +49,7 @@ impl Cursor {
 
         let bg_node = gsk::ColorNode::new(bg, &rect).upcast();
 
-        let attrs = crate::render::create_hl_attrs(&hl_id, colors, &font);
+        let attrs = crate::render::create_hl_attrs(&hl, &font);
         let fg_node = crate::render::render_text(
             &self.pango_context(),
             &imp.text.borrow(),

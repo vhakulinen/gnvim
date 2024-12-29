@@ -1,6 +1,6 @@
 use gtk::{cairo, gdk, graphene, gsk, pango, prelude::*};
 
-use crate::colors::{Color, Colors};
+use crate::colors::{Color, Highlight};
 use crate::font::Font;
 use crate::SCALE;
 
@@ -219,12 +219,12 @@ pub fn render_undercurl(
     node.upcast()
 }
 
-pub fn create_hl_attrs(hl_id: &i64, colors: &Colors, font: &Font) -> pango::AttrList {
+pub fn create_hl_attrs(hl: &Highlight, font: &Font) -> pango::AttrList {
     let attrs = pango::AttrList::new();
 
     attrs.insert(pango::AttrFontDesc::new(&font.font_desc()));
 
-    if let Some(hl) = colors.get_hl(hl_id).hl_attr() {
+    if let Some(hl) = hl.hl_attr() {
         if hl.bold.unwrap_or(false) {
             attrs.insert(pango::AttrInt::new_weight(pango::Weight::Bold));
         }

@@ -64,6 +64,10 @@ impl GridBuffer {
     }
 
     pub fn flush(&self, colors: &Colors) {
+        if !self.dirty() {
+            return;
+        }
+
         let imp = self.imp();
 
         let ctx = self.pango_context();
@@ -72,17 +76,13 @@ impl GridBuffer {
         row_nodes.clear();
 
         let font = imp.font.borrow();
-        for (i, row) in imp.rows.borrow_mut().iter_mut().enumerate() {
-            row.generate_nodes(&ctx, colors, &font);
-            row_nodes.push(
-                gsk::TransformNode::new(
-                    row.to_render_node(),
-                    &gsk::Transform::new()
-                        .translate(&graphene::Point::new(0.0, font.row_to_y(i as f64) as f32)),
-                )
-                .upcast(),
-            );
-        }
+        row_nodes.extend(
+            imp.rows
+                .borrow_mut()
+                .iter_mut()
+                .enumerate()
+                .map(|(i, row)| row.to_render_node(&ctx, colors, &font, i)),
+        );
 
         imp.margins_mask_node
             .replace(Some(imp.create_margins_mask()));
@@ -148,6 +148,9 @@ impl GridBuffer {
                 .for_each(Cell::clear_nodes);
 
             dst.cells[left..right].swap_with_slice(&mut src.cells[left..right]);
+
+            dst.clear_render_node();
+            src.clear_render_node();
         }
 
         self.set_dirty(true);

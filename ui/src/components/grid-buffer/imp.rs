@@ -147,12 +147,13 @@ impl GridBuffer {
 
     fn set_font(&self, value: Font) {
         self.font.replace(value);
+        self.obj().set_dirty(true);
 
         // Invalidate all the render nodes.
-        self.rows
-            .borrow_mut()
-            .iter_mut()
-            .for_each(|row| row.cells.iter_mut().for_each(Cell::clear_nodes));
+        self.rows.borrow_mut().iter_mut().for_each(|row| {
+            row.clear_render_node();
+            row.cells.iter_mut().for_each(Cell::clear_nodes)
+        });
     }
 
     fn scroll_delta_to_range(&self, delta: f64) -> (usize, usize) {
