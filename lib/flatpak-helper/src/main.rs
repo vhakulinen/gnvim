@@ -59,6 +59,7 @@ fn main() {
         .arg("--die-with-parent")
         .arg("--talk-name=org.a11y.Bus")
         .arg("--talk-name=org.freedesktop.Flatpak")
+        .arg("--filesystem=/sys")
         .arg("--device=dri")
         .arg("--share=network")
         .arg("--share=ipc")
