@@ -81,7 +81,7 @@ pub struct Grid {
 
 impl Grid {
     fn set_viewport_margins(&self, vp: ViewportMargins) {
-        self.viewport_margins.set(vp);
+        self.viewport_margins.replace(vp);
 
         // Margins affect the scrollbar's size, so queue a resize.
         self.obj().queue_resize();
