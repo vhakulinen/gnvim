@@ -79,10 +79,10 @@ shell: dev-base
 
 install-flatpak-deps:
 	@flatpak install --user \
-		org.gnome.Sdk//46 \
-		org.gnome.Platform//46 \
-		org.freedesktop.Sdk.Extension.rust-stable//23.08 \
-		org.freedesktop.Sdk.Extension.llvm16//23.08
+		org.gnome.Sdk//47 \
+		org.gnome.Platform//47 \
+		org.freedesktop.Sdk.Extension.rust-stable//24.08 \
+		org.freedesktop.Sdk.Extension.llvm18//24.08
 
 install-flatpak:
 	@flatpak-builder \
