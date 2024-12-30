@@ -11,7 +11,7 @@ use crate::{some_or_return, warn, SCALE};
 use super::row::Cell;
 use super::Row;
 
-#[derive(Default, Clone, Copy, glib::Boxed)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, glib::Boxed)]
 #[boxed_type(name = "ViewportMargins")]
 pub struct ViewportMargins {
     pub top: i64,
@@ -49,19 +49,39 @@ pub struct Size {
     pub height: usize,
 }
 
+pub struct Nodes {
+    pub foreground: gsk::RenderNode,
+    pub background: gsk::RenderNode,
+    pub margins: gsk::RenderNode,
+
+    // margin_* nodes are cached portions of the `margins` node.
+    pub margin_top: Option<gsk::RenderNode>,
+    pub margin_bottom: Option<gsk::RenderNode>,
+    pub margin_sides: Option<gsk::RenderNode>,
+}
+
+impl Default for Nodes {
+    fn default() -> Self {
+        Self {
+            foreground: gsk::ContainerNode::new(&[]).upcast(),
+            margins: gsk::ContainerNode::new(&[]).upcast(),
+            background: gsk::ContainerNode::new(&[]).upcast(),
+
+            margin_top: None,
+            margin_bottom: None,
+            margin_sides: None,
+        }
+    }
+}
+
 #[derive(glib::Properties, Default)]
 #[properties(wrapper_type = super::GridBuffer)]
 pub struct GridBuffer {
     /// Our rows of content.
     pub rows: RefCell<Vec<Row>>,
+    pub nodes: RefCell<Nodes>,
     #[property(get, set = Self::set_size)]
     size: RefCell<Size>,
-    /// Render nodes of our rows from the latest `flush` event.
-    pub row_nodes: RefCell<Vec<gsk::RenderNode>>,
-    /// Background nodes.
-    pub background_nodes: RefCell<Vec<gsk::RenderNode>>,
-    /// Margins mask node. Used to mask out content in the margins.
-    pub margins_mask_node: RefCell<Option<gsk::RenderNode>>,
 
     /// Node containing the "background" buffer (used for the scroll effect).
     pub scroll_node: RefCell<Option<gsk::RenderNode>>,
@@ -83,7 +103,7 @@ pub struct GridBuffer {
     #[property(get, set = Self::set_scroll_delta)]
     scroll_delta: std::cell::Cell<f64>,
 
-    #[property(get, set)]
+    #[property(get, set = Self::set_viewport_margins)]
     pub viewport_margins: RefCell<ViewportMargins>,
     /// If our content is "dirty" (i.e. we're waiting for flush event).
     #[property(get, set)]
@@ -122,6 +142,7 @@ impl ObjectSubclass for GridBuffer {
 impl GridBuffer {
     fn set_size(&self, size: Size) {
         self.size.replace(size);
+        self.invalidate_viewport_margins(None);
 
         let mut rows = self.rows.borrow_mut();
         rows.resize_with(size.height, Default::default);
@@ -147,6 +168,7 @@ impl GridBuffer {
 
     fn set_font(&self, value: Font) {
         self.font.replace(value);
+        self.invalidate_viewport_margins(None);
         self.obj().set_dirty(true);
 
         // Invalidate all the render nodes.
@@ -154,6 +176,38 @@ impl GridBuffer {
             row.clear_render_node();
             row.cells.iter_mut().for_each(Cell::clear_nodes)
         });
+    }
+
+    fn invalidate_viewport_margins(&self, og: Option<ViewportMargins>) {
+        let mut nodes = self.nodes.borrow_mut();
+
+        match og {
+            Some(og) => {
+                let value = self.viewport_margins.borrow();
+                if og != *value {
+                    if value.top != og.top {
+                        nodes.margin_top.take();
+                    }
+                    if value.bottom != og.bottom {
+                        nodes.margin_bottom.take();
+                    }
+                    if value.left != og.left || value.right != og.right {
+                        nodes.margin_sides.take();
+                    }
+                }
+            }
+            None => {
+                nodes.margin_top.take();
+                nodes.margin_bottom.take();
+                nodes.margin_sides.take();
+            }
+        }
+    }
+
+    fn set_viewport_margins(&self, value: ViewportMargins) {
+        let og = self.viewport_margins.replace(value);
+        self.invalidate_viewport_margins(Some(og));
+        self.obj().set_dirty(true)
     }
 
     fn scroll_delta_to_range(&self, delta: f64) -> (usize, usize) {
@@ -188,9 +242,17 @@ impl GridBuffer {
 
         let font = self.font.borrow();
         let (from, to) = self.scroll_delta_to_range(delta);
-        let rows = self.row_nodes.borrow();
+        let rows = self.rows.borrow();
 
-        let node = gsk::ContainerNode::new(rows.get(from..to).unwrap_or(&[])).upcast();
+        let node = gsk::ContainerNode::new(
+            &rows
+                .iter()
+                .skip(from)
+                .take(to)
+                .map(|row| row.cached_render_node().clone())
+                .collect::<Vec<_>>(),
+        )
+        .upcast();
 
         let start = self.y_offset.get();
         let target = font.row_to_y(-delta) as f32;
@@ -288,8 +350,6 @@ impl WidgetImpl for GridBuffer {
             return;
         }
 
-        let background = gsk::ContainerNode::new(&self.background_nodes.borrow());
-
         let scroll_nodes = self
             .scroll_nodes
             .borrow()
@@ -312,21 +372,18 @@ impl WidgetImpl for GridBuffer {
 
         let scroll = gsk::ContainerNode::new(&scroll_nodes);
 
-        let row_nodes = gsk::ContainerNode::new(&self.row_nodes.borrow());
-        let mut mask = self.margins_mask_node.borrow_mut();
-        let mask = mask.get_or_insert_with(|| self.create_margins_mask());
+        let nodes = self.nodes.borrow();
+
         let foreground = gsk::TransformNode::new(
-            gsk::MaskNode::new(&row_nodes, &mask, gsk::MaskMode::Alpha),
+            &nodes.foreground,
             &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
         );
 
-        let margins = gsk::MaskNode::new(&row_nodes, mask, gsk::MaskMode::InvertedAlpha);
-
         let node = gsk::ContainerNode::new(&[
-            background.upcast(),
+            nodes.background.clone(),
             scroll.upcast(),
             foreground.upcast(),
-            margins.upcast(),
+            nodes.margins.clone(),
         ]);
 
         snapshot.append_node(&node);

@@ -10,7 +10,7 @@ pub mod row;
 
 pub use imp::ViewportMargins;
 
-use row::{Cell, Row};
+use row::{Cell, RenderNodeIter, Row, ToRenderNode};
 
 glib::wrapper! {
     pub struct GridBuffer(ObjectSubclass<imp::GridBuffer>)
@@ -46,7 +46,22 @@ impl GridBuffer {
         let mut rows = self.get_rows_mut();
         let row = rows.get_mut(event.row as usize).expect("invalid row");
 
-        row.update(event);
+        let n = row.update(event);
+
+        // Invalidate the margin nodes if needed.
+        let left = event.col_start;
+        let right = left + n as i64;
+        let vp = self.viewport_margins();
+        let mut nodes = self.imp().nodes.borrow_mut();
+        if event.row < vp.top {
+            nodes.margin_top.take();
+        }
+        if event.row > vp.bottom {
+            nodes.margin_top.take();
+        }
+        if left < vp.left || right > vp.right {
+            nodes.margin_sides.take();
+        }
 
         self.set_dirty(true);
     }
@@ -72,34 +87,117 @@ impl GridBuffer {
 
         let ctx = self.pango_context();
 
-        let mut row_nodes = imp.row_nodes.borrow_mut();
-        row_nodes.clear();
-
+        let mut nodes = imp.nodes.borrow_mut();
         let font = imp.font.borrow();
-        row_nodes.extend(
-            imp.rows
-                .borrow_mut()
-                .iter_mut()
-                .enumerate()
-                .map(|(i, row)| row.to_render_node(&ctx, colors, &font, i)),
-        );
-
-        imp.margins_mask_node
-            .replace(Some(imp.create_margins_mask()));
-
-        let (alloc, _) = self.preferred_size();
-        let mut nodes = imp.background_nodes.borrow_mut();
-        nodes.clear();
-        nodes.push(
-            gsk::ColorNode::new(
-                &colors.bg,
-                &graphene::Rect::new(0.0, 0.0, alloc.width() as f32, alloc.height() as f32),
+        nodes.foreground = gsk::MaskNode::new(
+            gsk::ContainerNode::new(
+                &imp.rows
+                    .borrow_mut()
+                    .iter_mut()
+                    .enumerate()
+                    .map(|(i, row)| row.to_render_node(&ctx, colors, &font, i))
+                    .collect::<Vec<_>>(),
             )
             .upcast(),
-        );
+            imp.create_margins_mask(),
+            gsk::MaskMode::Alpha,
+        )
+        .upcast();
+
+        if nodes.margin_top.is_none()
+            || nodes.margin_bottom.is_none()
+            || nodes.margin_sides.is_none()
+        {
+            nodes.margins = gsk::MaskNode::new(
+                self.margin_nodes(&mut nodes),
+                imp.create_margins_mask(),
+                gsk::MaskMode::InvertedAlpha,
+            )
+            .upcast();
+        }
+
+        let (alloc, _) = self.preferred_size();
+        nodes.background = gsk::ColorNode::new(
+            &colors.bg,
+            &graphene::Rect::new(0.0, 0.0, alloc.width() as f32, alloc.height() as f32),
+        )
+        .upcast();
 
         self.set_dirty(false);
         self.queue_draw();
+    }
+
+    fn margin_nodes(&self, nodes: &mut RefMut<'_, imp::Nodes>) -> gsk::RenderNode {
+        let font = self.font();
+        let vp = self.viewport_margins();
+        let rows = self.imp().rows.borrow();
+
+        let top = vp.top as usize;
+        let bottom_start = rows.len() - vp.bottom as usize;
+        let right_start = self.size().width - vp.right as usize;
+
+        let margins = gsk::ContainerNode::new(&[
+            nodes
+                .margin_top
+                .get_or_insert_with(|| {
+                    gsk::ContainerNode::new(
+                        rows[..top]
+                            .iter()
+                            .enumerate()
+                            .map(|(i, row)| {
+                                RenderNodeIter::new(row.cells.iter().peekable())
+                                    .to_render_node(font.row_to_y(i as f64) as f32)
+                            })
+                            .collect::<Vec<_>>()
+                            .as_ref(),
+                    )
+                    .upcast()
+                })
+                .clone(),
+            nodes
+                .margin_bottom
+                .get_or_insert_with(|| {
+                    gsk::ContainerNode::new(
+                        rows[bottom_start..]
+                            .iter()
+                            .enumerate()
+                            .map(|(i, row)| {
+                                RenderNodeIter::new(row.cells.iter().peekable())
+                                    .to_render_node(font.row_to_y((bottom_start + i) as f64) as f32)
+                            })
+                            .collect::<Vec<_>>()
+                            .as_ref(),
+                    )
+                    .upcast()
+                })
+                .clone(),
+            nodes
+                .margin_sides
+                .get_or_insert_with(|| {
+                    gsk::ContainerNode::new(
+                        rows[top..bottom_start]
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(i, row)| {
+                                let left = RenderNodeIter::new(
+                                    row.cells[..vp.left as usize].iter().peekable(),
+                                )
+                                .to_render_node(font.row_to_y((top + i) as f64) as f32);
+                                let right =
+                                    RenderNodeIter::new(row.cells[right_start..].iter().peekable())
+                                        .to_render_node(font.row_to_y((top + i) as f64) as f32);
+
+                                Some(gsk::ContainerNode::new(&[left, right]).upcast())
+                            })
+                            .collect::<Vec<_>>()
+                            .as_ref(),
+                    )
+                    .upcast()
+                })
+                .clone(),
+        ]);
+
+        margins.upcast()
     }
 
     fn scroll_region(event: &GridScroll) -> (Box<dyn Iterator<Item = i64>>, i64) {

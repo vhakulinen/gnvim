@@ -1,4 +1,8 @@
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+use std::{
+    borrow::BorrowMut,
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
 
 use gtk::{graphene, gsk, pango, prelude::*};
 
@@ -116,10 +120,23 @@ impl<'a> LineSegment<'a> {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Row {
     pub cells: Vec<Cell>,
-    node: Option<gsk::RenderNode>,
+    /// If the `node` is valid (i.e. we don't need to regenerate it).
+    node_valid: bool,
+    /// Latest render node.
+    node: gsk::RenderNode,
+}
+
+impl Default for Row {
+    fn default() -> Self {
+        Self {
+            cells: vec![],
+            node_valid: false,
+            node: gsk::ContainerNode::new(&[]).upcast(),
+        }
+    }
 }
 
 impl Row {
@@ -128,8 +145,17 @@ impl Row {
         self.cells = vec![Cell::default(); self.cells.len()];
     }
 
+    pub fn cached_render_node(&self) -> &gsk::RenderNode {
+        &self.node
+    }
+
     pub fn clear_render_node(&mut self) {
-        self.node.take();
+        self.node_valid = false;
+    }
+
+    /// Iterate over the `CellNodes`.
+    pub fn iter_cell_nodes<'a>(&'a self) -> RenderNodeIter<'a, std::slice::Iter<'a, Cell>> {
+        RenderNodeIter::new(self.cells.iter().peekable())
     }
 
     pub fn to_render_node(
@@ -140,39 +166,25 @@ impl Row {
         row_index: usize,
     ) -> gsk::RenderNode {
         // If we have a node cached, return it.
-        if let Some(node) = &self.node {
-            return node.clone();
+        if self.node_valid {
+            return self.node.clone();
         }
 
-        let (bg, fg) = self
+        let node = self
             .generate_nodes(&ctx, colors, &font)
-            .filter_map(|nodes| {
-                nodes
-                    .borrow()
-                    .as_ref()
-                    .map(|nodes| (nodes.bg.clone(), nodes.fg.clone()))
-            })
-            .collect::<(Vec<_>, Vec<_>)>();
-
-        let node = gsk::TransformNode::new(
-            gsk::ContainerNode::new(&[
-                gsk::ContainerNode::new(&bg).upcast(),
-                gsk::ContainerNode::new(&fg).upcast(),
-            ]),
-            &gsk::Transform::new().translate(&graphene::Point::new(
-                0.0,
-                font.row_to_y(row_index as f64) as f32,
-            )),
-        )
-        .upcast();
+            .to_render_node(font.row_to_y(row_index as f64) as f32);
 
         // Cache the node.
-        self.node = Some(node.clone());
+        self.node = node.clone();
+        self.node_valid = true;
 
         node
     }
 
-    pub fn update(&mut self, event: &GridLine) {
+    /// Update the row content.
+    ///
+    /// Returns number of cells that were updated.
+    pub fn update(&mut self, event: &GridLine) -> usize {
         self.clear_render_node();
         let mut hl_id = event
             .data
@@ -185,6 +197,7 @@ impl Row {
 
         let mut iter = self.cells.iter_mut().skip(start);
         let mut data_iter = event.data.iter().peekable();
+        let mut n = 0;
         while let Some(data) = data_iter.next() {
             if let Some(id) = data.hl_id {
                 hl_id = id;
@@ -195,7 +208,9 @@ impl Row {
                 .map(|peek| peek.text.is_empty())
                 .unwrap_or(false);
 
-            for _ in 0..data.repeat.unwrap_or(1) {
+            let repeate = data.repeat.unwrap_or(1) as usize;
+            n += repeate;
+            for _ in 0..repeate {
                 let cell = iter.next().expect("too long grid line event");
                 cell.hl_id = hl_id;
                 cell.text.clone_from(&data.text);
@@ -203,6 +218,8 @@ impl Row {
                 cell.clear_nodes();
             }
         }
+
+        n
     }
 
     /// Generate the render nodes for the whole row.
@@ -368,5 +385,90 @@ impl<'a> Iterator for SegmentIterator<'a> {
         }
 
         self.current_segment.take()
+    }
+}
+
+/// Iterator over cells that yields only unique `CellNodes`.
+pub struct RenderNodeIter<'a, I>
+where
+    I: Iterator<Item = &'a Cell>,
+{
+    inner: std::iter::Peekable<I>,
+}
+
+impl<'a, I> RenderNodeIter<'a, I>
+where
+    I: Iterator<Item = &'a Cell>,
+{
+    pub fn new(inner: std::iter::Peekable<I>) -> Self {
+        Self { inner }
+    }
+}
+
+impl<'a, I> Iterator for RenderNodeIter<'a, I>
+where
+    I: Iterator<Item = &'a Cell>,
+{
+    type Item = Ref<'a, Option<CellNodes>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(cell) = self.inner.next() {
+            if let Some(next) = self.inner.peek() {
+                if Rc::ptr_eq(&cell.nodes, &next.nodes) {
+                    continue;
+                }
+            }
+
+            return Some(cell.nodes.borrow());
+        }
+
+        None
+    }
+}
+
+pub trait ToRenderNode {
+    fn to_render_node(&mut self, y: f32) -> gsk::RenderNode;
+}
+
+/// Utility trait to access the render nodes of a cell.
+trait RenderNodes {
+    fn render_nodes(&self) -> Option<(gsk::RenderNode, gsk::RenderNode)>;
+}
+
+impl RenderNodes for Rc<RefCell<Option<CellNodes>>> {
+    fn render_nodes(&self) -> Option<(gsk::RenderNode, gsk::RenderNode)> {
+        self.borrow()
+            .as_ref()
+            .map(|nodes| (nodes.bg.clone(), nodes.fg.clone()))
+    }
+}
+
+impl RenderNodes for Ref<'_, Option<CellNodes>> {
+    fn render_nodes(&self) -> Option<(gsk::RenderNode, gsk::RenderNode)> {
+        self.as_ref()
+            .map(|nodes| (nodes.bg.clone(), nodes.fg.clone()))
+    }
+}
+
+impl<T, I> ToRenderNode for I
+where
+    I: Iterator<Item = T>,
+    T: RenderNodes,
+{
+    fn to_render_node(&mut self, y: f32) -> gsk::RenderNode {
+        let (bg, fg) = self
+            .filter_map(|nodes| nodes.render_nodes())
+            .collect::<(Vec<_>, Vec<_>)>();
+
+        let node = gsk::TransformNode::new(
+            gsk::ContainerNode::new(&[
+                gsk::ContainerNode::new(&bg).upcast(),
+                gsk::ContainerNode::new(&fg).upcast(),
+            ]),
+            &gsk::Transform::new().translate(&graphene::Point::new(0.0, y)),
+        )
+        .upcast();
+
+        node
     }
 }
