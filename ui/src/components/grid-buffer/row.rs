@@ -154,11 +154,11 @@ impl Row {
     }
 
     /// Iterate over the `CellNodes`.
-    pub fn iter_cell_nodes<'a>(&'a self) -> RenderNodeIter<'a, std::slice::Iter<'a, Cell>> {
+    pub fn iter_cell_nodes(&self) -> RenderNodeIter<'_, std::slice::Iter<'_, Cell>> {
         RenderNodeIter::new(self.cells.iter().peekable())
     }
 
-    pub fn to_render_node(
+    pub fn render_node(
         &mut self,
         ctx: &pango::Context,
         colors: &Colors,
@@ -171,7 +171,7 @@ impl Row {
         }
 
         let node = self
-            .generate_nodes(&ctx, colors, &font)
+            .generate_nodes(ctx, colors, font)
             .to_render_node(font.row_to_y(row_index as f64) as f32);
 
         // Cache the node.
@@ -314,7 +314,7 @@ impl Row {
 
             x += width;
 
-            return nodes;
+            nodes
         })
     }
 }
@@ -460,15 +460,13 @@ where
             .filter_map(|nodes| nodes.render_nodes())
             .collect::<(Vec<_>, Vec<_>)>();
 
-        let node = gsk::TransformNode::new(
+        gsk::TransformNode::new(
             gsk::ContainerNode::new(&[
                 gsk::ContainerNode::new(&bg).upcast(),
                 gsk::ContainerNode::new(&fg).upcast(),
             ]),
             &gsk::Transform::new().translate(&graphene::Point::new(0.0, y)),
         )
-        .upcast();
-
-        node
+        .upcast()
     }
 }

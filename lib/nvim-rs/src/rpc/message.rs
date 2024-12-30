@@ -60,7 +60,7 @@ pub struct Request<'a, P> {
     pub params: P,
 }
 
-impl<'a, P> serde::Serialize for Request<'a, P>
+impl<P> serde::Serialize for Request<'_, P>
 where
     P: serde::Serialize,
 {
@@ -139,7 +139,7 @@ impl<'a, P> Notification<'a, P> {
     }
 }
 
-impl<'a, P> serde::Serialize for Notification<'a, P>
+impl<P> serde::Serialize for Notification<'_, P>
 where
     P: serde::Serialize,
 {

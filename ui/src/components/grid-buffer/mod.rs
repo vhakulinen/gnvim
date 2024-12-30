@@ -95,7 +95,7 @@ impl GridBuffer {
                     .borrow_mut()
                     .iter_mut()
                     .enumerate()
-                    .map(|(i, row)| row.to_render_node(&ctx, colors, &font, i))
+                    .map(|(i, row)| row.render_node(&ctx, colors, &font, i))
                     .collect::<Vec<_>>(),
             )
             .upcast(),
@@ -178,7 +178,7 @@ impl GridBuffer {
                         rows[top..bottom_start]
                             .iter()
                             .enumerate()
-                            .filter_map(|(i, row)| {
+                            .map(|(i, row)| {
                                 let left = RenderNodeIter::new(
                                     row.cells[..vp.left as usize].iter().peekable(),
                                 )
@@ -187,7 +187,7 @@ impl GridBuffer {
                                     RenderNodeIter::new(row.cells[right_start..].iter().peekable())
                                         .to_render_node(font.row_to_y((top + i) as f64) as f32);
 
-                                Some(gsk::ContainerNode::new(&[left, right]).upcast())
+                                gsk::ContainerNode::new(&[left, right]).upcast()
                             })
                             .collect::<Vec<_>>()
                             .as_ref(),

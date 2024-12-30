@@ -19,7 +19,7 @@ impl<'a> Cursor<'a> {
     }
 }
 
-impl<'a> io::Read for Cursor<'a> {
+impl io::Read for Cursor<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let start = self.pos.min(self.inner.len());
 
