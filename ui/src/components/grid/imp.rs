@@ -47,6 +47,17 @@ pub struct Grid {
     #[property(get, set = Self::set_viewport_margins)]
     pub viewport_margins: RefCell<ViewportMargins>,
 
+    #[property(get, set, nullable)]
+    position_relative_to: glib::WeakRef<super::Grid>,
+    #[property(get, set)]
+    position_row: Cell<f64>,
+    #[property(get, set)]
+    position_col: Cell<f64>,
+    #[property(get, set)]
+    position_zindex: Cell<i64>,
+    #[property(get, set)]
+    position_anchor: RefCell<String>,
+
     /// The grid id from neovim.
     #[property(name = "grid-id", construct_only, get, set, default = 0)]
     pub id: Cell<i64>,

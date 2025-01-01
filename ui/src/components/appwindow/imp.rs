@@ -480,10 +480,10 @@ impl AppWindow {
             // multigrid events
             UiEvent::WinPos(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_win_pos(event, &self.font.borrow())),
+                .for_each(|event| self.shell.handle_win_pos(event)),
             UiEvent::WinFloatPos(events) => events
                 .into_iter()
-                .for_each(|event| self.shell.handle_float_pos(event, &self.font.borrow())),
+                .for_each(|event| self.shell.handle_float_pos(event)),
             UiEvent::WinExternalPos(events) => events.into_iter().for_each(|event| {
                 self.shell
                     .handle_win_external_pos(event, self.obj().upcast_ref())

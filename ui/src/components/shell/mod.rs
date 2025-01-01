@@ -125,7 +125,18 @@ impl Shell {
     }
 
     pub fn handle_grid_resize(&self, event: GridResize) {
-        self.find_or_create_grid(event.grid).resize(event);
+        let grid = self.find_or_create_grid(event.grid);
+        grid.resize(event);
+
+        // Update the position if the grid isn't the root nor the msg win's grid.
+        if grid.grid_id() != 1
+            && !grid
+                .parent()
+                .map(|parent| parent == *self.imp().msg_win)
+                .unwrap_or(false)
+        {
+            self.update_grid_position(&grid);
+        }
     }
 
     pub fn handle_flush(&self, colors: &Colors) {
@@ -181,7 +192,7 @@ impl Shell {
         }
     }
 
-    pub fn handle_win_pos(&self, event: WinPos, font: &Font) {
+    pub fn handle_win_pos(&self, event: WinPos) {
         assert!(event.grid != 1, "cant do win_pos for grid 1");
 
         /* NOTE(ville): The reported width and height in this event _might_
@@ -192,36 +203,35 @@ impl Shell {
         let grid = self.find_or_create_grid(event.grid);
         grid.set_nvim_window(Some(event.win));
 
-        let x = font.col_to_x(event.startcol as f64) as f32;
-        let y = font.row_to_y(event.startrow as f64) as f32;
-
-        let fixed = self.imp().fixed.clone();
-        if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
-            fixed.move_(&grid, x, y);
-        } else {
-            grid.unparent();
-            fixed.put(&grid, x, y);
-        }
+        grid.set_position_relative_to(Some(self.imp().root_grid.clone()));
+        grid.set_position_row(event.startrow as f64);
+        grid.set_position_col(event.startcol as f64);
+        grid.set_position_anchor("NW"); // NW (i.e. topleft) is the default.
+        grid.set_position_zindex(0);
+        self.update_grid_position(&grid);
     }
 
-    pub fn handle_float_pos(&self, event: WinFloatPos, font: &Font) {
-        let grid = self.find_or_create_grid(event.grid);
-        grid.set_nvim_window(Some(event.win));
-
-        let east = event.anchor == "NE" || event.anchor == "SE";
-        let south = event.anchor == "SE" || event.anchor == "SW";
+    fn update_grid_position(&self, grid: &Grid) {
+        let anchor = grid.position_anchor();
+        let east = anchor == "NE" || anchor == "SE";
+        let south = anchor == "SE" || anchor == "SW";
 
         // Adjust position based on anchor.
         let (cols, rows) = grid.grid_size();
-        let col = event.anchor_col - if east { cols as f64 } else { 0.0 };
-        let row = event.anchor_row - if south { rows as f64 } else { 0.0 };
+        let col = grid.position_col() - if east { cols as f64 } else { 0.0 };
+        let row = grid.position_row() - if south { rows as f64 } else { 0.0 };
 
         let fixed = self.imp().fixed.clone();
 
-        let pos = if event.anchor_grid == 1 {
-            gsk::Transform::new()
-        } else {
-            fixed.child_position(&self.find_or_create_grid(event.anchor_grid))
+        let relative_to = grid.position_relative_to();
+        let font = relative_to
+            .as_ref()
+            .map(|grid| grid.font())
+            .unwrap_or_else(|| self.font());
+
+        let pos = match &relative_to {
+            Some(relative) if relative.grid_id() != 1 => fixed.child_position(relative),
+            _ => gsk::Transform::new(),
         }
         .transform_point(&graphene::Point::new(
             font.col_to_x(col) as f32,
@@ -247,34 +257,28 @@ impl Shell {
         let x = pos.x().clamp(0.0, max_x);
         let y = pos.y().clamp(0.0, max_y);
 
-        // If the grid doesn't fit the screen, clamp it.
-        let adj_w = max_w as f32 - (x + grid_w as f32);
-        let adj_h = max_h as f32 - (y + grid_h as f32);
-        if adj_w < 0.0 || adj_h < 0.0 {
-            let cols = font.scale_to_col(grid_w as f64 + adj_w.min(0.0) as f64);
-            let rows = font.scale_to_row(grid_h as f64 + adj_h.min(0.0) as f64);
-
-            let grid_id = grid.grid_id();
-            spawn_local!(glib::clone!(
-                #[weak(rename_to = obj)]
-                self,
-                async move {
-                    obj.nvim()
-                        .nvim_ui_try_resize_grid(grid_id, cols.max(1) as i64, rows.max(1) as i64)
-                        .await
-                        .expect("nvim_ui_try_resize failed");
-                }
-            ));
-        }
-
         if grid.parent().map(|parent| parent == fixed).unwrap_or(false) {
-            fixed.move_(&grid, x, y);
+            fixed.move_(grid, x, y);
         } else {
             grid.unparent();
-            fixed.put(&grid, x, y);
+            fixed.put(grid, x, y);
         }
 
-        fixed.set_zindex(&grid, event.zindex);
+        fixed.set_zindex(grid, grid.position_zindex());
+    }
+
+    pub fn handle_float_pos(&self, event: WinFloatPos) {
+        let grid = self.find_or_create_grid(event.grid);
+        grid.set_nvim_window(Some(event.win));
+
+        let anchor = self.find_or_create_grid(event.anchor_grid);
+        grid.set_position_relative_to(Some(&anchor));
+        grid.set_position_row(event.anchor_row);
+        grid.set_position_col(event.anchor_col);
+        grid.set_position_anchor(event.anchor);
+        grid.set_position_zindex(event.zindex);
+
+        self.update_grid_position(&grid);
     }
 
     pub fn handle_win_hide(&self, event: WinHide) {
