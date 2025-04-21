@@ -1,4 +1,5 @@
 use std::cell::{self, RefCell};
+use std::collections::VecDeque;
 
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk, prelude::*};
@@ -6,7 +7,7 @@ use nvim::types::uievents::WinViewportMargins;
 
 use crate::font::Font;
 use crate::math::ease_out_cubic;
-use crate::{some_or_return, warn, SCALE};
+use crate::{some_or_return, SCALE};
 
 use super::row::Cell;
 use super::Row;
@@ -74,6 +75,12 @@ impl Default for Nodes {
     }
 }
 
+struct ScrollNode {
+    node: gsk::RenderNode,
+    y_offset: f64,
+    end_time: f64,
+}
+
 #[derive(glib::Properties, Default)]
 #[properties(wrapper_type = super::GridBuffer)]
 pub struct GridBuffer {
@@ -83,16 +90,12 @@ pub struct GridBuffer {
     #[property(get, set = Self::set_size)]
     size: RefCell<Size>,
 
-    /// Node containing the "background" buffer (used for the scroll effect).
-    pub scroll_node: RefCell<Option<gsk::RenderNode>>,
-    /// Callback id for scroll animation.
-    pub scroll_tick: RefCell<Option<gtk::TickCallbackId>>,
     /// Scroll transition time.
     #[property(set, minimum = 0.0)]
     pub scroll_transition: cell::Cell<f64>,
     /// Y offset for the main buffer.
     #[property(get, set)]
-    pub y_offset: cell::Cell<f32>,
+    pub y_offset: cell::Cell<f64>,
 
     #[property(get, set = Self::set_font)]
     pub font: RefCell<Font>,
@@ -111,25 +114,8 @@ pub struct GridBuffer {
     /// Previous render. Drawn when we're "dirty".
     backbuffer: RefCell<Option<gsk::RenderNode>>,
 
-    scroll_nodes: RefCell<Vec<ScrollNode>>,
-}
-
-struct ScrollNode {
-    node: gsk::RenderNode,
-    offset: f32,
-    target: f32,
-    start: f32,
-    /// If the scroll node has reached theview yet (some nodes might start
-    /// their animation off screen).
-    reached_view: bool,
-}
-
-impl ScrollNode {
-    fn adjust(&mut self, adjust: f32) {
-        self.start += self.offset;
-        self.offset = 0.0;
-        self.target += adjust;
-    }
+    scroll_nodes: RefCell<VecDeque<ScrollNode>>,
+    tick_id: RefCell<Option<gtk::TickCallbackId>>,
 }
 
 #[glib::object_subclass]
@@ -225,6 +211,26 @@ impl GridBuffer {
         }
     }
 
+    fn scroll_node(&self, delta: f64, y: f64, end_time: f64) -> ScrollNode {
+        let (from, to) = self.scroll_delta_to_range(delta);
+        let rows = self.rows.borrow();
+        let node = gsk::ContainerNode::new(
+            &rows
+                .iter()
+                .skip(from)
+                .take(to)
+                .map(|row| row.cached_render_node().clone())
+                .collect::<Vec<gsk::RenderNode>>(),
+        )
+        .upcast();
+
+        ScrollNode {
+            node,
+            y_offset: y,
+            end_time,
+        }
+    }
+
     fn set_scroll_delta(&self, delta: f64) {
         self.scroll_delta.set(delta);
 
@@ -238,94 +244,53 @@ impl GridBuffer {
             "Failed to get a frame clock for grid buffer animation"
         )
         .frame_time() as f64;
-        let end_time = start_time + self.scroll_transition.get();
 
-        let font = self.font.borrow();
-        let (from, to) = self.scroll_delta_to_range(delta);
-        let rows = self.rows.borrow();
+        let duration = self.scroll_transition.get();
+        let end_time = start_time + duration;
 
-        let node = gsk::ContainerNode::new(
-            &rows
-                .iter()
-                .skip(from)
-                .take(to)
-                .map(|row| row.cached_render_node().clone())
-                .collect::<Vec<_>>(),
-        )
-        .upcast();
+        let delta_rows = self.font.borrow().row_to_y(delta);
+        let y = self.y_offset.get() + delta_rows;
 
-        let start = self.y_offset.get();
-        let target = font.row_to_y(-delta) as f32;
-        let scroll_node = ScrollNode {
-            node,
-            offset: 0.0,
-            target,
-            start,
-            reached_view: false,
-        };
+        let mut scroll_nodes = self.scroll_nodes.borrow_mut();
 
-        self.scroll_nodes
-            .borrow_mut()
+        // Remove any scroll nodes that have ended.
+        let to_pop = scroll_nodes
+            .iter()
+            .take_while(|s| s.end_time < start_time)
+            .count();
+        scroll_nodes.drain(0..to_pop);
+
+        // Adjust the existing scroll nodes.
+        scroll_nodes
             .iter_mut()
-            .for_each(|s| s.adjust(target));
+            .for_each(|s| s.y_offset -= delta_rows);
 
-        self.scroll_nodes.borrow_mut().push(scroll_node);
-
-        let target_y = 0.0;
-        let start_y = self.y_offset.get() + font.row_to_y(delta) as f32;
+        // Add the new scroll node.
+        scroll_nodes.push_back(self.scroll_node(delta, -delta_rows, end_time));
 
         let old_id = self
-            .scroll_tick
-            .borrow_mut()
-            .replace(self.obj().add_tick_callback(move |this, clock| {
+            .tick_id
+            .replace(Some(self.obj().add_tick_callback(move |obj, clock| {
+                obj.queue_draw();
+
                 let now = clock.frame_time() as f64;
-                if now < start_time {
-                    warn!("Clock going backwards");
-                    return glib::ControlFlow::Continue;
+                let time_left = end_time - now;
+                if time_left < 0.0 {
+                    obj.set_y_offset(0.0);
+                    // Clear the scroll nodes.
+                    obj.imp().scroll_nodes.borrow_mut().clear();
+                    return glib::ControlFlow::Break;
                 }
 
-                let (_, req) = this.preferred_size();
-                let clip = graphene::Rect::new(0.0, 0.0, req.width() as f32, req.height() as f32);
+                let d = time_left / duration;
+                let e = 1.0 - ease_out_cubic(1.0 - d);
+                obj.set_y_offset(y * e);
 
-                if !this.dirty() {
-                    this.queue_draw();
-                }
+                glib::ControlFlow::Continue
+            })));
 
-                let imp = this.imp();
-                if now < end_time {
-                    let t = ease_out_cubic((now - start_time) / (end_time - start_time)) as f32;
-
-                    // Update scroll nodes, and retain only those that haven't gone
-                    // of screen yet.
-                    imp.scroll_nodes.borrow_mut().retain_mut(|s| {
-                        let y = (s.target - s.start) * t;
-                        s.offset = y;
-
-                        let mut bounds = s.node.bounds();
-                        bounds.offset(0.0, s.start + s.offset);
-
-                        if clip.intersection(&bounds).is_none() {
-                            !s.reached_view
-                        } else {
-                            s.reached_view = true;
-                            true
-                        }
-                    });
-
-                    let y = start_y + ((target_y - start_y) * t);
-                    this.set_y_offset(y);
-
-                    glib::ControlFlow::Continue
-                } else {
-                    this.set_y_offset(target_y);
-                    imp.scroll_nodes.borrow_mut().clear();
-
-                    glib::ControlFlow::Break
-                }
-            }));
-
-        if let Some(old_id) = old_id {
-            old_id.remove();
+        if let Some(id) = old_id {
+            id.remove()
         }
     }
 
@@ -350,33 +315,31 @@ impl WidgetImpl for GridBuffer {
             return;
         }
 
+        let y_offset = self.y_offset.get();
         let scroll_nodes = self
             .scroll_nodes
             .borrow()
             .iter()
-            .filter_map(|s| {
-                if !s.reached_view {
-                    return None;
-                }
-
+            .map(|s| {
                 let node = gsk::TransformNode::new(
                     &s.node,
-                    &gsk::Transform::new()
-                        .translate(&graphene::Point::new(0.0, s.start + s.offset)),
-                )
-                .upcast();
+                    &gsk::Transform::new().translate(&graphene::Point::new(0.0, s.y_offset as f32)),
+                );
 
-                Some(node)
+                return node.upcast();
             })
             .collect::<Vec<gsk::RenderNode>>();
 
-        let scroll = gsk::ContainerNode::new(&scroll_nodes);
+        let scroll = gsk::TransformNode::new(
+            &gsk::ContainerNode::new(&scroll_nodes),
+            &gsk::Transform::new().translate(&graphene::Point::new(0.0, y_offset as f32)),
+        );
 
         let nodes = self.nodes.borrow();
 
         let foreground = gsk::TransformNode::new(
             &nodes.foreground,
-            &gsk::Transform::new().translate(&graphene::Point::new(0.0, self.y_offset.get())),
+            &gsk::Transform::new().translate(&graphene::Point::new(0.0, y_offset as f32)),
         );
 
         let node = gsk::ContainerNode::new(&[
