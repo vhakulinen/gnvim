@@ -791,7 +791,25 @@ impl WindowImpl for AppWindow {
             warn!("failed to save window state: {}", err);
         }
 
-        self.parent_close_request()
+        // Instead of closing immediately, send :q to neovim to let it handle
+        // unsaved changes confirmation. If neovim exits cleanly, the window
+        // will be closed through the existing vimleavepre -> io_loop flow.
+        spawn_local!(glib::clone!(
+            #[weak(rename_to = nvim)]
+            self.nvim,
+            async move {
+                nvim.nvim_command("q")
+                    .await
+                    .unwrap_or_else(|err| {
+                        // If the command fails (e.g., due to unsaved changes),
+                        // neovim will display its standard error message
+                        debug!("nvim_command 'q' failed: {}", err);
+                    });
+            }
+        ));
+
+        // Prevent the window from closing immediately - let neovim handle it
+        glib::Propagation::Stop
     }
 }
 
