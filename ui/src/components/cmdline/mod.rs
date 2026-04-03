@@ -40,7 +40,7 @@ impl Cmdline {
         let content = event
             .content
             .iter()
-            .map(|item| colors.get_hl(&item.hl_id).pango_markup(&item.text))
+            .map(|item| colors.get_hl(&item.attr).pango_markup(&item.text))
             .collect::<String>();
         buf.insert_markup(&mut iter, &content);
 
@@ -99,7 +99,7 @@ impl Cmdline {
         event.lines.iter().enumerate().for_each(|(i, line)| {
             let line = line
                 .iter()
-                .map(|item| colors.get_hl(&item.hl_id).pango_markup(&item.text))
+                .map(|item| colors.get_hl(&item.attr).pango_markup(&item.text))
                 .collect::<String>();
 
             if i > 0 {
@@ -118,7 +118,7 @@ impl Cmdline {
         let content = event
             .lines
             .iter()
-            .map(|item| colors.get_hl(&item.hl_id).pango_markup(&item.text))
+            .map(|item| colors.get_hl(&item.attr).pango_markup(&item.text))
             .collect::<String>();
 
         let buf = imp.block.buffer();

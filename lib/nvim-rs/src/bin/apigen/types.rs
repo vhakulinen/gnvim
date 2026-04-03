@@ -69,6 +69,7 @@ impl Function {
     ) -> (Option<TokenStream>, TokenStream) {
         match (self.name.as_ref(), param.name.as_ref()) {
             ("nvim_ui_attach", "options") => (None, quote! { UiOptions }),
+            ("nvim_win_set_cursor", "pos") => (None, quote! { (i64, i64) }),
             _ => self.param_type(&param.r#type, index),
         }
     }
@@ -83,15 +84,8 @@ impl Function {
             "Window" => (None, quote! { &Window }),
             "Tabpage" => (None, quote! { &Tabpage }),
             "Buffer" => (None, quote! { &Buffer }),
-            "ArrayOf(Integer, 2)" => (None, quote! { (i64, i64) }),
-            "ArrayOf(String)" => (None, quote! { Vec<String> }),
-            "ArrayOf(Integer)" => (None, quote! { &[i64] }),
-            "ArrayOf(Buffer)" => (None, quote! { Vec<Buffer> }),
-            "ArrayOf(Dictionary)" => (None, quote! { Vec<Dictionary> }),
-            "ArrayOf(Tabpage)" => (None, quote! { Vec<Tabpage> }),
-            "ArrayOf(Window)" => (None, quote! { Vec<Window> }),
             "Array" => (None, quote! { Vec<rmpv::Value> }),
-            "Dictionary" => (None, quote! { &Dictionary }),
+            "Dict" => (None, quote! { &Dictionary }),
             "Object" => {
                 let t = format_ident!("T{}", i).to_token_stream();
                 (Some(quote! { #t: serde::Serialize }), quote! { &#t })
@@ -111,15 +105,8 @@ impl Function {
             "Window" => quote! { Window },
             "Tabpage" => quote! { Tabpage },
             "Buffer" => quote! { Buffer },
-            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
-            "ArrayOf(String)" => quote! { Vec<String> },
-            "ArrayOf(Integer)" => quote! { Vec<i64> },
-            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
-            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
-            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
-            "ArrayOf(Window)" => quote! { Vec<Window> },
             "Array" => quote! { Vec<rmpv::Value> },
-            "Dictionary" => quote! { Dictionary },
+            "Dict" => quote! { Dictionary },
             "Object" => quote! { Object },
             "LuaRef" => quote! { LuaRef },
             s => unimplemented!("function output type '{}'", s),
@@ -347,13 +334,6 @@ impl UiEvent {
             "Window" => quote! { Window },
             "Tabpage" => quote! { Tabpage },
             "Buffer" => quote! { Buffer },
-            "ArrayOf(Integer, 2)" => quote! { (i64, i64) },
-            "ArrayOf(String)" => quote! { Vec<String> },
-            "ArrayOf(Integer)" => quote! { Vec<i64> },
-            "ArrayOf(Buffer)" => quote! { Vec<Buffer> },
-            "ArrayOf(Dictionary)" => quote! { Vec<Dictionary> },
-            "ArrayOf(Tabpage)" => quote! { Vec<Tabpage> },
-            "ArrayOf(Window)" => quote! { Vec<Window> },
             "Array" => quote! { Vec<rmpv::Value> },
             "Dictionary" => quote! { Dictionary },
             "Object" => quote! { Object },

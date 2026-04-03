@@ -152,8 +152,9 @@ pub struct ModeInfo {
 
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct CmdlineContent {
-    pub hl_id: i64,
+    pub attr: i64,
     pub text: String,
+    pub hl_id: i64,
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

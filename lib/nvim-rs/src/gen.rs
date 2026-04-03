@@ -61,7 +61,7 @@ where
         start: i64,
         end: i64,
         strict_indexing: bool,
-    ) -> CallResponse<Vec<String>> {
+    ) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_buf_get_lines", (buffer, start, end, strict_indexing))
             .await
     }
@@ -71,7 +71,7 @@ where
         start: i64,
         end: i64,
         strict_indexing: bool,
-        replacement: Vec<String>,
+        replacement: Vec<rmpv::Value>,
     ) -> CallResponse<()> {
         self.call(
             "nvim_buf_set_lines",
@@ -86,7 +86,7 @@ where
         start_col: i64,
         end_row: i64,
         end_col: i64,
-        replacement: Vec<String>,
+        replacement: Vec<rmpv::Value>,
     ) -> CallResponse<()> {
         self.call(
             "nvim_buf_set_text",
@@ -102,7 +102,7 @@ where
         end_row: i64,
         end_col: i64,
         opts: &Dictionary,
-    ) -> CallResponse<Vec<String>> {
+    ) -> CallResponse<Vec<rmpv::Value>> {
         self.call(
             "nvim_buf_get_text",
             (buffer, start_row, start_col, end_row, end_col, opts),
@@ -122,7 +122,7 @@ where
         self,
         buffer: &Buffer,
         mode: &str,
-    ) -> CallResponse<Vec<Dictionary>> {
+    ) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_buf_get_keymap", (buffer, mode)).await
     }
     async fn nvim_buf_set_keymap(
@@ -179,7 +179,11 @@ where
         self.call("nvim_buf_set_mark", (buffer, name, line, col, opts))
             .await
     }
-    async fn nvim_buf_get_mark(self, buffer: &Buffer, name: &str) -> CallResponse<(i64, i64)> {
+    async fn nvim_buf_get_mark(
+        self,
+        buffer: &Buffer,
+        name: &str,
+    ) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_buf_get_mark", (buffer, name)).await
     }
     async fn nvim_buf_call(self, buffer: &Buffer, fun: &LuaRef) -> CallResponse<Object> {
@@ -229,6 +233,13 @@ where
     ) -> CallResponse<Dictionary> {
         self.call("nvim_buf_get_commands", (buffer, opts)).await
     }
+    async fn nvim_ui_term_event<T2: serde::Serialize>(
+        self,
+        event: &str,
+        value: &T2,
+    ) -> CallResponse<()> {
+        self.call("nvim_ui_term_event", (event, value)).await
+    }
     async fn nvim_create_namespace(self, name: &str) -> CallResponse<i64> {
         self.call("nvim_create_namespace", (name,)).await
     }
@@ -241,7 +252,7 @@ where
         ns_id: i64,
         id: i64,
         opts: &Dictionary,
-    ) -> CallResponse<Vec<i64>> {
+    ) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_buf_get_extmark_by_id", (buffer, ns_id, id, opts))
             .await
     }
@@ -274,21 +285,6 @@ where
         id: i64,
     ) -> CallResponse<bool> {
         self.call("nvim_buf_del_extmark", (buffer, ns_id, id)).await
-    }
-    async fn nvim_buf_add_highlight(
-        self,
-        buffer: &Buffer,
-        ns_id: i64,
-        hl_group: &str,
-        line: i64,
-        col_start: i64,
-        col_end: i64,
-    ) -> CallResponse<i64> {
-        self.call(
-            "nvim_buf_add_highlight",
-            (buffer, ns_id, hl_group, line, col_start, col_end),
-        )
-        .await
     }
     async fn nvim_buf_clear_namespace(
         self,
@@ -329,7 +325,7 @@ where
     ) -> CallResponse<Dictionary> {
         self.call("nvim_get_option_info2", (name, opts)).await
     }
-    async fn nvim_tabpage_list_wins(self, tabpage: &Tabpage) -> CallResponse<Vec<Window>> {
+    async fn nvim_tabpage_list_wins(self, tabpage: &Tabpage) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_tabpage_list_wins", (tabpage,)).await
     }
     async fn nvim_tabpage_get_var(self, tabpage: &Tabpage, name: &str) -> CallResponse<Object> {
@@ -358,6 +354,15 @@ where
     }
     async fn nvim_tabpage_is_valid(self, tabpage: &Tabpage) -> CallResponse<bool> {
         self.call("nvim_tabpage_is_valid", (tabpage,)).await
+    }
+    async fn nvim_open_tabpage(
+        self,
+        buffer: &Buffer,
+        enter: bool,
+        config: &Dictionary,
+    ) -> CallResponse<Tabpage> {
+        self.call("nvim_open_tabpage", (buffer, enter, config))
+            .await
     }
     async fn nvim_ui_attach(self, width: i64, height: i64, options: UiOptions) -> CallResponse<()> {
         self.call("nvim_ui_attach", (width, height, options)).await
@@ -395,12 +400,8 @@ where
         self.call("nvim_ui_pum_set_bounds", (width, height, row, col))
             .await
     }
-    async fn nvim_ui_term_event<T2: serde::Serialize>(
-        self,
-        event: &str,
-        value: &T2,
-    ) -> CallResponse<()> {
-        self.call("nvim_ui_term_event", (event, value)).await
+    async fn nvim_ui_send(self, content: &str) -> CallResponse<()> {
+        self.call("nvim_ui_send", (content,)).await
     }
     async fn nvim_get_hl_id_by_name(self, name: &str) -> CallResponse<i64> {
         self.call("nvim_get_hl_id_by_name", (name,)).await
@@ -454,21 +455,13 @@ where
     async fn nvim_exec_lua(self, code: &str, args: Vec<rmpv::Value>) -> CallResponse<Object> {
         self.call("nvim_exec_lua", (code, args)).await
     }
-    async fn nvim_notify(
-        self,
-        msg: &str,
-        log_level: i64,
-        opts: &Dictionary,
-    ) -> CallResponse<Object> {
-        self.call("nvim_notify", (msg, log_level, opts)).await
-    }
     async fn nvim_strwidth(self, text: &str) -> CallResponse<i64> {
         self.call("nvim_strwidth", (text,)).await
     }
-    async fn nvim_list_runtime_paths(self) -> CallResponse<Vec<String>> {
+    async fn nvim_list_runtime_paths(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_runtime_paths", ()).await
     }
-    async fn nvim_get_runtime_file(self, name: &str, all: bool) -> CallResponse<Vec<String>> {
+    async fn nvim_get_runtime_file(self, name: &str, all: bool) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_get_runtime_file", (name, all)).await
     }
     async fn nvim_set_current_dir(self, dir: &str) -> CallResponse<()> {
@@ -503,19 +496,10 @@ where
         chunks: Vec<rmpv::Value>,
         history: bool,
         opts: &Dictionary,
-    ) -> CallResponse<()> {
+    ) -> CallResponse<Object> {
         self.call("nvim_echo", (chunks, history, opts)).await
     }
-    async fn nvim_out_write(self, str: &str) -> CallResponse<()> {
-        self.call("nvim_out_write", (str,)).await
-    }
-    async fn nvim_err_write(self, str: &str) -> CallResponse<()> {
-        self.call("nvim_err_write", (str,)).await
-    }
-    async fn nvim_err_writeln(self, str: &str) -> CallResponse<()> {
-        self.call("nvim_err_writeln", (str,)).await
-    }
-    async fn nvim_list_bufs(self) -> CallResponse<Vec<Buffer>> {
+    async fn nvim_list_bufs(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_bufs", ()).await
     }
     async fn nvim_get_current_buf(self) -> CallResponse<Buffer> {
@@ -524,7 +508,7 @@ where
     async fn nvim_set_current_buf(self, buffer: &Buffer) -> CallResponse<()> {
         self.call("nvim_set_current_buf", (buffer,)).await
     }
-    async fn nvim_list_wins(self) -> CallResponse<Vec<Window>> {
+    async fn nvim_list_wins(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_wins", ()).await
     }
     async fn nvim_get_current_win(self) -> CallResponse<Window> {
@@ -542,7 +526,7 @@ where
     async fn nvim_chan_send(self, chan: i64, data: &str) -> CallResponse<()> {
         self.call("nvim_chan_send", (chan, data)).await
     }
-    async fn nvim_list_tabpages(self) -> CallResponse<Vec<Tabpage>> {
+    async fn nvim_list_tabpages(self) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_list_tabpages", ()).await
     }
     async fn nvim_get_current_tabpage(self) -> CallResponse<Tabpage> {
@@ -556,18 +540,12 @@ where
     }
     async fn nvim_put(
         self,
-        lines: Vec<String>,
+        lines: Vec<rmpv::Value>,
         _type: &str,
         after: bool,
         follow: bool,
     ) -> CallResponse<()> {
         self.call("nvim_put", (lines, _type, after, follow)).await
-    }
-    async fn nvim_subscribe(self, event: &str) -> CallResponse<()> {
-        self.call("nvim_subscribe", (event,)).await
-    }
-    async fn nvim_unsubscribe(self, event: &str) -> CallResponse<()> {
-        self.call("nvim_unsubscribe", (event,)).await
     }
     async fn nvim_get_color_by_name(self, name: &str) -> CallResponse<i64> {
         self.call("nvim_get_color_by_name", (name,)).await
@@ -584,7 +562,7 @@ where
     async fn nvim_get_mode(self) -> CallResponse<Dictionary> {
         self.call("nvim_get_mode", ()).await
     }
-    async fn nvim_get_keymap(self, mode: &str) -> CallResponse<Vec<Dictionary>> {
+    async fn nvim_get_keymap(self, mode: &str) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_get_keymap", (mode,)).await
     }
     async fn nvim_set_keymap(
@@ -700,7 +678,7 @@ where
     async fn nvim_win_set_buf(self, window: &Window, buffer: &Buffer) -> CallResponse<()> {
         self.call("nvim_win_set_buf", (window, buffer)).await
     }
-    async fn nvim_win_get_cursor(self, window: &Window) -> CallResponse<(i64, i64)> {
+    async fn nvim_win_get_cursor(self, window: &Window) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_win_get_cursor", (window,)).await
     }
     async fn nvim_win_set_cursor(self, window: &Window, pos: (i64, i64)) -> CallResponse<()> {
@@ -732,7 +710,7 @@ where
     async fn nvim_win_del_var(self, window: &Window, name: &str) -> CallResponse<()> {
         self.call("nvim_win_del_var", (window, name)).await
     }
-    async fn nvim_win_get_position(self, window: &Window) -> CallResponse<(i64, i64)> {
+    async fn nvim_win_get_position(self, window: &Window) -> CallResponse<Vec<rmpv::Value>> {
         self.call("nvim_win_get_position", (window,)).await
     }
     async fn nvim_win_get_tabpage(self, window: &Window) -> CallResponse<Tabpage> {

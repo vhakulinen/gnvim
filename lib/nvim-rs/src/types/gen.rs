@@ -65,6 +65,62 @@ impl<'de> serde::Deserialize<'de> for ModeChange {
     }
 }
 #[derive(Debug)]
+pub struct Connect {
+    pub server_addr: String,
+}
+impl<'de> serde::Deserialize<'de> for Connect {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Connect;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Connect")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Connect {
+                    server_addr: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
+pub struct Restart {
+    pub listen_addr: String,
+}
+impl<'de> serde::Deserialize<'de> for Restart {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Restart;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid Restart")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = Restart {
+                    listen_addr: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
 pub struct SetTitle {
     pub title: String,
 }
@@ -166,6 +222,34 @@ impl<'de> serde::Deserialize<'de> for Chdir {
             ) -> Result<Self::Value, V::Error> {
                 let evt = Chdir {
                     path: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                };
+                while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
+                Ok(evt)
+            }
+        }
+        d.deserialize_any(Visitor)
+    }
+}
+#[derive(Debug)]
+pub struct UiSend {
+    pub content: String,
+}
+impl<'de> serde::Deserialize<'de> for UiSend {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UiSend;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("valid UiSend")
+            }
+            fn visit_seq<V: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: V,
+            ) -> Result<Self::Value, V::Error> {
+                let evt = UiSend {
+                    content: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
                 };
@@ -844,8 +928,11 @@ pub struct WinFloatPos {
     pub anchor_grid: i64,
     pub anchor_row: f64,
     pub anchor_col: f64,
-    pub focusable: bool,
+    pub mouse_enabled: bool,
     pub zindex: i64,
+    pub compindex: i64,
+    pub screen_row: i64,
+    pub screen_col: i64,
 }
 impl<'de> serde::Deserialize<'de> for WinFloatPos {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -878,12 +965,21 @@ impl<'de> serde::Deserialize<'de> for WinFloatPos {
                     anchor_col: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
-                    focusable: seq
+                    mouse_enabled: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
                     zindex: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(7usize, &self))?,
+                    compindex: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(8usize, &self))?,
+                    screen_row: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(9usize, &self))?,
+                    screen_col: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(10usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -986,6 +1082,8 @@ pub struct MsgSetPos {
     pub row: i64,
     pub scrolled: bool,
     pub sep_char: String,
+    pub zindex: i64,
+    pub compindex: i64,
 }
 impl<'de> serde::Deserialize<'de> for MsgSetPos {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -1012,6 +1110,12 @@ impl<'de> serde::Deserialize<'de> for MsgSetPos {
                     sep_char: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    zindex: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    compindex: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -1292,6 +1396,7 @@ pub struct CmdlineShow {
     pub prompt: String,
     pub indent: i64,
     pub level: i64,
+    pub hl_id: i64,
 }
 impl<'de> serde::Deserialize<'de> for CmdlineShow {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -1324,6 +1429,9 @@ impl<'de> serde::Deserialize<'de> for CmdlineShow {
                     level: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                    hl_id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -1403,6 +1511,7 @@ impl<'de> serde::Deserialize<'de> for CmdlineSpecialChar {
 #[derive(Debug)]
 pub struct CmdlineHide {
     pub level: i64,
+    pub abort: bool,
 }
 impl<'de> serde::Deserialize<'de> for CmdlineHide {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -1420,6 +1529,9 @@ impl<'de> serde::Deserialize<'de> for CmdlineHide {
                     level: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    abort: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -1545,6 +1657,10 @@ pub struct MsgShow {
     pub kind: String,
     pub content: Vec<MsgShowContent>,
     pub replace_last: bool,
+    pub history: bool,
+    pub append: bool,
+    pub id: Object,
+    pub trigger: String,
 }
 impl<'de> serde::Deserialize<'de> for MsgShow {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -1568,6 +1684,18 @@ impl<'de> serde::Deserialize<'de> for MsgShow {
                     replace_last: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(2usize, &self))?,
+                    history: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(3usize, &self))?,
+                    append: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(4usize, &self))?,
+                    id: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(5usize, &self))?,
+                    trigger: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(6usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -1663,6 +1791,7 @@ impl<'de> serde::Deserialize<'de> for MsgRuler {
 #[derive(Debug)]
 pub struct MsgHistoryShow {
     pub entries: Vec<MsgHistoryShowEntry>,
+    pub prev_cmd: bool,
 }
 impl<'de> serde::Deserialize<'de> for MsgHistoryShow {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -1680,6 +1809,9 @@ impl<'de> serde::Deserialize<'de> for MsgHistoryShow {
                     entries: seq
                         .next_element()?
                         .ok_or_else(|| serde::de::Error::invalid_length(0usize, &self))?,
+                    prev_cmd: seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1usize, &self))?,
                 };
                 while let Some(serde::de::IgnoredAny) = seq.next_element()? {}
                 Ok(evt)
@@ -1728,12 +1860,15 @@ pub enum UiEvent {
     Bell,
     VisualBell,
     Flush,
+    Connect(Vec<Connect>),
+    Restart(Vec<Restart>),
     Suspend,
     SetTitle(Vec<SetTitle>),
     SetIcon(Vec<SetIcon>),
     Screenshot(Vec<Screenshot>),
     OptionSet(Vec<OptionSet>),
     Chdir(Vec<Chdir>),
+    UiSend(Vec<UiSend>),
     UpdateFg(Vec<UpdateFg>),
     UpdateBg(Vec<UpdateBg>),
     UpdateSp(Vec<UpdateSp>),
@@ -1783,7 +1918,6 @@ pub enum UiEvent {
     MsgShowmode(Vec<MsgShowmode>),
     MsgRuler(Vec<MsgRuler>),
     MsgHistoryShow(Vec<MsgHistoryShow>),
-    MsgHistoryClear,
     ErrorExit(Vec<ErrorExit>),
 }
 impl Display for UiEvent {
@@ -1799,12 +1933,15 @@ impl Display for UiEvent {
             Self::Bell => write!(f, "bell"),
             Self::VisualBell => write!(f, "visual_bell"),
             Self::Flush => write!(f, "flush"),
+            Self::Connect(_) => write!(f, "connect"),
+            Self::Restart(_) => write!(f, "restart"),
             Self::Suspend => write!(f, "suspend"),
             Self::SetTitle(_) => write!(f, "set_title"),
             Self::SetIcon(_) => write!(f, "set_icon"),
             Self::Screenshot(_) => write!(f, "screenshot"),
             Self::OptionSet(_) => write!(f, "option_set"),
             Self::Chdir(_) => write!(f, "chdir"),
+            Self::UiSend(_) => write!(f, "ui_send"),
             Self::UpdateFg(_) => write!(f, "update_fg"),
             Self::UpdateBg(_) => write!(f, "update_bg"),
             Self::UpdateSp(_) => write!(f, "update_sp"),
@@ -1854,7 +1991,6 @@ impl Display for UiEvent {
             Self::MsgShowmode(_) => write!(f, "msg_showmode"),
             Self::MsgRuler(_) => write!(f, "msg_ruler"),
             Self::MsgHistoryShow(_) => write!(f, "msg_history_show"),
-            Self::MsgHistoryClear => write!(f, "msg_history_clear"),
             Self::ErrorExit(_) => write!(f, "error_exit"),
         }
     }
@@ -1918,6 +2054,8 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                         while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
                         UiEvent::Flush
                     }
+                    "connect" => UiEvent::Connect(seq_to_vec!(seq)),
+                    "restart" => UiEvent::Restart(seq_to_vec!(seq)),
                     "suspend" => {
                         while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
                         UiEvent::Suspend
@@ -1927,6 +2065,7 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     "screenshot" => UiEvent::Screenshot(seq_to_vec!(seq)),
                     "option_set" => UiEvent::OptionSet(seq_to_vec!(seq)),
                     "chdir" => UiEvent::Chdir(seq_to_vec!(seq)),
+                    "ui_send" => UiEvent::UiSend(seq_to_vec!(seq)),
                     "update_fg" => UiEvent::UpdateFg(seq_to_vec!(seq)),
                     "update_bg" => UiEvent::UpdateBg(seq_to_vec!(seq)),
                     "update_sp" => UiEvent::UpdateSp(seq_to_vec!(seq)),
@@ -1994,10 +2133,6 @@ impl<'de> serde::Deserialize<'de> for UiEvent {
                     "msg_showmode" => UiEvent::MsgShowmode(seq_to_vec!(seq)),
                     "msg_ruler" => UiEvent::MsgRuler(seq_to_vec!(seq)),
                     "msg_history_show" => UiEvent::MsgHistoryShow(seq_to_vec!(seq)),
-                    "msg_history_clear" => {
-                        while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
-                        UiEvent::MsgHistoryClear
-                    }
                     "error_exit" => UiEvent::ErrorExit(seq_to_vec!(seq)),
                     v => panic!("failed to decode message {:?}", v),
                 })
