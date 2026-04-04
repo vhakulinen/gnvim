@@ -341,6 +341,13 @@ impl Shell {
             grid.set_parent(&win);
         }
 
+        // If there already is a child on the msgwin and its not this grid, remove it.
+        if let Some(prev) = win.first_child() {
+            if prev != grid {
+                prev.unparent();
+            }
+        }
+
         if event.scrolled {
             win.add_css_class("scrolled");
         } else {
