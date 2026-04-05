@@ -204,6 +204,18 @@ pub struct MsgHistoryShowContent {
     pub text_chunk: String,
 }
 
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct ChanInfo {
+    pub id: i64,
+    pub argv: Option<Vec<String>>,
+    pub stream: rmpv::Value,
+    pub mode: rmpv::Value,
+    pub pty: Option<String>,
+    pub buffer: Option<rmpv::Value>,
+    pub client: Option<rmpv::Value>,
+    pub exitcode: Option<i64>,
+}
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(transparent)]
 pub struct Dictionary(rmpv::Value);
@@ -211,6 +223,10 @@ pub struct Dictionary(rmpv::Value);
 impl Dictionary {
     pub fn new(d: Vec<(rmpv::Value, rmpv::Value)>) -> Self {
         Self(rmpv::Value::Map(d))
+    }
+
+    pub fn as_map(&self) -> &Vec<(rmpv::Value, rmpv::Value)> {
+        self.0.as_map().unwrap()
     }
 }
 

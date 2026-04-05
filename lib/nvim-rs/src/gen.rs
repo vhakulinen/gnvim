@@ -1,6 +1,6 @@
 use crate::{
     rpc::{CallResponse, Caller},
-    types::{Buffer, Dictionary, LuaRef, Object, Tabpage, UiOptions, Window},
+    types::{Buffer, ChanInfo, Dictionary, LuaRef, Object, Tabpage, UiOptions, Window},
 };
 impl<T> Neovim for T where T: Caller {}
 # [async_trait :: async_trait (? Send)]
@@ -594,7 +594,7 @@ where
         )
         .await
     }
-    async fn nvim_get_chan_info(self, chan: i64) -> CallResponse<Dictionary> {
+    async fn nvim_get_chan_info(self, chan: i64) -> CallResponse<ChanInfo> {
         self.call("nvim_get_chan_info", (chan,)).await
     }
     async fn nvim_list_chans(self) -> CallResponse<Vec<rmpv::Value>> {

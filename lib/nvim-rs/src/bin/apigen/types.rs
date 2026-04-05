@@ -95,7 +95,14 @@ impl Function {
         }
     }
 
-    fn output_type_for(&self, ty: &str) -> TokenStream {
+    fn output_type_for(&self, method: &str, ty: &str) -> TokenStream {
+        match method {
+            "nvim_get_chan_info" => return quote! { ChanInfo },
+            _ => {
+                // fallthrough
+            }
+        }
+
         match ty {
             "Boolean" => quote! { bool },
             "Integer" => quote! { i64 },
@@ -143,7 +150,7 @@ impl Function {
         let method = &self.name;
         let (generics, args_in) = self.args_in();
         let args_out = self.args_out();
-        let output = self.output_type_for(&self.return_type);
+        let output = self.output_type_for(&method, &self.return_type);
 
         let generics = generics.into_iter().flatten();
 

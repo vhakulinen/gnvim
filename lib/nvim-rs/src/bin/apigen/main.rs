@@ -16,7 +16,7 @@ fn functions(res: ApiMetadata) {
         .filter_map(|function| function.to_tokens());
 
     let out = quote! {
-        use crate::{rpc::{Caller, CallResponse}, types::{UiOptions, Window, Tabpage, Buffer, Dictionary, LuaRef, Object}};
+        use crate::{rpc::{Caller, CallResponse}, types::{UiOptions, Window, Tabpage, Buffer, Dictionary, LuaRef, Object, ChanInfo}};
 
         impl<T> Neovim for T where T: Caller {}
 
