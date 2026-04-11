@@ -30,13 +30,13 @@ impl Font {
     }
 
     /// Pango font description for this font.
-    pub fn font_desc(&self) -> Ref<pango::FontDescription> {
+    pub fn font_desc(&self) -> Ref<'_, pango::FontDescription> {
         self.imp().font_desc.borrow()
     }
 
     /// Neovim guifont. This is what was used to construct the
     /// pango font description.
-    pub fn guifont(&self) -> Ref<String> {
+    pub fn guifont(&self) -> Ref<'_, String> {
         self.imp().guifont.borrow()
     }
 
