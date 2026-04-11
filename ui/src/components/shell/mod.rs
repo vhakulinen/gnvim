@@ -26,6 +26,10 @@ impl Shell {
         glib::Object::new()
     }
 
+    pub fn root_grid_size(&self) -> (usize, usize) {
+        self.imp().root_grid.grid_size()
+    }
+
     fn find_grid(&self, id: i64) -> Option<Grid> {
         self.imp()
             .grids

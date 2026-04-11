@@ -70,6 +70,9 @@ mod imp {
 
         #[property(get, set)]
         nvim_args: RefCell<Vec<String>>,
+
+        #[property(get, set, nullable)]
+        connect_addr: RefCell<Option<String>>,
     }
 
     impl App {
@@ -96,13 +99,33 @@ mod imp {
                         format!("let g:gnvim_rtp_path='{}'", obj.rtp()),
                     ]);
 
-                    args.extend_from_slice(&obj.nvim_args());
-
-                    glib::Object::builder()
+                    let win: AppWindow = glib::Object::builder()
                         .property("application", obj.upcast_ref::<adw::Application>())
                         .property("nvim-args", args)
+                        .property("connect-addr", self.connect_addr.borrow_mut().take())
                         .property("stdin-fd", *self.stdin_fd.borrow())
-                        .build()
+                        .build();
+
+                    // Handle `:restart` by looping back to this same function
+                    // after grabbing the new address.
+                    win.connect_closure(
+                        "restart-requested",
+                        false,
+                        glib::closure_local!(
+                            #[weak]
+                            obj,
+                            move |win: AppWindow, addr: &str| {
+                                obj.set_connect_addr(Some(addr));
+                                // Reset the main window reference.
+                                obj.imp().window.borrow_mut().take();
+                                obj.imp().main_window().present();
+                                // Close the previous window (the io loop is done).
+                                win.close();
+                            }
+                        ),
+                    );
+
+                    win
                 })
                 .clone()
         }
@@ -165,6 +188,15 @@ mod imp {
                 glib::OptionFlags::NONE,
                 glib::OptionArg::None,
                 "Ignore stdin pipe",
+                None,
+            );
+
+            obj.add_main_option(
+                "connect",
+                glib::Char::from(0),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::String,
+                "Connect to neovim instance",
                 None,
             );
 
@@ -299,6 +331,14 @@ mod imp {
                         })
                         .collect::<Vec<_>>(),
                 );
+            }
+
+            if let Some(connect_addr) = options
+                .lookup::<String>("connect")
+                .expect("invalid connect argument type")
+            {
+                debug!("connect arg: {}", connect_addr);
+                obj.set_connect_addr(Some(connect_addr));
             }
 
             self.parent_handle_local_options(options)

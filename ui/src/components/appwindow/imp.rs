@@ -1,5 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
+use std::sync::OnceLock;
 
 use nvim::dict;
 use nvim::rpc::message::{Message, Request};
@@ -11,7 +12,7 @@ use nvim::types::{OptionSet, UiOptions};
 use nvim::NeovimApi;
 
 use adw::{self, prelude::*, subclass::prelude::*};
-use glib::subclass::InitializingObject;
+use glib::subclass::{InitializingObject, Signal};
 use gtk::gio;
 use gtk::CompositeTemplate;
 use gtk::{
@@ -99,6 +100,11 @@ pub struct AppWindow {
     nvim_args: RefCell<Vec<String>>,
     #[property(get, set, construct_only)]
     stdin_fd: RefCell<Fd>,
+
+    #[property(set, nullable, construct_only)]
+    connect_addr: RefCell<Option<String>>,
+    #[property(get, set)]
+    pending_restart_addr: RefCell<Option<String>>,
 
     colors: RefCell<Colors>,
 
@@ -245,7 +251,11 @@ impl AppWindow {
                 Ok(msg) => self.process_nvim_event(msg),
                 Err(ReadError::IOError(_)) if self.nvim_exited.get() => {
                     debug!("clean exit");
-                    self.obj().close();
+                    if let Some(ref addr) = *self.pending_restart_addr.borrow() {
+                        self.obj().emit_by_name::<()>("restart-requested", &[addr]);
+                    } else {
+                        self.obj().close();
+                    }
                     break;
                 }
                 Err(err) => {
@@ -540,6 +550,10 @@ impl AppWindow {
                 .into_iter()
                 .for_each(|event| self.cmdline.block_append(event, &self.colors.borrow())),
 
+            UiEvent::Restart(events) => events.into_iter().for_each(|event| {
+                self.obj().set_pending_restart_addr(event.listen_addr);
+            }),
+
             event => panic!("Unhandled ui event: {}", event),
         }
     }
@@ -729,9 +743,13 @@ impl ObjectImpl for AppWindow {
             stdin_fd: **self.stdin_fd.borrow(),
             ..Default::default()
         };
-        let args = self.nvim_args.borrow();
-        let args: Vec<&OsStr> = args.iter().map(|a| a.as_ref()).collect();
-        let reader = self.nvim.open(&args, uiopts.stdin_fd.is_some());
+        let reader = if let Some(addr) = self.connect_addr.take() {
+            self.nvim.connect(&addr)
+        } else {
+            let args = self.nvim_args.borrow();
+            let args: Vec<&OsStr> = args.iter().map(|a| a.as_ref()).collect();
+            self.nvim.open(&args, uiopts.stdin_fd.is_some())
+        };
 
         // Start io loop.
         spawn_local!(glib::clone!(
@@ -746,6 +764,8 @@ impl ObjectImpl for AppWindow {
         spawn_local!(glib::clone!(
             #[weak(rename_to = nvim)]
             self.nvim,
+            #[weak]
+            obj,
             async move {
                 nvim.nvim_set_client_info(
                     "gnvim",
@@ -758,13 +778,21 @@ impl ObjectImpl for AppWindow {
                 .await
                 .expect("nvim_set_client_info failed");
 
-                // NOTE: If we're not embedding nvim, but using some other way to
-                // communicate to it, the channel id might be different.
-                nvim.nvim_command("autocmd VimLeavePre * call rpcrequest(1, 'vimleavepre')")
+                let chan_info = nvim
+                    .nvim_get_chan_info(0)
                     .await
-                    .expect("nvim_command failed");
+                    .expect("nvim_get_chan_info failed");
 
-                nvim.nvim_ui_attach(80, 30, uiopts)
+                nvim.nvim_command(&format!(
+                    "autocmd VimLeavePre * call rpcrequest({}, 'vimleavepre')",
+                    chan_info.id,
+                ))
+                .await
+                .expect("nvim_command failed");
+
+                let (cols, rows) = obj.imp().shell.root_grid_size();
+
+                nvim.nvim_ui_attach(cols as i64, rows as i64, uiopts)
                     .await
                     .expect("nvim_ui_attach failed");
             }
@@ -780,6 +808,15 @@ impl ObjectImpl for AppWindow {
         obj.add_controller(self.event_controller_key.borrow().clone());
 
         self.load_window_state();
+    }
+
+    fn signals() -> &'static [Signal] {
+        static SIGNALS: OnceLock<Vec<Signal>> = OnceLock::new();
+        SIGNALS.get_or_init(|| {
+            vec![Signal::builder("restart-requested")
+                .param_types([String::static_type()])
+                .build()]
+        })
     }
 }
 

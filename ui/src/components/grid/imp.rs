@@ -31,6 +31,11 @@ pub struct Grid {
     #[template_child(id = "scrollbar")]
     pub scrollbar: TemplateChild<gtk::Scrollbar>,
 
+    #[property(get, set, construct_only)]
+    initial_rows: Cell<u32>,
+    #[property(get, set, construct_only)]
+    initial_cols: Cell<u32>,
+
     /// Set the scrollbar visibility.
     #[property(get, set)]
     scrollbar_visible: Cell<bool>,
@@ -170,6 +175,15 @@ impl ObjectSubclass for Grid {
 impl ObjectImpl for Grid {
     fn constructed(&self) {
         self.parent_constructed();
+
+        match (self.initial_cols.get(), self.initial_rows.get()) {
+            (cols, rows) if cols > 0 && rows > 0 => {
+                self.buffer.resize(cols as usize, rows as usize)
+            }
+            _ => {
+                // noop.
+            }
+        }
 
         self.gesture_click.set_button(0);
         self.gesture_drag.set_button(0);

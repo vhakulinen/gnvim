@@ -1,12 +1,14 @@
 use std::ffi::OsStr;
 
 use futures::channel::oneshot;
-use gtk::{gio, glib, prelude::*, subclass::prelude::*};
+use gtk::{gio, gio::prelude::*, glib, subclass::prelude::*};
 use nvim::{
     async_trait,
     rpc::{caller::Response, Caller, HandleError, RpcWriter, WriteError},
     serde,
 };
+
+use crate::nvim::imp::Connection;
 
 mod imp;
 
@@ -18,6 +20,60 @@ glib::wrapper! {
 impl Neovim {
     fn new() -> Self {
         glib::Object::new()
+    }
+
+    /// Connect to a nvim process at `addr`.
+    pub fn connect(&self, addr: &str) -> gio::InputStreamAsyncRead<gio::PollableInputStream> {
+        let imp = self.imp();
+        assert!(
+            imp.connection.borrow().is_none(),
+            "shouldn't be started yet"
+        );
+
+        // If there is a ":" in the address, its a TCP address. Otherwise its
+        // unix socket.
+        // See `:h serverstart()`.
+        let conn = if addr.contains(":") {
+            SocketClientExt::connect_to_host(
+                &gio::SocketClient::new(),
+                addr,
+                0,
+                gio::Cancellable::NONE,
+            )
+        } else {
+            SocketClientExt::connect(
+                &gio::SocketClient::new(),
+                &gio::UnixSocketAddress::new(std::path::Path::new(addr)),
+                gio::Cancellable::NONE,
+            )
+        }
+        .map_err::<String, _>(|err| format!("failed to open {}: {}", addr, err))
+        .expect("failed to connect");
+
+        let writer = conn
+            .output_stream()
+            .dynamic_cast::<gio::PollableOutputStream>()
+            .expect("cast to PollableOutputStream")
+            .into_async_write()
+            .expect("convert to async write");
+
+        let reader = conn
+            .input_stream()
+            .dynamic_cast::<gio::PollableInputStream>()
+            .expect("cast to PollableInputStream")
+            .into_async_read()
+            .expect("covert to async read");
+
+        imp.writer
+            .try_lock()
+            .expect("set rpc writer")
+            .replace(writer);
+
+        imp.connection
+            .borrow_mut()
+            .replace(Connection::Socket(conn));
+
+        reader
     }
 
     /// Open the neovim subprocess.
@@ -32,6 +88,12 @@ impl Neovim {
         args: &[&OsStr],
         inherit_fds: bool,
     ) -> gio::InputStreamAsyncRead<gio::PollableInputStream> {
+        let imp = self.imp();
+        assert!(
+            imp.connection.borrow().is_none(),
+            "shouldn't be started yet"
+        );
+
         let mut flags = gio::SubprocessFlags::empty();
         flags.insert(gio::SubprocessFlags::STDIN_PIPE);
         flags.insert(gio::SubprocessFlags::STDOUT_PIPE);
@@ -58,11 +120,14 @@ impl Neovim {
             .into_async_read()
             .expect("covert to async read");
 
-        self.imp()
-            .writer
+        imp.writer
             .try_lock()
             .expect("set rpc writer")
             .replace(writer);
+
+        imp.connection
+            .borrow_mut()
+            .replace(Connection::Subprocess(p));
 
         reader
     }
