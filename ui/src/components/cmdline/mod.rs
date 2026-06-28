@@ -142,6 +142,7 @@ impl Cmdline {
 
         imp.popupmenu.set_items(event.items, colors, kinds);
         imp.popupmenu.set_visible(true);
+        imp.popupmenu.select(event.selected);
     }
 
     pub fn poupmenu_visible(&self) -> bool {
