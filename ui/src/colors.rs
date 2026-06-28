@@ -91,7 +91,7 @@ impl<'a> Highlight<'a> {
     pub fn sp(&self) -> &Color {
         self.hl_attr
             .and_then(|hl| hl.special.as_ref())
-            .unwrap_or(&self.colors.sp)
+            .unwrap_or_else(|| self.fg())
     }
 
     pub fn hl_attr(&self) -> Option<&HlAttr> {
