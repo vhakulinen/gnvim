@@ -4,3 +4,4 @@
 
 # Default flatpak-builder build directory.
 .flatpak-builder
+test_confirm_close.md
