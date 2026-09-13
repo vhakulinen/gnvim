@@ -30,7 +30,7 @@ ifneq ($(FLATPAK_ID),)
 endif
 
 build:
-	cargo build $(CARGOARGS) --bin gnvim --profile $(PROFILE)
+	PREFIX=$(PREFIX) cargo build $(CARGOARGS) --bin gnvim --profile $(PROFILE)
 
 install:
 	@echo "Installing gnvim binary"

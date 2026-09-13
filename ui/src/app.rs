@@ -43,7 +43,7 @@ mod imp {
 
     #[cfg(not(feature = "flatpak"))]
     fn default_rtp() -> Option<String> {
-        Some(String::from("/usr/local/share/gnvim/runtime"))
+        Some(format!("{}/share/gnvim/runtime", crate::PREFIX))
     }
 
     #[cfg(feature = "flatpak")]
