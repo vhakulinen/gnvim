@@ -75,7 +75,19 @@ impl Shell {
         })
     }
 
+    /// Mark the nvim UI as attached (or not). While not attached, calls to
+    /// `resize_nvim` are no-ops.
+    pub fn set_nvim_attached(&self, attached: bool) {
+        self.imp().nvim_attached.set(attached);
+    }
+
     pub fn resize_nvim(&self) {
+        // Until the UI is attached, nvim rejects resize requests with an
+        // error. The attach flow calls us again once it completes.
+        if !self.imp().nvim_attached.get() {
+            return;
+        }
+
         let (cols, rows) = self
             .imp()
             .font
@@ -94,10 +106,13 @@ impl Shell {
                         #[weak]
                         obj,
                         async move {
-                            obj.nvim()
+                            if let Err(err) = obj
+                                .nvim()
                                 .nvim_ui_try_resize_grid(1, cols.max(1) as i64, rows.max(1) as i64)
                                 .await
-                                .expect("nvim_ui_try_resize failed");
+                            {
+                                warn!("nvim_ui_try_resize failed: {:?}", err);
+                            }
                         }
                     ));
 

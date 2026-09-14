@@ -795,6 +795,12 @@ impl ObjectImpl for AppWindow {
                 nvim.nvim_ui_attach(cols as i64, rows as i64, uiopts)
                     .await
                     .expect("nvim_ui_attach failed");
+
+                // The UI is now attached: allow resize requests, and deliver
+                // the real window size (the attach above used the template's
+                // initial size).
+                obj.imp().shell.set_nvim_attached(true);
+                obj.imp().shell.resize_nvim();
             }
         ));
 

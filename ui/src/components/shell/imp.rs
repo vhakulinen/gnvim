@@ -66,6 +66,9 @@ pub struct Shell {
     /// Our previous size. Used to track when we need to tell neovim to resize
     /// itself.
     pub prev_size: Cell<(i32, i32)>,
+    /// True once `nvim_ui_attach` has completed. Resize requests are
+    /// dropped until then, because nvim rejects them for unattached UIs.
+    pub nvim_attached: Cell<bool>,
 
     #[property(name = "pmenu-col", member = col, get, set, type = i64)]
     #[property(name = "pmenu-row", member = row, get, set, type = i64)]
