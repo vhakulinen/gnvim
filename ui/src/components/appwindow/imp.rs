@@ -670,7 +670,7 @@ impl AppWindow {
         if self.im_context.borrow().filter_keypress(&evt) {
             glib::Propagation::Stop
         } else {
-            if let Some(input) = event_to_nvim_input(keyval, state) {
+            if let Some(input) = crate::input::event_to_nvim_input(keyval, state) {
                 spawn_local!(glib::clone!(
                     #[weak(rename_to = this)]
                     self,
@@ -681,7 +681,7 @@ impl AppWindow {
 
                 return glib::Propagation::Stop;
             } else {
-                println!(
+                debug!(
                     "Failed to turn input event into nvim key (keyval: {})",
                     keyval,
                 )
@@ -841,17 +841,3 @@ impl WindowImpl for AppWindow {
 impl AdwApplicationWindowImpl for AppWindow {}
 
 impl ApplicationWindowImpl for AppWindow {}
-
-fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option<String> {
-    let mut input = crate::input::modifier_to_nvim(&state);
-    let keyname = keyval.name()?;
-
-    if keyname.chars().count() > 1 {
-        let n = crate::input::keyname_to_nvim_key(keyname.as_str())?;
-        input.push_str(n);
-    } else {
-        input.push(keyval.to_unicode()?);
-    }
-
-    Some(format!("<{}>", input))
-}
