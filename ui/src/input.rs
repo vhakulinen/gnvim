@@ -92,6 +92,7 @@ pub fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "slash" => Some("/"),
         "backslash" => Some("\\"),
         "dead_circumflex" => Some("^"),
+        "dead_perispomeni" => Some("~"),
         "at" => Some("@"),
         "numbersign" => Some("#"),
         "dollar" => Some("$"),
@@ -176,6 +177,10 @@ pub fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option
         // A printable character already encodes shift (':' vs ';', 'A' vs
         // 'a'); sending <S-:> and the like confuses nvim.
         modifiers = modifiers.replace("S-", "");
+
+        if state.contains(gdk::ModifierType::ALT_MASK) {
+            modifiers = modifiers.replace("M-", "");
+        }
     }
 
     if modifiers.is_empty() && !is_special {
@@ -228,9 +233,11 @@ mod tests {
         let none = gdk::ModifierType::empty();
         let shift = gdk::ModifierType::SHIFT_MASK;
         let ctrl = gdk::ModifierType::CONTROL_MASK;
+        let alt = gdk::ModifierType::ALT_MASK;
 
         // Bare printable characters are sent as-is.
         assert_eq!(event_to_nvim_input(key("a"), none).as_deref(), Some("a"));
+        assert_eq!(event_to_nvim_input(key("at"), alt).as_deref(), Some("@"));
         // Named printable keys missing from the table fall back to their
         // unicode value (e.g. "colon" on macOS).
         assert_eq!(
