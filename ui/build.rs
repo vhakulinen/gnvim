@@ -5,6 +5,7 @@ fn main() {
     let outdir = Path::new(&outdir);
 
     let appid = env::var("APPID").unwrap_or(String::from("com.github.vhakulinen.gnvim.Devel"));
+    let prefix = env::var("PREFIX").unwrap_or(String::from("/usr/local"));
 
     glib_build_tools::compile_resources(
         &["data/resources"],
@@ -13,8 +14,17 @@ fn main() {
     );
 
     let config_dst = Path::new(&outdir).join("config.rs");
-    fs::write(config_dst, format!("const APPID: &str = \"{appid}\";"))
-        .expect("failed to create config.rs");
+    fs::write(
+        config_dst,
+        format!(
+            "const APPID: &str = \"{appid}\";\n\
+             #[allow(dead_code)]\n\
+             const PREFIX: &str = \"{prefix}\";\n"
+        ),
+    )
+    .expect("failed to create config.rs");
 
+    println!("cargo:rerun-if-env-changed=APPID");
+    println!("cargo:rerun-if-env-changed=PREFIX");
     println!("cargo:rerun-if-changed=build.rs")
 }

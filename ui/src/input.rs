@@ -92,6 +92,7 @@ pub fn keyname_to_nvim_key(s: &str) -> Option<&str> {
         "slash" => Some("/"),
         "backslash" => Some("\\"),
         "dead_circumflex" => Some("^"),
+        "dead_perispomeni" => Some("~"),
         "at" => Some("@"),
         "numbersign" => Some("#"),
         "dollar" => Some("$"),
@@ -146,11 +147,61 @@ pub fn keyname_to_nvim_key(s: &str) -> Option<&str> {
     }
 }
 
+/// Turns a gtk key event into a nvim input string, i.e. something that can
+/// be passed to `nvim_input`.
+///
+/// Returns `None` when the event doesn't translate to any nvim input (e.g.
+/// unmapped function keys, IM void symbols).
+pub fn event_to_nvim_input(keyval: gdk::Key, state: gdk::ModifierType) -> Option<String> {
+    let mut modifiers = modifier_to_nvim(&state);
+    let keyname = keyval.name()?;
+
+    let key = if keyname.chars().count() > 1 {
+        // Named key: try the table first, then fall back to the unicode
+        // value. The fallback matters e.g. on macOS, where the IM context
+        // doesn't consume plain printable keys, so names like "colon"
+        // reach us here.
+        match keyname_to_nvim_key(keyname.as_str()) {
+            Some(n) => String::from(n),
+            None => keyval.to_unicode()?.to_string(),
+        }
+    } else {
+        keyval.to_unicode()?.to_string()
+    };
+
+    // Single-char keys are printable characters, multi-char ones are
+    // special keys (CR, Tab, Space, F1, BS, ...).
+    let is_special = key.chars().count() > 1;
+
+    if !is_special {
+        // A printable character already encodes shift (':' vs ';', 'A' vs
+        // 'a'); sending <S-:> and the like confuses nvim.
+        modifiers = modifiers.replace("S-", "");
+
+        if state.contains(gdk::ModifierType::ALT_MASK) {
+            modifiers = modifiers.replace("M-", "");
+        }
+    }
+
+    if modifiers.is_empty() && !is_special {
+        // Bare printable character: send as-is, mirroring the IM commit
+        // path. "<" needs to be escaped for nvim_input (see `:h nvim_input`).
+        return Some(if key == "<" {
+            String::from("<lt>")
+        } else {
+            key
+        });
+    }
+
+    let key = if key == "<" { String::from("lt") } else { key };
+    Some(format!("<{}{}>", modifiers, key))
+}
+
 #[cfg(test)]
 mod tests {
     use gtk::gdk;
 
-    use super::modifier_to_nvim;
+    use super::{event_to_nvim_input, modifier_to_nvim};
 
     #[test]
     fn test_modifier_to_nvim() {
@@ -174,5 +225,67 @@ mod tests {
         m.set(gdk::ModifierType::SHIFT_MASK, true);
         m.set(gdk::ModifierType::ALT_MASK, true);
         assert_eq!(&modifier_to_nvim(&m), "S-M-");
+    }
+
+    #[test]
+    fn test_event_to_nvim_input() {
+        let key = |name: &str| gdk::Key::from_name(name).expect("bad key name");
+        let none = gdk::ModifierType::empty();
+        let shift = gdk::ModifierType::SHIFT_MASK;
+        let ctrl = gdk::ModifierType::CONTROL_MASK;
+        let alt = gdk::ModifierType::ALT_MASK;
+
+        // Bare printable characters are sent as-is.
+        assert_eq!(event_to_nvim_input(key("a"), none).as_deref(), Some("a"));
+        assert_eq!(event_to_nvim_input(key("at"), alt).as_deref(), Some("@"));
+        // Named printable keys missing from the table fall back to their
+        // unicode value (e.g. "colon" on macOS).
+        assert_eq!(
+            event_to_nvim_input(key("colon"), none).as_deref(),
+            Some(":")
+        );
+        // Shift is dropped for printable characters (it's already encoded
+        // in the character itself)...
+        assert_eq!(
+            event_to_nvim_input(key("colon"), shift).as_deref(),
+            Some(":")
+        );
+        assert_eq!(
+            event_to_nvim_input(key("underscore"), shift).as_deref(),
+            Some("_")
+        );
+        assert_eq!(event_to_nvim_input(key("A"), shift).as_deref(), Some("A"));
+        // ...but kept for special keys.
+        assert_eq!(
+            event_to_nvim_input(key("Tab"), shift).as_deref(),
+            Some("<S-Tab>")
+        );
+        // Other modifiers are kept.
+        assert_eq!(
+            event_to_nvim_input(key("a"), ctrl).as_deref(),
+            Some("<C-a>")
+        );
+        assert_eq!(
+            event_to_nvim_input(key("colon"), ctrl).as_deref(),
+            Some("<C-:>")
+        );
+        // "<" is escaped.
+        assert_eq!(
+            event_to_nvim_input(key("less"), none).as_deref(),
+            Some("<lt>")
+        );
+        assert_eq!(
+            event_to_nvim_input(key("less"), ctrl).as_deref(),
+            Some("<C-lt>")
+        );
+        // Special keys go through the table.
+        assert_eq!(
+            event_to_nvim_input(key("Return"), none).as_deref(),
+            Some("<CR>")
+        );
+        assert_eq!(
+            event_to_nvim_input(key("space"), none).as_deref(),
+            Some("<Space>")
+        );
     }
 }

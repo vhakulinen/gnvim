@@ -11,7 +11,7 @@ use gtk::{
 };
 use nvim::NeovimApi;
 
-use crate::{components::Grid, spawn_local};
+use crate::{components::Grid, spawn_local, warn};
 
 #[derive(Default)]
 pub struct ExternalWindow {
@@ -42,14 +42,17 @@ impl ExternalWindow {
                         #[weak]
                         obj,
                         async move {
-                            obj.nvim()
+                            if let Err(err) = obj
+                                .nvim()
                                 .nvim_ui_try_resize_grid(
                                     obj.grid_id(),
                                     cols.max(1) as i64,
                                     rows.max(1) as i64,
                                 )
                                 .await
-                                .expect("nvim_ui_try_resize failed");
+                            {
+                                warn!("nvim_ui_try_resize failed: {:?}", err);
+                            }
                         }
                     ));
 
