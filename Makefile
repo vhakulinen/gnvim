@@ -28,24 +28,26 @@ install:
 	@echo "Installing runtime"
 	install -d "$(DESTDIR)$(PREFIX)/share/gnvim"
 	cp -r ./runtime "$(DESTDIR)$(PREFIX)/share/gnvim"
+	chmod -R a+rX "$(DESTDIR)$(PREFIX)/share/gnvim"
 	@echo "Installing desktop file"
-	install -D ./desktop/gnvim.desktop "$(DESTDIR)$(PREFIX)/share/applications/$(APPID).desktop"
+	install -D -m 644 ./desktop/gnvim.desktop "$(DESTDIR)$(PREFIX)/share/applications/$(APPID).desktop"
 	sed -i "s/@icon@/$(APPID)/" "$(DESTDIR)$(PREFIX)/share/applications/$(APPID).desktop"
 	@echo "Installing icons"
-	install -D ./desktop/gnvim_128.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/$(APPID).png"
-	install -D ./desktop/gnvim_48.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/$(APPID).png"
-	install -D ./desktop/gnvim-logo.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/$(APPID).svg"
+	install -D -m 644 ./desktop/gnvim_128.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/$(APPID).png"
+	install -D -m 644 ./desktop/gnvim_48.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/$(APPID).png"
+	install -D -m 644 ./desktop/gnvim-logo.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/$(APPID).svg"
 	$(MAKE) install-schema
 
 install-schema:
 	@echo "Installing schema"
-	@install -D \
+	@install -D -m 644 \
 		./ui/data/com.github.vhakulinen.gnvim.gschema.xml.in \
 		"$(DESTDIR)$(PREFIX)/share/glib-2.0/schemas/com.github.vhakulinen.gnvim.gschema.xml"
 	@sed -i \
 		"s/@appid@/$(APPID)/" \
 		"$(DESTDIR)$(PREFIX)/share/glib-2.0/schemas/com.github.vhakulinen.gnvim.gschema.xml"
 	@glib-compile-schemas "$(DESTDIR)$(PREFIX)/share/glib-2.0/schemas"
+	@chmod 644 "$(DESTDIR)$(PREFIX)/share/glib-2.0/schemas/gschemas.compiled"
 
 uninstall:
 	rm "$(DESTDIR)$(PREFIX)/bin/gnvim"
